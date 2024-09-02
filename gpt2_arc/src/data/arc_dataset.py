@@ -50,4 +50,8 @@ class ArcDataset(Dataset):
         
         one_hot_grid = np.eye(self.num_symbols)[padded_grid]
         
+        # Ensure padding remains zero after one-hot encoding
+        one_hot_grid[grid_array.shape[0]:, :, :] = 0
+        one_hot_grid[:, grid_array.shape[1]:, :] = 0
+        
         return torch.tensor(one_hot_grid, dtype=torch.float32)
