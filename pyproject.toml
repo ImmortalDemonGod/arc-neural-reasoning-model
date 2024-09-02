@@ -10,6 +10,7 @@ testpaths = [
 ]
 
 [project]
+dynamic = ["readme", "classifiers"]
 name = "gpt2_arc"
 version = "0.1.0"
 description = "A project for ARC using GPT-2"
