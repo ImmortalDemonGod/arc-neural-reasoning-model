@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-ra -q"
+addopts = "-ra -q --cov=gpt2_arc --cov-report=term-missing"
 testpaths = [
     "gpt2_arc/tests",
 ]
