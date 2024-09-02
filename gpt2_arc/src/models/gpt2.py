@@ -1,3 +1,5 @@
+# gpt2_arc/src/models/gpt2.py
+
 import torch
 from torch import nn
 from transformers import GPT2Model, GPT2Config
