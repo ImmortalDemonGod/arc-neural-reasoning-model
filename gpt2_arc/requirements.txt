@@ -1,1 +1,8 @@
-aider-chat
+torch>=2.0.0
+pytorch-lightning>=2.0.0
+numpy>=1.20.0
+pytest>=6.0
+pytest-cov>=2.0
+black>=20.8b1
+isort>=5.0
+flake8>=3.9
