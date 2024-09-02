@@ -42,7 +42,20 @@ def test_arc_dataset_invalid_symbols():
     with pytest.raises(ValueError):
         ArcDataset(invalid_data)
 
-def test_arc_dataset_preprocessing():
+def test_missing_input_output_key():
+    invalid_data = [{'input': [[1, 0], [0, 1]]}]  # Missing 'output'
+    with pytest.raises(ValueError, match="missing 'input' or 'output' key"):
+        ArcDataset(invalid_data)
+
+def test_input_output_not_list():
+    invalid_data = [{'input': "not a list", 'output': [[0, 1], [1, 0]]}]
+    with pytest.raises(ValueError, match="'input' or 'output' is not a list"):
+        ArcDataset(invalid_data)
+
+def test_invalid_symbols():
+    invalid_data = [{'input': [[10, 0], [0, 1]], 'output': [[0, 1], [1, 0]]}]
+    with pytest.raises(ValueError, match="contains invalid symbols"):
+        ArcDataset(invalid_data)
     data = [{'input': [[1, 0], [0, 1]], 'output': [[0, 1], [1, 0]]}]
     dataset = ArcDataset(data, max_grid_size=(5, 5), num_symbols=3)
     input_grid, _ = dataset[0]
