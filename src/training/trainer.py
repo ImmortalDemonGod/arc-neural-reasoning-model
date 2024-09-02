@@ -1,5 +1,6 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
+from torch import nn
 from transformers import AdamW
 
 class ARCTrainer(pl.LightningModule):
