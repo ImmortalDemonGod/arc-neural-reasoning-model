@@ -35,6 +35,8 @@ class ArcDataset(Dataset):
                 raise ValueError(f"Sample {idx} 'input' or 'output' is not a list")
             if not all(isinstance(row, list) for row in sample['input']) or not all(isinstance(row, list) for row in sample['output']):
                 raise ValueError(f"Sample {idx} 'input' or 'output' is not a 2D list")
+            if any(max(row) >= self.num_symbols for row in sample['input']) or any(max(row) >= self.num_symbols for row in sample['output']):
+                raise ValueError(f"Sample {idx} contains invalid symbols (>= {self.num_symbols})")
 
     def _preprocess_grid(self, grid: List[List[int]]) -> torch.Tensor:
         grid_array = np.array(grid)
@@ -44,6 +46,7 @@ class ArcDataset(Dataset):
         
         padded_grid = np.zeros(self.max_grid_size, dtype=int)
         padded_grid[:grid_array.shape[0], :grid_array.shape[1]] = grid_array
+        logger.debug(f"Padded grid: \n{padded_grid}")
         
         one_hot_grid = np.eye(self.num_symbols)[padded_grid]
         

@@ -48,5 +48,5 @@ def test_arc_dataset_preprocessing():
     input_grid, _ = dataset[0]
     
     assert input_grid.shape == (5, 5, 3), "Preprocessed grid should have shape (5, 5, 3)"
-    assert torch.all(input_grid[2:, :, :] == 0), "Padding should be all zeros"
-    assert torch.all(input_grid[:, 2:, :] == 0), "Padding should be all zeros"
+    assert torch.all(input_grid[2:, :, :] == 0), "Padding should be all zeros in rows"
+    assert torch.all(input_grid[:, 2:, :] == 0), "Padding should be all zeros in columns"
