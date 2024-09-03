@@ -3,7 +3,7 @@
 import os
 import json
 import logging
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Tuple
 
 import numpy as np
 import torch
