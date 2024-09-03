@@ -1,6 +1,7 @@
 # gpt2_arc/src/training/train.py
 import argparse
 import pytorch_lightning as pl
+import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from src.data.arc_dataset import ArcDataset
