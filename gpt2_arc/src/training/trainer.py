@@ -1,7 +1,7 @@
 # gpt2_arc/src/training/trainer.py
 import pytorch_lightning as pl
 import torch
-from torch import nn
+from torch import nn, optim
 from torch.utils.data import DataLoader
 
 from src.config import Config
@@ -9,6 +9,7 @@ from src.config import Config
 
 class ARCTrainer(pl.LightningModule):
     def __init__(self, model, train_dataset, val_dataset, config: Config):
+        self.logged_metrics: dict[str, Any] = {}  # Initialize logged_metrics to store metrics
         super().__init__()
         self.model = model
         self.train_dataset = train_dataset

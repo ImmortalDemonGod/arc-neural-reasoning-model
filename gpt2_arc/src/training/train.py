@@ -17,15 +17,13 @@ def main(args):
     val_data = ArcDataset(args.val_data)
 
     # Initialize model
-    model = GPT2ARC()
+    model = GPT2ARC(config=Config().model)
 
     # Initialize trainer
     trainer = ARCTrainer(
         model=model,
         train_dataset=train_data,
         val_dataset=val_data,
-        batch_size=args.batch_size,
-        lr=args.learning_rate,
     )
 
     # Setup logging and checkpointing
@@ -43,7 +41,7 @@ def main(args):
         max_epochs=args.max_epochs,
         logger=logger,
         callbacks=[checkpoint_callback],
-        gpus=1 if use_gpu else 0,
+        accelerator='gpu' if use_gpu else 'cpu',
     )
 
     # Train the model

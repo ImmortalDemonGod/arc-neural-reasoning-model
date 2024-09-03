@@ -9,8 +9,8 @@ from src.training.trainer import ARCTrainer
 
 
 def evaluate(model, test_dataset, batch_size=32):
-    trainer = ARCTrainer(model, None, test_dataset, batch_size=batch_size)
-    pl_trainer = pl.Trainer(gpus=1 if torch.cuda.is_available() else 0)
+    trainer = ARCTrainer(model, None, test_dataset, config=Config())
+    pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
     return results[0]
 
@@ -20,7 +20,8 @@ def main(args):
     test_data = ArcDataset(args.test_data)
 
     # Load the trained model
-    model = GPT2ARC.load_from_checkpoint(args.model_checkpoint)
+    model = GPT2ARC(Config().model)
+    model.load_state_dict(torch.load(args.model_checkpoint))
     model.eval()
 
     # Evaluate the model
