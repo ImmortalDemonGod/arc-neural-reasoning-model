@@ -136,8 +136,7 @@ def test_learning_rate_extremes(mock_args, learning_rate):
 def test_non_existent_train_data(mock_args):
     mock_args.train_data = "non_existent_path.json"
     with pytest.raises(FileNotFoundError):
-        with patch('gpt2_arc.src.data.arc_dataset.ArcDataset.__init__', side_effect=FileNotFoundError):
-            main(mock_args)
+        main(mock_args)
 
 def test_gpu_not_available(mock_args):
     mock_args.use_gpu = True
@@ -221,9 +220,9 @@ def test_gpt2arc_in_training_loop(model, mock_dataset):
     
     # Simulate a single training step
     batch = {
-        'input_ids': torch.randint(0, 1000, (2, 10)),
-        'attention_mask': torch.ones((2, 10)),
-        'labels': torch.randint(0, 1000, (2, 10))
+        'input_ids': torch.randint(0, 1000, (2, 10)).long(),
+        'attention_mask': torch.ones((2, 10)).float(),
+        'labels': torch.randint(0, 1000, (2, 10)).long()
     }
     
     loss = trainer.training_step(batch, 0)

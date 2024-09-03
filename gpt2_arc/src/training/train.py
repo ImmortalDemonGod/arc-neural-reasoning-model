@@ -34,12 +34,12 @@ def main(args):
         mode="min"
     )
 
-    # Initialize PyTorch Lightning Trainer
+    use_gpu = args.use_gpu and torch.cuda.is_available()
     pl_trainer = pl.Trainer(
         max_epochs=args.max_epochs,
         logger=logger,
         callbacks=[checkpoint_callback],
-        gpus=1 if args.use_gpu else 0
+        gpus=1 if use_gpu else 0
     )
 
     # Train the model

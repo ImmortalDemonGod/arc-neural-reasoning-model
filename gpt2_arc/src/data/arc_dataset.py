@@ -1,5 +1,7 @@
 # gp2_arc/src/data/arc_dataset.py
 
+import os
+import json
 import logging
 from typing import Dict, List, Tuple
 
@@ -13,13 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
-    def __init__(
-        self,
-        data: List[Dict[str, Any]],
-        max_grid_size: Tuple[int, int] = (30, 30),
-        num_symbols: int = 10,
-    ):
-        self.data = data
+    def __init__(self, file_path: str, max_grid_size: Tuple[int, int] = (30, 30), num_symbols: int = 10):
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+        
+        with open(file_path, 'r') as f:
+            self.data = json.load(f)
         self.max_grid_size = max_grid_size
         self.num_symbols = num_symbols
         self._validate_data()

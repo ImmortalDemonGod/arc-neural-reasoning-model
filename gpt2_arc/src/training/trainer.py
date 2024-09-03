@@ -15,7 +15,12 @@ class ARCTrainer(pl.LightningModule):
         self.logged_metrics = {}  # Initialize logged_metrics to store metrics
 
     def training_step(self, batch, batch_idx):
-        input_ids, attention_mask, labels = batch
+        input_ids, attention_mask, labels = batch['input_ids'], batch['attention_mask'], batch['labels']
+        
+        # Ensure tensors
+        input_ids = input_ids.long() if not isinstance(input_ids, torch.LongTensor) else input_ids
+        attention_mask = attention_mask.float() if not isinstance(attention_mask, torch.FloatTensor) else attention_mask
+        labels = labels.long() if not isinstance(labels, torch.LongTensor) else labels
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("train_loss", loss)
