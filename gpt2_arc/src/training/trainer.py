@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 
 from src.config import Config
 
+
 class ARCTrainer(pl.LightningModule):
     def __init__(self, model, train_dataset, val_dataset, config: Config):
         super().__init__()
@@ -21,15 +22,23 @@ class ARCTrainer(pl.LightningModule):
         if isinstance(batch, tuple):
             input_ids, attention_mask, labels = batch
         elif isinstance(batch, dict):
-            input_ids = batch['input_ids']
-            attention_mask = batch['attention_mask']
-            labels = batch['labels']
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"]
         else:
             raise ValueError("Batch must be either a tuple or a dictionary")
-        
+
         # Ensure tensors
-        input_ids = input_ids.long() if not isinstance(input_ids, torch.LongTensor) else input_ids
-        attention_mask = attention_mask.float() if not isinstance(attention_mask, torch.FloatTensor) else attention_mask
+        input_ids = (
+            input_ids.long()
+            if not isinstance(input_ids, torch.LongTensor)
+            else input_ids
+        )
+        attention_mask = (
+            attention_mask.float()
+            if not isinstance(attention_mask, torch.FloatTensor)
+            else attention_mask
+        )
         labels = labels.long() if not isinstance(labels, torch.LongTensor) else labels
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
@@ -40,15 +49,15 @@ class ARCTrainer(pl.LightningModule):
         if isinstance(batch, tuple):
             input_ids, attention_mask, labels = batch
         elif isinstance(batch, dict):
-            input_ids = batch['input_ids']
-            attention_mask = batch['attention_mask']
-            labels = batch['labels']
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"]
         else:
             raise ValueError("Batch must be either a tuple or a dictionary")
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("val_loss", loss)
-        self.logged_metrics['val_loss'] = loss.item()  # Manually add to logged_metrics
+        self.logged_metrics["val_loss"] = loss.item()  # Manually add to logged_metrics
 
     def configure_optimizers(self):
         return torch.optim.AdamW(self.parameters(), lr=self.lr)
@@ -60,8 +69,9 @@ class ARCTrainer(pl.LightningModule):
         return DataLoader(self.val_dataset, batch_size=self.batch_size)
 
     def compute_loss(self, outputs, labels):
-        return nn.CrossEntropyLoss()(outputs.view(-1, outputs.size(-1)), labels.view(-1))
+        return nn.CrossEntropyLoss()(
+            outputs.view(-1, outputs.size(-1)), labels.view(-1)
+        )
 
     def forward(self, input_ids, attention_mask=None):
         return self.model(input_ids, attention_mask)
-

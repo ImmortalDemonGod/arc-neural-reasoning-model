@@ -1,12 +1,14 @@
 # gpt2_arc/src/config.py
 from dataclasses import dataclass
 
+
 @dataclass
 class ModelConfig:
     n_embd: int = 768
     n_head: int = 12
     n_layer: int = 12
     dropout: float = 0.1
+
 
 @dataclass
 class TrainingConfig:
@@ -15,7 +17,9 @@ class TrainingConfig:
     max_epochs: int = 10
     use_gpu: bool = True
 
+
 from dataclasses import field
+
 
 @dataclass
 class Config:

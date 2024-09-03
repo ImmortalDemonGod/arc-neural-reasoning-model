@@ -1,34 +1,42 @@
 # gp2_arc/src/data/arc_dataset.py
 
-import os
 import json
 import logging
-from typing import Union, List, Dict, Tuple
+import os
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from typing import Any
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
-    def __init__(self, data_source: Union[str, List[Dict]], max_grid_size: Tuple[int, int] = (30, 30), num_symbols: int = 10):
-        logger.debug(f"Initializing ArcDataset with data_source type: {type(data_source)}")
-        
+    def __init__(
+        self,
+        data_source: Union[str, List[Dict]],
+        max_grid_size: Tuple[int, int] = (30, 30),
+        num_symbols: int = 10,
+    ):
+        logger.debug(
+            f"Initializing ArcDataset with data_source type: {type(data_source)}"
+        )
+
         if isinstance(data_source, str):
             logger.debug(f"Loading data from file: {data_source}")
             if not os.path.exists(data_source):
                 raise FileNotFoundError(f"File not found: {data_source}")
-            with open(data_source, 'r') as f:
+            with open(data_source, "r") as f:
                 self.data = json.load(f)
         elif isinstance(data_source, list):
             logger.debug("Using provided list data directly")
             self.data = data_source
         else:
-            raise ValueError("data_source must be either a file path (str) or a list of dictionaries")
+            raise ValueError(
+                "data_source must be either a file path (str) or a list of dictionaries"
+            )
         self.max_grid_size = max_grid_size
         self.num_symbols = num_symbols
         self._validate_data()

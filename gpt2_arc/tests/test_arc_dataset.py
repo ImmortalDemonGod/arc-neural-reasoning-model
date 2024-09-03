@@ -67,12 +67,21 @@ def test_arc_dataset_invalid_data(sample_data):
     with pytest.raises(ValueError, match="'input' or 'output' is not a list"):
         ArcDataset(invalid_data)
 
+
 def test_arc_dataset_preprocess_grid(sample_data):
     dataset = ArcDataset(sample_data, max_grid_size=(5, 5), num_symbols=3)
     input_grid, output_grid = dataset[0]
 
-    assert input_grid.shape == (5, 5, 3), "Preprocessed grid should have shape (5, 5, 3)"
+    assert input_grid.shape == (
+        5,
+        5,
+        3,
+    ), "Preprocessed grid should have shape (5, 5, 3)"
     assert torch.all(input_grid[2:, :, :] == 0), "Padding should be all zeros in rows"
-    assert torch.all(input_grid[:, 2:, :] == 0), "Padding should be all zeros in columns"
+    assert torch.all(
+        input_grid[:, 2:, :] == 0
+    ), "Padding should be all zeros in columns"
     assert torch.all(output_grid[2:, :, :] == 0), "Padding should be all zeros in rows"
-    assert torch.all(output_grid[:, 2:, :] == 0), "Padding should be all zeros in columns"
+    assert torch.all(
+        output_grid[:, 2:, :] == 0
+    ), "Padding should be all zeros in columns"
