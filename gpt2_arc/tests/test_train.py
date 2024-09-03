@@ -148,8 +148,8 @@ def test_gpu_not_available(mock_args):
         
         main(mock_args)
         mock_trainer.assert_called_with(max_epochs=mock_args.max_epochs, 
-                                        logger=pytest.mock.ANY, 
-                                        callbacks=[pytest.mock.ANY], 
+                                        logger=ANY,
+                                        callbacks=[ANY],
                                         gpus=0)
 
 from hypothesis import given, strategies as st, settings, HealthCheck
