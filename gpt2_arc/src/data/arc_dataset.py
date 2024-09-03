@@ -30,8 +30,11 @@ class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         sample = self.data[idx]
-        input_grid = self._preprocess_grid(sample["input"])
-        output_grid = self._preprocess_grid(sample["output"])
+        if "input" in sample and "output" in sample:
+            input_grid = self._preprocess_grid(sample["input"])
+            output_grid = self._preprocess_grid(sample["output"])
+        else:
+            raise IndexError(f"Sample {idx} is missing 'input' or 'output' key")
         logger.debug(
             f"Retrieved sample {idx}: input shape {input_grid.shape}, output shape {output_grid.shape}"
         )
