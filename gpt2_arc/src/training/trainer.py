@@ -34,7 +34,14 @@ class ARCTrainer(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        input_ids, attention_mask, labels = batch
+        if isinstance(batch, tuple):
+            input_ids, attention_mask, labels = batch
+        elif isinstance(batch, dict):
+            input_ids = batch['input_ids']
+            attention_mask = batch['attention_mask']
+            labels = batch['labels']
+        else:
+            raise ValueError("Batch must be either a tuple or a dictionary")
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("val_loss", loss)
