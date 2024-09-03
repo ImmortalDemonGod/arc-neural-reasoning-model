@@ -6,15 +6,16 @@ from typing import Dict, List, Tuple
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from typing import Any
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class ArcDataset(Dataset):
+class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
     def __init__(
         self,
-        data: List[Dict],
+        data: List[Dict[str, Any]],
         max_grid_size: Tuple[int, int] = (30, 30),
         num_symbols: int = 10,
     ):
