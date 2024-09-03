@@ -3,10 +3,10 @@ import torch
 from unittest.mock import patch, MagicMock
 import argparse
 import pytorch_lightning as pl
-from gpt2_arc.src.training.train import main
-from gpt2_arc.src.data.arc_dataset import ArcDataset
-from gpt2_arc.src.models.gpt2 import GPT2ARC
-from gpt2_arc.src.training.trainer import ARCTrainer
+from ..src.training.train import main
+from ..src.data.arc_dataset import ArcDataset
+from ..src.models.gpt2 import GPT2ARC
+from ..src.training.trainer import ARCTrainer
 
 @pytest.fixture
 def mock_args():
