@@ -5,7 +5,6 @@ import torch
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from transformers import AdamW
 
 class ARCTrainer(pl.LightningModule):
     def __init__(self, model, train_dataset, val_dataset, batch_size=32, lr=1e-4):
@@ -29,6 +28,7 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("val_loss", loss)
+        self.logged_metrics['val_loss'] = loss.item()  # Add this line
 
     def configure_optimizers(self):
         return torch.optim.AdamW(self.parameters(), lr=self.lr)
@@ -65,7 +65,7 @@ class ARCTrainer(pl.LightningModule):
         self.log("val_loss", loss)
 
     def configure_optimizers(self):
-        return AdamW(self.parameters(), lr=self.lr)
+        return torch.optim.AdamW(self.parameters(), lr=self.lr)
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size)
