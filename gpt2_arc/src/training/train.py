@@ -5,6 +5,7 @@ import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from src.models.gpt2 import GPT2ARC
+from src.data.arc_dataset import ArcDataset
 from src.training.trainer import ARCTrainer
 
 def main(args):
