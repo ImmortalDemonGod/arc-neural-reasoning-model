@@ -1,8 +1,9 @@
 # gpt2_arc/src/training/trainer.py
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader
 from torch import nn
+from torch.utils.data import DataLoader
 from transformers import AdamW
+
 
 class ARCTrainer(pl.LightningModule):
     def __init__(self, model, train_dataset, val_dataset, batch_size=32, lr=1e-4):
@@ -20,14 +21,14 @@ class ARCTrainer(pl.LightningModule):
         input_ids, attention_mask, labels = batch
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
-        self.log('train_loss', loss)
+        self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
         input_ids, attention_mask, labels = batch
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
-        self.log('val_loss', loss)
+        self.log("val_loss", loss)
 
     def configure_optimizers(self):
         return AdamW(self.parameters(), lr=self.lr)
@@ -40,4 +41,6 @@ class ARCTrainer(pl.LightningModule):
 
     def compute_loss(self, outputs, labels):
         # Implement the loss computation
-        return nn.CrossEntropyLoss()(outputs.view(-1, outputs.size(-1)), labels.view(-1))
+        return nn.CrossEntropyLoss()(
+            outputs.view(-1, outputs.size(-1)), labels.view(-1)
+        )
