@@ -11,3 +11,4 @@ flake8>=3.9
 ruff
 mypy
 tox
+tensorboard
