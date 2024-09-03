@@ -83,7 +83,7 @@ class GPT2ARC(nn.Module):
             "n_layer": config.n_layer,
             "dropout": config.dropout
         }
-        logger.debug(f"Initialized GPT2ARC with vocab_size={vocab_size}, n_embd={n_embd}, n_head={n_head}, n_layer={n_layer}")
+        logger.debug(f"Initialized GPT2ARC with vocab_size=50257, n_embd={config.n_embd}, n_head={config.n_head}, n_layer={config.n_layer}")
 
     def forward(self, input_ids, attention_mask=None):
         logger.debug(f"GPT2ARC input shape: {input_ids.shape}")
