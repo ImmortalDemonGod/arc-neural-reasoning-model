@@ -2,9 +2,9 @@ import argparse
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
-from src.data.arc_dataset import ArcDataset
-from src.models.gpt2 import GPT2ARC
-from src.training.trainer import ARCTrainer
+from gpt2_arc.src.data.arc_dataset import ArcDataset
+from gpt2_arc.src.models.gpt2 import GPT2ARC
+from gpt2_arc.src.training.trainer import ARCTrainer
 
 def main(args):
     # Load data
