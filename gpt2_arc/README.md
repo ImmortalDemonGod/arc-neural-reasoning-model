@@ -27,19 +27,35 @@ pip install -e ".[dev]"
 
 ## Usage
 
-To train the model, use the `train.py` script:
+### Training the Model
 
-```bash
-python gpt2_arc/src/train.py --train_data <path_to_train_data> --val_data <path_to_val_data> --batch_size 32 --learning_rate 1e-4 --max_epochs 10 --use_gpu
+To train the model, use the following command:
+
+```
+python src/train.py --train_data path/to/train_data --val_data path/to/val_data --batch_size 32 --learning_rate 1e-4 --max_epochs 10 --use_gpu
 ```
 
-## Testing
+Adjust the parameters as needed. The trained model checkpoints will be saved in the `checkpoints` directory.
 
-Run the tests using pytest:
+### Evaluating the Model
 
-```bash
-pytest
+To evaluate a trained model on a test set, use the following command:
+
 ```
+python src/evaluate.py --test_data path/to/test_data --model_checkpoint path/to/model_checkpoint.ckpt --batch_size 32
+```
+
+This will output the evaluation metrics for the model on the test dataset.
+
+## Running Tests
+
+To run the tests, use the following command:
+
+```
+pytest -v
+```
+
+This will run all tests and display the results, including test coverage.
 
 ## Contributing
 
