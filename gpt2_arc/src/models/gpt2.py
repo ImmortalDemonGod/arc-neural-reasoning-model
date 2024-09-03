@@ -17,8 +17,3 @@ class GPT2ARC(nn.Module):
     def forward(self, input_ids, attention_mask=None):
         outputs = self.gpt2(input_ids, attention_mask=attention_mask)
         return outputs.last_hidden_state
-        self.gpt2 = GPT2Model.from_pretrained(model_name, config=self.config)
-
-    def forward(self, input_ids, attention_mask=None):
-        outputs = self.gpt2(input_ids, attention_mask=attention_mask)
-        return outputs.last_hidden_state
