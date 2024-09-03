@@ -43,7 +43,14 @@ def test_gpt2arc_output_values(model):
     
     assert not torch.isnan(output).any(), "Output contains NaN values"
 def test_gpt2arc_forward_pass(model):
-
+    batch_size = 2
+    seq_length = 10
+    input_ids = torch.randint(0, 1000, (batch_size, seq_length))
+    attention_mask = torch.ones((batch_size, seq_length))
+    
+    output_with_mask = model(input_ids, attention_mask)
+    output_without_mask = model(input_ids)
+    
     logger.debug(f"Difference between outputs: {(output_with_mask - output_without_mask).abs().mean()}")
 
 def test_attention_module():
