@@ -3,7 +3,7 @@
 import os
 import json
 import logging
-from typing import Dict, List, Tuple
+from typing import Union, List, Dict
 
 import numpy as np
 import torch
@@ -15,12 +15,20 @@ logger = logging.getLogger(__name__)
 
 
 class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
-    def __init__(self, file_path: str, max_grid_size: Tuple[int, int] = (30, 30), num_symbols: int = 10):
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File not found: {file_path}")
+    def __init__(self, data_source: Union[str, List[Dict]], max_grid_size: Tuple[int, int] = (30, 30), num_symbols: int = 10):
+        logger.debug(f"Initializing ArcDataset with data_source type: {type(data_source)}")
         
-        with open(file_path, 'r') as f:
-            self.data = json.load(f)
+        if isinstance(data_source, str):
+            logger.debug(f"Loading data from file: {data_source}")
+            if not os.path.exists(data_source):
+                raise FileNotFoundError(f"File not found: {data_source}")
+            with open(data_source, 'r') as f:
+                self.data = json.load(f)
+        elif isinstance(data_source, list):
+            logger.debug("Using provided list data directly")
+            self.data = data_source
+        else:
+            raise ValueError("data_source must be either a file path (str) or a list of dictionaries")
         self.max_grid_size = max_grid_size
         self.num_symbols = num_symbols
         self._validate_data()
