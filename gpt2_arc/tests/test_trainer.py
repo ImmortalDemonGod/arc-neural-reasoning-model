@@ -63,14 +63,23 @@ def test_arctrainer_training_step(trainer, batch_format):
     assert not torch.isnan(loss).any(), "Loss contains NaN values"
     assert not torch.isinf(loss).any(), "Loss contains infinity values"
 
-def test_arctrainer_validation_step(trainer):
+@pytest.mark.parametrize("batch_format", ["tuple", "dict"])
+def test_arctrainer_validation_step(trainer, batch_format):
     batch_size = 2
     seq_length = 900  # 30x30 grid
-    input_ids = torch.randint(0, 2, (batch_size, seq_length))
-    attention_mask = torch.ones((batch_size, seq_length))
-    labels = torch.randint(0, 2, (batch_size, seq_length))
-    
-    batch = (input_ids, attention_mask, labels)
+    vocab_size = 10  # Use a small vocab size for testing
+    if batch_format == "tuple":
+        batch = (
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            torch.ones((batch_size, seq_length)).float(),
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long()
+        )
+    else:
+        batch = {
+            'input_ids': torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            'attention_mask': torch.ones((batch_size, seq_length)).float(),
+            'labels': torch.randint(0, vocab_size, (batch_size, seq_length)).long()
+        }
     trainer.validation_step(batch, 0)
     
     # Check if val_loss is logged
