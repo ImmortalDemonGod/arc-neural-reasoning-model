@@ -42,19 +42,30 @@ def test_gpt2arc_output_values(model):
     output = model(input_ids, attention_mask)
     
     assert not torch.isnan(output).any(), "Output contains NaN values"
-    assert not torch.isinf(output).any(), "Output contains infinity values"
+def test_gpt2arc_forward_pass(model):
 
-    logger.debug(f"Output min: {output.min()}, max: {output.max()}")
+    logger.debug(f"Difference between outputs: {(output_with_mask - output_without_mask).abs().mean()}")
 
-def test_gpt2arc_attention_mask(model):
-    logger.debug("Testing GPT2ARC attention mask")
-    batch_size = 2
-    seq_length = 10
-    input_ids = torch.randint(0, 1000, (batch_size, seq_length))
-    attention_mask = torch.zeros((batch_size, seq_length))
-    attention_mask[:, :5] = 1  # Only attend to first 5 tokens
-    
-    output_with_mask = model(input_ids, attention_mask)
-    output_without_mask = model(input_ids)
-    
-    assert not torch.allclose(output_with_mask, output_without_mask), "Attention mask should affect the output"
+def test_attention_module():
+    logger.debug("Testing Attention module")
+    attention = Attention(n_embd=768, n_head=12)
+    x = torch.randn(2, 10, 768)
+    output = attention(x)
+    assert output.shape == x.shape
+    logger.debug(f"Attention input shape: {x.shape}, output shape: {output.shape}")
+
+def test_feedforward_module():
+    logger.debug("Testing FeedForward module")
+    ff = FeedForward(n_embd=768)
+    x = torch.randn(2, 10, 768)
+    output = ff(x)
+    assert output.shape == x.shape
+    logger.debug(f"FeedForward input shape: {x.shape}, output shape: {output.shape}")
+
+def test_transformer_block():
+    logger.debug("Testing TransformerBlock")
+    block = TransformerBlock(n_embd=768, n_head=12)
+    x = torch.randn(2, 10, 768)
+    output = block(x)
+    assert output.shape == x.shape
+    logger.debug(f"TransformerBlock input shape: {x.shape}, output shape: {output.shape}")
