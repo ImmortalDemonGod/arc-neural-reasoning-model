@@ -85,7 +85,24 @@ def test_gpt2arc_attention_mask(model):
 
 # New tests for train.py
 
-def test_main_execution(mock_args, mock_dataset, model, mock_trainer, mock_pl_trainer):
+def test_logging_and_checkpointing(mock_args, mock_dataset, model, mock_trainer, mock_pl_trainer):
+    with patch('gpt2_arc.src.training.train.ArcDataset', return_value=mock_dataset), \
+         patch('gpt2_arc.src.training.train.GPT2ARC', return_value=model), \
+         patch('gpt2_arc.src.training.train.ARCTrainer', return_value=mock_trainer), \
+         patch('gpt2_arc.src.training.train.pl.Trainer', return_value=mock_pl_trainer), \
+         patch('gpt2_arc.src.training.train.TensorBoardLogger') as mock_logger, \
+         patch('gpt2_arc.src.training.train.ModelCheckpoint') as mock_checkpoint:
+        
+        main(mock_args)
+        
+        mock_logger.assert_called_once_with("tb_logs", name="arc_model")
+        mock_checkpoint.assert_called_once_with(
+            dirpath="checkpoints",
+            filename="arc_model-{epoch:02d}-{val_loss:.2f}",
+            save_top_k=3,
+            monitor="val_loss",
+            mode="min"
+        )
     with patch('gpt2_arc.src.training.train.ArcDataset', return_value=mock_dataset), \
          patch('gpt2_arc.src.training.train.GPT2ARC', return_value=model), \
          patch('gpt2_arc.src.training.train.ARCTrainer', return_value=mock_trainer), \
