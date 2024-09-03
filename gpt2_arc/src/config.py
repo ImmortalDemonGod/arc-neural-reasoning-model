@@ -15,7 +15,9 @@ class TrainingConfig:
     max_epochs: int = 10
     use_gpu: bool = True
 
+from dataclasses import field
+
 @dataclass
 class Config:
-    model: ModelConfig = ModelConfig()
-    training: TrainingConfig = TrainingConfig()
+    model: ModelConfig = field(default_factory=ModelConfig)
+    training: TrainingConfig = field(default_factory=TrainingConfig)
