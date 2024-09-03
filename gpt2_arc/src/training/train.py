@@ -8,6 +8,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from src.data.arc_dataset import ArcDataset
 from src.models.gpt2 import GPT2ARC
+from src.config import Config
 from src.training.trainer import ARCTrainer
 
 

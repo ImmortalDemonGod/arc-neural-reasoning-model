@@ -2,6 +2,7 @@
 import pytorch_lightning as pl
 import torch
 from torch import nn, optim
+from typing import Any
 from torch.utils.data import DataLoader
 
 from src.config import Config
