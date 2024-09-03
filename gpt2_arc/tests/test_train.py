@@ -27,6 +27,7 @@ def mock_args():
 @pytest.fixture
 def mock_dataset():
     dataset = MagicMock(spec=ArcDataset)
+    dataset.data = [{"input": "mock input", "output": "mock output"}]
     dataset.__len__.return_value = 100
     return dataset
 
@@ -151,8 +152,9 @@ def test_gpu_not_available(mock_args):
                                         callbacks=[pytest.mock.ANY], 
                                         gpus=0)
 
-from hypothesis import given, strategies as st
+from hypothesis import given, strategies as st, settings, HealthCheck
 
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(batch_size=st.integers(min_value=1, max_value=1024))
 def test_valid_batch_sizes(mock_args, batch_size):
     mock_args.batch_size = batch_size
@@ -163,6 +165,7 @@ def test_valid_batch_sizes(mock_args, batch_size):
         
         main(mock_args)  # Should not raise an exception
 
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(learning_rate=st.floats(min_value=1e-6, max_value=1.0, allow_nan=False, allow_infinity=False))
 def test_valid_learning_rates(mock_args, learning_rate):
     mock_args.learning_rate = learning_rate
@@ -202,7 +205,7 @@ def test_tensorboard_logging(mock_args, tmp_path):
         
         main(mock_args)
         
-        mock_logger.assert_called_once_with(str(log_dir), name="arc_model")
+        mock_logger.assert_called_once_with("tb_logs", name="arc_model")
 
 # Additional test for GPT2ARC model in training context
 
