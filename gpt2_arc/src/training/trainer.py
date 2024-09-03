@@ -1,11 +1,7 @@
 # gpt2_arc/src/training/trainer.py
 import pytorch_lightning as pl
-from torch import nn
-from torch.utils.data import DataLoader
-from transformers import AdamW
-
-
 import pytorch_lightning as pl
+import torch
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -19,6 +15,7 @@ class ARCTrainer(pl.LightningModule):
         self.val_dataset = val_dataset
         self.batch_size = batch_size
         self.lr = lr
+        self.logged_metrics = {}  # Initialize logged_metrics to store metrics
 
     def training_step(self, batch, batch_idx):
         input_ids, attention_mask, labels = batch
@@ -34,13 +31,19 @@ class ARCTrainer(pl.LightningModule):
         self.log("val_loss", loss)
 
     def configure_optimizers(self):
-        return AdamW(self.parameters(), lr=self.lr)
+        return torch.optim.AdamW(self.parameters(), lr=self.lr)
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size)
+
+    def compute_loss(self, outputs, labels):
+        return nn.CrossEntropyLoss()(outputs.view(-1, outputs.size(-1)), labels.view(-1))
+
+    def forward(self, input_ids, attention_mask=None):
+        return self.model(input_ids, attention_mask)
 
     def compute_loss(self, outputs, labels):
         return nn.CrossEntropyLoss()(outputs.view(-1, outputs.size(-1)), labels.view(-1))

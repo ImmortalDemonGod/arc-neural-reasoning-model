@@ -68,7 +68,7 @@ def test_arctrainer_validation_step(trainer):
 
 def test_arctrainer_configure_optimizers(trainer):
     optimizer = trainer.configure_optimizers()
-    assert isinstance(optimizer, torch.optim.AdamW)
+    assert isinstance(optimizer, torch.optim.AdamW)  # Use torch.optim.AdamW
 
 def test_arctrainer_train_dataloader(trainer):
     dataloader = trainer.train_dataloader()
