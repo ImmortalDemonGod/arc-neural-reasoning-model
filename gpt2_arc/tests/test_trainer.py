@@ -39,15 +39,23 @@ def test_arctrainer_forward_pass(trainer):
     assert isinstance(output, torch.Tensor)
     assert output.shape == (batch_size, seq_length, trainer.model.config.n_embd)
 
-def test_arctrainer_training_step(trainer):
+@pytest.mark.parametrize("batch_format", ["tuple", "dict"])
+def test_arctrainer_training_step(trainer, batch_format):
     batch_size = 2
     seq_length = 900  # 30x30 grid
     vocab_size = 10  # Use a small vocab size for testing
-    batch = {
-        'input_ids': torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
-        'attention_mask': torch.ones((batch_size, seq_length)).float(),
-        'labels': torch.randint(0, vocab_size, (batch_size, seq_length)).long()
-    }
+    if batch_format == "tuple":
+        batch = (
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            torch.ones((batch_size, seq_length)).float(),
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long()
+        )
+    else:
+        batch = {
+            'input_ids': torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            'attention_mask': torch.ones((batch_size, seq_length)).float(),
+            'labels': torch.randint(0, vocab_size, (batch_size, seq_length)).long()
+        }
     loss = trainer.training_step(batch, 0)
     
     assert isinstance(loss, torch.Tensor)
