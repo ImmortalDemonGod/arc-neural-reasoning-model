@@ -204,7 +204,7 @@ def test_gpu_not_available(mock_args):
     ), patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer:
         main(mock_args)
         mock_trainer.assert_called_with(
-            max_epochs=mock_args.max_epochs, logger=ANY, callbacks=[ANY], gpus=0
+            max_epochs=mock_args.max_epochs, logger=ANY, callbacks=[ANY], accelerator='cpu'
         )
 
 
