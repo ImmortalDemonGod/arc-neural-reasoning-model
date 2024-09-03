@@ -4,7 +4,19 @@ import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
-from src.data.arc_dataset import ArcDataset
+@pytest.fixture
+def sample_data():
+    return [
+        {'input': [[1, 0], [0, 1]], 'output': [[0, 1], [1, 0]]},
+        {'input': [[0, 1], [1, 0]], 'output': [[1, 0], [0, 1]]},
+    ]
+
+@pytest.fixture
+def trainer(model, sample_data):
+    logger.debug("Creating ArcDataset instances for trainer fixture")
+    train_dataset = ArcDataset(sample_data)
+    val_dataset = ArcDataset(sample_data)
+    return ARCTrainer(model, train_dataset, val_dataset)
 from src.models.gpt2 import GPT2ARC
 from src.training.trainer import ARCTrainer
 

@@ -1,3 +1,4 @@
+# gpt2_arc/tests/test_trainer.py
 import pytest
 import torch
 from src.models.gpt2 import GPT2ARC
