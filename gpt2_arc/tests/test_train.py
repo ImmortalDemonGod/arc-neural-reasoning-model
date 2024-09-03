@@ -128,12 +128,12 @@ def test_data_loading(mock_args):
         mock_init.assert_called_once_with(mock_args.train_data)
 
 def test_trainer_initialization(model, mock_dataset):
+    config = Config(model=ModelConfig(), training=TrainingConfig())
     trainer = ARCTrainer(
         model=model,
         train_dataset=mock_dataset,
         val_dataset=mock_dataset,
-        batch_size=32,
-        lr=1e-4
+        config=config
     )
     assert isinstance(trainer, ARCTrainer)
     assert trainer.model == model
@@ -239,12 +239,12 @@ def test_tensorboard_logging(mock_args, tmp_path):
 # Additional test for GPT2ARC model in training context
 
 def test_gpt2arc_in_training_loop(model, mock_dataset):
+    config = Config(model=ModelConfig(), training=TrainingConfig())
     trainer = ARCTrainer(
         model=model,
         train_dataset=mock_dataset,
         val_dataset=mock_dataset,
-        batch_size=2,
-        lr=1e-4
+        config=config
     )
     
     # Simulate a single training step

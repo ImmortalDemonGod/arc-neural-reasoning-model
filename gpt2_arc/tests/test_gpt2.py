@@ -2,6 +2,7 @@
 import pytest
 import torch
 from src.models.gpt2 import GPT2ARC, Attention, FeedForward, TransformerBlock
+from src.config import ModelConfig
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -9,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def model():
-    return GPT2ARC()
+    config = ModelConfig()
+    return GPT2ARC(config)
 
 def test_gpt2arc_initialization(model):
     assert isinstance(model, GPT2ARC)

@@ -2,6 +2,7 @@
 import pytest
 import torch
 from src.models.gpt2 import GPT2ARC
+from src.config import ModelConfig
 from src.training.trainer import ARCTrainer
 from src.data.arc_dataset import ArcDataset
 
@@ -16,7 +17,8 @@ def sample_data():
 
 @pytest.fixture
 def model():
-    return GPT2ARC()
+    config = ModelConfig()
+    return GPT2ARC(config)
 
 @pytest.fixture
 def trainer(model, sample_data):
