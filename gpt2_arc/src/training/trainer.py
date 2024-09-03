@@ -15,7 +15,14 @@ class ARCTrainer(pl.LightningModule):
         self.logged_metrics = {}  # Initialize logged_metrics to store metrics
 
     def training_step(self, batch, batch_idx):
-        input_ids, attention_mask, labels = batch['input_ids'], batch['attention_mask'], batch['labels']
+        if isinstance(batch, tuple):
+            input_ids, attention_mask, labels = batch
+        elif isinstance(batch, dict):
+            input_ids = batch['input_ids']
+            attention_mask = batch['attention_mask']
+            labels = batch['labels']
+        else:
+            raise ValueError("Batch must be either a tuple or a dictionary")
         
         # Ensure tensors
         input_ids = input_ids.long() if not isinstance(input_ids, torch.LongTensor) else input_ids

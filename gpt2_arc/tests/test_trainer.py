@@ -42,11 +42,12 @@ def test_arctrainer_forward_pass(trainer):
 def test_arctrainer_training_step(trainer):
     batch_size = 2
     seq_length = 900  # 30x30 grid
-    input_ids = torch.randint(0, 2, (batch_size, seq_length))
-    attention_mask = torch.ones((batch_size, seq_length))
-    labels = torch.randint(0, 2, (batch_size, seq_length))
-    
-    batch = (input_ids, attention_mask, labels)
+    vocab_size = 10  # Use a small vocab size for testing
+    batch = {
+        'input_ids': torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        'attention_mask': torch.ones((batch_size, seq_length)).float(),
+        'labels': torch.randint(0, vocab_size, (batch_size, seq_length)).long()
+    }
     loss = trainer.training_step(batch, 0)
     
     assert isinstance(loss, torch.Tensor)

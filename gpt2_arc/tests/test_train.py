@@ -223,11 +223,12 @@ def test_gpt2arc_in_training_loop(model, mock_dataset):
     )
     
     # Simulate a single training step
-    vocab_size = model.config.vocab_size
+    vocab_size = 10  # Use a small vocab size for testing
+    seq_length = 10
     batch = {
-        'input_ids': torch.randint(0, vocab_size, (2, 10)).long(),
-        'attention_mask': torch.ones((2, 10)).float(),
-        'labels': torch.randint(0, vocab_size, (2, 10)).long()
+        'input_ids': torch.randint(0, vocab_size, (2, seq_length)).long(),
+        'attention_mask': torch.ones((2, seq_length)).float(),
+        'labels': torch.randint(0, vocab_size, (2, seq_length)).long()
     }
     
     loss = trainer.training_step(batch, 0)
