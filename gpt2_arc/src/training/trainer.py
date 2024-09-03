@@ -18,6 +18,7 @@ class ARCTrainer(pl.LightningModule):
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.batch_size = batch_size
+        self.lr = lr
 
     def training_step(self, batch, batch_idx):
         input_ids, attention_mask, labels = batch
@@ -43,7 +44,6 @@ class ARCTrainer(pl.LightningModule):
 
     def compute_loss(self, outputs, labels):
         return nn.CrossEntropyLoss()(outputs.view(-1, outputs.size(-1)), labels.view(-1))
-        self.lr = lr
 
     def forward(self, input_ids, attention_mask=None):
         return self.model(input_ids, attention_mask)
