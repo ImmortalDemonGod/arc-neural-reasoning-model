@@ -18,9 +18,10 @@ def model():
 
 @pytest.fixture
 def trainer(model, sample_data):
+    config = Config(model=ModelConfig(), training=TrainingConfig())
     train_dataset = ArcDataset(sample_data)
     val_dataset = ArcDataset(sample_data)
-    return ARCTrainer(model, train_dataset, val_dataset)
+    return ARCTrainer(model, train_dataset, val_dataset, config)
 
 def test_arctrainer_initialization(trainer):
     assert isinstance(trainer, ARCTrainer)
@@ -37,7 +38,7 @@ def test_arctrainer_forward_pass(trainer):
     output = trainer(input_ids, attention_mask)
     
     assert isinstance(output, torch.Tensor)
-    assert output.shape == (batch_size, seq_length, trainer.model.config.n_embd)
+    assert output.shape == (batch_size, seq_length, trainer.model.config['n_embd'])
 
 @pytest.mark.parametrize("batch_format", ["tuple", "dict"])
 def test_arctrainer_training_step(trainer, batch_format):

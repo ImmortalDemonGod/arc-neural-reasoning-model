@@ -68,14 +68,21 @@ class TransformerBlock(nn.Module):
         logger.debug(f"TransformerBlock output shape: {x.shape}")
         return x
 
+from src.config import ModelConfig
+
 class GPT2ARC(nn.Module):
-    def __init__(self, vocab_size=50257, n_embd=768, n_head=12, n_layer=12):
+    def __init__(self, config: ModelConfig):
         super().__init__()
-        self.token_embedding = nn.Embedding(vocab_size, n_embd)
-        self.position_embedding = nn.Embedding(1024, n_embd)
-        self.blocks = nn.ModuleList([TransformerBlock(n_embd, n_head) for _ in range(n_layer)])
-        self.ln_f = nn.LayerNorm(n_embd)
-        self.config = {"n_embd": n_embd, "n_head": n_head, "n_layer": n_layer}
+        self.token_embedding = nn.Embedding(50257, config.n_embd)
+        self.position_embedding = nn.Embedding(1024, config.n_embd)
+        self.blocks = nn.ModuleList([TransformerBlock(config.n_embd, config.n_head) for _ in range(config.n_layer)])
+        self.ln_f = nn.LayerNorm(config.n_embd)
+        self.config = {
+            "n_embd": config.n_embd,
+            "n_head": config.n_head,
+            "n_layer": config.n_layer,
+            "dropout": config.dropout
+        }
         logger.debug(f"Initialized GPT2ARC with vocab_size={vocab_size}, n_embd={n_embd}, n_head={n_head}, n_layer={n_layer}")
 
     def forward(self, input_ids, attention_mask=None):

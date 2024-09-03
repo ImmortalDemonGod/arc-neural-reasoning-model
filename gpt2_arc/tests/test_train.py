@@ -36,9 +36,12 @@ def mock_dataset():
     dataset.__len__.return_value = 100
     return dataset
 
+from src.config import Config, ModelConfig, TrainingConfig
+
 @pytest.fixture
 def model():
-    return GPT2ARC()
+    config = Config(model=ModelConfig(), training=TrainingConfig())
+    return GPT2ARC(config.model)
 
 @pytest.fixture
 def mock_trainer():
@@ -52,7 +55,10 @@ def mock_pl_trainer():
 
 def test_gpt2arc_initialization(model):
     assert isinstance(model, GPT2ARC)
-    assert hasattr(model, 'gpt2')
+    assert hasattr(model, 'token_embedding')
+    assert hasattr(model, 'position_embedding')
+    assert hasattr(model, 'blocks')
+    assert hasattr(model, 'ln_f')
     assert hasattr(model, 'config')
 
 def test_gpt2arc_forward_pass(model):
@@ -62,7 +68,7 @@ def test_gpt2arc_forward_pass(model):
     attention_mask = torch.ones((batch_size, seq_length))
     output = model(input_ids, attention_mask)
     assert isinstance(output, torch.Tensor)
-    assert output.shape == (batch_size, seq_length, model.config.n_embd)
+    assert output.shape == (batch_size, seq_length, model.config['n_embd'])
 
 def test_gpt2arc_output_values(model):
     batch_size = 1

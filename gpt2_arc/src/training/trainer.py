@@ -4,14 +4,17 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
+from src.config import Config
+
 class ARCTrainer(pl.LightningModule):
-    def __init__(self, model, train_dataset, val_dataset, batch_size=32, lr=1e-4):
-        super(ARCTrainer, self).__init__()
+    def __init__(self, model, train_dataset, val_dataset, config: Config):
+        super().__init__()
         self.model = model
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
-        self.batch_size = batch_size
-        self.lr = lr
+        self.config = config
+        self.batch_size = config.training.batch_size
+        self.lr = config.training.learning_rate
         self.logged_metrics = {}  # Initialize logged_metrics to store metrics
 
     def training_step(self, batch, batch_idx):
