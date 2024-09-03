@@ -28,7 +28,7 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("val_loss", loss)
-        self.logged_metrics['val_loss'] = loss.item()  # Add this line
+        self.logged_metrics['val_loss'] = loss.item()  # Manually add to logged_metrics
 
     def configure_optimizers(self):
         return torch.optim.AdamW(self.parameters(), lr=self.lr)
