@@ -85,7 +85,7 @@ def test_gpt2arc_attention_mask(model):
 
 # New tests for train.py
 
-def test_logging_and_checkpointing(mock_args, mock_dataset, model, mock_trainer, mock_pl_trainer):
+def test_logging(mock_args, mock_dataset, model, mock_trainer, mock_pl_trainer):
     with patch('gpt2_arc.src.training.train.ArcDataset', return_value=mock_dataset), \
          patch('gpt2_arc.src.training.train.GPT2ARC', return_value=model), \
          patch('gpt2_arc.src.training.train.ARCTrainer', return_value=mock_trainer), \
@@ -103,6 +103,8 @@ def test_logging_and_checkpointing(mock_args, mock_dataset, model, mock_trainer,
             monitor="val_loss",
             mode="min"
         )
+
+def test_fit_call(mock_args, mock_dataset, model, mock_trainer, mock_pl_trainer):
     with patch('gpt2_arc.src.training.train.ArcDataset', return_value=mock_dataset), \
          patch('gpt2_arc.src.training.train.GPT2ARC', return_value=model), \
          patch('gpt2_arc.src.training.train.ARCTrainer', return_value=mock_trainer), \
