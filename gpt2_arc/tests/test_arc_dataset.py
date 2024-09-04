@@ -125,7 +125,7 @@ def test_arc_dataset_invalid_data(sample_data):
         ARCDataset(invalid_data)
 
 def test_arc_dataset_preprocess_grid(sample_data):
-    dataset = ARCDataset(sample_data, max_grid_size=(5, 5), num_symbols=3)
+    dataset = ARCDataset(sample_data, num_symbols=3)
     input_grid, output_grid = dataset[0]
 
     assert input_grid.shape == (3, 5, 5), "Preprocessed grid should have shape (3, 5, 5)"

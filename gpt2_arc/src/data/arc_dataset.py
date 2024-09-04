@@ -28,7 +28,7 @@ class ARCDataset(Dataset):
         self.is_test = is_test
         self.num_symbols = num_symbols
         self.test_split = test_split
-        self.data = self._process_data(data_source)
+        self.data = self._process_list_data(data_source)
         self.max_grid_size = self._compute_max_grid_size()
 
     def _compute_max_grid_size(self):
