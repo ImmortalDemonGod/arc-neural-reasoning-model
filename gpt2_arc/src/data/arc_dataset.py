@@ -41,7 +41,10 @@ class ARCDataset(Dataset):
             self.data = self._process_list_data(data_source)
         elif isinstance(data_source, tuple):
             self.data = self._combine_data(*data_source)
+        elif TaskSet is not None and isinstance(data_source, TaskSet):
+            self.data = self._process_arckit_data(data_source)
         else:
+            logger.error(f"Invalid data_source type: {type(data_source)}")
             raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
         
         self.max_grid_size = self._compute_max_grid_size()

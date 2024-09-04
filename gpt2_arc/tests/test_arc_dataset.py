@@ -88,8 +88,14 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     
     logger.debug(f"Mock TaskSet: {mock_taskset}")
     logger.debug(f"Mock TaskSet attributes: {dir(mock_taskset)}")
+    logger.debug(f"Mock TaskSet type: {type(mock_taskset)}")
+    logger.debug(f"Is instance of TaskSet: {isinstance(mock_taskset, TaskSet)}")
     
-    dataset = ARCDataset(mock_taskset)
+    try:
+        dataset = ARCDataset(mock_taskset)
+    except Exception as e:
+        logger.error(f"Error initializing ARCDataset: {str(e)}")
+        raise
     
     logger.debug(f"Dataset length: {len(dataset)}")
     
