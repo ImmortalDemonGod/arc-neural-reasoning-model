@@ -5,6 +5,7 @@ import pytest
 import torch
 from src.data.arc_dataset import ArcDataset
 from unittest.mock import Mock
+from arckit.data import TaskSet
 
 
 @pytest.fixture
