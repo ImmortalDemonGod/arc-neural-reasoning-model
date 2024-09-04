@@ -90,7 +90,7 @@ def test_arc_dataset_len(sample_data):
 
 def test_arc_dataset_invalid_data(sample_data):
     invalid_data = [{"input": [1, 0], "output": [[0, 1], [1, 0]]}]
-    with pytest.raises(ValueError, match="is not a 2D list"):
+    with pytest.raises(ValueError, match="must be 2D lists"):
         ArcDataset(invalid_data)
 
     invalid_data = [{"input": [[1, 0], [0, 1]], "output": "not a list"}]
