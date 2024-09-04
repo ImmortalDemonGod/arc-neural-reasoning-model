@@ -165,8 +165,8 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     input_grid, output_grid = dataset[0]
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
-    assert input_grid.shape == (30, 30, 10), "Input grid should have shape (30, 30, 10)"
-    assert output_grid.shape == (30, 30, 10), "Output grid should have shape (30, 30, 10)"
+    assert input_grid.shape == (10, 2, 2), "Input grid should have shape (10, 2, 2)"
+    assert output_grid.shape == (10, 2, 2), "Output grid should have shape (10, 2, 2)"
 
 from torch.utils.data import DataLoader
 
