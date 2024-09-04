@@ -75,10 +75,11 @@ def test_arc_dataset_getitem(sample_data):
     assert torch.all(
         output_grid[0, 0] == torch.tensor([1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     ), "Output grid values are incorrect"
+
+
+def test_arc_dataset_len(sample_data):
     dataset = ArcDataset(sample_data)
-    assert len(dataset) == len(
-        sample_data
-    ), "Dataset length should match input data length"
+    assert len(dataset) == len(sample_data), "Dataset length should match input data length"
 
 
 def test_arc_dataset_invalid_data(sample_data):
