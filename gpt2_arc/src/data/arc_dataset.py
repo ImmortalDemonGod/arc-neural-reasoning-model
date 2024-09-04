@@ -191,6 +191,9 @@ class ARCDataset(Dataset):
         # One-hot encode the padded grid
         one_hot_grid = np.eye(self.num_symbols)[padded_grid]
 
+        # Ensure the output shape is correct
+        one_hot_grid = one_hot_grid.transpose(2, 0, 1)  # Change to (channels, height, width)
+
         return torch.tensor(one_hot_grid, dtype=torch.float32)
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
         processed_data = []
