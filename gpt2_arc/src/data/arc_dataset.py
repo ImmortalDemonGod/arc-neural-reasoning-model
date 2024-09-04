@@ -28,7 +28,22 @@ class ARCDataset(Dataset):
         self.is_test = is_test
         self.num_symbols = num_symbols
         self.test_split = test_split
-        self.data = self._process_list_data(data_source)
+        
+        if isinstance(data_source, str):
+            if os.path.isdir(data_source):
+                self.data = self._process_synthetic_data(data_source)
+            elif os.path.isfile(data_source):
+                with open(data_source, 'r') as f:
+                    self.data = json.load(f)
+            else:
+                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
+        elif isinstance(data_source, list):
+            self.data = self._process_list_data(data_source)
+        elif isinstance(data_source, tuple):
+            self.data = self._combine_data(*data_source)
+        else:
+            raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
+        
         self.max_grid_size = self._compute_max_grid_size()
 
     def _compute_max_grid_size(self):
@@ -46,15 +61,7 @@ class ARCDataset(Dataset):
         synthetic_processed = self._process_synthetic_data(synthetic_data_path)
         return official_processed + synthetic_processed
 
-    def _process_synthetic_data(self, data_source: Union[str, Dict]) -> List[Dict]:
-        if isinstance(data_source, str):
-            return self._load_synthetic_data_from_directory(data_source)
-        elif isinstance(data_source, dict):
-            return [self._process_single_task(data_source)]
-        else:
-            raise ValueError("Synthetic data must be either a directory path or a dictionary")
-
-    def _load_synthetic_data_from_directory(self, directory: str) -> List[Dict]:
+    def _process_synthetic_data(self, directory: str) -> List[Dict]:
         processed_data = []
         for filename in os.listdir(directory):
             if filename.endswith('.json'):
