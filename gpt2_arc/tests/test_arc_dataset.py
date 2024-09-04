@@ -34,7 +34,7 @@ def mock_taskset():
     return mock_taskset
 
 def test_arc_dataset_initialization(sample_data):
-    dataset = ArcDataset(sample_data)
+    dataset = ARCDataset(sample_data)
     assert len(dataset) == 2, "Dataset should have 2 samples"
     input_grid, output_grid = dataset[0]
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
