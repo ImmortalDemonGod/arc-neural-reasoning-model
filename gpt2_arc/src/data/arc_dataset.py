@@ -5,6 +5,7 @@ import random
 from typing import Union, List, Dict, Tuple
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset
 import logging
 
