@@ -24,6 +24,14 @@ class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
         max_grid_size: Tuple[int, int] = (30, 30),
         num_symbols: int = 10,
     ):
+        """
+        Initialize the ArcDataset.
+
+        Args:
+            data_source: Can be a file path (str), a list of dictionaries, or an arckit TaskSet.
+            max_grid_size: Maximum size of the grid (height, width).
+            num_symbols: Number of unique symbols in the grid.
+        """
         logger.debug(f"Initializing ArcDataset with data_source type: {type(data_source)}")
         
         self.max_grid_size = max_grid_size
