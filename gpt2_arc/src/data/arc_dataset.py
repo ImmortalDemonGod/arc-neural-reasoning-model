@@ -9,6 +9,11 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+try:
+    from arckit.data import TaskSet
+except ImportError:
+    TaskSet = None
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -16,7 +21,7 @@ logger = logging.getLogger(__name__)
 class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
     def __init__(
         self,
-        data_source: Union[str, List[Dict]],
+        data_source: Union[str, List[Dict], 'TaskSet'],
         max_grid_size: Tuple[int, int] = (30, 30),
         num_symbols: int = 10,
     ):
@@ -33,16 +38,31 @@ class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
         elif isinstance(data_source, list):
             logger.debug("Using provided list data directly")
             self.data = data_source
-        else:
+        elif TaskSet is not None and isinstance(data_source, TaskSet):
+            logger.debug("Processing arckit TaskSet")
+            self.data = self._process_taskset(data_source)
             raise ValueError(
-                "data_source must be either a file path (str) or a list of dictionaries"
+                "data_source must be either a file path (str), a list of dictionaries, or an arckit TaskSet"
             )
         self.max_grid_size = max_grid_size
         self.num_symbols = num_symbols
         self._validate_data()
         logger.info(f"Initialized ArcDataset with {len(self.data)} samples")
 
-    def __len__(self) -> int:
+    def _process_taskset(self, taskset: 'TaskSet') -> List[Dict]:
+        processed_data = []
+        for task in taskset.tasks:
+            for train_example in task.train:
+                processed_data.append({
+                    "input": train_example[0].tolist(),
+                    "output": train_example[1].tolist()
+                })
+            for test_example in task.test:
+                processed_data.append({
+                    "input": test_example[0].tolist(),
+                    "output": test_example[1].tolist()
+                })
+        return processed_data
         return len(self.data)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:

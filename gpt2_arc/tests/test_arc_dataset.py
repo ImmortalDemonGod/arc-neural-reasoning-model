@@ -3,6 +3,7 @@
 import pytest
 import torch
 from src.data.arc_dataset import ArcDataset
+from unittest.mock import Mock
 
 
 @pytest.fixture
@@ -13,7 +14,30 @@ def sample_data():
     ]
 
 
-def test_arc_dataset_initialization(sample_data):
+@pytest.fixture
+def mock_taskset():
+    mock_task = Mock()
+    mock_task.train = [
+        (np.array([[1, 0], [0, 1]]), np.array([[0, 1], [1, 0]])),
+        (np.array([[0, 1], [1, 0]]), np.array([[1, 0], [0, 1]]))
+    ]
+    mock_task.test = [
+        (np.array([[1, 1], [0, 0]]), np.array([[0, 0], [1, 1]]))
+    ]
+    
+    mock_taskset = Mock()
+    mock_taskset.tasks = [mock_task]
+    return mock_taskset
+
+def test_arc_dataset_taskset_initialization(mock_taskset):
+    dataset = ArcDataset(mock_taskset)
+    assert len(dataset) == 3, "Dataset should have 3 samples (2 train + 1 test)"
+    
+    input_grid, output_grid = dataset[0]
+    assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
+    assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
+    assert input_grid.shape == (30, 30, 10), "Input grid should have shape (30, 30, 10)"
+    assert output_grid.shape == (30, 30, 10), "Output grid should have shape (30, 30, 10)"
     dataset = ArcDataset(sample_data)
     assert len(dataset) == 2, "Dataset should have 2 samples"
 
