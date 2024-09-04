@@ -45,6 +45,16 @@ class ARCDataset(Dataset):
             raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
         
         self.max_grid_size = self._compute_max_grid_size()
+        self._validate_data()
+
+    def _validate_data(self):
+        for task in self.data:
+            for split in ["train", "test"]:
+                if split in task:
+                    for sample in task[split]:
+                        if not ("input" in sample and "output" in sample):
+                            raise ValueError(f"Each sample must contain 'input' and 'output'. Task: {task.get('id', 'unknown')}")
+        print("Data validation passed.")
 
     def _compute_max_grid_size(self):
         max_h, max_w = 0, 0
@@ -117,6 +127,10 @@ class ARCDataset(Dataset):
         return sum(len(task['train']) + len(task['test']) for task in self.data)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        total_samples = sum(len(task["train" if not self.is_test else "test"]) for task in self.data)
+        if idx >= total_samples:
+            raise IndexError(f"Index {idx} out of range for dataset with {total_samples} samples.")
+        
         for task in self.data:
             split = "test" if self.is_test else "train"
             if idx < len(task[split]):
@@ -125,6 +139,8 @@ class ARCDataset(Dataset):
                 output_grid = self._preprocess_grid(sample["output"])
                 return input_grid, output_grid
             idx -= len(task[split])
+        
+        # This line should never be reached due to the initial check
         raise IndexError("Index out of range")
 
     def _validate_data(self):

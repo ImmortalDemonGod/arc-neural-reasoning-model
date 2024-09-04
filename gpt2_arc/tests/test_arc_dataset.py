@@ -52,14 +52,23 @@ def test_arc_dataset_synthetic_data():
 
     assert len(dataset) > 0, "Synthetic dataset should not be empty"
     print(f"Loaded {len(dataset)} synthetic tasks")
+    print(f"Total dataset length: {len(dataset)}")
+    for task in dataset.data:
+        print(f"Task ID: {task.get('id', 'unknown')} - Train samples: {len(task.get('train', []))}, Test samples: {len(task.get('test', []))}")
+
+    if len(dataset) == 0:
+        pytest.skip("Dataset is empty; skipping random sample tests.")
 
     # Test a few random samples
     for i in range(3):
         idx = random.randint(0, len(dataset) - 1)
-        input_grid, output_grid = dataset[idx]
-        print(f"\nSample {i + 1}:")
-        print(f"Input grid shape: {input_grid.shape}")
-        print(f"Output grid shape: {output_grid.shape}")
+        try:
+            input_grid, output_grid = dataset[idx]
+            print(f"\nSample {i + 1}:")
+            print(f"Input grid shape: {input_grid.shape}")
+            print(f"Output grid shape: {output_grid.shape}")
+        except IndexError as e:
+            pytest.fail(f"Generated index {idx} out of range for dataset size {len(dataset)}: {str(e)}")
 
     # Verify grid sizes
     max_h, max_w = dataset.max_grid_size
