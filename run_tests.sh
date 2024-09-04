@@ -8,7 +8,6 @@ mkdir -p $TMP_DIR
 
 # Remove old output files in the tmp directory
 rm -rf $TMP_DIR/compressed_output.txt $TMP_DIR/uncompressed_output.txt $TMP_DIR/test_output.log
-rm -rf /workspaces/arc-neural-reasoning-model/tmp/*.txt
 
 # Correct path to the Python script
 PYTHON_SCRIPT="./tmp/1filellm/onefilellm.py"
@@ -28,9 +27,12 @@ pytest -s -v --log-cli-level=ERROR > $TMP_DIR/test_output.log 2>&1
 # Check if xclip is installed
 if ! command -v xclip &> /dev/null
 then
-    echo "xclip could not be found, please install it to copy to clipboard"
+    echo "xclip could not be found. Please install it using your package manager (e.g., sudo apt install xclip) to enable clipboard functionality."
     exit 1
 fi
+
+# Create an empty compressed_output.txt if it doesn't exist
+touch $TMP_DIR/compressed_output.txt
 
 # Copy the new compressed_output.txt and pytest results to clipboard
 cat $TMP_DIR/compressed_output.txt | xclip -selection clipboard
