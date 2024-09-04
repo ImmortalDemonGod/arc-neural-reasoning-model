@@ -81,8 +81,10 @@ class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
         for idx, sample in enumerate(self.data):
             if "input" not in sample or "output" not in sample:
                 raise ValueError(f"Sample {idx} is missing 'input' or 'output' key")
-            if not isinstance(sample["input"], list) or not isinstance(sample["output"], list):
-                raise ValueError(f"Sample {idx} 'input' and 'output' must be lists")
+            if not isinstance(sample["input"], list):
+                raise ValueError(f"Sample {idx} 'input' is not a list")
+            if not isinstance(sample["output"], list):
+                raise ValueError(f"Sample {idx} 'output' is not a list")
             if not all(isinstance(row, list) for row in sample["input"]) or not all(isinstance(row, list) for row in sample["output"]):
                 raise ValueError(f"Sample {idx} 'input' and 'output' must be 2D lists")
             if any(max(row) >= self.num_symbols for row in sample["input"]) or any(max(row) >= self.num_symbols for row in sample["output"]):
