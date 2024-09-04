@@ -36,7 +36,7 @@ class ARCDataset(Dataset):
         elif isinstance(data_source, str) and os.path.isdir(data_source):
             self.data = self._process_synthetic_data(data_source)
         elif isinstance(data_source, list):
-            self.data = data_source
+            self.data = self._process_list_data(data_source)
         elif isinstance(data_source, dict):
             self.data = self._process_synthetic_data(data_source)
         elif TaskSet is not None and isinstance(data_source, TaskSet):
@@ -121,11 +121,12 @@ class ARCDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         task_idx = 0
-        while idx >= len(self.data[task_idx]["train" if not self.is_test else "test"]):
-            idx -= len(self.data[task_idx]["train" if not self.is_test else "test"])
+        split = "train" if not self.is_test else "test"
+        while idx >= len(self.data[task_idx].get(split, [])):
+            idx -= len(self.data[task_idx].get(split, []))
             task_idx += 1
 
-        sample = self.data[task_idx]["train" if not self.is_test else "test"][idx]
+        sample = self.data[task_idx][split][idx]
         input_grid = self._preprocess_grid(sample["input"])
         output_grid = self._preprocess_grid(sample["output"])
         
@@ -135,15 +136,17 @@ class ARCDataset(Dataset):
     def _validate_data(self):
         for task in self.data:
             for split in ["train", "test"]:
+                if split not in task:
+                    continue
                 for idx, sample in enumerate(task[split]):
                     if "input" not in sample or "output" not in sample:
-                        raise ValueError(f"Sample {idx} in task {task['id']} {split} set is missing 'input' or 'output' key")
+                        raise ValueError(f"Sample {idx} in task {split} set is missing 'input' or 'output' key")
                     if not isinstance(sample["input"], np.ndarray) or not isinstance(sample["output"], np.ndarray):
-                        raise ValueError(f"Sample {idx} in task {task['id']} {split} set 'input' or 'output' is not a numpy array")
+                        raise ValueError(f"Sample {idx} in task {split} set 'input' or 'output' is not a numpy array")
                     if sample["input"].ndim != 2 or sample["output"].ndim != 2:
-                        raise ValueError(f"Sample {idx} in task {task['id']} {split} set 'input' and 'output' must be 2D arrays")
+                        raise ValueError(f"Sample {idx} in task {split} set 'input' and 'output' must be 2D arrays")
                     if np.any(sample["input"] >= self.num_symbols) or np.any(sample["output"] >= self.num_symbols):
-                        raise ValueError(f"Sample {idx} in task {task['id']} {split} set contains invalid symbols (>= {self.num_symbols})")
+                        raise ValueError(f"Sample {idx} in task {split} set contains invalid symbols (>= {self.num_symbols})")
 
     def _compute_grid_size_stats(self):
         max_height, max_width = 0, 0
@@ -175,3 +178,12 @@ class ARCDataset(Dataset):
         one_hot_grid = np.eye(self.num_symbols)[padded_grid]
         
         return torch.tensor(one_hot_grid, dtype=torch.float32)
+    def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
+        processed_data = []
+        for item in data_source:
+            processed_item = {
+                "train": [{"input": np.array(item["input"]), "output": np.array(item["output"])}],
+                "test": []
+            }
+            processed_data.append(processed_item)
+        return processed_data
