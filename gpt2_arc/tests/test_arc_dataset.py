@@ -18,6 +18,7 @@ def sample_data():
 @pytest.fixture
 def mock_taskset():
     mock_task = Mock()
+    mock_task.id = "mock_task_1"
     mock_task.train = [
         (np.array([[1, 0], [0, 1]]), np.array([[0, 1], [1, 0]])),
         (np.array([[0, 1], [1, 0]]), np.array([[1, 0], [0, 1]]))
@@ -26,7 +27,7 @@ def mock_taskset():
         (np.array([[1, 1], [0, 0]]), np.array([[0, 0], [1, 1]]))
     ]
     
-    mock_taskset = Mock()
+    mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
 
