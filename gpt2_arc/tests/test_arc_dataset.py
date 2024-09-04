@@ -41,6 +41,28 @@ def test_arc_dataset_initialization(sample_data):
     assert input_grid.shape == (30, 30, 10), "Input grid should have shape (30, 30, 10)"
     assert output_grid.shape == (30, 30, 10), "Output grid should have shape (30, 30, 10)"
 
+def test_arc_dataset_synthetic_data():
+    synthetic_data_path = "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/syntheticARC/tasks"
+    dataset = ARCDataset(synthetic_data_path, is_test=False)
+
+    assert len(dataset) > 0, "Synthetic dataset should not be empty"
+    print(f"Loaded {len(dataset)} synthetic tasks")
+
+    # Test a few random samples
+    for i in range(3):
+        idx = random.randint(0, len(dataset) - 1)
+        input_grid, output_grid = dataset[idx]
+        print(f"\nSample {i + 1}:")
+        print(f"Input grid shape: {input_grid.shape}")
+        print(f"Output grid shape: {output_grid.shape}")
+
+    # Verify grid sizes and symbol range
+    assert dataset.max_grid_size[0] <= 30 and dataset.max_grid_size[1] <= 30, "Grid size exceeds maximum allowed"
+    assert max(dataset.symbol_frequencies) < dataset.num_symbols, "Symbol values exceed allowed range"
+
+    print(f"Maximum grid size: {dataset.max_grid_size}")
+    print(f"Symbol frequencies: {dataset.symbol_frequencies}")
+
 
 def test_arc_dataset_taskset_initialization(mock_taskset):
     import logging
