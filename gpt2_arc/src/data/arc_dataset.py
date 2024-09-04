@@ -40,6 +40,8 @@ class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
             self.data = data_source
         elif TaskSet is not None and (isinstance(data_source, TaskSet) or (hasattr(data_source, 'tasks') and isinstance(data_source.tasks, list))):
             logger.debug("Processing arckit TaskSet")
+            logger.debug(f"TaskSet type: {type(data_source)}")
+            logger.debug(f"TaskSet attributes: {dir(data_source)}")
             self.data = self._process_taskset(data_source)
         else:
             raise ValueError(
@@ -56,13 +58,18 @@ class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
 
     def _process_taskset(self, taskset: 'TaskSet') -> List[Dict]:
         processed_data = []
+        logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
         for task in taskset.tasks:
+            logger.debug(f"Processing task: {task}")
+            logger.debug(f"Task attributes: {dir(task)}")
             for example in task.train + task.test:
+                logger.debug(f"Processing example: {example}")
                 input_data, output_data = example
                 processed_data.append({
                     "input": input_data.tolist() if isinstance(input_data, np.ndarray) else input_data,
                     "output": output_data.tolist() if isinstance(output_data, np.ndarray) else output_data
                 })
+        logger.debug(f"Processed {len(processed_data)} examples")
         return processed_data
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
