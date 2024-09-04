@@ -117,7 +117,7 @@ class ARCDataset(Dataset):
         return processed_data
 
     def __len__(self) -> int:
-        return sum(len(task["train" if not self.is_test else "test"]) for task in self.data)
+        return sum(len(task.get("train" if not self.is_test else "test", [])) for task in self.data)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         task_idx = 0
