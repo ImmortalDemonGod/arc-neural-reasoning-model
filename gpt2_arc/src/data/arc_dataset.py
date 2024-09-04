@@ -21,40 +21,24 @@ class ARCDataset(Dataset):
         self,
         data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
         is_test: bool = False,
-        max_grid_size: Tuple[int, int] = (30, 30),
         num_symbols: int = 10,
         test_split: float = 0.2,
     ):
         self.is_test = is_test
-        self.max_grid_size = max_grid_size
         self.num_symbols = num_symbols
         self.test_split = test_split
+        self.data = self._process_data(data_source)
+        self.max_grid_size = self._compute_max_grid_size()
 
-        if isinstance(data_source, str):
-            if os.path.isdir(data_source):
-                self.data = self._process_synthetic_data(data_source)
-            elif os.path.isfile(data_source):
-                with open(data_source, 'r') as f:
-                    self.data = json.load(f)
-            else:
-                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-        elif isinstance(data_source, tuple):
-            official_data, synthetic_data_path = data_source
-            self.data = self._combine_data(official_data, synthetic_data_path)
-        elif isinstance(data_source, list):
-            self.data = self._process_list_data(data_source)
-        elif isinstance(data_source, dict):
-            self.data = self._process_synthetic_data(data_source)
-        elif TaskSet is not None and isinstance(data_source, TaskSet):
-            self.data = self._process_arckit_data(data_source)
-        else:
-            raise ValueError(
-                "Data must be either a file path, a list of tasks, a dictionary of synthetic data, a TaskSet from arckit, or a tuple of (official_data, synthetic_data_path)"
-            )
-
-        self._validate_data()
-        self._compute_grid_size_stats()
-        self.symbol_frequencies = self._compute_symbol_frequencies()
+    def _compute_max_grid_size(self):
+        max_h, max_w = 0, 0
+        for task in self.data:
+            for split in ['train', 'test']:
+                for sample in task[split]:
+                    h, w = sample['input'].shape
+                    max_h = max(max_h, h)
+                    max_w = max(max_w, w)
+        return (max_h, max_w)
 
     def _combine_data(self, official_data, synthetic_data_path):
         official_processed = self._process_arckit_data(official_data) if TaskSet is not None and isinstance(official_data, TaskSet) else official_data
@@ -125,21 +109,14 @@ class ARCDataset(Dataset):
         return sum(len(task['train']) + len(task['test']) for task in self.data)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        task_idx = 0
-        split = "test" if self.is_test else "train"
-        remaining_idx = idx
-
-        while task_idx < len(self.data):
-            if split in self.data[task_idx] and remaining_idx < len(self.data[task_idx][split]):
-                sample = self.data[task_idx][split][remaining_idx]
+        for task in self.data:
+            split = "test" if self.is_test else "train"
+            if idx < len(task[split]):
+                sample = task[split][idx]
                 input_grid = self._preprocess_grid(sample["input"])
                 output_grid = self._preprocess_grid(sample["output"])
                 return input_grid, output_grid
-            
-            if split in self.data[task_idx]:
-                remaining_idx -= len(self.data[task_idx][split])
-            task_idx += 1
-
+            idx -= len(task[split])
         raise IndexError("Index out of range")
 
     def _validate_data(self):
@@ -192,15 +169,8 @@ class ARCDataset(Dataset):
         # One-hot encode the padded grid
         one_hot_grid = np.eye(self.num_symbols)[padded_grid]
 
-        # Ensure the output shape is correct (num_symbols, height, width)
+        # Transpose to (num_symbols, height, width)
         one_hot_grid = np.transpose(one_hot_grid, (2, 0, 1))
-
-        # Pad or crop to match the expected dimensions
-        expected_shape = (self.num_symbols, self.max_grid_size[0], self.max_grid_size[1])
-        if one_hot_grid.shape != expected_shape:
-            padded_one_hot = np.zeros(expected_shape, dtype=one_hot_grid.dtype)
-            padded_one_hot[:, :one_hot_grid.shape[1], :one_hot_grid.shape[2]] = one_hot_grid
-            one_hot_grid = padded_one_hot
 
         return torch.tensor(one_hot_grid, dtype=torch.float32)
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
@@ -212,3 +182,17 @@ class ARCDataset(Dataset):
             }
             processed_data.append(processed_item)
         return processed_data
+    @staticmethod
+    def collate_fn(batch):
+        # This method will be used by DataLoader to prepare batches
+        inputs, outputs = zip(*batch)
+        
+        # Find max dimensions in the batch
+        max_h = max(i.size(1) for i in inputs)
+        max_w = max(i.size(2) for i in inputs)
+
+        # Pad inputs and outputs to max size in the batch
+        padded_inputs = torch.stack([F.pad(i, (0, max_w - i.size(2), 0, max_h - i.size(1))) for i in inputs])
+        padded_outputs = torch.stack([F.pad(o, (0, max_w - o.size(2), 0, max_h - o.size(1))) for o in outputs])
+
+        return padded_inputs, padded_outputs
