@@ -41,13 +41,18 @@ class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
         elif TaskSet is not None and isinstance(data_source, TaskSet):
             logger.debug("Processing arckit TaskSet")
             self.data = self._process_taskset(data_source)
+        else:
             raise ValueError(
                 "data_source must be either a file path (str), a list of dictionaries, or an arckit TaskSet"
             )
+        
         self.max_grid_size = max_grid_size
         self.num_symbols = num_symbols
         self._validate_data()
         logger.info(f"Initialized ArcDataset with {len(self.data)} samples")
+
+    def __len__(self) -> int:
+        return len(self.data)
 
     def _process_taskset(self, taskset: 'TaskSet') -> List[Dict]:
         processed_data = []
@@ -63,7 +68,6 @@ class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
                     "output": test_example[1].tolist()
                 })
         return processed_data
-        return len(self.data)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         sample = self.data[idx]
