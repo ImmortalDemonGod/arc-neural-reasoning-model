@@ -66,6 +66,11 @@ def test_arc_dataset_synthetic_data():
     assert max_h > 0 and max_w > 0, "Grid size should be positive"
     print(f"Maximum grid size: {dataset.max_grid_size}")
 
+    # Verify that we can access train and test splits
+    assert len(dataset.data) > 0, "Dataset should contain at least one task"
+    assert 'train' in dataset.data[0], "Each task should have a 'train' split"
+    assert 'test' in dataset.data[0], "Each task should have a 'test' split"
+
 
 def test_arc_dataset_taskset_initialization(mock_taskset):
     import logging
