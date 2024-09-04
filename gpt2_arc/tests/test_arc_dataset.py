@@ -171,3 +171,33 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
     assert input_grid.shape == (30, 30, 10), "Input grid should have shape (30, 30, 10)"
     assert output_grid.shape == (30, 30, 10), "Output grid should have shape (30, 30, 10)"
+
+from torch.utils.data import DataLoader
+
+def test_arc_dataset_collate_fn(sample_data):
+    logger.debug("Starting test_arc_dataset_collate_fn")
+    dataset = ARCDataset(sample_data)
+    dataloader = DataLoader(dataset, batch_size=2, collate_fn=ARCDataset.collate_fn)
+    batch = next(iter(dataloader))
+    input_batch, output_batch = batch
+    logger.debug(f"Collated batch shapes - inputs: {input_batch.shape}, outputs: {output_batch.shape}")
+    assert input_batch.shape == (2, 2, 2), "Batched input should be padded to max size in batch"
+    assert output_batch.shape == (2, 2, 2), "Batched output should be padded to max size in batch"
+    logger.debug("Completed test_arc_dataset_collate_fn")
+
+def test_arc_dataset_variable_size_grids(sample_data):
+    logger.debug("Starting test_arc_dataset_variable_size_grids")
+    variable_data = sample_data + [{"input": [[1, 0, 2], [0, 2, 1], [2, 1, 0]], "output": [[2, 1, 0], [1, 0, 2], [0, 2, 1]]}]
+    dataset = ARCDataset(variable_data)
+    
+    # Check first sample (2x2)
+    input_grid_1, output_grid_1 = dataset[0]
+    assert input_grid_1.shape == (10, 2, 2), "First sample should maintain 2x2 shape"
+    assert output_grid_1.shape == (10, 2, 2), "First sample should maintain 2x2 shape"
+    
+    # Check third sample (3x3)
+    input_grid_2, output_grid_2 = dataset[2]
+    assert input_grid_2.shape == (10, 3, 3), "Third sample should maintain 3x3 shape"
+    assert output_grid_2.shape == (10, 3, 3), "Third sample should maintain 3x3 shape"
+    
+    logger.debug("Completed test_arc_dataset_variable_size_grids")
