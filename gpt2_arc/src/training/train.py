@@ -6,7 +6,7 @@ import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
-from src.data.arc_dataset import ArcDataset
+from src.data.arc_dataset import ARCDataset
 from src.models.gpt2 import GPT2ARC
 from src.config import Config
 from src.training.trainer import ARCTrainer
@@ -14,8 +14,8 @@ from src.training.trainer import ARCTrainer
 
 def main(args):
     # Load data
-    train_data = ArcDataset(args.train_data)
-    val_data = ArcDataset(args.val_data)
+    train_data = ARCDataset(args.train_data)
+    val_data = ARCDataset(args.val_data)
 
     # Initialize model
     model = GPT2ARC(config=Config().model)

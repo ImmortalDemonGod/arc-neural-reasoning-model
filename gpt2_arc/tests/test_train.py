@@ -36,7 +36,7 @@ def mock_args():
 
 @pytest.fixture
 def mock_dataset():
-    dataset = MagicMock(spec=ArcDataset)
+    dataset = MagicMock(spec=ARCDataset)
     dataset.data = [{"input": "mock input", "output": "mock output"}]
     dataset.__len__.return_value = 100
     return dataset
@@ -111,7 +111,7 @@ def test_gpt2arc_attention_mask(model):
 
 def test_logging(mock_args, mock_dataset, model, mock_trainer, mock_pl_trainer):
     with patch(
-        "gpt2_arc.src.training.train.ArcDataset", return_value=mock_dataset
+        "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
     ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
         "gpt2_arc.src.training.train.ARCTrainer", return_value=mock_trainer
     ), patch(
@@ -133,7 +133,7 @@ def test_logging(mock_args, mock_dataset, model, mock_trainer, mock_pl_trainer):
 
 def test_fit_call(mock_args, mock_dataset, model, mock_trainer, mock_pl_trainer):
     with patch(
-        "gpt2_arc.src.training.train.ArcDataset", return_value=mock_dataset
+        "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
     ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
         "gpt2_arc.src.training.train.ARCTrainer", return_value=mock_trainer
     ), patch(
@@ -148,9 +148,9 @@ def test_fit_call(mock_args, mock_dataset, model, mock_trainer, mock_pl_trainer)
 
 def test_data_loading(mock_args):
     with patch(
-        "gpt2_arc.src.data.arc_dataset.ArcDataset.__init__", return_value=None
+        "gpt2_arc.src.data.arc_dataset.ARCDataset.__init__", return_value=None
     ) as mock_init:
-        ArcDataset(mock_args.train_data)
+        ARCDataset(mock_args.train_data)
         mock_init.assert_called_once_with(mock_args.train_data)
 
 
@@ -170,7 +170,7 @@ def test_trainer_initialization(model, mock_dataset):
 @pytest.mark.parametrize("batch_size", [1, 1000000])
 def test_batch_size_extremes(mock_args, batch_size):
     mock_args.batch_size = batch_size
-    with patch("gpt2_arc.src.training.train.ArcDataset"), patch(
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
@@ -181,7 +181,7 @@ def test_batch_size_extremes(mock_args, batch_size):
 @pytest.mark.parametrize("learning_rate", [1e-10, 1000])
 def test_learning_rate_extremes(mock_args, learning_rate):
     mock_args.learning_rate = learning_rate
-    with patch("gpt2_arc.src.training.train.ArcDataset"), patch(
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
@@ -198,7 +198,7 @@ def test_non_existent_train_data(mock_args):
 def test_gpu_not_available(mock_args):
     mock_args.use_gpu = True
     with patch("torch.cuda.is_available", return_value=False), patch(
-        "gpt2_arc.src.training.train.ArcDataset"
+        "gpt2_arc.src.training.train.ARCDataset"
     ), patch("gpt2_arc.src.training.train.GPT2ARC"), patch(
         "gpt2_arc.src.training.train.ARCTrainer"
     ), patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer:
@@ -216,7 +216,7 @@ from hypothesis import strategies as st
 @given(batch_size=st.integers(min_value=1, max_value=1024))
 def test_valid_batch_sizes(mock_args, batch_size):
     mock_args.batch_size = batch_size
-    with patch("gpt2_arc.src.training.train.ArcDataset"), patch(
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
@@ -232,7 +232,7 @@ def test_valid_batch_sizes(mock_args, batch_size):
 )
 def test_valid_learning_rates(mock_args, learning_rate):
     mock_args.learning_rate = learning_rate
-    with patch("gpt2_arc.src.training.train.ArcDataset"), patch(
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
@@ -246,7 +246,7 @@ def test_end_to_end_training(mock_args, tmp_path):
     checkpoint_dir.mkdir()
     mock_args.checkpoint_dir = str(checkpoint_dir)
 
-    with patch("gpt2_arc.src.training.train.ArcDataset"), patch(
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
@@ -263,7 +263,7 @@ def test_tensorboard_logging(mock_args, tmp_path):
     log_dir = tmp_path / "tb_logs"
     log_dir.mkdir()
 
-    with patch("gpt2_arc.src.training.train.ArcDataset"), patch(
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"

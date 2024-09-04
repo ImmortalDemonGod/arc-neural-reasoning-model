@@ -73,7 +73,7 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     logger.debug(f"Mock TaskSet: {mock_taskset}")
     logger.debug(f"Mock TaskSet attributes: {dir(mock_taskset)}")
     
-    dataset = ArcDataset(mock_taskset)
+    dataset = ARCDataset(mock_taskset)
     
     logger.debug(f"Dataset length: {len(dataset)}")
     
@@ -86,7 +86,7 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
 
 
 def test_arc_dataset_getitem(sample_data):
-    dataset = ArcDataset(sample_data)
+    dataset = ARCDataset(sample_data)
     input_grid, output_grid = dataset[0]
 
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
@@ -105,7 +105,7 @@ def test_arc_dataset_getitem(sample_data):
 def test_arc_dataset_len(sample_data):
     print("Debugging: Entering test_arc_dataset_len")
     print(f"Debugging: sample_data = {sample_data}")
-    dataset = ArcDataset(sample_data)
+    dataset = ARCDataset(sample_data)
     print(f"Debugging: len(dataset) = {len(dataset)}, len(sample_data) = {len(sample_data)}")
     assert len(dataset) == len(sample_data), "Dataset length should match input data length"
     print("Debugging: Exiting test_arc_dataset_len")
@@ -114,31 +114,31 @@ def test_arc_dataset_len(sample_data):
 def test_arc_dataset_invalid_data(sample_data):
     invalid_data = [{"input": [1, 0], "output": [[0, 1], [1, 0]]}]
     with pytest.raises(ValueError, match="must be 2D lists"):
-        ArcDataset(invalid_data)
+        ARCDataset(invalid_data)
 
     invalid_data = [{"input": [[1, 0], [0, 1]], "output": "not a list"}]
     with pytest.raises(ValueError, match="'output' is not a list"):
-        ArcDataset(invalid_data)
+        ARCDataset(invalid_data)
 
     invalid_data = [{"input": [[1, 0], [0, 1]], "output": [[10, 1], [1, 0]]}]
     with pytest.raises(ValueError, match="contains invalid symbols"):
-        ArcDataset(invalid_data)
+        ARCDataset(invalid_data)
 
     invalid_data = [{"input": [[1, 0], [0, 1]]}]  # Missing 'output'
     with pytest.raises(ValueError, match="missing 'input' or 'output' key"):
-        ArcDataset(invalid_data)
+        ARCDataset(invalid_data)
 
     invalid_data = [{"input": "not a list", "output": [[0, 1], [1, 0]]}]
     with pytest.raises(ValueError, match="'input' is not a list"):
-        ArcDataset(invalid_data)
+        ARCDataset(invalid_data)
 
     invalid_data = [{"input": [[0, 1], [1, 0]], "output": 5}]
     with pytest.raises(ValueError, match="'output' is not a list"):
-        ArcDataset(invalid_data)
+        ARCDataset(invalid_data)
 
 
 def test_arc_dataset_preprocess_grid(sample_data):
-    dataset = ArcDataset(sample_data, max_grid_size=(5, 5), num_symbols=3)
+    dataset = ARCDataset(sample_data, max_grid_size=(5, 5), num_symbols=3)
     input_grid, output_grid = dataset[0]
 
     assert input_grid.shape == (
@@ -179,7 +179,7 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     logger.debug(f"Mock TaskSet: {mock_taskset}")
     logger.debug(f"Mock TaskSet attributes: {dir(mock_taskset)}")
     
-    dataset = ArcDataset(mock_taskset)
+    dataset = ARCDataset(mock_taskset)
     
     logger.debug(f"Dataset length: {len(dataset)}")
     
