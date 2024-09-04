@@ -54,6 +54,7 @@ class ArcDataset(Dataset[Tuple[torch.Tensor, torch.Tensor]]):
         logger.info(f"Initialized ArcDataset with {len(self.data)} samples")
 
     def __len__(self) -> int:
+        print(f"Debugging: ArcDataset.__len__ called, returning {len(self.data)}")
         return len(self.data)
 
     def _process_taskset(self, taskset: 'TaskSet') -> List[Dict]:

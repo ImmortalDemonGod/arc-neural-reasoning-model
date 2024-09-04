@@ -78,8 +78,12 @@ def test_arc_dataset_getitem(sample_data):
 
 
 def test_arc_dataset_len(sample_data):
+    print("Debugging: Entering test_arc_dataset_len")
+    print(f"Debugging: sample_data = {sample_data}")
     dataset = ArcDataset(sample_data)
+    print(f"Debugging: len(dataset) = {len(dataset)}, len(sample_data) = {len(sample_data)}")
     assert len(dataset) == len(sample_data), "Dataset length should match input data length"
+    print("Debugging: Exiting test_arc_dataset_len")
 
 
 def test_arc_dataset_invalid_data(sample_data):
