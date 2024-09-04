@@ -3,7 +3,8 @@
 import numpy as np
 import pytest
 import torch
-from src.data.arc_dataset import ArcDataset
+import random
+from src.data.arc_dataset import ARCDataset
 from unittest.mock import Mock
 from arckit.data import TaskSet
 
