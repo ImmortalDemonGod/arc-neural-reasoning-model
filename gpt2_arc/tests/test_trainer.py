@@ -2,7 +2,7 @@
 import pytest
 import torch
 from src.config import Config, ModelConfig, TrainingConfig
-from src.data.arc_dataset import ArcDataset
+from src.data.arc_dataset import ARCDataset
 from src.models.gpt2 import GPT2ARC
 from src.training.trainer import ARCTrainer
 

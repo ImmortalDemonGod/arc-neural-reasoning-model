@@ -16,7 +16,7 @@ from unittest.mock import ANY, MagicMock, patch
 import pytorch_lightning as pl
 import torch
 
-from gpt2_arc.src.data.arc_dataset import ArcDataset
+from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.training.train import main
 from gpt2_arc.src.training.trainer import ARCTrainer
