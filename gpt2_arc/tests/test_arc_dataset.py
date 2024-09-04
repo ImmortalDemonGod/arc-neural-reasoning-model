@@ -106,7 +106,11 @@ def test_arc_dataset_invalid_data(sample_data):
         ArcDataset(invalid_data)
 
     invalid_data = [{"input": "not a list", "output": [[0, 1], [1, 0]]}]
-    with pytest.raises(ValueError, match="'input' or 'output' is not a list"):
+    with pytest.raises(ValueError, match="'input' is not a list"):
+        ArcDataset(invalid_data)
+
+    invalid_data = [{"input": [[0, 1], [1, 0]], "output": 5}]
+    with pytest.raises(ValueError, match="'output' is not a list"):
         ArcDataset(invalid_data)
 
 
