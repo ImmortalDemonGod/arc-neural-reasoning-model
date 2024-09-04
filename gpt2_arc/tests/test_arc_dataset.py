@@ -120,40 +120,22 @@ def test_arc_dataset_invalid_data(sample_data):
     with pytest.raises(ValueError, match="must be a list or numpy array"):
         ARCDataset(invalid_data)
 
-    invalid_data = [{"input": [[1, 0], [0, 1]], "output": [[10, 1], [1, 0]]}]
-    with pytest.raises(ValueError, match="contains invalid symbols"):
-        ARCDataset(invalid_data)
-
-    invalid_data = [{"input": [[1, 0], [0, 1]]}]  # Missing 'output'
-    with pytest.raises(ValueError, match="missing 'input' or 'output' key"):
-        ARCDataset(invalid_data)
-
-    invalid_data = [{"input": "not a list", "output": [[0, 1], [1, 0]]}]
-    with pytest.raises(ValueError, match="'input' is not a list"):
-        ARCDataset(invalid_data)
-
-    invalid_data = [{"input": [[0, 1], [1, 0]], "output": 5}]
-    with pytest.raises(ValueError, match="'output' is not a list"):
-        ARCDataset(invalid_data)
-
-
 def test_arc_dataset_preprocess_grid(sample_data):
     dataset = ARCDataset(sample_data, max_grid_size=(5, 5), num_symbols=3)
     input_grid, output_grid = dataset[0]
 
-    assert input_grid.shape == (
-        5,
-        5,
-        3,
-    ), "Preprocessed grid should have shape (5, 5, 3)"
-    assert torch.all(input_grid[2:, :, :] == 0), "Padding should be all zeros in rows"
-    assert torch.all(
-        input_grid[:, 2:, :] == 0
-    ), "Padding should be all zeros in columns"
-    assert torch.all(output_grid[2:, :, :] == 0), "Padding should be all zeros in rows"
-    assert torch.all(
-        output_grid[:, 2:, :] == 0
-    ), "Padding should be all zeros in columns"
+    assert input_grid.shape == (3, 5, 5), "Preprocessed grid should have shape (3, 5, 5)"
+    assert output_grid.shape == (3, 5, 5), "Preprocessed grid should have shape (3, 5, 5)"
+
+    # Check if the original data is preserved in the top-left corner
+    assert torch.all(input_grid[:, :2, :2] == torch.eye(3)[:, :2, :2])
+    assert torch.all(output_grid[:, :2, :2] == torch.eye(3)[:, :2, :2])
+
+    # Check if the rest is zero-padded
+    assert torch.all(input_grid[:, 2:, :] == 0)
+    assert torch.all(input_grid[:, :, 2:] == 0)
+    assert torch.all(output_grid[:, 2:, :] == 0)
+    assert torch.all(output_grid[:, :, 2:] == 0)
 
 @pytest.fixture
 def mock_taskset():

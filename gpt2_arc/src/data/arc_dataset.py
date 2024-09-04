@@ -127,16 +127,20 @@ class ARCDataset(Dataset):
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         task_idx = 0
         split = "test" if self.is_test else "train"
-        while idx >= len(self.data[task_idx][split]):
-            idx -= len(self.data[task_idx][split])
+        remaining_idx = idx
+
+        while task_idx < len(self.data):
+            if split in self.data[task_idx] and remaining_idx < len(self.data[task_idx][split]):
+                sample = self.data[task_idx][split][remaining_idx]
+                input_grid = self._preprocess_grid(sample["input"])
+                output_grid = self._preprocess_grid(sample["output"])
+                return input_grid, output_grid
+            
+            if split in self.data[task_idx]:
+                remaining_idx -= len(self.data[task_idx][split])
             task_idx += 1
 
-        sample = self.data[task_idx][split][idx]
-        input_grid = self._preprocess_grid(sample["input"])
-        output_grid = self._preprocess_grid(sample["output"])
-
-        logger.debug(f"Retrieved sample {idx}: input shape {input_grid.shape}, output shape {output_grid.shape}")
-        return input_grid, output_grid
+        raise IndexError("Index out of range")
 
     def _validate_data(self):
         for task in self.data:
@@ -185,13 +189,18 @@ class ARCDataset(Dataset):
         padded_grid = np.zeros(self.max_grid_size, dtype=int)
         padded_grid[:grid.shape[0], :grid.shape[1]] = grid
 
-        logger.debug(f"Padded grid:\n{padded_grid}")
-
         # One-hot encode the padded grid
         one_hot_grid = np.eye(self.num_symbols)[padded_grid]
 
         # Ensure the output shape is correct (num_symbols, height, width)
         one_hot_grid = np.transpose(one_hot_grid, (2, 0, 1))
+
+        # Pad or crop to match the expected dimensions
+        expected_shape = (self.num_symbols, self.max_grid_size[0], self.max_grid_size[1])
+        if one_hot_grid.shape != expected_shape:
+            padded_one_hot = np.zeros(expected_shape, dtype=one_hot_grid.dtype)
+            padded_one_hot[:, :one_hot_grid.shape[1], :one_hot_grid.shape[2]] = one_hot_grid
+            one_hot_grid = padded_one_hot
 
         return torch.tensor(one_hot_grid, dtype=torch.float32)
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
