@@ -1,5 +1,6 @@
 # gpt2_arc/tests/test_arc_dataset.py
 
+import numpy as np
 import pytest
 import torch
 from src.data.arc_dataset import ArcDataset
