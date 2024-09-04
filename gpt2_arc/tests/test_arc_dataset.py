@@ -48,17 +48,16 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
     assert input_grid.shape == (30, 30, 10), "Input grid should have shape (30, 30, 10)"
     assert output_grid.shape == (30, 30, 10), "Output grid should have shape (30, 30, 10)"
+
+
+def test_arc_dataset_getitem(sample_data):
     dataset = ArcDataset(sample_data)
     input_grid, output_grid = dataset[0]
 
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
     assert input_grid.shape == (30, 30, 10), "Input grid should have shape (30, 30, 10)"
-    assert output_grid.shape == (
-        30,
-        30,
-        10,
-    ), "Output grid should have shape (30, 30, 10)"
+    assert output_grid.shape == (30, 30, 10), "Output grid should have shape (30, 30, 10)"
 
     assert torch.all(
         input_grid[0, 0] == torch.tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
@@ -66,9 +65,6 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     assert torch.all(
         output_grid[0, 0] == torch.tensor([1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     ), "Output grid values are incorrect"
-
-
-def test_arc_dataset_len(sample_data):
     dataset = ArcDataset(sample_data)
     assert len(dataset) == len(
         sample_data
