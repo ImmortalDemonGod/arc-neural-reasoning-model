@@ -65,7 +65,7 @@ class ARCDataset(Dataset):
         if isinstance(data_source, str):
             return self._load_synthetic_data_from_directory(data_source)
         elif isinstance(data_source, dict):
-            return self._process_single_task(data_source)
+            return [self._process_single_task(data_source)]
         else:
             raise ValueError("Synthetic data must be either a directory path or a dictionary")
 
@@ -75,10 +75,10 @@ class ARCDataset(Dataset):
             if filename.endswith('.json'):
                 with open(os.path.join(directory, filename), 'r') as f:
                     task_data = json.load(f)
-                    processed_data.extend(self._process_single_task(task_data))
+                    processed_data.append(self._process_single_task(task_data))
         return processed_data
 
-    def _process_single_task(self, task_data: Union[Dict, List]) -> List[Dict]:
+    def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
         if isinstance(task_data, dict):
             all_examples = task_data.get("train", []) + task_data.get("test", [])
         elif isinstance(task_data, list):
@@ -89,7 +89,7 @@ class ARCDataset(Dataset):
         random.shuffle(all_examples)
         split_idx = int(len(all_examples) * (1 - self.test_split))
 
-        processed_task = {
+        return {
             "id": task_data.get("id", "unknown") if isinstance(task_data, dict) else "unknown",
             "train": [
                 {"input": np.array(ex["input"]), "output": np.array(ex["output"])}
@@ -100,7 +100,6 @@ class ARCDataset(Dataset):
                 for ex in all_examples[split_idx:]
             ]
         }
-        return [processed_task]
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         processed_data = []
@@ -127,15 +126,15 @@ class ARCDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         task_idx = 0
-        split = "train" if not self.is_test else "test"
-        while idx >= len(self.data[task_idx].get(split, [])):
-            idx -= len(self.data[task_idx].get(split, []))
+        split = "test" if self.is_test else "train"
+        while idx >= len(self.data[task_idx][split]):
+            idx -= len(self.data[task_idx][split])
             task_idx += 1
 
         sample = self.data[task_idx][split][idx]
         input_grid = self._preprocess_grid(sample["input"])
         output_grid = self._preprocess_grid(sample["output"])
-        
+
         logger.debug(f"Retrieved sample {idx}: input shape {input_grid.shape}, output shape {output_grid.shape}")
         return input_grid, output_grid
 
@@ -156,7 +155,7 @@ class ARCDataset(Dataset):
                     if isinstance(output_data, list):
                         output_data = np.array(output_data)
                     if input_data.ndim != 2 or output_data.ndim != 2:
-                        raise ValueError(f"Sample {idx} in task {split} set 'input' and 'output' must be 2D")
+                        raise ValueError(f"Sample {idx} in task {split} set 'input' and 'output' must be 2D lists")
                     if np.any(input_data >= self.num_symbols) or np.any(output_data >= self.num_symbols):
                         raise ValueError(f"Sample {idx} in task {split} set contains invalid symbols (>= {self.num_symbols})")
 
@@ -191,8 +190,8 @@ class ARCDataset(Dataset):
         # One-hot encode the padded grid
         one_hot_grid = np.eye(self.num_symbols)[padded_grid]
 
-        # Ensure the output shape is correct
-        one_hot_grid = one_hot_grid.transpose(2, 0, 1)  # Change to (channels, height, width)
+        # Ensure the output shape is correct (num_symbols, height, width)
+        one_hot_grid = np.transpose(one_hot_grid, (2, 0, 1))
 
         return torch.tensor(one_hot_grid, dtype=torch.float32)
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
