@@ -4,9 +4,13 @@ import numpy as np
 import pytest
 import torch
 import random
+import logging
 from src.data.arc_dataset import ARCDataset
 from unittest.mock import Mock
 from arckit.data import TaskSet
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
