@@ -1,5 +1,6 @@
 import os
 import sys
+from hello import hello
 
 def create_directory(path):
     if not os.path.exists(path):
@@ -61,5 +62,6 @@ if __name__ == "__main__":
     else:
         base_path = os.path.join(os.getcwd(), "arc_solver_project")
     
+    hello()
     create_arc_solver_structure(base_path)
     print(f"ARC Solver project structure created at: {base_path}")
