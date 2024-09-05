@@ -52,6 +52,7 @@ def test_end_to_end():
             # Create a dummy attention mask (all ones)
             attention_mask = torch.ones(input_stack.size(0), input_stack.size(2) * input_stack.size(3))
 
+            logger.debug(f"Collate function input dtype: {input_stack.dtype}")
             return input_stack, attention_mask, output_stack
 
         # Initialize model
