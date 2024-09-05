@@ -55,16 +55,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10):
     logger.info(f"Total time for {num_batches} batches: {total_time:.4f} seconds")
     logger.info(f"Total grids processed: {total_grids}")
 
-    # Hardcoded baseline numbers for comparison
-    baseline_average_time = 0.1866
-    baseline_grids_per_second = 171.46
-
-    # Compare current results with baseline
-    improvement_time = baseline_average_time - average_time
-    improvement_grids = grids_per_second - baseline_grids_per_second
-
-    logger.info(f"Improvement in average time per batch: {improvement_time:.4f} seconds")
-    logger.info(f"Improvement in grids per second: {improvement_grids:.2f}")
+    return total_time, grids_per_second
 
 if __name__ == "__main__":
     # Load your dataset and model
@@ -80,5 +71,22 @@ if __name__ == "__main__":
     model = GPT2ARC(model_config)
 
     # Run the benchmark with multiple batches
-    benchmark_model(model, train_dataset, num_batches=10)
-    benchmark_model(model, train_dataset)
+    total_time_1, grids_per_second_1 = benchmark_model(model, train_dataset, num_batches=10)
+    total_time_2, grids_per_second_2 = benchmark_model(model, train_dataset)
+
+    # Hardcoded baseline numbers for comparison
+    baseline_total_time = 2.0881  # Example baseline total time
+    baseline_grids_per_second = 171.46  # Example baseline grids per second
+
+    # Compare current results with baseline
+    improvement_time_1 = baseline_total_time - total_time_1
+    improvement_grids_1 = grids_per_second_1 - baseline_grids_per_second
+
+    improvement_time_2 = baseline_total_time - total_time_2
+    improvement_grids_2 = grids_per_second_2 - baseline_grids_per_second
+
+    logger.info(f"Improvement in total time for first run: {improvement_time_1:.4f} seconds")
+    logger.info(f"Improvement in grids per second for first run: {improvement_grids_1:.2f}")
+
+    logger.info(f"Improvement in total time for second run: {improvement_time_2:.4f} seconds")
+    logger.info(f"Improvement in grids per second for second run: {improvement_grids_2:.2f}")
