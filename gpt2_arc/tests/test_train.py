@@ -77,22 +77,32 @@ def test_gpt2arc_initialization(model):
 
 def test_gpt2arc_forward_pass(model):
     batch_size = 2
-    height = width = 30  # 30x30 grid
-    input_ids = torch.randint(0, 2, (batch_size, height * width))
-    attention_mask = torch.ones((batch_size, height * width))
-    output = model(input_ids, attention_mask)
-    assert isinstance(output, torch.Tensor)
-    assert output.shape == (batch_size, height * width, model.config.n_embd)
+    height = width = 30
+    seq_length = height * width
+    input_ids = torch.randint(0, 2, (batch_size, seq_length))
+    attention_mask = torch.ones((batch_size, seq_length))
+
+    output_with_mask = model(input_ids, attention_mask)
+    output_without_mask = model(input_ids)
+
+    assert isinstance(output_with_mask, torch.Tensor)
+    assert output_with_mask.shape == (batch_size, seq_length, model.config.n_embd)
+    assert isinstance(output_without_mask, torch.Tensor)
+    assert output_without_mask.shape == (batch_size, seq_length, model.config.n_embd)
+
+    logger.debug(f"Difference between outputs: {(output_with_mask - output_without_mask).abs().mean()}")
 
 
 def test_gpt2arc_output_values(model):
+    logger.debug("Testing GPT2ARC output values")
     batch_size = 1
-    channels = 1
-    height = 30
-    width = 30
-    input_ids = torch.randint(0, 2, (batch_size, channels, height, width))
-    attention_mask = torch.ones((batch_size, height * width))
+    height = width = 30
+    seq_length = height * width
+    input_ids = torch.randint(0, 2, (batch_size, seq_length))
+    attention_mask = torch.ones((batch_size, seq_length))
+
     output = model(input_ids, attention_mask)
+
     assert not torch.isnan(output).any(), "Output contains NaN values"
     assert not torch.isinf(output).any(), "Output contains infinity values"
 

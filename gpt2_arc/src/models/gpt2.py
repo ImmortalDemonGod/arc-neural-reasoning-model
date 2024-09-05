@@ -92,19 +92,23 @@ class GPT2ARC(nn.Module):
 
     def forward(self, input_ids, attention_mask=None):
         logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
-        # Reshape input_ids to [batch_size, 1, height, width]
-        batch_size = input_ids.size(0)
-        height = width = int(input_ids.size(1) ** 0.5)
-        x = input_ids.float().view(batch_size, 1, height, width)
         
-        x = self.conv1(x)  # Apply convolution
-        B, C, H, W = x.size()  # Get the dimensions after convolution
-        x = x.view(B, C, H * W)  # Flatten the spatial dimensions
+        # Check if input_ids is already in the correct shape
+        if input_ids.dim() == 4:
+            x = input_ids.float()
+        else:
+            # Reshape input_ids to [batch_size, 1, height, width]
+            batch_size = input_ids.size(0)
+            seq_length = input_ids.size(1)
+            height = width = int(seq_length ** 0.5)
+            x = input_ids.float().view(batch_size, 1, height, width)
+        
+        x = self.conv1(x)
+        b, c, h, w = x.size()
+        x = x.view(b, c, h * w)  # Flatten spatial dimensions
         x = x.permute(0, 2, 1)  # Rearrange to (batch_size, sequence_length, channels)
 
         for block in self.blocks:
             x = block(x, attention_mask)
-
         x = self.ln_f(x)
-        logger.debug(f"GPT2ARC output shape: {x.shape}")
         return x
