@@ -18,7 +18,7 @@ def model():
 
 def test_gpt2arc_initialization(model):
     assert isinstance(model, GPT2ARC)
-    assert hasattr(model, "token_embedding")
+    assert hasattr(model, "conv1")  # Check for conv1 instead of token_embedding
     assert hasattr(model, "position_embedding")
     assert hasattr(model, "blocks")
     assert hasattr(model, "ln_f")
@@ -44,7 +44,7 @@ def test_gpt2arc_output_values(model):
     logger.debug("Testing GPT2ARC output values")
     batch_size = 1
     seq_length = 5
-    input_ids = torch.tensor([[0, 1, 2, 3, 4]])
+    input_ids = torch.tensor([[0, 1, 2, 3, 4]]).float()  # Convert to float
     attention_mask = torch.ones((batch_size, seq_length))
 
     output = model(input_ids, attention_mask)
@@ -55,7 +55,7 @@ def test_gpt2arc_output_values(model):
 def test_gpt2arc_forward_pass(model):
     batch_size = 2
     seq_length = 10
-    input_ids = torch.randint(0, 1000, (batch_size, seq_length))
+    input_ids = torch.randint(0, 1000, (batch_size, seq_length)).float()  # Convert to float
     attention_mask = torch.ones((batch_size, seq_length))
 
     output_with_mask = model(input_ids, attention_mask)

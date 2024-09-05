@@ -50,7 +50,7 @@ def test_end_to_end():
             output_stack = torch.stack(outputs)
 
             # Create a dummy attention mask (all ones)
-            attention_mask = torch.ones_like(input_stack[:, :, 0])
+            attention_mask = torch.ones(input_stack.size(0), input_stack.size(2) * input_stack.size(3))
 
             return input_stack, attention_mask, output_stack
 
