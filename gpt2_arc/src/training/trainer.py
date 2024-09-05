@@ -93,13 +93,13 @@ class ARCTrainer(pl.LightningModule):
         return torch.optim.AdamW(self.parameters(), lr=self.lr)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=8)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=7)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=8)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=7)
 
     def test_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=8)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=7)
 
     def compute_loss(self, outputs, labels):
         return nn.CrossEntropyLoss()(
