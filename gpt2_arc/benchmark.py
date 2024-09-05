@@ -54,4 +54,4 @@ if __name__ == "__main__":
     model = GPT2ARC(model_config)
 
     # Run the benchmark
-    benchmark_model(model, dataset)
+    benchmark_model(model, train_dataset)
