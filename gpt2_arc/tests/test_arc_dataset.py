@@ -64,7 +64,7 @@ def test_arc_dataset_synthetic_data():
     assert len(dataset) > 0, "Synthetic dataset should not be empty"
     print(f"Loaded {len(dataset.data)} synthetic tasks")
     print(f"Total dataset length: {len(dataset)}")
-    
+
     total_train = sum(len(task['train']) for task in dataset.data)
     total_test = sum(len(task['test']) for task in dataset.data)
     print(f"Total train samples: {total_train}")
@@ -93,10 +93,20 @@ def test_arc_dataset_synthetic_data():
     assert max_h > 0 and max_w > 0, "Grid size should be positive"
     print(f"Maximum grid size: {dataset.max_grid_size}")
 
-    # Verify that we can access train and test splits
+    # Verify access to train and test splits
     assert len(dataset.data) > 0, "Dataset should contain at least one task"
     assert 'train' in dataset.data[0], "Each task should have a 'train' split"
     assert 'test' in dataset.data[0], "Each task should have a 'test' split"
+
+    # Test both train and test modes
+    train_dataset = ARCDataset(synthetic_data_path, is_test=False)
+    test_dataset = ARCDataset(synthetic_data_path, is_test=True)
+    
+    assert len(train_dataset) == total_train, f"Train dataset length ({len(train_dataset)}) should match total train samples ({total_train})"
+    assert len(test_dataset) == total_test, f"Test dataset length ({len(test_dataset)}) should match total test samples ({total_test})"
+
+    print(f"Train dataset length: {len(train_dataset)}")
+    print(f"Test dataset length: {len(test_dataset)}")
 
 
 
