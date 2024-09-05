@@ -57,7 +57,16 @@ def test_end_to_end(arc_data_path):
         def collate_fn(batch):
             inputs = [torch.tensor(item['input'], dtype=torch.float32) for item in batch]
             outputs = [torch.tensor(item['output'], dtype=torch.float32) for item in batch]
-            return torch.stack(inputs), torch.stack(outputs)
+            
+            # Find max dimensions
+            max_input_size = max(input.size() for input in inputs)
+            max_output_size = max(output.size() for output in outputs)
+            
+            # Pad inputs and outputs
+            padded_inputs = [torch.nn.functional.pad(input, (0, max_input_size[1] - input.size(1), 0, max_input_size[0] - input.size(0))) for input in inputs]
+            padded_outputs = [torch.nn.functional.pad(output, (0, max_output_size[1] - output.size(1), 0, max_output_size[0] - output.size(0))) for output in outputs]
+            
+            return torch.stack(padded_inputs), torch.stack(padded_outputs)
 
         # Initialize model
         logger.debug("Initializing model")
