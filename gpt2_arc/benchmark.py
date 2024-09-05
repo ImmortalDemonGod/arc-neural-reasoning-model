@@ -23,6 +23,8 @@ BASELINE_TOTAL_TIME = 1.6391
 BASELINE_GRIDS_PER_SECOND = 199.27
 
 def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
+    run_id = datetime.now().strftime("%Y%m%d%H%M%S")
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     total_time_runs = []
     grids_per_second_runs = []
 
@@ -85,6 +87,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
         # Store the results of each run
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         run_results.append({
+            'run_id': run_id,
             'datetime': current_time,
             'run': run + 1,
             'total_time': total_time,
@@ -189,7 +192,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
 
     with open(stats_csv_file_path, 'a', newline='') as csvfile:
         fieldnames = [
-            'avg_total_time', 'std_total_time', 'ci_total_time',
+            'run_id', 'datetime', 'avg_total_time', 'std_total_time', 'ci_total_time',
             'avg_grids_per_second', 'std_grids_per_second', 'ci_grids_per_second',
             'effect_size_time', 'effect_size_grids',
             't_stat_time', 'p_value_time', 't_stat_grids', 'p_value_grids',
@@ -204,6 +207,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
             writer.writeheader()
 
         writer.writerow({
+            'run_id': run_id,
+            'datetime': current_time,
             'avg_total_time': avg_total_time,
             'std_total_time': std_total_time,
             'ci_total_time': ci_total_time,
