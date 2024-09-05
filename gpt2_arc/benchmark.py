@@ -11,6 +11,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Baseline values for comparison
+BASELINE_TOTAL_TIME = 2.0076
+BASELINE_GRIDS_PER_SECOND = 159.40
+
 def benchmark_model(model, dataset, batch_size=32, num_batches=10):
     dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -54,6 +58,13 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10):
     logger.info(f"Average grids per second: {grids_per_second:.2f}")
     logger.info(f"Total time for {num_batches} batches: {total_time:.4f} seconds")
     logger.info(f"Total grids processed: {total_grids}")
+
+    # Compare with baseline
+    time_improvement = total_time - BASELINE_TOTAL_TIME
+    grids_per_second_improvement = grids_per_second - BASELINE_GRIDS_PER_SECOND
+
+    logger.info(f"Improvement in total time: {time_improvement:.4f} seconds")
+    logger.info(f"Improvement in grids per second: {grids_per_second_improvement:.2f}")
 
     return total_time, grids_per_second
 
