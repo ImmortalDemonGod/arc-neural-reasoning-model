@@ -40,7 +40,13 @@ def benchmark_model(model, dataset, batch_size=32):
 
 if __name__ == "__main__":
     # Load your dataset and model
-    dataset = ARCDataset(...)  # Provide appropriate arguments
+    # Sample data for demonstration purposes
+    sample_data = [
+        {"train": [{"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]}],
+         "test": [{"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]}]}
+    ]
+
+    dataset = ARCDataset(sample_data)
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
     model = GPT2ARC(model_config)
 
