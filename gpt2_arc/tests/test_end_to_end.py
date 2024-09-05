@@ -82,10 +82,11 @@ def test_end_to_end():
         logger.debug("PyTorch Lightning trainer created")
 
         # Evaluate model before training to get initial accuracy
-        logger.debug("Evaluating model before training")
+        logger.info("Evaluating model before training")
         initial_val_results = pl_trainer.test(trainer, verbose=False)
         initial_accuracy = initial_val_results[0]['test_accuracy']
-        logger.debug(f"Initial validation accuracy: {initial_accuracy}")
+        initial_loss = initial_val_results[0]['test_loss']
+        logger.info(f"Initial validation accuracy: {initial_accuracy}, Initial loss: {initial_loss}")
         logger.debug("Starting model training")
         pl_trainer.fit(trainer)
         logger.debug("Model training completed")
@@ -106,7 +107,8 @@ def test_end_to_end():
         logger.debug("Evaluating model after training")
         final_val_results = pl_trainer.test(trainer, verbose=False)
         final_accuracy = final_val_results[0]['test_accuracy']
-        logger.debug(f"Final validation accuracy: {final_accuracy}")
+        final_loss = final_val_results[0]['test_loss']
+        logger.info(f"Final validation accuracy: {final_accuracy}, Final loss: {final_loss}")
 
         # Check that validation accuracy improved
         assert final_accuracy > initial_accuracy, f"Validation accuracy did not improve. Initial accuracy: {initial_accuracy}, Final accuracy: {final_accuracy}"
