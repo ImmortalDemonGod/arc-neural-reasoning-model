@@ -9,6 +9,9 @@ black>=20.8b1
 isort>=5.0
 flake8>=3.9
 ruff
+scipy
+psutil
+ultralytics-thop
 mypy
 tox
 tensorboard
