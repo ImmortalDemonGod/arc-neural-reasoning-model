@@ -1,8 +1,8 @@
 import torch
 from torch.utils.data import DataLoader
-from src.data.arc_dataset import ARCDataset
-from src.models.gpt2 import GPT2ARC
-from src.config import ModelConfig
+from gpt2_arc.src.data.arc_dataset import ARCDataset
+from gpt2_arc.src.models.gpt2 import GPT2ARC
+from gpt2_arc.src.config import ModelConfig
 import time
 import logging
 
