@@ -90,7 +90,13 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
             'total_time': total_time,
             'grids_per_second': grids_per_second,
             'cpu_usage': np.mean(cpu_usages),
-            'memory_usage': np.mean(memory_usages)
+            'memory_usage': np.mean(memory_usages),
+            'batch_size': batch_size,
+            'num_batches': num_batches,
+            'device': device.type,
+            'n_embd': model.config.n_embd,
+            'n_head': model.config.n_head,
+            'n_layer': model.config.n_layer
         })
 
         total_time_runs.append(total_time)
@@ -113,7 +119,10 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
 
     # Append results to the CSV file
     with open(csv_file_path, 'a', newline='') as csvfile:
-        fieldnames = ['datetime', 'run', 'total_time', 'grids_per_second', 'cpu_usage', 'memory_usage']
+        fieldnames = [
+            'datetime', 'run', 'total_time', 'grids_per_second', 'cpu_usage', 'memory_usage',
+            'batch_size', 'num_batches', 'device', 'n_embd', 'n_head', 'n_layer'
+        ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         # Write the header only if the file does not exist
