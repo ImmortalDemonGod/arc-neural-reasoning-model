@@ -93,7 +93,7 @@ def test_end_to_end():
 
         # Check that loss decreased
         train_losses = trainer.train_losses
-        logger.debug(f"Training losses: {train_losses}")
+        logger.info(f"Training losses: {train_losses}")
         assert train_losses[-1] < train_losses[0], f"Training loss did not decrease. Initial loss: {train_losses[0]}, Final loss: {train_losses[-1]}"
         
         # Check that the final loss is lower than the initial loss
@@ -113,8 +113,8 @@ def test_end_to_end():
         # Check that validation accuracy improved
         assert final_accuracy > initial_accuracy, f"Validation accuracy did not improve. Initial accuracy: {initial_accuracy}, Final accuracy: {final_accuracy}"
 
-        logger.debug(f"Final training loss: {train_losses[-1]:.4f}")
-        logger.debug(f"Validation accuracy: {final_accuracy:.4f}")
+        logger.info(f"Final training loss: {train_losses[-1]:.4f}")
+        logger.info(f"Validation accuracy: {final_accuracy:.4f}")
 
         # Check model parameters
         total_params = sum(p.numel() for p in model.parameters())
