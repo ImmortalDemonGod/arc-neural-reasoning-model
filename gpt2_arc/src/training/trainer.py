@@ -35,14 +35,14 @@ class ARCTrainer(pl.LightningModule):
         else:
             raise ValueError("Batch must be either a tuple or a dictionary")
 
-        logger.debug(f"Training step input_ids dtype: {input_ids.dtype}")
-        logger.debug(f"Training step attention_mask dtype: {attention_mask.dtype}")
-        logger.debug(f"Training step labels dtype: {labels.dtype}")
-
         # Ensure tensors are float32
         input_ids = input_ids.to(torch.float32)
         attention_mask = attention_mask.to(torch.float32)
         labels = labels.to(torch.float32)
+
+        logger.debug(f"Training step input_ids dtype: {input_ids.dtype}")
+        logger.debug(f"Training step attention_mask dtype: {attention_mask.dtype}")
+        logger.debug(f"Training step labels dtype: {labels.dtype}")
 
         logger.debug(f"Validation step input_ids dtype: {input_ids.dtype}")
         logger.debug(f"Validation step attention_mask dtype: {attention_mask.dtype}")
