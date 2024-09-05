@@ -29,24 +29,9 @@ def test_end_to_end(arc_data_path):
         if not os.path.exists(arc_data_path):
             pytest.skip(f"ARC dataset file not found at {arc_data_path}")
 
-        # Load and inspect the JSON file
-        import json
-        with open(arc_data_path, 'r') as f:
-            raw_data = json.load(f)
-        
-        logger.debug(f"Type of data: {type(raw_data)}")
-        if isinstance(raw_data, list):
-            logger.debug(f"Number of items: {len(raw_data)}")
-            if raw_data:
-                logger.debug(f"Keys in the first item: {list(raw_data[0].keys()) if isinstance(raw_data[0], dict) else 'Not a dictionary'}")
-        elif isinstance(raw_data, dict):
-            logger.debug(f"Keys in the JSON file: {list(raw_data.keys())}")
-        else:
-            logger.debug(f"Unexpected data type: {type(raw_data)}")
-
-        # Create datasets
+        # Create datasets using ARCDataset
         logger.debug("Creating train and validation datasets")
-        full_dataset = raw_data  # Use the raw data directly
+        full_dataset = ARCDataset(arc_data_path)
         dataset_size = len(full_dataset)
         train_size = int(0.8 * dataset_size)
         val_size = dataset_size - train_size
@@ -55,18 +40,17 @@ def test_end_to_end(arc_data_path):
 
         # Create a custom collate function to handle the data format
         def collate_fn(batch):
-            inputs = [torch.tensor(item['input'], dtype=torch.float32) for item in batch]
-            outputs = [torch.tensor(item['output'], dtype=torch.float32) for item in batch]
-            
-            # Find max dimensions
-            max_input_size = max(input.size() for input in inputs)
-            max_output_size = max(output.size() for output in outputs)
-            
-            # Pad inputs and outputs
-            padded_inputs = [torch.nn.functional.pad(input, (0, max_input_size[1] - input.size(1), 0, max_input_size[0] - input.size(0))) for input in inputs]
-            padded_outputs = [torch.nn.functional.pad(output, (0, max_output_size[1] - output.size(1), 0, max_output_size[0] - output.size(0))) for output in outputs]
-            
-            return torch.stack(padded_inputs), torch.stack(padded_outputs)
+            inputs = [item[0] for item in batch]
+            outputs = [item[1] for item in batch]
+
+            # Inputs and outputs are already tensors, so we just need to stack them
+            input_stack = torch.stack(inputs)
+            output_stack = torch.stack(outputs)
+
+            # Create a dummy attention mask (all ones)
+            attention_mask = torch.ones_like(input_stack[:, :, 0])
+
+            return input_stack, attention_mask, output_stack
 
         # Initialize model
         logger.debug("Initializing model")
