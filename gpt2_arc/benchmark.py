@@ -6,6 +6,7 @@ from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import ModelConfig
 import time
 import logging
+import statistics
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -69,8 +70,16 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=10):
     avg_total_time = sum(total_time_runs) / num_runs
     avg_grids_per_second = sum(grids_per_second_runs) / num_runs
 
-    logger.info(f"Average total time over {num_runs} runs: {avg_total_time:.4f} seconds")
-    logger.info(f"Average grids per second over {num_runs} runs: {avg_grids_per_second:.2f}")
+    std_total_time = statistics.stdev(total_time_runs)
+    std_grids_per_second = statistics.stdev(grids_per_second_runs)
+
+    min_total_time = min(total_time_runs)
+    max_total_time = max(total_time_runs)
+    min_grids_per_second = min(grids_per_second_runs)
+    max_grids_per_second = max(grids_per_second_runs)
+
+    logger.info(f"Average total time over {num_runs} runs: {avg_total_time:.4f} seconds (std: {std_total_time:.4f}, min: {min_total_time:.4f}, max: {max_total_time:.4f})")
+    logger.info(f"Average grids per second over {num_runs} runs: {avg_grids_per_second:.2f} (std: {std_grids_per_second:.2f}, min: {min_grids_per_second:.2f}, max: {max_grids_per_second:.2f})")
 
     # Compare with baseline
     time_improvement = avg_total_time - BASELINE_TOTAL_TIME
