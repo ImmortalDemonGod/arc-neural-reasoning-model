@@ -92,20 +92,17 @@ class GPT2ARC(nn.Module):
 
     def forward(self, input_ids, attention_mask=None):
         logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
-        # Expecting input_ids to be 4D: (batch_size, channels, height, width)
-        x = self.conv1(input_ids.float())  # Convert input to float and apply convolution
+        # Reshape input_ids to [batch_size, 1, height, width]
+        batch_size = input_ids.size(0)
+        height = width = int(input_ids.size(1) ** 0.5)
+        x = input_ids.float().view(batch_size, 1, height, width)
+        
+        x = self.conv1(x)  # Apply convolution
         B, C, H, W = x.size()  # Get the dimensions after convolution
         x = x.view(B, C, H * W)  # Flatten the spatial dimensions
         x = x.permute(0, 2, 1)  # Rearrange to (batch_size, sequence_length, channels)
 
         for block in self.blocks:
-            x = block(x, attention_mask)
-
-        x = self.ln_f(x)
-        return x
-
-        for i, block in enumerate(self.blocks):
-            logger.debug(f"Processing block {i}")
             x = block(x, attention_mask)
 
         x = self.ln_f(x)

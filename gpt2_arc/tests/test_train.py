@@ -77,10 +77,8 @@ def test_gpt2arc_initialization(model):
 
 def test_gpt2arc_forward_pass(model):
     batch_size = 2
-    channels = 1
-    height = 30
-    width = 30
-    input_ids = torch.randint(0, 2, (batch_size, channels, height, width))
+    height = width = 30  # 30x30 grid
+    input_ids = torch.randint(0, 2, (batch_size, height * width))
     attention_mask = torch.ones((batch_size, height * width))
     output = model(input_ids, attention_mask)
     assert isinstance(output, torch.Tensor)
