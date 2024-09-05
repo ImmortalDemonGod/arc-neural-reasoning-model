@@ -150,8 +150,10 @@ def test_arc_dataset_preprocess_grid(sample_data):
     dataset = ARCDataset(sample_data, num_symbols=3)
     input_grid, output_grid = dataset[0]
 
-    logger.debug(f"Input grid shape: {input_grid.shape}")
-    logger.debug(f"Output grid shape: {output_grid.shape}")
+    print(f"Input grid shape: {input_grid.shape}")
+    print(f"Output grid shape: {output_grid.shape}")
+    print(f"Input grid content:\n{input_grid}")
+    print(f"Output grid content:\n{output_grid}")
 
     # Check that the grids are indeed 3D
     assert input_grid.ndim == 3, f"Expected 3D input grid, got {input_grid.ndim}D"
@@ -161,14 +163,27 @@ def test_arc_dataset_preprocess_grid(sample_data):
     assert output_grid.shape == (3, 2, 2), f"Preprocessed grid should have shape (3, 2, 2), but got {output_grid.shape}"
 
     # Check if the original data is preserved
-    expected_input = torch.eye(input_grid.size(0))[:, :2, :2]
-    expected_output = torch.flip(torch.eye(output_grid.size(0))[:, :2, :2], [1])
+    print(f"Shape of eye tensor: {torch.eye(input_grid.size(0)).shape}")
+    print(f"Input grid size(0): {input_grid.size(0)}")
     
-    logger.debug(f"Expected input shape: {expected_input.shape}")
-    logger.debug(f"Expected output shape: {expected_output.shape}")
-    
-    assert torch.all(input_grid[:, :2, :2] == expected_input), "Input grid data mismatch"
-    assert torch.all(output_grid[:, :2, :2] == expected_output), "Output grid data mismatch"
+    # Instead of using torch.eye, let's create the expected input manually
+    expected_input = torch.zeros((3, 2, 2))
+    expected_input[0, 0, 0] = 1  # Representing 1 in the original input
+    expected_input[1, 0, 1] = 1  # Representing 0 in the original input
+    expected_input[1, 1, 0] = 1  # Representing 0 in the original input
+    expected_input[0, 1, 1] = 1  # Representing 1 in the original input
+
+    expected_output = torch.zeros((3, 2, 2))
+    expected_output[1, 0, 0] = 1  # Representing 0 in the original output
+    expected_output[0, 0, 1] = 1  # Representing 1 in the original output
+    expected_output[0, 1, 0] = 1  # Representing 1 in the original output
+    expected_output[1, 1, 1] = 1  # Representing 0 in the original output
+
+    print(f"Expected input:\n{expected_input}")
+    print(f"Expected output:\n{expected_output}")
+
+    assert torch.all(input_grid == expected_input), "Input grid data mismatch"
+    assert torch.all(output_grid == expected_output), "Output grid data mismatch"
 
 @pytest.fixture
 def mock_taskset():

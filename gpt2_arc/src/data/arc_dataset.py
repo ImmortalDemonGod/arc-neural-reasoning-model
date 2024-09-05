@@ -185,6 +185,7 @@ class ARCDataset(Dataset):
 
     def _preprocess_grid(self, grid: np.ndarray) -> torch.Tensor:
         logger.debug(f"Original grid shape: {grid.shape}")
+        logger.debug(f"Original grid content:\n{grid}")
 
         # Check for invalid symbols
         if np.any(grid >= self.num_symbols):
@@ -194,14 +195,17 @@ class ARCDataset(Dataset):
         padded_grid = np.zeros(self.max_grid_size, dtype=int)
         padded_grid[:grid.shape[0], :grid.shape[1]] = grid
         logger.debug(f"Padded grid shape: {padded_grid.shape}")
+        logger.debug(f"Padded grid content:\n{padded_grid}")
 
         # One-hot encode the padded grid
         one_hot_grid = np.eye(self.num_symbols)[padded_grid]
         logger.debug(f"One-hot encoded grid shape before transpose: {one_hot_grid.shape}")
+        logger.debug(f"One-hot encoded grid content before transpose:\n{one_hot_grid}")
 
         # Correctly transpose to ensure shape (num_symbols, height, width)
         one_hot_grid = np.transpose(one_hot_grid, (2, 0, 1))
         logger.debug(f"One-hot encoded grid shape after transpose: {one_hot_grid.shape}")
+        logger.debug(f"One-hot encoded grid content after transpose:\n{one_hot_grid}")
 
         return torch.tensor(one_hot_grid, dtype=torch.float32)
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
