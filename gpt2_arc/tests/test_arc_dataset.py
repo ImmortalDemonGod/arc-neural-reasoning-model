@@ -149,6 +149,7 @@ def test_arc_dataset_preprocess_grid(sample_data):
     logger.debug(f"Input grid shape: {input_grid.shape}")
     logger.debug(f"Output grid shape: {output_grid.shape}")
 
+    # Check that the grids are indeed 3D
     assert input_grid.ndim == 3, f"Expected 3D input grid, got {input_grid.ndim}D"
     assert output_grid.ndim == 3, f"Expected 3D output grid, got {output_grid.ndim}D"
 
@@ -156,8 +157,8 @@ def test_arc_dataset_preprocess_grid(sample_data):
     assert output_grid.shape == (3, 2, 2), "Preprocessed grid should have shape (3, 2, 2)"
 
     # Check if the original data is preserved
-    assert torch.all(input_grid[:, :2, :2] == torch.eye(3)[:, :2, :2])
-    assert torch.all(output_grid[:, :2, :2] == torch.flip(torch.eye(3)[:, :2, :2], [1]))
+    assert torch.all(input_grid[:, :2, :2] == torch.eye(3)[:, :2, :2]), "Input grid data mismatch"
+    assert torch.all(output_grid[:, :2, :2] == torch.flip(torch.eye(3)[:, :2, :2], [1])), "Output grid data mismatch"
 
 @pytest.fixture
 def mock_taskset():
