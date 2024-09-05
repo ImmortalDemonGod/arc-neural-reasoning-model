@@ -106,6 +106,20 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=10):
     else:
         logger.info(f"Improvement in grids per second: {grids_per_second_improvement:.2f} ({grids_per_second_improvement_percent:.2f}%)")
 
+    # Calculate effect size (Cohen's d)
+    effect_size_time = (avg_total_time - BASELINE_TOTAL_TIME) / std_total_time
+    effect_size_grids = (avg_grids_per_second - BASELINE_GRIDS_PER_SECOND) / std_grids_per_second
+
+    logger.info(f"Effect size for total time: {effect_size_time:.4f}")
+    logger.info(f"Effect size for grids per second: {effect_size_grids:.4f}")
+
+    # Perform a one-sample t-test
+    t_stat_time, p_value_time = stats.ttest_1samp(total_time_runs, BASELINE_TOTAL_TIME)
+    t_stat_grids, p_value_grids = stats.ttest_1samp(grids_per_second_runs, BASELINE_GRIDS_PER_SECOND)
+
+    logger.info(f"T-Test for total time: t-statistic = {t_stat_time:.4f}, p-value = {p_value_time:.4f}")
+    logger.info(f"T-Test for grids per second: t-statistic = {t_stat_grids:.4f}, p-value = {p_value_grids:.4f}")
+
     return avg_total_time, avg_grids_per_second
 
 if __name__ == "__main__":
