@@ -134,7 +134,7 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
     with patch(
         "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
     ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
-        "gpt2_arc.src.training.train.ARCTrainer", return_value=mock_trainer
+        "gpt2_arc.src.training.train.ARCTrainer", return_value=trainer
     ), patch(
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
@@ -157,7 +157,7 @@ def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
     with patch(
         "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
     ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
-        "gpt2_arc.src.training.train.ARCTrainer", return_value=mock_trainer
+        "gpt2_arc.src.training.train.ARCTrainer", return_value=trainer
     ), patch(
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger"), patch(
@@ -165,7 +165,7 @@ def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
     ):
         main(mock_args)
 
-        mock_pl_trainer.fit.assert_called_once_with(mock_trainer)
+        mock_pl_trainer.fit.assert_called_once_with(trainer)
 
 
 def test_data_loading(mock_args):

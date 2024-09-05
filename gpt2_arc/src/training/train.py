@@ -47,6 +47,8 @@ def main(args):
 
     train_loader = DataLoader(train_data, batch_size=args.batch_size, num_workers=7)
     val_loader = DataLoader(val_data, batch_size=args.batch_size, num_workers=7)
+
+    pl_trainer = pl.Trainer(
         max_epochs=config.training.max_epochs,
         logger=logger,
         callbacks=callbacks if callbacks else None,
