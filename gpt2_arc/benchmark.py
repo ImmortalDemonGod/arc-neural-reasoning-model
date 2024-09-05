@@ -79,8 +79,8 @@ if __name__ == "__main__":
     total_time_2, grids_per_second_2 = benchmark_model(model, train_dataset)
 
     # Set baseline values for comparison
-    baseline_total_time = 1.9047  # Updated baseline total time from first run
-    baseline_grids_per_second = 168.01  # Updated baseline grids per second from first run
+    baseline_total_time = 1.9385  # Updated baseline total time from first run
+    baseline_grids_per_second = 165.08  # Updated baseline grids per second from first run
 
     # Compare current results with baseline
     improvement_time_1 = baseline_total_time - total_time_1
