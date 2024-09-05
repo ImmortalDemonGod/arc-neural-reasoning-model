@@ -92,20 +92,17 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     import logging
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
-    
+
     logger.debug(f"Mock TaskSet: {mock_taskset}")
     logger.debug(f"Mock TaskSet attributes: {dir(mock_taskset)}")
-    logger.debug(f"Mock TaskSet type: {type(mock_taskset)}")
-    logger.debug(f"Is instance of TaskSet: {isinstance(mock_taskset, TaskSet)}")
+    logger.debug(f"Mock TaskSet tasks: {mock_taskset.tasks}")
+    logger.debug(f"Length of Mock TaskSet tasks: {len(mock_taskset.tasks)}")
+
+    dataset = ARCDataset(mock_taskset)
     
-    try:
-        dataset = ARCDataset(mock_taskset)
-    except Exception as e:
-        logger.error(f"Error initializing ARCDataset: {str(e)}")
-        raise
-    
-    logger.debug(f"Dataset length: {len(dataset)}")
-    
+    logger.debug(f"Dataset length after initialization: {len(dataset)}")
+    logger.debug(f"Dataset details: {[len(task['train']) + len(task['test']) for task in dataset.data]}")
+
     assert len(dataset) == 3, "Dataset should have 3 samples (2 train + 1 test)"
     input_grid, output_grid = dataset[0]
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"

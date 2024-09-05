@@ -111,6 +111,7 @@ class ARCDataset(Dataset):
         logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
         for task in taskset.tasks:
             logger.debug(f"Processing task: {task.id}")
+            logger.debug(f"Train samples: {len(task.train)}, Test samples: {len(task.test)}")
             processed_task = {
                 "id": task.id,
                 "train": [
@@ -123,11 +124,14 @@ class ARCDataset(Dataset):
                 ]
             }
             processed_data.append(processed_task)
+            logger.debug(f"Processed task {task.id}: Train samples: {len(processed_task['train'])}, Test samples: {len(processed_task['test'])}")
         logger.debug(f"Processed {len(processed_data)} tasks")
         return processed_data
 
     def __len__(self) -> int:
-        return sum(len(task['train' if not self.is_test else 'test']) for task in self.data)
+        total_samples = sum(len(task['train']) + len(task['test']) for task in self.data)
+        logger.debug(f"Total samples in dataset: {total_samples}")
+        return total_samples
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         for task in self.data:
