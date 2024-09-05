@@ -36,9 +36,31 @@ def mock_taskset():
     mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
-#Skip
-@pytest.mark.skip(reason="Hard to fix")
 def test_arc_dataset_initialization(sample_data):
+    dataset = ARCDataset(sample_data)
+    print(f"Dataset length: {len(dataset)}, Expected: {len(sample_data)}")
+    assert len(dataset) == len(sample_data), "Dataset length mismatch"
+    
+    input_grid, output_grid = dataset[0]
+    print(f"Input grid shape: {input_grid.shape}, Expected: (1, 30, 30)")
+    print(f"Output grid shape: {output_grid.shape}, Expected: (1, 30, 30)")
+    
+    assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
+    assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
+    
+    # Update the shape check to match the new preprocessing logic
+    assert input_grid.shape == (1, 30, 30), "Input grid should have shape (1, 30, 30)"
+    assert output_grid.shape == (1, 30, 30), "Output grid should have shape (1, 30, 30)"
+    
+    # Verify that the original data is preserved in the center of the padded grid
+    center_input = input_grid[0, 14:16, 14:16]
+    center_output = output_grid[0, 14:16, 14:16]
+    
+    print(f"Center input: {center_input}")
+    print(f"Center output: {center_output}")
+    
+    assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
+    assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
     dataset = ARCDataset(sample_data)
     assert len(dataset) == 2, "Dataset should have 2 samples"
     
@@ -197,9 +219,37 @@ def mock_taskset():
     mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
-#skip
-@pytest.mark.skip(reason="Hard to fix")
 def test_arc_dataset_taskset_initialization(mock_taskset):
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
+    
+    logger.debug(f"Mock TaskSet: {mock_taskset}")
+    logger.debug(f"Mock TaskSet attributes: {dir(mock_taskset)}")
+    
+    dataset = ARCDataset(mock_taskset)
+    
+    logger.debug(f"Dataset length: {len(dataset)}")
+    print(f"Dataset length: {len(dataset)}, Expected: 3")
+    
+    assert len(dataset) == 3, "Dataset should have 3 samples (2 train + 1 test)"
+    input_grid, output_grid = dataset[0]
+    print(f"Input grid shape: {input_grid.shape}, Expected: (1, 30, 30)")
+    print(f"Output grid shape: {output_grid.shape}, Expected: (1, 30, 30)")
+    
+    assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
+    assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
+    assert input_grid.shape == (1, 30, 30), "Input grid should have shape (1, 30, 30)"
+    assert output_grid.shape == (1, 30, 30), "Output grid should have shape (1, 30, 30)"
+    
+    # Check if the original data is preserved in the center
+    center_input = input_grid[0, 14:16, 14:16]
+    center_output = output_grid[0, 14:16, 14:16]
+    print(f"Center input: {center_input}")
+    print(f"Center output: {center_output}")
+    
+    assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
+    assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
     import logging
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
