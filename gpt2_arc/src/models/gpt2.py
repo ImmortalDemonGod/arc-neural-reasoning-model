@@ -96,7 +96,10 @@ class GPT2ARC(nn.Module):
 
     def _init_weights(self, module):
         if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
-            init.xavier_uniform_(module.weight)
+            # Calculate fan_in for Conv2d
+            fan_in = module.in_channels * module.kernel_size[0] * module.kernel_size[1]
+            std = 1.0 / fan_in**0.5
+            init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
                 init.zeros_(module.bias)
         # No initialization for nn.LayerNorm, using default
