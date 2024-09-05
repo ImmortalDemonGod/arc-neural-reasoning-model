@@ -8,7 +8,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 
 from src.data.arc_dataset import ARCDataset
 from src.models.gpt2 import GPT2ARC
-from src.config import Config
+from src.config import Config, ModelConfig, TrainingConfig
 from src.training.trainer import ARCTrainer
 
 
@@ -43,7 +43,6 @@ def main(args):
     # Create PyTorch Lightning trainer
     pl_trainer = pl.Trainer(
         max_epochs=config.training.max_epochs,
-        logger=logger,
         logger=logger,
         callbacks=[checkpoint_callback] if checkpoint_callback else None,
         enable_checkpointing=not args.no_checkpointing,
