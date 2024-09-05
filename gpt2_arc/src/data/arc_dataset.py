@@ -187,21 +187,31 @@ class ARCDataset(Dataset):
         logger.debug(f"Original grid shape: {grid.shape}")
         logger.debug(f"Original grid content:\n{grid}")
 
-        # Check for invalid symbols
-        if np.any(grid >= self.num_symbols):
-            raise ValueError(f"Grid contains invalid symbols (>= {self.num_symbols})")
+        # Scale the grid
+        scaled_grid = self._scale_grid(grid, height=30, width=30)
 
-        # Create a zero-initialized 3D array
-        one_hot_grid = np.zeros((self.num_symbols, *grid.shape), dtype=np.float32)
+        # Pad if necessary
+        padded_grid = self._pad_grid(scaled_grid, height=30, width=30)
 
-        # Populate the one-hot encoded grid
-        for i in range(self.num_symbols):
-            one_hot_grid[i] = (grid == (self.num_symbols - 1 - i))
+        # Convert to tensor and add channel dimension
+        grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
 
-        logger.debug(f"One-hot encoded grid shape: {one_hot_grid.shape}")
-        logger.debug(f"One-hot encoded grid content:\n{one_hot_grid}")
+        logger.debug(f"Preprocessed grid shape: {grid_tensor.shape}")
+        logger.debug(f"Preprocessed grid content:\n{grid_tensor}")
 
-        return torch.tensor(one_hot_grid, dtype=torch.float32)
+        return grid_tensor
+
+    def _scale_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
+        h = height / grid.shape[0]
+        w = width / grid.shape[1]
+        d = int(min(h, w))
+        return np.kron(grid, np.ones((d, d)))
+
+    def _pad_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
+        h, w = grid.shape
+        pad_h = (height - h) // 2
+        pad_w = (width - w) // 2
+        return np.pad(grid, ((pad_h, height - h - pad_h), (pad_w, width - w - pad_w)), mode='constant')
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
         processed_data = []
         for item in data_source:

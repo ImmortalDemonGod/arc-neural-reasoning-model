@@ -147,7 +147,7 @@ def test_arc_dataset_invalid_data(sample_data):
         ARCDataset(invalid_data)
 
 def test_arc_dataset_preprocess_grid(sample_data):
-    dataset = ARCDataset(sample_data, num_symbols=3)
+    dataset = ARCDataset(sample_data, num_symbols=10)
     input_grid, output_grid = dataset[0]
 
     print(f"Input grid shape: {input_grid.shape}")
@@ -159,27 +159,22 @@ def test_arc_dataset_preprocess_grid(sample_data):
     assert input_grid.ndim == 3, f"Expected 3D input grid, got {input_grid.ndim}D"
     assert output_grid.ndim == 3, f"Expected 3D output grid, got {output_grid.ndim}D"
 
-    assert input_grid.shape == (3, 2, 2), f"Preprocessed grid should have shape (3, 2, 2), but got {input_grid.shape}"
-    assert output_grid.shape == (3, 2, 2), f"Preprocessed grid should have shape (3, 2, 2), but got {output_grid.shape}"
+    # Check the shape (1, 30, 30)
+    assert input_grid.shape == (1, 30, 30), f"Preprocessed grid should have shape (1, 30, 30), but got {input_grid.shape}"
+    assert output_grid.shape == (1, 30, 30), f"Preprocessed grid should have shape (1, 30, 30), but got {output_grid.shape}"
 
-    # Check if the original data is preserved
-    expected_input = torch.tensor([
-        [[1., 0.], [0., 1.]],
-        [[0., 1.], [1., 0.]],
-        [[0., 0.], [0., 0.]]
-    ])
+    # Check if the original data is preserved in the center
+    expected_input = torch.zeros((1, 30, 30))
+    expected_input[0, 14:16, 14:16] = torch.tensor([[1., 0.], [0., 1.]])
 
-    expected_output = torch.tensor([
-        [[0., 1.], [1., 0.]],
-        [[1., 0.], [0., 1.]],
-        [[0., 0.], [0., 0.]]
-    ])
+    expected_output = torch.zeros((1, 30, 30))
+    expected_output[0, 14:16, 14:16] = torch.tensor([[0., 1.], [1., 0.]])
 
     print(f"Expected input:\n{expected_input}")
     print(f"Expected output:\n{expected_output}")
 
-    assert torch.all(input_grid == expected_input), "Input grid data mismatch"
-    assert torch.all(output_grid == expected_output), "Output grid data mismatch"
+    assert torch.allclose(input_grid, expected_input), "Input grid data mismatch"
+    assert torch.allclose(output_grid, expected_output), "Output grid data mismatch"
 
 @pytest.fixture
 def mock_taskset():
