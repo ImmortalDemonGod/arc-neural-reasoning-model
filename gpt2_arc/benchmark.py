@@ -71,7 +71,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10):
     else:
         logger.info(f"Improvement in total time: {time_improvement:.4f} seconds ({time_improvement_percent:.2f}%)")
 
-    if abs(grids_per_second_improvement_percent) < 5:
+    if abs(grids_per_second_improvement_percent) < 5 or grids_per_second_improvement_percent < 0:
         logger.info("No improvement in grids per second")
     else:
         logger.info(f"Improvement in grids per second: {grids_per_second_improvement:.2f} ({grids_per_second_improvement_percent:.2f}%)")
