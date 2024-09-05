@@ -191,11 +191,12 @@ class ARCDataset(Dataset):
         if np.any(grid >= self.num_symbols):
             raise ValueError(f"Grid contains invalid symbols (>= {self.num_symbols})")
 
-        # One-hot encode the grid
-        one_hot_grid = np.eye(self.num_symbols)[grid]
+        # Create a zero-initialized 3D array
+        one_hot_grid = np.zeros((self.num_symbols, *grid.shape), dtype=np.float32)
 
-        # Transpose to ensure shape is (num_symbols, height, width)
-        one_hot_grid = np.transpose(one_hot_grid, (2, 0, 1))
+        # Populate the one-hot encoded grid
+        for i in range(self.num_symbols):
+            one_hot_grid[i] = (grid == i)
 
         logger.debug(f"One-hot encoded grid shape: {one_hot_grid.shape}")
         logger.debug(f"One-hot encoded grid content:\n{one_hot_grid}")
