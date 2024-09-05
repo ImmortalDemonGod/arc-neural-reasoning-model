@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 
 def benchmark_model(model, dataset, batch_size=32):
     dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
-    inputs, attention_mask, _ = next(iter(dataloader))
+    inputs, outputs = next(iter(dataloader))
+
+    # Create a dummy attention mask (all ones)
+    attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     inputs, attention_mask = inputs.to(device), attention_mask.to(device)
