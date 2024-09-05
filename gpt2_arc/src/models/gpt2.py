@@ -103,7 +103,6 @@ class GPT2ARC(nn.Module):
 
         x = self.ln_f(x)
         return x
-        x = tok_emb + pos_emb
 
         for i, block in enumerate(self.blocks):
             logger.debug(f"Processing block {i}")
