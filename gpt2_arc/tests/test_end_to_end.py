@@ -29,6 +29,18 @@ def test_end_to_end(arc_data_path):
         if not os.path.exists(arc_data_path):
             pytest.skip(f"ARC dataset file not found at {arc_data_path}")
 
+        # Load and inspect the JSON file
+        import json
+        with open(arc_data_path, 'r') as f:
+            raw_data = json.load(f)
+        
+        logger.debug(f"Keys in the JSON file: {list(raw_data.keys())}")
+        logger.debug(f"Type of data: {type(raw_data)}")
+        if isinstance(raw_data, list):
+            logger.debug(f"Number of items: {len(raw_data)}")
+            if raw_data:
+                logger.debug(f"Keys in the first item: {list(raw_data[0].keys())}")
+
         # Create datasets
         logger.debug("Creating train and validation datasets")
         full_dataset = ARCDataset(arc_data_path)
