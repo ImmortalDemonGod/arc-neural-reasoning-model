@@ -3,6 +3,7 @@ import pytorch_lightning as pl
 import torch
 import logging
 from torch import nn, optim
+import time
 from typing import Any
 from src.config import Config
 from torch.utils.data import DataLoader
@@ -23,6 +24,8 @@ class ARCTrainer(pl.LightningModule):
         self.logged_metrics = {}
 
     def training_step(self, batch, batch_idx):
+        start_time = time.time()
+        
         if isinstance(batch, tuple):
             input_ids, attention_mask, labels = batch
         elif isinstance(batch, dict):
@@ -60,6 +63,10 @@ class ARCTrainer(pl.LightningModule):
         loss = self.compute_loss(outputs, labels)
         self.log("train_loss", loss)
         self.train_losses.append(loss.item())
+        end_time = time.time()
+        batch_time = end_time - start_time
+        logger.info(f"Batch {batch_idx} training time: {batch_time:.4f} seconds")
+        
         return loss
 
     def validation_step(self, batch, batch_idx):

@@ -7,6 +7,7 @@ from src.models.gpt2 import GPT2ARC
 from src.training.trainer import ARCTrainer
 from src.config import Config, ModelConfig, TrainingConfig
 import pytorch_lightning as pl
+import time
 import logging
 import os
 from pytest import approx
@@ -73,6 +74,9 @@ def test_end_to_end():
 
         # Create PyTorch Lightning trainer
         logger.debug("Creating PyTorch Lightning trainer")
+        # Measure training time
+        start_time = time.time()
+        
         pl_trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
             logger=False,
@@ -90,6 +94,9 @@ def test_end_to_end():
         print(f"Initial validation accuracy: {initial_accuracy}, Initial loss: {initial_loss}")
         logger.debug("Starting model training")
         pl_trainer.fit(trainer)
+        end_time = time.time()
+        training_time = end_time - start_time
+        logger.info(f"Total training time: {training_time:.2f} seconds")
         logger.debug("Model training completed")
 
         # Check that loss decreased
