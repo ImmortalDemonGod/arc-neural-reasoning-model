@@ -15,8 +15,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Baseline values for comparison
-BASELINE_TOTAL_TIME = 1.6480
-BASELINE_GRIDS_PER_SECOND = 197.69
+BASELINE_TOTAL_TIME = 1.6391
+BASELINE_GRIDS_PER_SECOND = 199.27
 
 def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=10):
     total_time_runs = []
