@@ -11,36 +11,50 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def benchmark_model(model, dataset, batch_size=32):
+def benchmark_model(model, dataset, batch_size=32, num_batches=10):
     dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
-    inputs, outputs = next(iter(dataloader))
-
-    # Create a dummy attention mask (all ones)
-    attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    inputs, attention_mask = inputs.to(device), attention_mask.to(device)
     model.to(device)
 
-    # Measure the time taken to process the batch
-    start_time = time.time()
+    total_time = 0.0
+    total_grids = 0
 
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+    for i, (inputs, outputs) in enumerate(dataloader):
+        if i >= num_batches:
+            break
 
-    with torch.no_grad():
-        model(inputs, attention_mask)
+        # Create a dummy attention mask (all ones)
+        attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
+        inputs, attention_mask = inputs.to(device), attention_mask.to(device)
 
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+        # Measure the time taken to process the batch
+        start_time = time.time()
 
-    end_time = time.time()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
 
-    time_taken = end_time - start_time
-    grids_per_second = len(inputs) / time_taken
+        with torch.no_grad():
+            model(inputs, attention_mask)
 
-    logger.info(f"Time taken for batch: {time_taken:.4f} seconds")
-    logger.info(f"Grids per second: {grids_per_second:.2f}")
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+
+        end_time = time.time()
+
+        batch_time = end_time - start_time
+        total_time += batch_time
+        total_grids += len(inputs)
+
+        logger.info(f"Time taken for batch {i+1}: {batch_time:.4f} seconds")
+
+    average_time = total_time / num_batches
+    grids_per_second = total_grids / total_time
+
+    logger.info(f"Average time per batch: {average_time:.4f} seconds")
+    logger.info(f"Average grids per second: {grids_per_second:.2f}")
+
+# Run the benchmark with multiple batches
+benchmark_model(model, train_dataset, num_batches=10)
 
 if __name__ == "__main__":
     # Load your dataset and model
