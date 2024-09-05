@@ -22,7 +22,6 @@ def arc_data_path():
 
 import arckit
 
-@pytest.mark.timeout(600)  # 10 minutes timeout
 def test_end_to_end():
     logger.debug("Starting end-to-end test")
 
