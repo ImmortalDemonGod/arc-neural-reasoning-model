@@ -43,8 +43,8 @@ def test_end_to_end():
 
         # Create a custom collate function to handle the data format
         def collate_fn(batch):
-            inputs = [item[0].float() for item in batch]  # Convert to float
-            outputs = [item[1].float() for item in batch]  # Convert to float
+            inputs = [item[0].to(torch.float32) for item in batch]  # Convert to float32
+            outputs = [item[1].to(torch.float32) for item in batch]  # Convert to float32
             logger.debug(f"Batch input dtypes before stack: {[item[0].dtype for item in batch]}")
             logger.debug(f"Batch output dtypes before stack: {[item[1].dtype for item in batch]}")
 
