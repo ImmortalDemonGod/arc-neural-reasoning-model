@@ -172,6 +172,8 @@ def test_trainer_initialization(model, mock_dataset):
 
 @pytest.mark.parametrize("batch_size", [1, 1000000])
 def test_batch_size_extremes(mock_args, batch_size):
+    model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
+    config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=5e-4, max_epochs=2))
     mock_args.batch_size = batch_size
     with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
