@@ -16,12 +16,13 @@ def main(args):
     # Load data
     train_data = ARCDataset(args.train_data)
     val_data = ARCDataset(args.val_data)
+    print("Data loaded successfully")
 
-    # Initialize model with new configuration
+    print("Initializing model with new configuration")
     model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
     model = GPT2ARC(config=model_config)
 
-    # Initialize trainer with new configuration
+    print("Initializing trainer with new configuration")
     config = Config(model=model_config, training=TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs))
     trainer = ARCTrainer(
         model=model,
@@ -30,7 +31,7 @@ def main(args):
         config=config
     )
 
-    # Setup logging and checkpointing
+    # Create PyTorch Lightning trainer
     logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
     callbacks = []
     if not args.no_checkpointing:
@@ -42,9 +43,10 @@ def main(args):
             mode="min",
         )
         callbacks.append(checkpoint_callback)
+    from torch.utils.data import DataLoader
 
-    # Create PyTorch Lightning trainer
-    pl_trainer = pl.Trainer(
+    train_loader = DataLoader(train_data, batch_size=args.batch_size, num_workers=7)
+    val_loader = DataLoader(val_data, batch_size=args.batch_size, num_workers=7)
         max_epochs=config.training.max_epochs,
         logger=logger,
         callbacks=callbacks if callbacks else None,

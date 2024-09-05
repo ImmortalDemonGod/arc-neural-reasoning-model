@@ -227,6 +227,8 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     logger.debug(f"Mock TaskSet: {mock_taskset}")
     logger.debug(f"Mock TaskSet attributes: {dir(mock_taskset)}")
     
+    print(f"Mock task train data: {mock_taskset.tasks[0].train}")
+    print(f"Mock task test data: {mock_taskset.tasks[0].test}")
     dataset = ARCDataset(mock_taskset)
     
     logger.debug(f"Dataset length: {len(dataset)}")

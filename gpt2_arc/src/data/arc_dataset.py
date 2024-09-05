@@ -48,6 +48,8 @@ class ARCDataset(Dataset):
             logger.error(f"Invalid data_source type: {type(data_source)}")
             raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
         
+        print(f"Number of train samples: {sum(len(task['train']) for task in self.data)}")
+        print(f"Number of test samples: {sum(len(task['test']) for task in self.data)}")
         self.max_grid_size = self._compute_max_grid_size()
         self._validate_data()
 
