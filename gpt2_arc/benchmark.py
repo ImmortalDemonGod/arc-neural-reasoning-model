@@ -1,3 +1,5 @@
+import csv
+import os
 import torch
 from torch.utils.data import DataLoader
 import arckit
@@ -80,7 +82,23 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
         total_time_runs.append(total_time)
         grids_per_second_runs.append(grids_per_second)
 
-    avg_total_time = sum(total_time_runs) / num_runs
+    # Define the CSV file path
+    csv_file_path = 'benchmark_results.csv'
+
+    # Check if the file exists to determine if we need to write the header
+    file_exists = os.path.isfile(csv_file_path)
+
+    # Append results to the CSV file
+    with open(csv_file_path, 'a', newline='') as csvfile:
+        fieldnames = ['run', 'total_time', 'grids_per_second', 'cpu_usage', 'memory_usage']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        # Write the header only if the file does not exist
+        if not file_exists:
+            writer.writeheader()
+
+        for result in run_results:
+            writer.writerow(result)
     avg_grids_per_second = sum(grids_per_second_runs) / num_runs
 
     std_total_time = statistics.stdev(total_time_runs)
