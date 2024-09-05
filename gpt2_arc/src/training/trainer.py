@@ -4,6 +4,7 @@ import torch
 import logging
 from torch import nn, optim
 from typing import Any
+from src.config import Config
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,16 @@ class ARCTrainer(pl.LightningModule):
         self.logged_metrics = {}
 
     def training_step(self, batch, batch_idx):
+        if isinstance(batch, tuple):
+            input_ids, attention_mask, labels = batch
+        elif isinstance(batch, dict):
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"]
+        else:
+            raise ValueError("Batch must be either a tuple or a dictionary")
+
+        outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         logger.info(f"Epoch {self.current_epoch}, Batch {batch_idx}: Training loss = {loss.item()}")
         if isinstance(batch, tuple):
