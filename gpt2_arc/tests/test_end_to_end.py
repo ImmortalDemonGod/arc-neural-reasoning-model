@@ -13,29 +13,62 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 @pytest.fixture
-def synthetic_data():
-    logger.debug("Creating synthetic dataset")
+def real_data_sample():
+    logger.debug("Creating real dataset sample")
     data = [
         {
             "train": [
-                {"input": np.array([[1, 0], [0, 1]]), "output": np.array([[0, 1], [1, 0]])},
-                {"input": np.array([[0, 1], [1, 0]]), "output": np.array([[1, 0], [0, 1]])},
+                {
+                    "input": np.array([
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 8, 0, 0, 0, 0],
+                        [0, 8, 0, 0, 0, 0],
+                        [0, 8, 0, 0, 0, 0],
+                        [0, 8, 8, 8, 8, 0],
+                        [0, 0, 0, 0, 0, 0]
+                    ]),
+                    "output": np.array([
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 8, 8, 8, 8, 0],
+                        [0, 8, 0, 0, 0, 0],
+                        [0, 8, 0, 0, 0, 0],
+                        [0, 8, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0]
+                    ])
+                }
             ],
             "test": [
-                {"input": np.array([[1, 1], [0, 0]]), "output": np.array([[0, 0], [1, 1]])},
+                {
+                    "input": np.array([
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 5, 0, 0, 0, 0],
+                        [0, 5, 0, 0, 0, 0],
+                        [0, 5, 5, 5, 5, 0],
+                        [0, 5, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0]
+                    ]),
+                    "output": np.array([
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 5, 5, 5, 5, 0],
+                        [0, 5, 0, 0, 0, 0],
+                        [0, 5, 0, 0, 0, 0],
+                        [0, 5, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0]
+                    ])
+                }
             ]
         }
     ]
-    logger.debug(f"Synthetic dataset created with {len(data)} tasks")
+    logger.debug(f"Real dataset sample created with {len(data)} tasks")
     return data
 
-def test_end_to_end(synthetic_data):
+def test_end_to_end(real_data_sample):
     logger.debug("Starting end-to-end test")
 
     # Create datasets
     logger.debug("Creating train and validation datasets")
-    train_dataset = ARCDataset(synthetic_data)
-    val_dataset = ARCDataset(synthetic_data, is_test=True)
+    train_dataset = ARCDataset(real_data_sample)
+    val_dataset = ARCDataset(real_data_sample, is_test=True)
     logger.debug(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
 
     # Initialize model
