@@ -284,26 +284,26 @@ def analyze_results(total_time_runs, grids_per_second_runs, cpu_usages, memory_u
     logger.info(f" • T-Test for Total Time: t-statistic = {t_stat_time:.4f}, p-value = {p_value_time:.4f}")
     logger.info(f" • T-Test for Grids per Second: t-statistic = {t_stat_grids:.4f}, p-value = {p_value_grids:.4f}")
 
-    logger.info("Interpretation:")
+    logger.info("Interpretation of Statistical Significance:")
     if abs(effect_size_time) > 0.8:
-        logger.info(" • Total Time: The effect size suggests a strong practical significance.")
+        logger.info(" • Total Time: Strong practical significance (effect size > 0.8).")
     else:
-        logger.info(" • Total Time: The effect size suggests a weak practical significance.")
+        logger.info(" • Total Time: Weak practical significance (effect size <= 0.8).")
 
     if abs(effect_size_grids) > 0.8:
-        logger.info(" • Grids per Second: The effect size suggests a strong practical significance.")
+        logger.info(" • Grids per Second: Strong practical significance (effect size > 0.8).")
     else:
-        logger.info(" • Grids per Second: The effect size suggests a weak practical significance.")
+        logger.info(" • Grids per Second: Weak practical significance (effect size <= 0.8).")
 
     if p_value_time < 0.05:
-        logger.info(" • Total Time: The p-value suggests a statistically significant difference.")
+        logger.info(" • Total Time: Statistically significant difference (p-value < 0.05).")
     else:
-        logger.info(" • Total Time: The p-value suggests no statistically significant difference.")
+        logger.info(" • Total Time: No statistically significant difference (p-value >= 0.05).")
 
     if p_value_grids < 0.05:
-        logger.info(" • Grids per Second: The p-value suggests a statistically significant difference.")
+        logger.info(" • Grids per Second: Statistically significant difference (p-value < 0.05).")
     else:
-        logger.info(" • Grids per Second: The p-value suggests no statistically significant difference.")
+        logger.info(" • Grids per Second: No statistically significant difference (p-value >= 0.05).")
 
     logger.info("Conclusion:")
     if abs(effect_size_time) > 0.8 and p_value_time < 0.05:
