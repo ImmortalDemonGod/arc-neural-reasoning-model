@@ -137,7 +137,19 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
     return avg_total_time, avg_grids_per_second
 
 def analyze_results(total_time_runs, grids_per_second_runs, cpu_usages, memory_usages):
-    # Calculate statistics
+    # Calculate statistics for CPU and memory usage
+    avg_cpu_usage = np.mean(cpu_usages)
+    std_cpu_usage = np.std(cpu_usages, ddof=1)
+    avg_memory_usage = np.mean(memory_usages)
+    std_memory_usage = np.std(memory_usages, ddof=1)
+
+    # Calculate confidence intervals for CPU and memory usage
+    ci_cpu_usage = z_score * (std_cpu_usage / np.sqrt(len(cpu_usages)))
+    ci_memory_usage = z_score * (std_memory_usage / np.sqrt(len(memory_usages)))
+
+    # Log CPU and memory usage statistics
+    logger.info(f" • Average CPU Usage: {avg_cpu_usage:.2f}% (std: {std_cpu_usage:.2f}, CI: ±{ci_cpu_usage:.2f})")
+    logger.info(f" • Average Memory Usage: {avg_memory_usage:.2f}% (std: {std_memory_usage:.2f}, CI: ±{ci_memory_usage:.2f})")
     avg_total_time = np.mean(total_time_runs)
     std_total_time = np.std(total_time_runs, ddof=1)
     avg_grids_per_second = np.mean(grids_per_second_runs)
