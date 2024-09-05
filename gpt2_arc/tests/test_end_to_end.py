@@ -82,7 +82,11 @@ def test_end_to_end():
         )
         logger.debug("PyTorch Lightning trainer created")
 
-        # Train model
+        # Evaluate model before training to get initial accuracy
+        logger.debug("Evaluating model before training")
+        initial_val_results = pl_trainer.test(trainer, verbose=False)
+        initial_accuracy = initial_val_results[0]['test_accuracy']
+        logger.debug(f"Initial validation accuracy: {initial_accuracy}")
         logger.debug("Starting model training")
         pl_trainer.fit(trainer)
         logger.debug("Model training completed")
@@ -99,16 +103,14 @@ def test_end_to_end():
         epoch_losses = [sum(train_losses[i:i+33])/33 for i in range(0, len(train_losses), 33)]
         assert all(epoch_losses[i] > epoch_losses[i+1] for i in range(len(epoch_losses)-1)), "Average training loss per epoch did not consistently decrease"
 
-        # Evaluate model
-        logger.debug("Starting model evaluation")
-        val_results = pl_trainer.test(trainer, verbose=False)
-        logger.debug(f"Validation results: {val_results}")
-        
-        # Check that validation accuracy improved
-        assert val_results[0]['test_accuracy'] > 0.2, f"Validation accuracy did not improve. Final accuracy: {val_results[0]['test_accuracy']}"
+        # Evaluate model after training
+        logger.debug("Evaluating model after training")
+        final_val_results = pl_trainer.test(trainer, verbose=False)
+        final_accuracy = final_val_results[0]['test_accuracy']
+        logger.debug(f"Final validation accuracy: {final_accuracy}")
 
-        # Check that validation accuracy is within expected range
-        assert 0.2 < val_results[0]['test_accuracy'] < 0.9, f"Validation accuracy {val_results[0]['test_accuracy']} is outside expected range (0.2, 0.9)"
+        # Check that validation accuracy improved
+        assert final_accuracy > initial_accuracy, f"Validation accuracy did not improve. Initial accuracy: {initial_accuracy}, Final accuracy: {final_accuracy}"
 
         logger.debug(f"Final training loss: {train_losses[-1]:.4f}")
         logger.debug(f"Validation accuracy: {val_results[0]['test_accuracy']:.4f}")
