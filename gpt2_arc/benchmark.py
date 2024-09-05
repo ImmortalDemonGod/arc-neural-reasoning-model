@@ -55,8 +55,6 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10):
 
 if __name__ == "__main__":
     # Load your dataset and model
-    # Run the benchmark with multiple batches
-    benchmark_model(model, train_dataset, num_batches=10)
     # Load data using arckit
     train_set, _ = arckit.load_data()
     
@@ -69,5 +67,6 @@ if __name__ == "__main__":
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
     model = GPT2ARC(model_config)
 
-    # Run the benchmark
+    # Run the benchmark with multiple batches
+    benchmark_model(model, train_dataset, num_batches=10)
     benchmark_model(model, train_dataset)
