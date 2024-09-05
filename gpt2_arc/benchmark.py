@@ -28,6 +28,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
     cpu_usages = []
     memory_usages = []
 
+    run_results = []  # Initialize run_results to store each run's data
+
     for run in range(num_runs):
         dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -79,6 +81,15 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
         logger.info(f"Run {run+1}, Total time for {num_batches} batches: {total_time:.4f} seconds")
         logger.info(f"Run {run+1}, Total grids processed: {total_grids}")
 
+        # Store the results of each run
+        run_results.append({
+            'run': run + 1,
+            'total_time': total_time,
+            'grids_per_second': grids_per_second,
+            'cpu_usage': np.mean(cpu_usages),
+            'memory_usage': np.mean(memory_usages)
+        })
+
         total_time_runs.append(total_time)
         grids_per_second_runs.append(grids_per_second)
 
@@ -99,6 +110,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
 
         for result in run_results:
             writer.writerow(result)
+    avg_total_time = sum(total_time_runs) / num_runs
     avg_grids_per_second = sum(grids_per_second_runs) / num_runs
 
     std_total_time = statistics.stdev(total_time_runs)
