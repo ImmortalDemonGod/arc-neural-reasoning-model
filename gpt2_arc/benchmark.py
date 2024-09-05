@@ -194,7 +194,9 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
             'effect_size_time', 'effect_size_grids',
             't_stat_time', 'p_value_time', 't_stat_grids', 'p_value_grids',
             'avg_cpu_usage', 'std_cpu_usage', 'ci_cpu_usage',
-            'avg_memory_usage', 'std_memory_usage', 'ci_memory_usage'
+            'avg_memory_usage', 'std_memory_usage', 'ci_memory_usage',
+            'effect_size_time', 'effect_size_grids',
+            'p_value_time', 'p_value_grids'
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
@@ -219,7 +221,11 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
             'ci_cpu_usage': ci_cpu_usage,
             'avg_memory_usage': avg_memory_usage,
             'std_memory_usage': std_memory_usage,
-            'ci_memory_usage': ci_memory_usage
+            'ci_memory_usage': ci_memory_usage,
+            'effect_size_time': effect_size_time,
+            'effect_size_grids': effect_size_grids,
+            'p_value_time': p_value_time,
+            'p_value_grids': p_value_grids
         })
 
     analyze_results(total_time_runs, grids_per_second_runs, cpu_usages, memory_usages)
