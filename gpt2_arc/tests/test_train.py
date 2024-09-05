@@ -306,25 +306,27 @@ def test_tensorboard_logging(mock_args, tmp_path):
 # Additional test for GPT2ARC model in training context
 
 
-def test_gpt2arc_in_training_loop(model, mock_dataset):
-    config = Config(model=ModelConfig(), training=TrainingConfig())
-    trainer = ARCTrainer(
-        model=model, train_dataset=mock_dataset, val_dataset=mock_dataset, config=config
-    )
-
-    # Simulate a single training step
+@pytest.mark.parametrize("batch_format", ["tuple", "dict"])
+def test_arctrainer_training_step(trainer, batch_format):
     batch_size = 2
-    channels = 1
-    height = 30
-    width = 30
-    batch = {
-        "input_ids": torch.randint(0, 2, (batch_size, channels, height, width)).float(),
-        "attention_mask": torch.ones((batch_size, height * width)).float(),
-        "labels": torch.randint(0, 2, (batch_size, channels, height, width)).long(),
-    }
-
+    height = width = 30  # 30x30 grid
+    seq_length = height * width
+    vocab_size = 10  # Use a small vocab size for testing
+    if batch_format == "tuple":
+        batch = (
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            torch.ones((batch_size, seq_length)).float(),
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        )
+    else:
+        batch = {
+            "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            "attention_mask": torch.ones((batch_size, seq_length)).float(),
+            "labels": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        }
     loss = trainer.training_step(batch, 0)
+
     assert isinstance(loss, torch.Tensor)
-    assert loss.dim() == 0  # scalar tensor
-    assert not torch.isnan(loss).any(), "Training loss is NaN"
-    assert not torch.isinf(loss).any(), "Training loss is infinite"
+    assert loss.shape == torch.Size([])  # Loss should be a scalar
+    assert not torch.isnan(loss).any(), "Loss contains NaN values"
+    assert not torch.isinf(loss).any(), "Loss contains infinity values"
