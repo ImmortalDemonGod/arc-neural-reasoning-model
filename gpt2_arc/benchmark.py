@@ -7,6 +7,7 @@ from gpt2_arc.src.config import ModelConfig
 import time
 import logging
 import statistics
+from scipy import stats
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -78,8 +79,15 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=10):
     min_grids_per_second = min(grids_per_second_runs)
     max_grids_per_second = max(grids_per_second_runs)
 
-    logger.info(f"Average total time over {num_runs} runs: {avg_total_time:.4f} seconds (std: {std_total_time:.4f}, min: {min_total_time:.4f}, max: {max_total_time:.4f})")
-    logger.info(f"Average grids per second over {num_runs} runs: {avg_grids_per_second:.2f} (std: {std_grids_per_second:.2f}, min: {min_grids_per_second:.2f}, max: {max_grids_per_second:.2f})")
+    # Calculate confidence intervals
+    confidence_level = 0.95
+    z_score = stats.norm.ppf((1 + confidence_level) / 2)
+
+    ci_total_time = z_score * (std_total_time / (num_runs ** 0.5))
+    ci_grids_per_second = z_score * (std_grids_per_second / (num_runs ** 0.5))
+
+    logger.info(f"Average total time over {num_runs} runs: {avg_total_time:.4f} seconds (std: {std_total_time:.4f}, min: {min_total_time:.4f}, max: {max_total_time:.4f}, CI: ±{ci_total_time:.4f})")
+    logger.info(f"Average grids per second over {num_runs} runs: {avg_grids_per_second:.2f} (std: {std_grids_per_second:.2f}, min: {min_grids_per_second:.2f}, max: {max_grids_per_second:.2f}, CI: ±{ci_grids_per_second:.2f})")
 
     # Compare with baseline
     time_improvement = avg_total_time - BASELINE_TOTAL_TIME
