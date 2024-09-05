@@ -31,6 +31,9 @@ def mock_args():
     args.learning_rate = 1e-4
     args.max_epochs = 10
     args.use_gpu = False
+    args.no_logging = False
+    args.no_checkpointing = False
+    args.no_progress_bar = False
     return args
 
 
