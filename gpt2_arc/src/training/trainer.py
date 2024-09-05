@@ -10,7 +10,6 @@ from src.config import Config
 
 class ARCTrainer(pl.LightningModule):
     def __init__(self, model, train_dataset, val_dataset, config: Config):
-        self.logged_metrics: dict[str, Any] = {}  # Initialize logged_metrics to store metrics
         super().__init__()
         self.model = model
         self.train_dataset = train_dataset
@@ -18,7 +17,8 @@ class ARCTrainer(pl.LightningModule):
         self.config = config
         self.batch_size = config.training.batch_size
         self.lr = config.training.learning_rate
-        self.logged_metrics = {}  # Initialize logged_metrics to store metrics
+        self.train_losses = []
+        self.logged_metrics = {}
 
     def training_step(self, batch, batch_idx):
         if isinstance(batch, tuple):
@@ -45,6 +45,7 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("train_loss", loss)
+        self.train_losses.append(loss.item())
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -59,7 +60,22 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("val_loss", loss)
-        self.logged_metrics["val_loss"] = loss.item()  # Manually add to logged_metrics
+        self.logged_metrics["val_loss"] = loss.item()
+
+    def test_step(self, batch, batch_idx):
+        if isinstance(batch, tuple):
+            input_ids, attention_mask, labels = batch
+        elif isinstance(batch, dict):
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"]
+        else:
+            raise ValueError("Batch must be either a tuple or a dictionary")
+        outputs = self(input_ids, attention_mask)
+        predictions = torch.argmax(outputs, dim=-1)
+        accuracy = (predictions == labels).float().mean()
+        self.log('test_accuracy', accuracy)
+        return {"test_accuracy": accuracy}
 
     def configure_optimizers(self):
         return torch.optim.AdamW(self.parameters(), lr=self.lr)
@@ -68,6 +84,9 @@ class ARCTrainer(pl.LightningModule):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self):
+        return DataLoader(self.val_dataset, batch_size=self.batch_size)
+
+    def test_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size)
 
     def compute_loss(self, outputs, labels):
