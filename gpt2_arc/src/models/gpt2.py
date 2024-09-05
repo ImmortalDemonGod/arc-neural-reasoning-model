@@ -82,7 +82,7 @@ class GPT2ARC(nn.Module):
         super().__init__()
         self.config = config
         # Replace token embedding with a convolutional layer
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.n_embd, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.n_embd, kernel_size=3, padding=1).to(torch.float32)
         self.blocks = nn.ModuleList(
             [
                 TransformerBlock(self.config.n_embd, self.config.n_head)

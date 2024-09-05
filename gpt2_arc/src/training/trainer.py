@@ -49,7 +49,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Validation step labels dtype: {labels.dtype}")
 
         outputs = self(input_ids, attention_mask)
-        loss = self.compute_loss(outputs, labels)
+        loss = self.compute_loss(outputs, labels.long())
         logger.info(f"Epoch {self.current_epoch}, Batch {batch_idx}: Training loss = {loss.item()}")
 
         # Ensure tensors are float32

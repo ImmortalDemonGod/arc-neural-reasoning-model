@@ -81,7 +81,7 @@ def test_end_to_end():
 
         # THOP Profiling
         logger.debug("Profiling model with THOP")
-        dummy_input = torch.randn(1, 1, 28, 28)  # Example input shape
+        dummy_input = torch.randn(1, 1, 28, 28, dtype=torch.float32)  # Example input shape
         macs, params = profile(model, inputs=(dummy_input,))
         macs, params = clever_format([macs, params], "%.3f")
         logger.info(f"MACs: {macs}, Parameters: {params}")
