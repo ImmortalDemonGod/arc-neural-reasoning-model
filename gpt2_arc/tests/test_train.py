@@ -7,6 +7,9 @@ import os
 import sys
 
 import pytest
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Add the project root to the PYTHONPATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
