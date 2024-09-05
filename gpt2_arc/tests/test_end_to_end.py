@@ -87,6 +87,7 @@ def test_end_to_end():
         initial_accuracy = initial_val_results[0]['test_accuracy']
         initial_loss = initial_val_results[0]['test_loss']
         logger.info(f"Initial validation accuracy: {initial_accuracy}, Initial loss: {initial_loss}")
+        print(f"Initial validation accuracy: {initial_accuracy}, Initial loss: {initial_loss}")
         logger.debug("Starting model training")
         pl_trainer.fit(trainer)
         logger.debug("Model training completed")
@@ -109,6 +110,7 @@ def test_end_to_end():
         final_accuracy = final_val_results[0]['test_accuracy']
         final_loss = final_val_results[0]['test_loss']
         logger.info(f"Final validation accuracy: {final_accuracy}, Final loss: {final_loss}")
+        print(f"Final validation accuracy: {final_accuracy}, Final loss: {final_loss}")
 
         # Check that validation accuracy improved
         assert final_accuracy > initial_accuracy, f"Validation accuracy did not improve. Initial accuracy: {initial_accuracy}, Final accuracy: {final_accuracy}"
