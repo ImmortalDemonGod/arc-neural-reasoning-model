@@ -44,6 +44,8 @@ def test_end_to_end():
         def collate_fn(batch):
             inputs = [item[0].float() for item in batch]  # Convert to float
             outputs = [item[1].float() for item in batch]  # Convert to float
+            logger.debug(f"Batch input dtypes before stack: {[item[0].dtype for item in batch]}")
+            logger.debug(f"Batch output dtypes before stack: {[item[1].dtype for item in batch]}")
 
             # Inputs and outputs are already tensors, so we just need to stack them
             input_stack = torch.stack(inputs)

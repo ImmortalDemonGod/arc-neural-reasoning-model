@@ -164,7 +164,7 @@ class ARCDataset(Dataset):
                 sample = task[split][idx - current_idx]
                 input_grid = self._preprocess_grid(sample["input"])
                 output_grid = self._preprocess_grid(sample["output"])
-                logger.debug(f"__getitem__ input dtype: {input_grid.dtype}")
+                logger.debug(f"__getitem__ input dtype: {input_grid.dtype}, output dtype: {output_grid.dtype}")
                 return input_grid, output_grid
             current_idx += len(task[split])
 
