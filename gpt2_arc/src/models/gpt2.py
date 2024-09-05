@@ -79,8 +79,9 @@ from src.config import ModelConfig
 class GPT2ARC(nn.Module):
     def __init__(self, config: ModelConfig):
         super().__init__()
-        self.token_embedding = nn.Embedding(50257, config.n_embd)
-        self.position_embedding = nn.Embedding(1024, config.n_embd)
+        self.config = config
+        # Replace token embedding with a convolutional layer
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=config.n_embd, kernel_size=3, padding=1)
         self.blocks = nn.ModuleList(
             [
                 TransformerBlock(config.n_embd, config.n_head)
@@ -88,23 +89,20 @@ class GPT2ARC(nn.Module):
             ]
         )
         self.ln_f = nn.LayerNorm(config.n_embd)
-        self.config = {
-            "n_embd": config.n_embd,
-            "n_head": config.n_head,
-            "n_layer": config.n_layer,
-            "dropout": config.dropout,
-        }
-        logger.debug(
-            f"Initialized GPT2ARC with vocab_size=50257, n_embd={config.n_embd}, n_head={config.n_head}, n_layer={config.n_layer}"
-        )
 
     def forward(self, input_ids, attention_mask=None):
         logger.debug(f"GPT2ARC input shape: {input_ids.shape}")
-        B, T = input_ids.size()
-        pos = torch.arange(0, T, dtype=torch.long, device=input_ids.device).unsqueeze(0)
+        # Expecting input_ids to be 4D: (batch_size, channels, height, width)
+        x = self.conv1(input_ids)  # Apply convolution
+        B, C, H, W = x.size()  # Get the dimensions after convolution
+        x = x.view(B, C, H * W)  # Flatten the spatial dimensions
+        x = x.permute(0, 2, 1)  # Rearrange to (batch_size, sequence_length, channels)
 
-        tok_emb = self.token_embedding(input_ids)
-        pos_emb = self.position_embedding(pos)
+        for block in self.blocks:
+            x = block(x, attention_mask)
+
+        x = self.ln_f(x)
+        return x
         x = tok_emb + pos_emb
 
         for i, block in enumerate(self.blocks):
