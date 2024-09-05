@@ -51,10 +51,16 @@ def test_arc_dataset_synthetic_data():
     dataset = ARCDataset(synthetic_data_path, is_test=False)
 
     assert len(dataset) > 0, "Synthetic dataset should not be empty"
-    print(f"Loaded {len(dataset)} synthetic tasks")
+    print(f"Loaded {len(dataset.data)} synthetic tasks")
     print(f"Total dataset length: {len(dataset)}")
-    for task in dataset.data:
-        print(f"Task ID: {task.get('id', 'unknown')} - Train samples: {len(task.get('train', []))}, Test samples: {len(task.get('test', []))}")
+    
+    total_train = sum(len(task['train']) for task in dataset.data)
+    total_test = sum(len(task['test']) for task in dataset.data)
+    print(f"Total train samples: {total_train}")
+    print(f"Total test samples: {total_test}")
+
+    for i, task in enumerate(dataset.data):
+        print(f"Task {i} - Train samples: {len(task['train'])}, Test samples: {len(task['test'])}")
 
     if len(dataset) == 0:
         pytest.skip("Dataset is empty; skipping random sample tests.")
@@ -65,6 +71,7 @@ def test_arc_dataset_synthetic_data():
         try:
             input_grid, output_grid = dataset[idx]
             print(f"\nSample {i + 1}:")
+            print(f"Index: {idx}")
             print(f"Input grid shape: {input_grid.shape}")
             print(f"Output grid shape: {output_grid.shape}")
         except IndexError as e:
