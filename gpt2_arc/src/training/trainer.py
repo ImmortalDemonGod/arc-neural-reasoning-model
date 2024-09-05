@@ -51,27 +51,12 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         logger.info(f"Epoch {self.current_epoch}, Batch {batch_idx}: Training loss = {loss.item()}")
-        if isinstance(batch, tuple):
-            input_ids, attention_mask, labels = batch
-        elif isinstance(batch, dict):
-            input_ids = batch["input_ids"]
-            attention_mask = batch["attention_mask"]
-            labels = batch["labels"]
-        else:
-            raise ValueError("Batch must be either a tuple or a dictionary")
 
-        # Ensure tensors
-        input_ids = (
-            input_ids.long()
-            if not isinstance(input_ids, torch.LongTensor)
-            else input_ids
-        )
-        attention_mask = (
-            attention_mask.float()
-            if not isinstance(attention_mask, torch.FloatTensor)
-            else attention_mask
-        )
-        labels = labels.long() if not isinstance(labels, torch.LongTensor) else labels
+        # Ensure tensors are float32
+        input_ids = input_ids.to(torch.float32)
+        attention_mask = attention_mask.to(torch.float32)
+        labels = labels.to(torch.float32)
+
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("train_loss", loss)
