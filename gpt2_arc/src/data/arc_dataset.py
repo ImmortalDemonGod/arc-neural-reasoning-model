@@ -186,18 +186,22 @@ class ARCDataset(Dataset):
         return symbol_counts / symbol_counts.sum()
 
     def _preprocess_grid(self, grid: np.ndarray) -> torch.Tensor:
+        logger.debug(f"Original grid shape: {grid.shape}")
         if np.any(grid >= self.num_symbols):
             raise ValueError(f"Grid contains invalid symbols (>= {self.num_symbols})")
 
         # Pad the grid to max_grid_size
         padded_grid = np.zeros(self.max_grid_size, dtype=int)
         padded_grid[:grid.shape[0], :grid.shape[1]] = grid
+        logger.debug(f"Padded grid shape: {padded_grid.shape}")
 
         # One-hot encode the padded grid
         one_hot_grid = np.eye(self.num_symbols)[padded_grid]
+        logger.debug(f"One-hot encoded grid shape: {one_hot_grid.shape}")
 
-        # Transpose to (num_symbols, height, width)
-        one_hot_grid = np.transpose(one_hot_grid, (2, 0, 1))
+        # Reshape to (num_symbols, height, width)
+        one_hot_grid = one_hot_grid.transpose(2, 0, 1)
+        logger.debug(f"Final grid shape after reshape: {one_hot_grid.shape}")
 
         return torch.tensor(one_hot_grid, dtype=torch.float32)
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:

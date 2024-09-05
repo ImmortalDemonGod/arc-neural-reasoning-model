@@ -146,6 +146,12 @@ def test_arc_dataset_preprocess_grid(sample_data):
     dataset = ARCDataset(sample_data, num_symbols=3)
     input_grid, output_grid = dataset[0]
 
+    logger.debug(f"Input grid shape: {input_grid.shape}")
+    logger.debug(f"Output grid shape: {output_grid.shape}")
+
+    assert input_grid.ndim == 3, f"Expected 3D input grid, got {input_grid.ndim}D"
+    assert output_grid.ndim == 3, f"Expected 3D output grid, got {output_grid.ndim}D"
+
     assert input_grid.shape == (3, 2, 2), "Preprocessed grid should have shape (3, 2, 2)"
     assert output_grid.shape == (3, 2, 2), "Preprocessed grid should have shape (3, 2, 2)"
 
