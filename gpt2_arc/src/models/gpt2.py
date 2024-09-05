@@ -91,7 +91,7 @@ class GPT2ARC(nn.Module):
         self.ln_f = nn.LayerNorm(config.n_embd)
 
     def forward(self, input_ids, attention_mask=None):
-        logger.debug(f"GPT2ARC input shape: {input_ids.shape}")
+        logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         # Expecting input_ids to be 4D: (batch_size, channels, height, width)
         x = self.conv1(input_ids)  # Apply convolution
         B, C, H, W = x.size()  # Get the dimensions after convolution
