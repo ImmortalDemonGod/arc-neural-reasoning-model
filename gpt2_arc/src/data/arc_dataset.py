@@ -26,9 +26,10 @@ class ARCDataset(Dataset):
         test_split: float = 0.2,
     ):
         self.samples = []
-        for task in taskset.tasks:
-            self.samples.extend(task.train)
-            self.samples.extend(task.test)
+        if TaskSet is not None and isinstance(data_source, TaskSet):
+            for task in data_source.tasks:
+                self.samples.extend(task.train)
+                self.samples.extend(task.test)
         
         if isinstance(data_source, str):
             if os.path.isdir(data_source):
