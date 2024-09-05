@@ -262,9 +262,9 @@ def test_arc_dataset_variable_size_grids(sample_data):
     assert output_grid_2.shape == (1, 30, 30), "Third sample should have shape (1, 30, 30)"
     
     # Check center of third sample (3x3)
-    center_input_2 = input_grid_2[0, 14:17, 14:17]
-    center_output_2 = output_grid_2[0, 14:17, 14:17]
-    assert torch.allclose(center_input_2, torch.tensor([[1., 0., 2.], [0., 2., 1.], [2., 1., 0.]])), "Third sample input data not preserved correctly"
-    assert torch.allclose(center_output_2, torch.tensor([[2., 1., 0.], [1., 0., 2.], [0., 2., 1.]])), "Third sample output data not preserved correctly"
+    center_input_2 = input_grid_2[0, 13:16, 13:16]
+    center_output_2 = output_grid_2[0, 13:16, 13:16]
+    assert torch.allclose(center_input_2, torch.tensor([[1., 0., 2.], [0., 2., 1.], [2., 1., 0.]])), f"Third sample input data not preserved correctly. Got:\n{center_input_2}"
+    assert torch.allclose(center_output_2, torch.tensor([[2., 1., 0.], [1., 0., 2.], [0., 2., 1.]])), f"Third sample output data not preserved correctly. Got:\n{center_output_2}"
     
     logger.debug("Completed test_arc_dataset_variable_size_grids")

@@ -134,6 +134,12 @@ class ARCDataset(Dataset):
         return total_samples
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        total_samples = sum(len(task['test' if self.is_test else 'train']) for task in self.data)
+        logger.debug(f"Requested index {idx}, total samples {total_samples}")
+        
+        if idx < 0 or idx >= total_samples:
+            raise IndexError(f"Index {idx} out of range (total samples: {total_samples})")
+        
         for task in self.data:
             split = 'test' if self.is_test else 'train'
             if idx < len(task[split]):
@@ -142,7 +148,9 @@ class ARCDataset(Dataset):
                 output_grid = self._preprocess_grid(sample["output"])
                 return input_grid, output_grid
             idx -= len(task[split])
-        raise IndexError(f"Index {idx} out of range")
+        
+        # This line should never be reached due to the initial range check
+        raise RuntimeError("Unexpected error in __getitem__")
 
     def _validate_data(self):
         for task in self.data:
