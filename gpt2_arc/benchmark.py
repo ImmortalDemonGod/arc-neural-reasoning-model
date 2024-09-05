@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
+import arckit
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import ModelConfig
@@ -40,13 +41,14 @@ def benchmark_model(model, dataset, batch_size=32):
 
 if __name__ == "__main__":
     # Load your dataset and model
-    # Sample data for demonstration purposes
-    sample_data = [
-        {"train": [{"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]}],
-         "test": [{"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]}]}
-    ]
-
-    dataset = ARCDataset(sample_data)
+    # Load data using arckit
+    train_set, _ = arckit.load_data()
+    
+    # Create a smaller subset of the dataset for benchmarking
+    subset_size = int(0.1 * len(train_set))  # Use 10% of the dataset
+    train_dataset, _ = torch.utils.data.random_split(train_set, [subset_size, len(train_set) - subset_size])
+    
+    dataset = ARCDataset(train_dataset, is_test=False)
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
     model = GPT2ARC(model_config)
 
