@@ -29,8 +29,6 @@ def main(args):
         val_dataset=val_data,
         config=config
     )
-    self.batch_size = self.config.training.batch_size
-    self.lr = self.config.training.learning_rate
 
     # Setup logging and checkpointing
     logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
