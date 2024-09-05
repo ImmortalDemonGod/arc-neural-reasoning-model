@@ -29,7 +29,7 @@ class Attention(nn.Module):
         q = self.query(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         v = self.value(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
 
-        att = (q @ k.transpose(-2, -1)) * (1.0 / torch.sqrt(torch.tensor(k.size(-1))))
+        att = (q @ k.transpose(-2, -1)) * (1.0 / torch.sqrt(torch.tensor(k.size(-1), dtype=torch.float32)))
         if mask is not None:
             att = att.masked_fill(mask[:, None, None, :] == 0, float("-inf"))
         att = F.softmax(att, dim=-1)
@@ -98,6 +98,10 @@ class GPT2ARC(nn.Module):
         if isinstance(module, nn.Conv2d):
             # Calculate fan_in for Conv2d
             fan_in = module.in_channels * module.kernel_size[0] * module.kernel_size[1]
+            std = 1.0 / fan_in**0.5
+            init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                init.zeros_(module.bias)
         elif isinstance(module, nn.Linear):
             fan_in = module.in_features
             std = 1.0 / fan_in**0.5
