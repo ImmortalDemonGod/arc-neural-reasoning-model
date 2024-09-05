@@ -53,11 +53,10 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10):
     logger.info(f"Average time per batch: {average_time:.4f} seconds")
     logger.info(f"Average grids per second: {grids_per_second:.2f}")
 
-# Run the benchmark with multiple batches
-benchmark_model(model, train_dataset, num_batches=10)
-
 if __name__ == "__main__":
     # Load your dataset and model
+    # Run the benchmark with multiple batches
+    benchmark_model(model, train_dataset, num_batches=10)
     # Load data using arckit
     train_set, _ = arckit.load_data()
     
