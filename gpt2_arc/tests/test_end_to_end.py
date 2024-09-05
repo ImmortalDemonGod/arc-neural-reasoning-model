@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @pytest.fixture
 def arc_data_path():
     # Adjust this path to the location of your ARC dataset JSON file
-    return "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/data/training/ARC-train-data.json"
+    return "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/syntheticARC/tasks/1c786137.json"
 
 def test_end_to_end(arc_data_path):
     logger.debug("Starting end-to-end test")
