@@ -34,12 +34,15 @@ def test_end_to_end(arc_data_path):
         with open(arc_data_path, 'r') as f:
             raw_data = json.load(f)
         
-        logger.debug(f"Keys in the JSON file: {list(raw_data.keys())}")
         logger.debug(f"Type of data: {type(raw_data)}")
         if isinstance(raw_data, list):
             logger.debug(f"Number of items: {len(raw_data)}")
             if raw_data:
-                logger.debug(f"Keys in the first item: {list(raw_data[0].keys())}")
+                logger.debug(f"Keys in the first item: {list(raw_data[0].keys()) if isinstance(raw_data[0], dict) else 'Not a dictionary'}")
+        elif isinstance(raw_data, dict):
+            logger.debug(f"Keys in the JSON file: {list(raw_data.keys())}")
+        else:
+            logger.debug(f"Unexpected data type: {type(raw_data)}")
 
         # Create datasets
         logger.debug("Creating train and validation datasets")
