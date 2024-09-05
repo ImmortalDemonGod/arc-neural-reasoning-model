@@ -338,18 +338,11 @@ def test_arctrainer_training_step(trainer):
     height = width = 30  # 30x30 grid
     seq_length = height * width
     vocab_size = 10  # Use a small vocab size for testing
-    if batch_format == "tuple":
-        batch = (
-            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
-            torch.ones((batch_size, seq_length)).float(),
-            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
-        )
-    else:
-        batch = {
-            "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
-            "attention_mask": torch.ones((batch_size, seq_length)).float(),
-            "labels": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
-        }
+    batch = {
+        "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        "attention_mask": torch.ones((batch_size, seq_length)).float(),
+        "labels": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+    }
     loss = trainer.training_step(batch, 0)
 
     assert isinstance(loss, torch.Tensor)
