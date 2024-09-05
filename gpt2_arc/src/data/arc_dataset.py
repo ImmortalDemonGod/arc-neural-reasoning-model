@@ -193,8 +193,8 @@ class ARCDataset(Dataset):
 
         # One-hot encode the grid
         one_hot_grid = np.eye(self.num_symbols)[grid]
-        
-        # Transpose to ensure shape (num_symbols, height, width)
+
+        # Transpose to ensure shape is (num_symbols, height, width)
         one_hot_grid = np.transpose(one_hot_grid, (2, 0, 1))
 
         logger.debug(f"One-hot encoded grid shape: {one_hot_grid.shape}")
