@@ -80,6 +80,7 @@ class ARCTrainer(pl.LightningModule):
         input_ids, attention_mask, labels = batch
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
+        B, T, C = outputs.size()  # Define B and C
         outputs = outputs.view(B, -1, C)
         predictions = torch.argmax(outputs, dim=-1)
         labels = labels.view(B, -1)
