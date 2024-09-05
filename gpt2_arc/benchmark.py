@@ -1,3 +1,4 @@
+import argparse
 import csv
 import uuid
 from datetime import datetime
@@ -333,7 +334,9 @@ def analyze_results(total_time_runs, grids_per_second_runs, cpu_usages, memory_u
         logger.info(" • Grids per Second: No statistically significant improvement.")
 
 if __name__ == "__main__":
-    # Load your dataset and model
+    parser = argparse.ArgumentParser(description="Benchmark the GPT2ARC model.")
+    parser.add_argument('--num-runs', type=int, default=20, help='Number of times to run the benchmark')
+    args = parser.parse_args()
     # Load data using arckit
     train_set, _ = arckit.load_data()
     
@@ -347,7 +350,7 @@ if __name__ == "__main__":
 
     # Run the benchmark with multiple batches
     # Run the benchmark with multiple batches
-    total_time, grids_per_second = benchmark_model(model, train_dataset, num_batches=10, num_runs=20)
+    total_time, grids_per_second = benchmark_model(model, train_dataset, num_batches=10, num_runs=args.num_runs)
 
     # Log the results
     logger.info(f"Total time for 10 batches: {total_time:.4f} seconds")
