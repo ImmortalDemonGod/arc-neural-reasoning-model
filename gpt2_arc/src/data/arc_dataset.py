@@ -187,11 +187,8 @@ class ARCDataset(Dataset):
         logger.debug(f"Original grid shape: {grid.shape}")
         logger.debug(f"Original grid content:\n{grid}")
 
-        # Scale the grid
-        scaled_grid = self._scale_grid(grid, height=30, width=30)
-
-        # Pad if necessary
-        padded_grid = self._pad_grid(scaled_grid, height=30, width=30)
+        # Pad the grid to 30x30
+        padded_grid = self._pad_grid(grid, height=30, width=30)
 
         # Convert to tensor and add channel dimension
         grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
@@ -202,10 +199,7 @@ class ARCDataset(Dataset):
         return grid_tensor
 
     def _scale_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
-        h = height / grid.shape[0]
-        w = width / grid.shape[1]
-        d = int(min(h, w))
-        return np.kron(grid, np.ones((d, d)))
+        return grid  # No scaling, preserve original size
 
     def _pad_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
         h, w = grid.shape
