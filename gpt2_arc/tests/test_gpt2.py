@@ -27,14 +27,15 @@ def test_gpt2arc_initialization(model):
 
 def test_gpt2arc_forward_pass(model):
     batch_size = 2
-    seq_length = 10
-    input_ids = torch.randint(0, 1000, (batch_size, seq_length))
-    attention_mask = torch.ones((batch_size, seq_length))
+    height = 30
+    width = 30
+    input_ids = torch.randn(batch_size, 1, height, width)  # Simulate image-like input
+    attention_mask = torch.ones((batch_size, height * width))
 
     output = model(input_ids, attention_mask)
 
     assert isinstance(output, torch.Tensor)
-    assert output.shape == (batch_size, seq_length, model.config["n_embd"])
+    assert output.shape == (batch_size, height * width, model.config.n_embd)
 
     logger.debug(f"Output shape: {output.shape}")
 
