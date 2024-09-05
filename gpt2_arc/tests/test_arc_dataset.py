@@ -163,21 +163,17 @@ def test_arc_dataset_preprocess_grid(sample_data):
     assert output_grid.shape == (3, 2, 2), f"Preprocessed grid should have shape (3, 2, 2), but got {output_grid.shape}"
 
     # Check if the original data is preserved
-    print(f"Shape of eye tensor: {torch.eye(input_grid.size(0)).shape}")
-    print(f"Input grid size(0): {input_grid.size(0)}")
-    
-    # Instead of using torch.eye, let's create the expected input manually
-    expected_input = torch.zeros((3, 2, 2))
-    expected_input[0, 0, 0] = 1  # Representing 1 in the original input
-    expected_input[1, 0, 1] = 1  # Representing 0 in the original input
-    expected_input[1, 1, 0] = 1  # Representing 0 in the original input
-    expected_input[0, 1, 1] = 1  # Representing 1 in the original input
+    expected_input = torch.tensor([
+        [[1., 0.], [0., 1.]],
+        [[0., 1.], [1., 0.]],
+        [[0., 0.], [0., 0.]]
+    ])
 
-    expected_output = torch.zeros((3, 2, 2))
-    expected_output[1, 0, 0] = 1  # Representing 0 in the original output
-    expected_output[0, 0, 1] = 1  # Representing 1 in the original output
-    expected_output[0, 1, 0] = 1  # Representing 1 in the original output
-    expected_output[1, 1, 1] = 1  # Representing 0 in the original output
+    expected_output = torch.tensor([
+        [[0., 1.], [1., 0.]],
+        [[1., 0.], [0., 1.]],
+        [[0., 0.], [0., 0.]]
+    ])
 
     print(f"Expected input:\n{expected_input}")
     print(f"Expected output:\n{expected_output}")

@@ -191,21 +191,14 @@ class ARCDataset(Dataset):
         if np.any(grid >= self.num_symbols):
             raise ValueError(f"Grid contains invalid symbols (>= {self.num_symbols})")
 
-        # Pad the grid to max_grid_size
-        padded_grid = np.zeros(self.max_grid_size, dtype=int)
-        padded_grid[:grid.shape[0], :grid.shape[1]] = grid
-        logger.debug(f"Padded grid shape: {padded_grid.shape}")
-        logger.debug(f"Padded grid content:\n{padded_grid}")
-
-        # One-hot encode the padded grid
-        one_hot_grid = np.eye(self.num_symbols)[padded_grid]
-        logger.debug(f"One-hot encoded grid shape before transpose: {one_hot_grid.shape}")
-        logger.debug(f"One-hot encoded grid content before transpose:\n{one_hot_grid}")
-
-        # Correctly transpose to ensure shape (num_symbols, height, width)
+        # One-hot encode the grid
+        one_hot_grid = np.eye(self.num_symbols)[grid]
+        
+        # Transpose to ensure shape (num_symbols, height, width)
         one_hot_grid = np.transpose(one_hot_grid, (2, 0, 1))
-        logger.debug(f"One-hot encoded grid shape after transpose: {one_hot_grid.shape}")
-        logger.debug(f"One-hot encoded grid content after transpose:\n{one_hot_grid}")
+
+        logger.debug(f"One-hot encoded grid shape: {one_hot_grid.shape}")
+        logger.debug(f"One-hot encoded grid content:\n{one_hot_grid}")
 
         return torch.tensor(one_hot_grid, dtype=torch.float32)
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
