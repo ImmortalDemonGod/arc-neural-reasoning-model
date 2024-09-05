@@ -322,7 +322,6 @@ def test_tensorboard_logging(mock_args, tmp_path):
 # Additional test for GPT2ARC model in training context
 
 
-@pytest.mark.parametrize("batch_format", ["tuple", "dict"])
 def test_arctrainer_forward_pass(trainer):
     batch_size = 2
     seq_length = 900  # 30x30 grid
@@ -334,7 +333,7 @@ def test_arctrainer_forward_pass(trainer):
     assert isinstance(output, torch.Tensor)
     assert output.shape == (batch_size, seq_length, trainer.model.config.n_embd)
 
-def test_arctrainer_training_step(trainer, batch_format):
+def test_arctrainer_training_step(trainer):
     batch_size = 2
     height = width = 30  # 30x30 grid
     seq_length = height * width
@@ -351,6 +350,32 @@ def test_arctrainer_training_step(trainer, batch_format):
             "attention_mask": torch.ones((batch_size, seq_length)).float(),
             "labels": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
         }
+    loss = trainer.training_step(batch, 0)
+
+    assert isinstance(loss, torch.Tensor)
+    assert loss.shape == torch.Size([])  # Loss should be a scalar
+    assert not torch.isnan(loss).any(), "Loss contains NaN values"
+    assert not torch.isinf(loss).any(), "Loss contains infinity values"
+@pytest.mark.parametrize("batch_format", ["tuple", "dict"])
+def test_arctrainer_batch_format(trainer, batch_format):
+    batch_size = 2
+    height = width = 30  # 30x30 grid
+    seq_length = height * width
+    vocab_size = 10  # Use a small vocab size for testing
+
+    if batch_format == "tuple":
+        batch = (
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            torch.ones((batch_size, seq_length)).float(),
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        )
+    else:
+        batch = {
+            "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            "attention_mask": torch.ones((batch_size, seq_length)).float(),
+            "labels": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        }
+
     loss = trainer.training_step(batch, 0)
 
     assert isinstance(loss, torch.Tensor)
