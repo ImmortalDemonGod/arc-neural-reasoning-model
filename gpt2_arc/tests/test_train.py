@@ -74,19 +74,23 @@ def test_gpt2arc_initialization(model):
 
 def test_gpt2arc_forward_pass(model):
     batch_size = 2
-    seq_length = 10
-    input_ids = torch.randint(0, 1000, (batch_size, seq_length))
-    attention_mask = torch.ones((batch_size, seq_length))
+    channels = 1
+    height = 30
+    width = 30
+    input_ids = torch.randint(0, 2, (batch_size, channels, height, width))
+    attention_mask = torch.ones((batch_size, height * width))
     output = model(input_ids, attention_mask)
     assert isinstance(output, torch.Tensor)
-    assert output.shape == (batch_size, seq_length, model.config["n_embd"])
+    assert output.shape == (batch_size, height * width, model.config.n_embd)
 
 
 def test_gpt2arc_output_values(model):
     batch_size = 1
-    seq_length = 5
-    input_ids = torch.tensor([[0, 1, 2, 3, 4]])
-    attention_mask = torch.ones((batch_size, seq_length))
+    channels = 1
+    height = 30
+    width = 30
+    input_ids = torch.randint(0, 2, (batch_size, channels, height, width))
+    attention_mask = torch.ones((batch_size, height * width))
     output = model(input_ids, attention_mask)
     assert not torch.isnan(output).any(), "Output contains NaN values"
     assert not torch.isinf(output).any(), "Output contains infinity values"
@@ -94,15 +98,15 @@ def test_gpt2arc_output_values(model):
 
 def test_gpt2arc_attention_mask(model):
     batch_size = 2
-    seq_length = 10
-    input_ids = torch.randint(0, 1000, (batch_size, seq_length))
-    attention_mask = torch.zeros((batch_size, seq_length))
-    attention_mask[:, :5] = 1  # Only attend to first 5 tokens
+    channels = 1
+    height = 30
+    width = 30
+    input_ids = torch.randint(0, 2, (batch_size, channels, height, width))
+    attention_mask = torch.zeros((batch_size, height * width))
+    attention_mask[:, :450] = 1  # Only attend to first half of the pixels
     output_with_mask = model(input_ids, attention_mask)
     output_without_mask = model(input_ids)
-    assert not torch.allclose(
-        output_with_mask, output_without_mask
-    ), "Attention mask should affect the output"
+    assert not torch.allclose(output_with_mask, output_without_mask), "Attention mask should affect the output"
 
 
 # New tests for train.py
@@ -282,16 +286,18 @@ def test_gpt2arc_in_training_loop(model, mock_dataset):
     )
 
     # Simulate a single training step
-    vocab_size = 10  # Use a small vocab size for testing
-    seq_length = 10
+    batch_size = 2
+    channels = 1
+    height = 30
+    width = 30
     batch = {
-        "input_ids": torch.randint(0, vocab_size, (2, seq_length)).long(),
-        "attention_mask": torch.ones((2, seq_length)).float(),
-        "labels": torch.randint(0, vocab_size, (2, seq_length)).long(),
+        "input_ids": torch.randint(0, 2, (batch_size, channels, height, width)).float(),
+        "attention_mask": torch.ones((batch_size, height * width)).float(),
+        "labels": torch.randint(0, 2, (batch_size, channels, height, width)).long(),
     }
 
     loss = trainer.training_step(batch, 0)
     assert isinstance(loss, torch.Tensor)
-    assert loss.dim() == 0  # Scalar tensor
+    assert loss.dim() == 0  # scalar tensor
     assert not torch.isnan(loss).any(), "Training loss is NaN"
     assert not torch.isinf(loss).any(), "Training loss is infinite"
