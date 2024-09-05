@@ -195,7 +195,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
         fieldnames = [
             'run_id', 'datetime', 'avg_total_time', 'std_total_time', 'ci_total_time',
             'avg_grids_per_second', 'std_grids_per_second', 'ci_grids_per_second',
-            'effect_size_time', 'effect_size_grids',
+            'effect_size_time', 'effect_size_grids', 'percent_change_time', 'percent_change_grids',
             't_stat_time', 'p_value_time', 't_stat_grids', 'p_value_grids',
             'avg_cpu_usage', 'std_cpu_usage', 'ci_cpu_usage',
             'avg_memory_usage', 'std_memory_usage', 'ci_memory_usage',
@@ -218,6 +218,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
             'ci_grids_per_second': ci_grids_per_second,
             'effect_size_time': effect_size_time,
             'effect_size_grids': effect_size_grids,
+            'percent_change_time': percent_change_time,
+            'percent_change_grids': percent_change_grids,
             't_stat_time': t_stat_time,
             'p_value_time': p_value_time,
             't_stat_grids': t_stat_grids,
