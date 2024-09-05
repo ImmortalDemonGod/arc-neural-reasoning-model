@@ -52,6 +52,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10):
 
     logger.info(f"Average time per batch: {average_time:.4f} seconds")
     logger.info(f"Average grids per second: {grids_per_second:.2f}")
+    logger.info(f"Total time for {num_batches} batches: {total_time:.4f} seconds")
+    logger.info(f"Total grids processed: {total_grids}")
 
 if __name__ == "__main__":
     # Load your dataset and model
