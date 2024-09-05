@@ -93,7 +93,14 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
         total_time_runs.append(total_time)
         grids_per_second_runs.append(grids_per_second)
 
-    # Define the CSV file path
+    # Calculate statistics for CPU and memory usage
+    avg_cpu_usage = np.mean(cpu_usages)
+    std_cpu_usage = np.std(cpu_usages, ddof=1)
+    ci_cpu_usage = z_score * (std_cpu_usage / np.sqrt(len(cpu_usages)))
+
+    avg_memory_usage = np.mean(memory_usages)
+    std_memory_usage = np.std(memory_usages, ddof=1)
+    ci_memory_usage = z_score * (std_memory_usage / np.sqrt(len(memory_usages)))
     csv_file_path = 'benchmark_results.csv'
 
     # Check if the file exists to determine if we need to write the header
