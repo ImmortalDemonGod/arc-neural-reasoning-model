@@ -89,6 +89,16 @@ class GPT2ARC(nn.Module):
             ]
         )
         self.ln_f = nn.LayerNorm(self.config.n_embd)
+        
+        # Initialize weights
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+            init.xavier_uniform_(module.weight)
+            if module.bias is not None:
+                init.zeros_(module.bias)
+        # No initialization for nn.LayerNorm, using default
 
     def forward(self, input_ids, attention_mask=None):
         logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
