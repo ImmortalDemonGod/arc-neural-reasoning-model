@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 import os
 import torch
 from torch.utils.data import DataLoader
@@ -82,7 +83,9 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
         logger.info(f"Run {run+1}, Total grids processed: {total_grids}")
 
         # Store the results of each run
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         run_results.append({
+            'datetime': current_time,
             'run': run + 1,
             'total_time': total_time,
             'grids_per_second': grids_per_second,
@@ -110,7 +113,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
 
     # Append results to the CSV file
     with open(csv_file_path, 'a', newline='') as csvfile:
-        fieldnames = ['run', 'total_time', 'grids_per_second', 'cpu_usage', 'memory_usage']
+        fieldnames = ['datetime', 'run', 'total_time', 'grids_per_second', 'cpu_usage', 'memory_usage']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         # Write the header only if the file does not exist
