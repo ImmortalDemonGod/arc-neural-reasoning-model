@@ -175,6 +175,10 @@ def test_batch_size_extremes(mock_args, batch_size):
     model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
     config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=5e-4, max_epochs=2))
     mock_args.batch_size = batch_size
+    mock_args.no_logging = True
+    mock_args.no_checkpointing = True
+    mock_args.no_progress_bar = True
+    mock_args.use_gpu = False
     with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
@@ -185,6 +189,7 @@ def test_batch_size_extremes(mock_args, batch_size):
         mock_trainer.assert_called_with(
             max_epochs=config.training.max_epochs,
             logger=False,
+            callbacks=None,
             enable_checkpointing=False,
             enable_progress_bar=False,
             gradient_clip_val=1.0
