@@ -69,6 +69,7 @@ def test_end_to_end():
         trainer = ARCTrainer(model, train_dataset, val_dataset, config)
         trainer.train_dataloader = lambda: torch.utils.data.DataLoader(train_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
         trainer.val_dataloader = lambda: torch.utils.data.DataLoader(val_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
+        trainer.test_dataloader = lambda: torch.utils.data.DataLoader(val_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
         logger.debug(f"Trainer initialized with config: {config}")
 
         # Create PyTorch Lightning trainer

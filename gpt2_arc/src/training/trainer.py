@@ -77,14 +77,7 @@ class ARCTrainer(pl.LightningModule):
         self.logged_metrics["val_loss"] = loss.item()
 
     def test_step(self, batch, batch_idx):
-        if isinstance(batch, tuple):
-            input_ids, attention_mask, labels = batch
-        elif isinstance(batch, dict):
-            input_ids = batch["input_ids"]
-            attention_mask = batch["attention_mask"]
-            labels = batch["labels"]
-        else:
-            raise ValueError("Batch must be either a tuple or a dictionary")
+        input_ids, attention_mask, labels = batch
         outputs = self(input_ids, attention_mask)
         predictions = torch.argmax(outputs, dim=-1)
         accuracy = (predictions == labels).float().mean()
