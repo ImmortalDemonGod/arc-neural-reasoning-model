@@ -46,12 +46,18 @@ def test_end_to_end(arc_data_path):
 
         # Create datasets
         logger.debug("Creating train and validation datasets")
-        full_dataset = ARCDataset(arc_data_path)
+        full_dataset = raw_data  # Use the raw data directly
         dataset_size = len(full_dataset)
         train_size = int(0.8 * dataset_size)
         val_size = dataset_size - train_size
         train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
         logger.debug(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
+
+        # Create a custom collate function to handle the data format
+        def collate_fn(batch):
+            inputs = [torch.tensor(item['input'], dtype=torch.float32) for item in batch]
+            outputs = [torch.tensor(item['output'], dtype=torch.float32) for item in batch]
+            return torch.stack(inputs), torch.stack(outputs)
 
         # Initialize model
         logger.debug("Initializing model")
@@ -63,6 +69,8 @@ def test_end_to_end(arc_data_path):
         logger.debug("Initializing trainer")
         config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=10))
         trainer = ARCTrainer(model, train_dataset, val_dataset, config)
+        trainer.train_dataloader = lambda: torch.utils.data.DataLoader(train_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
+        trainer.val_dataloader = lambda: torch.utils.data.DataLoader(val_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
         logger.debug(f"Trainer initialized with config: {config}")
 
         # Create PyTorch Lightning trainer
