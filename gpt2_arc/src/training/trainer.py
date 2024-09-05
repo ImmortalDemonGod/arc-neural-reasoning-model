@@ -21,6 +21,7 @@ class ARCTrainer(pl.LightningModule):
         self.logged_metrics = {}
 
     def training_step(self, batch, batch_idx):
+        logger.info(f"Epoch {self.current_epoch}, Batch {batch_idx}: Training loss = {loss.item()}")
         if isinstance(batch, tuple):
             input_ids, attention_mask, labels = batch
         elif isinstance(batch, dict):
