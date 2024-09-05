@@ -81,14 +81,14 @@ class GPT2ARC(nn.Module):
         super().__init__()
         self.config = config
         # Replace token embedding with a convolutional layer
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=config.n_embd, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.n_embd, kernel_size=3, padding=1)
         self.blocks = nn.ModuleList(
             [
-                TransformerBlock(config.n_embd, config.n_head)
-                for _ in range(config.n_layer)
+                TransformerBlock(self.config.n_embd, self.config.n_head)
+                for _ in range(self.config.n_layer)
             ]
         )
-        self.ln_f = nn.LayerNorm(config.n_embd)
+        self.ln_f = nn.LayerNorm(self.config.n_embd)
 
     def forward(self, input_ids, attention_mask=None):
         logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")

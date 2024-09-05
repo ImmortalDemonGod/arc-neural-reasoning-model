@@ -58,8 +58,11 @@ def model():
 
 
 @pytest.fixture
-def mock_trainer():
-    return MagicMock(spec=ARCTrainer)
+def trainer():
+    model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
+    config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=2))
+    model = GPT2ARC(config.model)
+    return ARCTrainer(model, None, None, config)
 
 
 @pytest.fixture
@@ -320,6 +323,17 @@ def test_tensorboard_logging(mock_args, tmp_path):
 
 
 @pytest.mark.parametrize("batch_format", ["tuple", "dict"])
+def test_arctrainer_forward_pass(trainer):
+    batch_size = 2
+    seq_length = 900  # 30x30 grid
+    input_ids = torch.randint(0, 2, (batch_size, seq_length))
+    attention_mask = torch.ones((batch_size, seq_length))
+
+    output = trainer(input_ids, attention_mask)
+
+    assert isinstance(output, torch.Tensor)
+    assert output.shape == (batch_size, seq_length, trainer.model.config.n_embd)
+
 def test_arctrainer_training_step(trainer, batch_format):
     batch_size = 2
     height = width = 30  # 30x30 grid
