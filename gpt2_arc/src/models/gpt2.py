@@ -93,7 +93,7 @@ class GPT2ARC(nn.Module):
     def forward(self, input_ids, attention_mask=None):
         logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         # Expecting input_ids to be 4D: (batch_size, channels, height, width)
-        x = self.conv1(input_ids)  # Apply convolution
+        x = self.conv1(input_ids.float())  # Convert input to float and apply convolution
         B, C, H, W = x.size()  # Get the dimensions after convolution
         x = x.view(B, C, H * W)  # Flatten the spatial dimensions
         x = x.permute(0, 2, 1)  # Rearrange to (batch_size, sequence_length, channels)
