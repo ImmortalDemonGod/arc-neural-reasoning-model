@@ -187,7 +187,9 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
     logger.info(f"T-Test for total time: t-statistic = {t_stat_time:.4f}, p-value = {p_value_time:.4f}")
     logger.info(f"T-Test for grids per second: t-statistic = {t_stat_grids:.4f}, p-value = {p_value_grids:.4f}")
 
-    # Save statistical information to a CSV file
+    # Calculate percent change compared to baseline
+    percent_change_time = ((avg_total_time - BASELINE_TOTAL_TIME) / BASELINE_TOTAL_TIME) * 100
+    percent_change_grids = ((avg_grids_per_second - BASELINE_GRIDS_PER_SECOND) / BASELINE_GRIDS_PER_SECOND) * 100
     stats_csv_file_path = 'benchmark_statistics.csv'
     stats_file_exists = os.path.isfile(stats_csv_file_path)
 
