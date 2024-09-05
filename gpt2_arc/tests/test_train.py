@@ -177,8 +177,16 @@ def test_batch_size_extremes(mock_args, batch_size):
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
-    ):
-        main(mock_args)  # Should not raise an exception
+    ) as mock_trainer:
+        main(mock_args)
+
+        mock_trainer.assert_called_with(
+            max_epochs=config.training.max_epochs,
+            logger=False,
+            enable_checkpointing=False,
+            enable_progress_bar=False,
+            gradient_clip_val=1.0
+        )
 
 
 @pytest.mark.parametrize("learning_rate", [1e-10, 1000])
@@ -244,7 +252,8 @@ def test_valid_learning_rates(mock_args, learning_rate):
 
 
 def test_end_to_end_training(mock_args, tmp_path):
-    mock_args.max_epochs = 2  # Short training run
+    model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
+    config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=5e-4, max_epochs=2))
     checkpoint_dir = tmp_path / "checkpoints"
     checkpoint_dir.mkdir()
     mock_args.checkpoint_dir = str(checkpoint_dir)
