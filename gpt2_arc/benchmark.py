@@ -5,6 +5,7 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import ModelConfig
 import time
+import psutil
 import logging
 import statistics
 import numpy as np
@@ -22,6 +23,9 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
     total_time_runs = []
     grids_per_second_runs = []
 
+    cpu_usages = []
+    memory_usages = []
+
     for run in range(num_runs):
         dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -37,6 +41,13 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
             # Create a dummy attention mask (all ones)
             attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
             inputs, attention_mask = inputs.to(device), attention_mask.to(device)
+
+            # Log system load before processing the batch
+            cpu_percent = psutil.cpu_percent(interval=None)
+            memory_info = psutil.virtual_memory()
+            cpu_usages.append(cpu_percent)
+            memory_usages.append(memory_info.percent)
+            logger.info(f"CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%")
 
             # Measure the time taken to process the batch
             start_time = time.time()
@@ -121,11 +132,11 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
     logger.info(f"T-Test for total time: t-statistic = {t_stat_time:.4f}, p-value = {p_value_time:.4f}")
     logger.info(f"T-Test for grids per second: t-statistic = {t_stat_grids:.4f}, p-value = {p_value_grids:.4f}")
 
-    analyze_results(total_time_runs, grids_per_second_runs)
+    analyze_results(total_time_runs, grids_per_second_runs, cpu_usages, memory_usages)
 
     return avg_total_time, avg_grids_per_second
 
-def analyze_results(total_time_runs, grids_per_second_runs):
+def analyze_results(total_time_runs, grids_per_second_runs, cpu_usages, memory_usages):
     # Calculate statistics
     avg_total_time = np.mean(total_time_runs)
     std_total_time = np.std(total_time_runs, ddof=1)
@@ -146,7 +157,13 @@ def analyze_results(total_time_runs, grids_per_second_runs):
     t_stat_time, p_value_time = stats.ttest_1samp(total_time_runs, BASELINE_TOTAL_TIME)
     t_stat_grids, p_value_grids = stats.ttest_1samp(grids_per_second_runs, BASELINE_GRIDS_PER_SECOND)
 
+    # Calculate average CPU and memory usage
+    avg_cpu_usage = np.mean(cpu_usages)
+    avg_memory_usage = np.mean(memory_usages)
+
     # Log the results
+    logger.info(f" • Average CPU Usage: {avg_cpu_usage:.2f}%")
+    logger.info(f" • Average Memory Usage: {avg_memory_usage:.2f}%")
     logger.info("Current Statistics:")
     logger.info(f" • Average Total Time: {avg_total_time:.4f} seconds")
     logger.info(f" • Standard Deviation of Total Time: {std_total_time:.4f} seconds")
