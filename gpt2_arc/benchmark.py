@@ -71,7 +71,11 @@ if __name__ == "__main__":
     model = GPT2ARC(model_config)
 
     # Run the benchmark with multiple batches
+    # Run the benchmark with multiple batches
     total_time_1, grids_per_second_1 = benchmark_model(model, train_dataset, num_batches=10)
+
+    # Reinitialize the model to ensure a fresh start for the second run
+    model = GPT2ARC(model_config)
     total_time_2, grids_per_second_2 = benchmark_model(model, train_dataset)
 
     # Set baseline values for comparison
