@@ -25,9 +25,10 @@ class ARCDataset(Dataset):
         num_symbols: int = 10,
         test_split: float = 0.2,
     ):
-        self.is_test = is_test
-        self.num_symbols = num_symbols
-        self.test_split = test_split
+        self.samples = []
+        for task in taskset.tasks:
+            self.samples.extend(task.train)
+            self.samples.extend(task.test)
         
         if isinstance(data_source, str):
             if os.path.isdir(data_source):
