@@ -120,7 +120,77 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=10):
     logger.info(f"T-Test for total time: t-statistic = {t_stat_time:.4f}, p-value = {p_value_time:.4f}")
     logger.info(f"T-Test for grids per second: t-statistic = {t_stat_grids:.4f}, p-value = {p_value_grids:.4f}")
 
+    analyze_results(total_time_runs, grids_per_second_runs)
+
     return avg_total_time, avg_grids_per_second
+
+def analyze_results(total_time_runs, grids_per_second_runs):
+    # Calculate statistics
+    avg_total_time = np.mean(total_time_runs)
+    std_total_time = np.std(total_time_runs, ddof=1)
+    avg_grids_per_second = np.mean(grids_per_second_runs)
+    std_grids_per_second = np.std(grids_per_second_runs, ddof=1)
+
+    # Calculate confidence intervals
+    confidence_level = 0.95
+    z_score = stats.norm.ppf((1 + confidence_level) / 2)
+    ci_total_time = z_score * (std_total_time / np.sqrt(len(total_time_runs)))
+    ci_grids_per_second = z_score * (std_grids_per_second / np.sqrt(len(grids_per_second_runs)))
+
+    # Calculate effect sizes
+    effect_size_time = (avg_total_time - BASELINE_TOTAL_TIME) / std_total_time
+    effect_size_grids = (avg_grids_per_second - BASELINE_GRIDS_PER_SECOND) / std_grids_per_second
+
+    # Perform t-tests
+    t_stat_time, p_value_time = stats.ttest_1samp(total_time_runs, BASELINE_TOTAL_TIME)
+    t_stat_grids, p_value_grids = stats.ttest_1samp(grids_per_second_runs, BASELINE_GRIDS_PER_SECOND)
+
+    # Log the results
+    logger.info("Current Statistics:")
+    logger.info(f" • Average Total Time: {avg_total_time:.4f} seconds")
+    logger.info(f" • Standard Deviation of Total Time: {std_total_time:.4f} seconds")
+    logger.info(f" • Confidence Interval for Total Time (95%): ±{ci_total_time:.4f} seconds")
+    logger.info(f" • Average Grids per Second: {avg_grids_per_second:.2f}")
+    logger.info(f" • Standard Deviation of Grids per Second: {std_grids_per_second:.2f}")
+    logger.info(f" • Confidence Interval for Grids per Second (95%): ±{ci_grids_per_second:.2f}")
+
+    logger.info("Statistical Tests:")
+    logger.info(f" • Effect Size for Total Time: {effect_size_time:.4f}")
+    logger.info(f" • Effect Size for Grids per Second: {effect_size_grids:.4f}")
+    logger.info(f" • T-Test for Total Time: t-statistic = {t_stat_time:.4f}, p-value = {p_value_time:.4f}")
+    logger.info(f" • T-Test for Grids per Second: t-statistic = {t_stat_grids:.4f}, p-value = {p_value_grids:.4f}")
+
+    logger.info("Interpretation:")
+    if abs(effect_size_time) > 0.8:
+        logger.info(" • Total Time: The effect size suggests a strong practical significance.")
+    else:
+        logger.info(" • Total Time: The effect size suggests a weak practical significance.")
+
+    if abs(effect_size_grids) > 0.8:
+        logger.info(" • Grids per Second: The effect size suggests a strong practical significance.")
+    else:
+        logger.info(" • Grids per Second: The effect size suggests a weak practical significance.")
+
+    if p_value_time < 0.05:
+        logger.info(" • Total Time: The p-value suggests a statistically significant difference.")
+    else:
+        logger.info(" • Total Time: The p-value suggests no statistically significant difference.")
+
+    if p_value_grids < 0.05:
+        logger.info(" • Grids per Second: The p-value suggests a statistically significant difference.")
+    else:
+        logger.info(" • Grids per Second: The p-value suggests no statistically significant difference.")
+
+    logger.info("Conclusion:")
+    if abs(effect_size_time) > 0.8 and p_value_time < 0.05:
+        logger.info(" • Total Time: Statistically significant reduction.")
+    else:
+        logger.info(" • Total Time: No statistically significant reduction.")
+
+    if abs(effect_size_grids) > 0.8 and p_value_grids < 0.05:
+        logger.info(" • Grids per Second: Statistically significant improvement.")
+    else:
+        logger.info(" • Grids per Second: No statistically significant improvement.")
 
 if __name__ == "__main__":
     # Load your dataset and model
