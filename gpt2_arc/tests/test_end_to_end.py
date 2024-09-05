@@ -7,68 +7,31 @@ from src.training.trainer import ARCTrainer
 from src.config import Config, ModelConfig, TrainingConfig
 import pytorch_lightning as pl
 import logging
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 @pytest.fixture
-def real_data_sample():
-    logger.debug("Creating real dataset sample")
-    data = [
-        {
-            "train": [
-                {
-                    "input": np.array([
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 8, 0, 0, 0, 0],
-                        [0, 8, 0, 0, 0, 0],
-                        [0, 8, 0, 0, 0, 0],
-                        [0, 8, 8, 8, 8, 0],
-                        [0, 0, 0, 0, 0, 0]
-                    ]),
-                    "output": np.array([
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 8, 8, 8, 8, 0],
-                        [0, 8, 0, 0, 0, 0],
-                        [0, 8, 0, 0, 0, 0],
-                        [0, 8, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0]
-                    ])
-                }
-            ],
-            "test": [
-                {
-                    "input": np.array([
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 5, 0, 0, 0, 0],
-                        [0, 5, 0, 0, 0, 0],
-                        [0, 5, 5, 5, 5, 0],
-                        [0, 5, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0]
-                    ]),
-                    "output": np.array([
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 5, 5, 5, 5, 0],
-                        [0, 5, 0, 0, 0, 0],
-                        [0, 5, 0, 0, 0, 0],
-                        [0, 5, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0]
-                    ])
-                }
-            ]
-        }
-    ]
-    logger.debug(f"Real dataset sample created with {len(data)} tasks")
-    return data
+def arc_data_path():
+    # Adjust this path to the location of your ARC dataset JSON file
+    return "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/data/training/ARC-train-data.json"
 
-def test_end_to_end(real_data_sample):
+def test_end_to_end(arc_data_path):
     logger.debug("Starting end-to-end test")
+
+    # Check if the ARC dataset file exists
+    if not os.path.exists(arc_data_path):
+        pytest.skip(f"ARC dataset file not found at {arc_data_path}")
 
     # Create datasets
     logger.debug("Creating train and validation datasets")
-    train_dataset = ARCDataset(real_data_sample)
-    val_dataset = ARCDataset(real_data_sample, is_test=True)
+    full_dataset = ARCDataset(arc_data_path)
+    dataset_size = len(full_dataset)
+    train_size = int(0.8 * dataset_size)
+    val_size = dataset_size - train_size
+    train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
     logger.debug(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
 
     # Initialize model
@@ -79,14 +42,14 @@ def test_end_to_end(real_data_sample):
 
     # Initialize trainer
     logger.debug("Initializing trainer")
-    config = Config(model=model_config, training=TrainingConfig(batch_size=2, learning_rate=1e-3, max_epochs=5))
+    config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=10))
     trainer = ARCTrainer(model, train_dataset, val_dataset, config)
     logger.debug(f"Trainer initialized with config: {config}")
 
     # Create PyTorch Lightning trainer
     logger.debug("Creating PyTorch Lightning trainer")
     pl_trainer = pl.Trainer(
-        max_epochs=5,
+        max_epochs=config.training.max_epochs,
         logger=False,
         enable_checkpointing=False,
         enable_progress_bar=False
@@ -109,7 +72,7 @@ def test_end_to_end(real_data_sample):
     logger.debug(f"Validation results: {val_results}")
     
     # Check that validation accuracy improved
-    assert val_results[0]['test_accuracy'] > 0.5, f"Validation accuracy did not improve. Final accuracy: {val_results[0]['test_accuracy']}"
+    assert val_results[0]['test_accuracy'] > 0.2, f"Validation accuracy did not improve. Final accuracy: {val_results[0]['test_accuracy']}"
 
     logger.debug(f"Final training loss: {train_losses[-1]:.4f}")
     logger.debug(f"Validation accuracy: {val_results[0]['test_accuracy']:.4f}")

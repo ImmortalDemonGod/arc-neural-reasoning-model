@@ -34,7 +34,8 @@ class ARCDataset(Dataset):
                 self.data = self._process_synthetic_data(data_source)
             elif os.path.isfile(data_source):
                 with open(data_source, 'r') as f:
-                    self.data = json.load(f)
+                    raw_data = json.load(f)
+                self.data = self._process_json_data(raw_data)
             else:
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
         elif isinstance(data_source, list):
@@ -49,6 +50,22 @@ class ARCDataset(Dataset):
         
         self.max_grid_size = self._compute_max_grid_size()
         self._validate_data()
+
+    def _process_json_data(self, raw_data: List[Dict]) -> List[Dict]:
+        processed_data = []
+        for task in raw_data:
+            processed_task = {
+                "train": [
+                    {"input": np.array(example["input"]), "output": np.array(example["output"])}
+                    for example in task["train"]
+                ],
+                "test": [
+                    {"input": np.array(example["input"]), "output": np.array(example["output"])}
+                    for example in task["test"]
+                ]
+            }
+            processed_data.append(processed_task)
+        return processed_data
 
     def _validate_data(self):
         for task in self.data:
