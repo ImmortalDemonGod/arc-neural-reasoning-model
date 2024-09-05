@@ -40,11 +40,22 @@ def mock_taskset():
 def test_arc_dataset_initialization(sample_data):
     dataset = ARCDataset(sample_data)
     assert len(dataset) == 2, "Dataset should have 2 samples"
+    
     input_grid, output_grid = dataset[0]
+    
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
-    assert input_grid.shape == (10, 2, 2), "Input grid should have shape (10, 2, 2)"
-    assert output_grid.shape == (10, 2, 2), "Output grid should have shape (10, 2, 2)"
+    
+    # Update the shape check to match the new preprocessing logic
+    assert input_grid.shape == (1, 30, 30), "Input grid should have shape (1, 30, 30)"
+    assert output_grid.shape == (1, 30, 30), "Output grid should have shape (1, 30, 30)"
+    
+    # Verify that the original data is preserved in the center of the padded grid
+    center_input = input_grid[0, 14:16, 14:16]
+    center_output = output_grid[0, 14:16, 14:16]
+    
+    assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
+    assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
 
 def test_arc_dataset_synthetic_data():
     synthetic_data_path = "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/syntheticARC/tasks"
