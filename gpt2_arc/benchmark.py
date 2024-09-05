@@ -72,25 +72,8 @@ if __name__ == "__main__":
 
     # Run the benchmark with multiple batches
     # Run the benchmark with multiple batches
-    total_time_1, grids_per_second_1 = benchmark_model(model, train_dataset, num_batches=10)
+    total_time, grids_per_second = benchmark_model(model, train_dataset, num_batches=10)
 
-    # Reinitialize the model to ensure a fresh start for the second run
-    model = GPT2ARC(model_config)
-    total_time_2, grids_per_second_2 = benchmark_model(model, train_dataset)
-
-    # Set baseline values for comparison
-    baseline_total_time = 1.9385  # Updated baseline total time from first run
-    baseline_grids_per_second = 165.08  # Updated baseline grids per second from first run
-
-    # Compare current results with baseline
-    improvement_time_1 = baseline_total_time - total_time_1
-    improvement_grids_1 = grids_per_second_1 - baseline_grids_per_second
-
-    improvement_time_2 = baseline_total_time - total_time_2
-    improvement_grids_2 = grids_per_second_2 - baseline_grids_per_second
-
-    logger.info(f"Improvement in total time for first run: {improvement_time_1:.4f} seconds")
-    logger.info(f"Improvement in grids per second for first run: {improvement_grids_1:.2f}")
-
-    logger.info(f"Improvement in total time for second run: {improvement_time_2:.4f} seconds")
-    logger.info(f"Improvement in grids per second for second run: {improvement_grids_2:.2f}")
+    # Log the results
+    logger.info(f"Total time for 10 batches: {total_time:.4f} seconds")
+    logger.info(f"Average grids per second: {grids_per_second:.2f}")
