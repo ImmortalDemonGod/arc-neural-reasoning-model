@@ -79,7 +79,7 @@ def test_end_to_end():
         model = GPT2ARC(model_config).to(torch.float32)
         logger.debug(f"Model initialized with config: {model_config}")
 
-        # # THOP Profiling
+        # # THOP Profiling - Commented out due to TypeError with MPS Tensors
         # logger.debug("Profiling model with THOP")
         # dummy_input = torch.randn(1, 1, 28, 28, dtype=torch.float32)  # Example input shape
         # macs, params = profile(model, inputs=(dummy_input,))
