@@ -20,18 +20,20 @@ def arc_data_path():
     # Adjust this path to the location of your ARC dataset JSON file
     return "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/syntheticARC/tasks/1c786137.json"
 
+import arckit
+
 @pytest.mark.timeout(600)  # 10 minutes timeout
-def test_end_to_end(arc_data_path):
+def test_end_to_end():
     logger.debug("Starting end-to-end test")
 
     try:
-        # Check if the ARC dataset file exists
-        if not os.path.exists(arc_data_path):
-            pytest.skip(f"ARC dataset file not found at {arc_data_path}")
-
+        # Load data using arckit
+        logger.debug("Loading data using arckit")
+        train_set, eval_set = arckit.load_data()
+        
         # Create datasets using ARCDataset
         logger.debug("Creating train and validation datasets")
-        full_dataset = ARCDataset(arc_data_path)
+        full_dataset = ARCDataset(train_set, is_test=False)
         dataset_size = len(full_dataset)
         train_size = int(0.8 * dataset_size)
         val_size = dataset_size - train_size
