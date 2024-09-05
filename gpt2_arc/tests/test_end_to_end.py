@@ -42,8 +42,8 @@ def test_end_to_end():
 
         # Create a custom collate function to handle the data format
         def collate_fn(batch):
-            inputs = [item[0] for item in batch]
-            outputs = [item[1] for item in batch]
+            inputs = [item[0].float() for item in batch]  # Convert to float
+            outputs = [item[1].float() for item in batch]  # Convert to float
 
             # Inputs and outputs are already tensors, so we just need to stack them
             input_stack = torch.stack(inputs)
