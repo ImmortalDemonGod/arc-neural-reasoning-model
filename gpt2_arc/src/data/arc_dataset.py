@@ -199,16 +199,11 @@ class ARCDataset(Dataset):
 
         # One-hot encode the padded grid
         one_hot_grid = np.eye(self.num_symbols)[padded_grid]
-        logger.debug(f"One-hot encoded grid shape before reshape: {one_hot_grid.shape}")
+        logger.debug(f"One-hot encoded grid shape before transpose: {one_hot_grid.shape}")
 
-        # Ensure one-hot grid is 3D
-        if one_hot_grid.ndim == 2:
-            one_hot_grid = one_hot_grid.reshape(self.num_symbols, padded_grid.shape[0], padded_grid.shape[1])
-        elif one_hot_grid.ndim == 1:
-            # Handle potential edge case where one_hot_grid might become 1D
-            one_hot_grid = one_hot_grid.reshape(self.num_symbols, 1, 1)
-
-        logger.debug(f"Final grid shape after reshape: {one_hot_grid.shape}")
+        # Correctly transpose to ensure shape (num_symbols, height, width)
+        one_hot_grid = np.transpose(one_hot_grid, (2, 0, 1))
+        logger.debug(f"One-hot encoded grid shape after transpose: {one_hot_grid.shape}")
 
         return torch.tensor(one_hot_grid, dtype=torch.float32)
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:

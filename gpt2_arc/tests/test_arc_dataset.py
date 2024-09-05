@@ -153,8 +153,8 @@ def test_arc_dataset_preprocess_grid(sample_data):
     assert input_grid.ndim == 3, f"Expected 3D input grid, got {input_grid.ndim}D"
     assert output_grid.ndim == 3, f"Expected 3D output grid, got {output_grid.ndim}D"
 
-    assert input_grid.shape == (3, 2, 2), "Preprocessed grid should have shape (3, 2, 2)"
-    assert output_grid.shape == (3, 2, 2), "Preprocessed grid should have shape (3, 2, 2)"
+    assert input_grid.shape == (3, 2, 2), f"Preprocessed grid should have shape (3, 2, 2), but got {input_grid.shape}"
+    assert output_grid.shape == (3, 2, 2), f"Preprocessed grid should have shape (3, 2, 2), but got {output_grid.shape}"
 
     # Check if the original data is preserved
     assert torch.all(input_grid[:, :2, :2] == torch.eye(3)[:, :2, :2]), "Input grid data mismatch"
