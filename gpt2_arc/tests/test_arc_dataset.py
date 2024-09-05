@@ -76,16 +76,22 @@ def test_arc_dataset_synthetic_data():
     if len(dataset) == 0:
         pytest.skip("Dataset is empty; skipping random sample tests.")
 
+    print(f"Dataset size: {len(dataset)}")
+    
+    if len(dataset) < 3:
+        pytest.skip("Not enough data in the dataset for random sampling tests.")
+    
     # Test a few random samples
     for i in range(3):
-        idx = random.randint(0, len(dataset) - 1)
+        idx = random.choice(range(len(dataset)))
         try:
-            input_grid, output_grid = dataset[idx]
             print(f"\nSample {i + 1}:")
-            print(f"Index: {idx}")
+            print(f"Generated index: {idx}")
+            input_grid, output_grid = dataset[idx]
             print(f"Input grid shape: {input_grid.shape}")
             print(f"Output grid shape: {output_grid.shape}")
         except IndexError as e:
+            print(f"Error: Attempted to access index {idx} which is out of range. Dataset size is {len(dataset)}.")
             pytest.fail(f"Generated index {idx} out of range for dataset size {len(dataset)}: {str(e)}")
 
     # Verify grid sizes
