@@ -7,6 +7,7 @@ from gpt2_arc.src.config import ModelConfig
 import time
 import logging
 import statistics
+import numpy as np
 from scipy import stats
 
 # Set up logging
