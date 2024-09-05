@@ -60,57 +60,57 @@ def test_arc_dataset_initialization(sample_data):
 
 def test_arc_dataset_synthetic_data():
     synthetic_data_path = "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/syntheticARC/tasks"
-    dataset = ARCDataset(synthetic_data_path, is_test=False)
+    train_dataset = ARCDataset(synthetic_data_path, is_test=False)
+    test_dataset = ARCDataset(synthetic_data_path, is_test=True)
 
-    assert len(dataset) > 0, "Synthetic dataset should not be empty"
-    print(f"Loaded {len(dataset.data)} synthetic tasks")
-    print(f"Total dataset length: {len(dataset)}")
+    assert len(train_dataset) > 0, "Synthetic train dataset should not be empty"
+    assert len(test_dataset) > 0, "Synthetic test dataset should not be empty"
+    print(f"Loaded {len(train_dataset.data)} synthetic tasks")
+    print(f"Total train dataset length: {len(train_dataset)}")
+    print(f"Total test dataset length: {len(test_dataset)}")
 
-    total_train = sum(len(task['train']) for task in dataset.data)
-    total_test = sum(len(task['test']) for task in dataset.data)
+    total_train = sum(len(task['train']) for task in train_dataset.data)
+    total_test = sum(len(task['test']) for task in test_dataset.data)
     print(f"Total train samples: {total_train}")
     print(f"Total test samples: {total_test}")
 
-    for i, task in enumerate(dataset.data):
+    for i, task in enumerate(train_dataset.data):
         print(f"Task {i} - Train samples: {len(task['train'])}, Test samples: {len(task['test'])}")
 
-    if len(dataset) == 0:
-        pytest.skip("Dataset is empty; skipping random sample tests.")
+    assert len(train_dataset) == total_train, f"Train dataset length ({len(train_dataset)}) should match total train samples ({total_train})"
+    assert len(test_dataset) == total_test, f"Test dataset length ({len(test_dataset)}) should match total test samples ({total_test})"
 
-    print(f"Dataset size: {len(dataset)}")
+    if len(train_dataset) == 0:
+        pytest.skip("Train dataset is empty; skipping random sample tests.")
+
+    print(f"Train dataset size: {len(train_dataset)}")
+    print(f"Test dataset size: {len(test_dataset)}")
     
-    if len(dataset) < 3:
-        pytest.skip("Not enough data in the dataset for random sampling tests.")
+    if len(train_dataset) < 3:
+        pytest.skip("Not enough data in the train dataset for random sampling tests.")
     
-    # Test a few random samples
+    # Test a few random samples from the train dataset
     for i in range(3):
-        idx = random.choice(range(len(dataset)))
+        idx = random.choice(range(len(train_dataset)))
         try:
-            print(f"\nSample {i + 1}:")
+            print(f"\nTrain Sample {i + 1}:")
             print(f"Generated index: {idx}")
-            input_grid, output_grid = dataset[idx]
+            input_grid, output_grid = train_dataset[idx]
             print(f"Input grid shape: {input_grid.shape}")
             print(f"Output grid shape: {output_grid.shape}")
         except IndexError as e:
-            print(f"Error: Attempted to access index {idx} which is out of range. Dataset size is {len(dataset)}.")
-            pytest.fail(f"Generated index {idx} out of range for dataset size {len(dataset)}: {str(e)}")
+            print(f"Error: Attempted to access index {idx} which is out of range. Train dataset size is {len(train_dataset)}.")
+            pytest.fail(f"Generated index {idx} out of range for train dataset size {len(train_dataset)}: {str(e)}")
 
     # Verify grid sizes
-    max_h, max_w = dataset.max_grid_size
+    max_h, max_w = train_dataset.max_grid_size
     assert max_h > 0 and max_w > 0, "Grid size should be positive"
-    print(f"Maximum grid size: {dataset.max_grid_size}")
+    print(f"Maximum grid size: {train_dataset.max_grid_size}")
 
     # Verify access to train and test splits
-    assert len(dataset.data) > 0, "Dataset should contain at least one task"
-    assert 'train' in dataset.data[0], "Each task should have a 'train' split"
-    assert 'test' in dataset.data[0], "Each task should have a 'test' split"
-
-    # Test both train and test modes
-    train_dataset = ARCDataset(synthetic_data_path, is_test=False)
-    test_dataset = ARCDataset(synthetic_data_path, is_test=True)
-    
-    assert len(train_dataset) == total_train, f"Train dataset length ({len(train_dataset)}) should match total train samples ({total_train})"
-    assert len(test_dataset) == total_test, f"Test dataset length ({len(test_dataset)}) should match total test samples ({total_test})"
+    assert len(train_dataset.data) > 0, "Dataset should contain at least one task"
+    assert 'train' in train_dataset.data[0], "Each task should have a 'train' split"
+    assert 'test' in train_dataset.data[0], "Each task should have a 'test' split"
 
     print(f"Train dataset length: {len(train_dataset)}")
     print(f"Test dataset length: {len(test_dataset)}")
