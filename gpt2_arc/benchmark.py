@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
     # Run the benchmark with multiple batches
     # Run the benchmark with multiple batches
-    total_time, grids_per_second = benchmark_model(model, train_dataset, num_batches=10, num_runs=10)
+    total_time, grids_per_second = benchmark_model(model, train_dataset, num_batches=10, num_runs=20)
 
     # Log the results
     logger.info(f"Total time for 10 batches: {total_time:.4f} seconds")
