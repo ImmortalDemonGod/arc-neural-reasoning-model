@@ -196,7 +196,7 @@ class ARCDataset(Dataset):
 
         # Populate the one-hot encoded grid
         for i in range(self.num_symbols):
-            one_hot_grid[i] = (grid == i)
+            one_hot_grid[i] = (grid == (self.num_symbols - 1 - i))
 
         logger.debug(f"One-hot encoded grid shape: {one_hot_grid.shape}")
         logger.debug(f"One-hot encoded grid content:\n{one_hot_grid}")
