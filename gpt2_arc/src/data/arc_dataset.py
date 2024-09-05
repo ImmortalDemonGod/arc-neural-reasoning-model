@@ -129,8 +129,11 @@ class ARCDataset(Dataset):
         return processed_data
 
     def __len__(self) -> int:
-        total_samples = sum(len(task['train']) + len(task['test']) for task in self.data)
-        logger.debug(f"Total samples in dataset: {total_samples}")
+        if self.is_test:
+            total_samples = sum(len(task['test']) for task in self.data)
+        else:
+            total_samples = sum(len(task['train']) for task in self.data)
+        logger.debug(f"Total samples in dataset ({'test' if self.is_test else 'train'}): {total_samples}")
         return total_samples
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
