@@ -68,7 +68,7 @@ def test_end_to_end():
             output_stack = torch.stack(outputs)
 
             # Create a dummy attention mask (all ones)
-            attention_mask = torch.ones(input_stack.size(0), input_stack.size(2) * input_stack.size(3))
+            attention_mask = torch.ones(input_stack.size(0), input_stack.size(2) * input_stack.size(3), dtype=torch.float32)
 
             logger.debug(f"Collate function input dtype: {input_stack.dtype}")
             return input_stack, attention_mask, output_stack
@@ -76,7 +76,7 @@ def test_end_to_end():
         # Initialize model
         logger.debug("Initializing model")
         model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)  # Use smaller model configuration
-        model = GPT2ARC(model_config)
+        model = GPT2ARC(model_config).to(torch.float32)
         logger.debug(f"Model initialized with config: {model_config}")
 
         # THOP Profiling

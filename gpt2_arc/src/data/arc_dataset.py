@@ -27,6 +27,7 @@ class ARCDataset(Dataset):
     ):
         self.is_test = is_test
         self.num_symbols = num_symbols
+        self.test_split = test_split
         self.samples = []
         if TaskSet is not None and isinstance(data_source, TaskSet):
             for task in data_source.tasks:
@@ -108,25 +109,18 @@ class ARCDataset(Dataset):
 
     def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
         if isinstance(task_data, dict):
-            all_examples = task_data.get("train", []) + task_data.get("test", [])
+            train_examples = task_data.get("train", [])
+            test_examples = task_data.get("test", [])
         elif isinstance(task_data, list):
-            all_examples = task_data
+            split_idx = int(len(task_data) * (1 - self.test_split))
+            train_examples = task_data[:split_idx]
+            test_examples = task_data[split_idx:]
         else:
             raise ValueError("Task data must be either a dictionary or a list")
 
-        random.shuffle(all_examples)
-        split_idx = int(len(all_examples) * (1 - self.test_split))
-
         return {
-            "id": task_data.get("id", "unknown") if isinstance(task_data, dict) else "unknown",
-            "train": [
-                {"input": np.array(ex["input"]), "output": np.array(ex["output"])}
-                for ex in all_examples[:split_idx]
-            ],
-            "test": [
-                {"input": np.array(ex["input"]), "output": np.array(ex["output"])}
-                for ex in all_examples[split_idx:]
-            ]
+            "train": [self._preprocess_grid(example) for example in train_examples],
+            "test": [self._preprocess_grid(example) for example in test_examples]
         }
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
