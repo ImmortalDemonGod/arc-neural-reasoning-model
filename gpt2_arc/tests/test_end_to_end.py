@@ -10,6 +10,7 @@ import pytorch_lightning as pl
 import time
 import logging
 import os
+from thop import profile, clever_format  # Import THOP
 from pytest import approx
 
 # Set up logging
@@ -62,6 +63,13 @@ def test_end_to_end():
         model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)  # Use smaller model configuration
         model = GPT2ARC(model_config)
         logger.debug(f"Model initialized with config: {model_config}")
+
+        # THOP Profiling
+        logger.debug("Profiling model with THOP")
+        dummy_input = torch.randn(1, 1, 28, 28)  # Example input shape
+        macs, params = profile(model, inputs=(dummy_input,))
+        macs, params = clever_format([macs, params], "%.3f")
+        logger.info(f"MACs: {macs}, Parameters: {params}")
 
         # Initialize trainer
         logger.debug("Initializing trainer")
