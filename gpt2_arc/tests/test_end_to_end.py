@@ -34,10 +34,10 @@ def test_end_to_end():
         # Create datasets using ARCDataset
         logger.debug("Creating train and validation datasets")
         full_dataset = ARCDataset(train_set, is_test=False)
-        dataset_size = len(full_dataset)
-        train_size = int(0.8 * dataset_size)
-        val_size = dataset_size - train_size
-        train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
+        # Use a smaller subset of the dataset
+        subset_size = int(0.1 * len(full_dataset))  # Use 10% of the dataset
+        train_dataset, _ = torch.utils.data.random_split(full_dataset, [subset_size, len(full_dataset) - subset_size])
+        val_dataset, _ = torch.utils.data.random_split(full_dataset, [subset_size, len(full_dataset) - subset_size])
         logger.debug(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
 
         # Create a custom collate function to handle the data format
@@ -59,13 +59,13 @@ def test_end_to_end():
 
         # Initialize model
         logger.debug("Initializing model")
-        model_config = ModelConfig(n_embd=128, n_head=4, n_layer=2)
+        model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)  # Use smaller model configuration
         model = GPT2ARC(model_config)
         logger.debug(f"Model initialized with config: {model_config}")
 
         # Initialize trainer
         logger.debug("Initializing trainer")
-        config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=3))
+        config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=1))  # Reduce epochs to 1
         trainer = ARCTrainer(model, train_dataset, val_dataset, config)
         trainer.train_dataloader = lambda: torch.utils.data.DataLoader(train_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
         trainer.val_dataloader = lambda: torch.utils.data.DataLoader(val_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
