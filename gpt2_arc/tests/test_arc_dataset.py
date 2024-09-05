@@ -128,15 +128,14 @@ def test_arc_dataset_getitem(sample_data):
 
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
-    assert input_grid.shape == (10, 2, 2), "Input grid should have shape (10, 2, 2)"
-    assert output_grid.shape == (10, 2, 2), "Output grid should have shape (10, 2, 2)"
+    assert input_grid.shape == (1, 30, 30), "Input grid should have shape (1, 30, 30)"
+    assert output_grid.shape == (1, 30, 30), "Output grid should have shape (1, 30, 30)"
 
-    assert torch.all(
-        input_grid[:, 0, 0] == torch.tensor([0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
-    ), "Input grid values are incorrect"
-    assert torch.all(
-        output_grid[:, 0, 0] == torch.tensor([1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    ), "Output grid values are incorrect"
+    # Check if the original data is preserved in the center
+    center_input = input_grid[0, 14:16, 14:16]
+    center_output = output_grid[0, 14:16, 14:16]
+    assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
+    assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
 
 
 def test_arc_dataset_len(sample_data):
@@ -219,8 +218,14 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     input_grid, output_grid = dataset[0]
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
-    assert input_grid.shape == (10, 2, 2), "Input grid should have shape (10, 2, 2)"
-    assert output_grid.shape == (10, 2, 2), "Output grid should have shape (10, 2, 2)"
+    assert input_grid.shape == (1, 30, 30), "Input grid should have shape (1, 30, 30)"
+    assert output_grid.shape == (1, 30, 30), "Output grid should have shape (1, 30, 30)"
+    
+    # Check if the original data is preserved in the center
+    center_input = input_grid[0, 14:16, 14:16]
+    center_output = output_grid[0, 14:16, 14:16]
+    assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
+    assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
 
 from torch.utils.data import DataLoader
 
@@ -231,8 +236,8 @@ def test_arc_dataset_collate_fn(sample_data):
     batch = next(iter(dataloader))
     input_batch, output_batch = batch
     logger.debug(f"Collated batch shapes - inputs: {input_batch.shape}, outputs: {output_batch.shape}")
-    assert input_batch.shape == (2, 10, 2, 2), "Batched input should maintain original size"
-    assert output_batch.shape == (2, 10, 2, 2), "Batched output should maintain original size"
+    assert input_batch.shape == (2, 1, 30, 30), "Batched input should have shape (2, 1, 30, 30)"
+    assert output_batch.shape == (2, 1, 30, 30), "Batched output should have shape (2, 1, 30, 30)"
     logger.debug("Completed test_arc_dataset_collate_fn")
 
 def test_arc_dataset_variable_size_grids(sample_data):
@@ -242,12 +247,24 @@ def test_arc_dataset_variable_size_grids(sample_data):
     
     # Check first sample (2x2)
     input_grid_1, output_grid_1 = dataset[0]
-    assert input_grid_1.shape == (10, 2, 2), "First sample should maintain 2x2 shape"
-    assert output_grid_1.shape == (10, 2, 2), "First sample should maintain 2x2 shape"
+    assert input_grid_1.shape == (1, 30, 30), "First sample should have shape (1, 30, 30)"
+    assert output_grid_1.shape == (1, 30, 30), "First sample should have shape (1, 30, 30)"
+    
+    # Check center of first sample (2x2)
+    center_input_1 = input_grid_1[0, 14:16, 14:16]
+    center_output_1 = output_grid_1[0, 14:16, 14:16]
+    assert torch.allclose(center_input_1, torch.tensor([[1., 0.], [0., 1.]])), "First sample input data not preserved correctly"
+    assert torch.allclose(center_output_1, torch.tensor([[0., 1.], [1., 0.]])), "First sample output data not preserved correctly"
     
     # Check third sample (3x3)
     input_grid_2, output_grid_2 = dataset[2]
-    assert input_grid_2.shape == (10, 3, 3), "Third sample should maintain 3x3 shape"
-    assert output_grid_2.shape == (10, 3, 3), "Third sample should maintain 3x3 shape"
+    assert input_grid_2.shape == (1, 30, 30), "Third sample should have shape (1, 30, 30)"
+    assert output_grid_2.shape == (1, 30, 30), "Third sample should have shape (1, 30, 30)"
+    
+    # Check center of third sample (3x3)
+    center_input_2 = input_grid_2[0, 14:17, 14:17]
+    center_output_2 = output_grid_2[0, 14:17, 14:17]
+    assert torch.allclose(center_input_2, torch.tensor([[1., 0., 2.], [0., 2., 1.], [2., 1., 0.]])), "Third sample input data not preserved correctly"
+    assert torch.allclose(center_output_2, torch.tensor([[2., 1., 0.], [1., 0., 2.], [0., 2., 1.]])), "Third sample output data not preserved correctly"
     
     logger.debug("Completed test_arc_dataset_variable_size_grids")
