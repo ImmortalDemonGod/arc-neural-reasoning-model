@@ -5,6 +5,7 @@ import logging
 import torch
 import torch.nn.functional as F
 from torch import nn
+import torch.nn.init as init
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
