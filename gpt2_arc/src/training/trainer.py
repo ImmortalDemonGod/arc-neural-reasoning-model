@@ -79,7 +79,10 @@ class ARCTrainer(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         input_ids, attention_mask, labels = batch
         outputs = self(input_ids, attention_mask)
+        B, T, C = outputs.size()
+        outputs = outputs.view(B, -1, C)
         predictions = torch.argmax(outputs, dim=-1)
+        labels = labels.view(B, -1)
         accuracy = (predictions == labels).float().mean()
         self.log('test_accuracy', accuracy)
         return {"test_accuracy": accuracy}
