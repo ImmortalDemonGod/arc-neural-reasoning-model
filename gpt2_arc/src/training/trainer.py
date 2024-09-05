@@ -35,6 +35,14 @@ class ARCTrainer(pl.LightningModule):
         else:
             raise ValueError("Batch must be either a tuple or a dictionary")
 
+        logger.debug(f"Training step input_ids dtype: {input_ids.dtype}")
+        logger.debug(f"Training step attention_mask dtype: {attention_mask.dtype}")
+        logger.debug(f"Training step labels dtype: {labels.dtype}")
+
+        logger.debug(f"Validation step input_ids dtype: {input_ids.dtype}")
+        logger.debug(f"Validation step attention_mask dtype: {attention_mask.dtype}")
+        logger.debug(f"Validation step labels dtype: {labels.dtype}")
+
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         logger.info(f"Epoch {self.current_epoch}, Batch {batch_idx}: Training loss = {loss.item()}")
