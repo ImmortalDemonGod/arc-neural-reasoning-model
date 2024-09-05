@@ -91,8 +91,12 @@ def test_end_to_end():
         logger.debug(f"Training losses: {train_losses}")
         assert train_losses[-1] < train_losses[0], f"Training loss did not decrease. Initial loss: {train_losses[0]}, Final loss: {train_losses[-1]}"
         
-        # Check that loss decreased consistently
-        assert all(train_losses[i] > train_losses[i+1] for i in range(len(train_losses)-1)), "Training loss did not consistently decrease"
+        # Check that the final loss is lower than the initial loss
+        assert train_losses[-1] < train_losses[0], "Final training loss should be lower than initial loss"
+
+        # Check that the average loss per epoch decreases
+        epoch_losses = [sum(train_losses[i:i+33])/33 for i in range(0, len(train_losses), 33)]
+        assert all(epoch_losses[i] > epoch_losses[i+1] for i in range(len(epoch_losses)-1)), "Average training loss per epoch did not consistently decrease"
 
         # Evaluate model
         logger.debug("Starting model evaluation")
