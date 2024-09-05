@@ -124,7 +124,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
     # Append results to the CSV file
     with open(csv_file_path, 'a', newline='') as csvfile:
         fieldnames = [
-            'datetime', 'run', 'total_time', 'grids_per_second', 'cpu_usage', 'memory_usage',
+            'run_id', 'datetime', 'run', 'total_time', 'grids_per_second', 'cpu_usage', 'memory_usage',
             'batch_size', 'num_batches', 'device', 'n_embd', 'n_head', 'n_layer'
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
