@@ -13,3 +13,5 @@ mypy
 tox
 tensorboard
 arckit
+urllib3>=1.26.0
+chardet>=3.0.0
