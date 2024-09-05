@@ -176,7 +176,7 @@ def test_trainer_initialization(model, mock_dataset):
 @pytest.mark.parametrize("batch_size", [1, 1000000])
 def test_batch_size_extremes(mock_args, batch_size):
     model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
-    config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=5e-4, max_epochs=2))
+    config = Config(model=model_config, training=TrainingConfig(batch_size=batch_size, learning_rate=5e-4, max_epochs=10))
     mock_args.batch_size = batch_size
     mock_args.no_logging = True
     mock_args.no_checkpointing = True
@@ -195,7 +195,8 @@ def test_batch_size_extremes(mock_args, batch_size):
             callbacks=None,
             enable_checkpointing=False,
             enable_progress_bar=False,
-            gradient_clip_val=1.0
+            gradient_clip_val=1.0,
+            accelerator='cpu'
         )
 
 
@@ -218,6 +219,9 @@ def test_non_existent_train_data(mock_args):
 
 def test_gpu_not_available(mock_args):
     mock_args.use_gpu = True
+    mock_args.no_logging = False
+    mock_args.no_checkpointing = False
+    mock_args.no_progress_bar = False
     with patch("torch.cuda.is_available", return_value=False), patch(
         "gpt2_arc.src.training.train.ARCDataset"
     ), patch("gpt2_arc.src.training.train.GPT2ARC"), patch(
@@ -225,7 +229,13 @@ def test_gpu_not_available(mock_args):
     ), patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer:
         main(mock_args)
         mock_trainer.assert_called_with(
-            max_epochs=mock_args.max_epochs, logger=ANY, callbacks=[ANY], accelerator='cpu'
+            max_epochs=mock_args.max_epochs,
+            logger=ANY,
+            callbacks=ANY,
+            enable_checkpointing=True,
+            enable_progress_bar=True,
+            gradient_clip_val=1.0,
+            accelerator='cpu'
         )
 
 

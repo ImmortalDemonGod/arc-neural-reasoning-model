@@ -31,20 +31,23 @@ def main(args):
     )
 
     # Setup logging and checkpointing
-    logger = TensorBoardLogger("tb_logs", name="arc_model")
-    checkpoint_callback = ModelCheckpoint(
-        dirpath="checkpoints",
-        filename="arc_model-{epoch:02d}-{val_loss:.2f}",
-        save_top_k=3,
-        monitor="val_loss",
-        mode="min",
-    )
+    logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
+    callbacks = []
+    if not args.no_checkpointing:
+        checkpoint_callback = ModelCheckpoint(
+            dirpath="checkpoints",
+            filename="arc_model-{epoch:02d}-{val_loss:.2f}",
+            save_top_k=3,
+            monitor="val_loss",
+            mode="min",
+        )
+        callbacks.append(checkpoint_callback)
 
     # Create PyTorch Lightning trainer
     pl_trainer = pl.Trainer(
         max_epochs=config.training.max_epochs,
         logger=logger,
-        callbacks=[checkpoint_callback] if checkpoint_callback else None,
+        callbacks=callbacks if callbacks else None,
         enable_checkpointing=not args.no_checkpointing,
         enable_progress_bar=not args.no_progress_bar,
         gradient_clip_val=1.0,
