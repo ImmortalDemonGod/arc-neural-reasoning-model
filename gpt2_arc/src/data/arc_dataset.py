@@ -25,6 +25,7 @@ class ARCDataset(Dataset):
         num_symbols: int = 10,
         test_split: float = 0.2,
     ):
+        self.is_test = is_test
         self.num_symbols = num_symbols
         self.samples = []
         if TaskSet is not None and isinstance(data_source, TaskSet):
