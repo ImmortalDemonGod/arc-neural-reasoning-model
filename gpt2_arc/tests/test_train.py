@@ -66,8 +66,7 @@ def mock_pl_trainer():
 
 def test_gpt2arc_initialization(model):
     assert isinstance(model, GPT2ARC)
-    assert hasattr(model, "token_embedding")
-    assert hasattr(model, "position_embedding")
+    assert hasattr(model, "conv1")  # Check for conv1 instead of token_embedding
     assert hasattr(model, "blocks")
     assert hasattr(model, "ln_f")
     assert hasattr(model, "config")
