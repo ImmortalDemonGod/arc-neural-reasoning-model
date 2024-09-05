@@ -61,9 +61,8 @@ if __name__ == "__main__":
     # Create the ARCDataset
     full_dataset = ARCDataset(train_set, is_test=False)
 
-    # Create a smaller subset of the dataset for benchmarking
-    subset_size = int(0.1 * len(full_dataset))  # Use 10% of the dataset
-    train_dataset, _ = torch.utils.data.random_split(full_dataset, [subset_size, len(full_dataset) - subset_size])
+    # Use the full dataset for benchmarking
+    train_dataset = full_dataset
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
     model = GPT2ARC(model_config)
 
