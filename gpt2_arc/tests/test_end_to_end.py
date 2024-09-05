@@ -64,7 +64,7 @@ def test_end_to_end():
 
         # Initialize trainer
         logger.debug("Initializing trainer")
-        config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=1))  # Reduce epochs to 1
+        config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=2))  # Reduce epochs to 2
         trainer = ARCTrainer(model, train_dataset, val_dataset, config)
         trainer.train_dataloader = lambda: torch.utils.data.DataLoader(train_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
         trainer.val_dataloader = lambda: torch.utils.data.DataLoader(val_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
