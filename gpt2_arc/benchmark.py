@@ -162,6 +162,45 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30):
     logger.info(f"T-Test for total time: t-statistic = {t_stat_time:.4f}, p-value = {p_value_time:.4f}")
     logger.info(f"T-Test for grids per second: t-statistic = {t_stat_grids:.4f}, p-value = {p_value_grids:.4f}")
 
+    # Save statistical information to a CSV file
+    stats_csv_file_path = 'benchmark_statistics.csv'
+    stats_file_exists = os.path.isfile(stats_csv_file_path)
+
+    with open(stats_csv_file_path, 'a', newline='') as csvfile:
+        fieldnames = [
+            'avg_total_time', 'std_total_time', 'ci_total_time',
+            'avg_grids_per_second', 'std_grids_per_second', 'ci_grids_per_second',
+            'effect_size_time', 'effect_size_grids',
+            't_stat_time', 'p_value_time', 't_stat_grids', 'p_value_grids',
+            'avg_cpu_usage', 'std_cpu_usage', 'ci_cpu_usage',
+            'avg_memory_usage', 'std_memory_usage', 'ci_memory_usage'
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        if not stats_file_exists:
+            writer.writeheader()
+
+        writer.writerow({
+            'avg_total_time': avg_total_time,
+            'std_total_time': std_total_time,
+            'ci_total_time': ci_total_time,
+            'avg_grids_per_second': avg_grids_per_second,
+            'std_grids_per_second': std_grids_per_second,
+            'ci_grids_per_second': ci_grids_per_second,
+            'effect_size_time': effect_size_time,
+            'effect_size_grids': effect_size_grids,
+            't_stat_time': t_stat_time,
+            'p_value_time': p_value_time,
+            't_stat_grids': t_stat_grids,
+            'p_value_grids': p_value_grids,
+            'avg_cpu_usage': avg_cpu_usage,
+            'std_cpu_usage': std_cpu_usage,
+            'ci_cpu_usage': ci_cpu_usage,
+            'avg_memory_usage': avg_memory_usage,
+            'std_memory_usage': std_memory_usage,
+            'ci_memory_usage': ci_memory_usage
+        })
+
     analyze_results(total_time_runs, grids_per_second_runs, cpu_usages, memory_usages)
 
     return avg_total_time, avg_grids_per_second
