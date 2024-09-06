@@ -47,14 +47,17 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
                           "mps" if device_type == "mps" and torch.backends.mps.is_available() else "cpu")
     model = model.to(device)
     torch._dynamo.config.suppress_errors = True
-    try:
-        if device.type != "mps":
-            compiled_model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
-        else:
-            compiled_model = model  # Use the model directly for MPS
-    except ImportError as e:
-        logger.warning(f"Compilation failed with error: {e}. Falling back to eager execution.")
-        compiled_model = model
+    if device.type == "cpu":
+        compiled_model = model  # Use the model directly for CPU
+    else:
+        try:
+            if device.type != "mps":
+                compiled_model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
+            else:
+                compiled_model = model  # Use the model directly for MPS
+        except ImportError as e:
+            logger.warning(f"Compilation failed with error: {e}. Falling back to eager execution.")
+            compiled_model = model
 
     for run in range(num_runs):
         dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
