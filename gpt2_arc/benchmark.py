@@ -44,7 +44,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     # Select device based on the argument (including support for MPS)
     device = torch.device("cuda" if device_type == "gpu" and torch.cuda.is_available() else
                           "mps" if device_type == "mps" and torch.backends.mps.is_available() else "cpu")
-    compiled_model = torch.compile(model)
+    compiled_model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
     compiled_model.to(device)
 
     for run in range(num_runs):
@@ -270,6 +270,7 @@ def main(args):
     # Create the model configuration
     model_config = ModelConfig(n_embd=args.n_embd, n_head=args.n_head, n_layer=args.n_layer)
     model = GPT2ARC(model_config)
+    model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
 
     # Run the benchmark for different configurations
     for run_num in range(args.num_full_runs):
