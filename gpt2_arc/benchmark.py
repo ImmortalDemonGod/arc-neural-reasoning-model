@@ -135,7 +135,9 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
         time_improvement = BASELINES[device.type]['total_time'] - avg_total_time
         time_improvement_percent = (time_improvement / BASELINES[device.type]['total_time']) * 100
         logger.info(f"Improvement in total time: -{time_improvement:.4f} seconds ({time_improvement_percent:.2f}%)")
+        grids_per_second_regression_percent = 0.0
     else:
+        grids_per_second_improvement_percent = 0.0
         time_regression = avg_total_time - BASELINES[device.type]['total_time']
         time_regression_percent = (time_regression / BASELINES[device.type]['total_time']) * 100
         logger.info(f"Regression in total time: +{time_regression:.4f} seconds ({time_regression_percent:.2f}%)")
