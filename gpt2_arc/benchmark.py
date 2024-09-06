@@ -81,7 +81,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             with torch.no_grad():
                 if device.type == 'cuda':
                     with autocast(device_type=device.type, dtype=torch.float16):
-                        compiled_model(inputs, attention_mask)
+                        model(inputs, attention_mask)
                 else:
                     model(inputs, attention_mask)
 
