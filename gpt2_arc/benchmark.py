@@ -146,6 +146,10 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     grids_per_second_regression = BASELINES[device.type]['grids_per_second'] - avg_grids_per_second
     grids_per_second_regression_percent = (grids_per_second_regression / BASELINES[device.type]['grids_per_second']) * 100
 
+    # Determine if there was an improvement
+    improvement_time = avg_total_time < BASELINES[device.type]['total_time']
+    improvement_grids = avg_grids_per_second > BASELINES[device.type]['grids_per_second']
+
     # Log improvements or regressions based on averages
     if avg_total_time < BASELINES[device.type]['total_time']:
         logger.info(f"Improvement in average total time: -{time_improvement:.4f} seconds ({time_improvement_percent:.2f}%)")
