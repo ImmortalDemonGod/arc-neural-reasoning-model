@@ -46,6 +46,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
                           "mps" if device_type == "mps" and torch.backends.mps.is_available() else "cpu")
     model = model.to(device)
     torch._dynamo.config.suppress_errors = True
+    try:
         if device.type != "mps":
             compiled_model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
         else:
