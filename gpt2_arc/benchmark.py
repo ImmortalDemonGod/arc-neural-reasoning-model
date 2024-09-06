@@ -158,8 +158,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
         logger.info(f"Regression in average grids per second: -{grids_per_second_regression:.2f} ({grids_per_second_regression_percent:.2f}%)")
 
     # Update practical significance checks
-    practical_significance_time = time_improvement_percent >= practical_threshold or time_regression_percent < practical_threshold
-    practical_significance_grids = grids_per_second_improvement_percent >= practical_threshold or grids_per_second_regression_percent < practical_threshold
+    practical_significance_time = time_improvement_percent >= practical_threshold
+    practical_significance_grids = grids_per_second_improvement_percent >= practical_threshold
 
     # Log practical significance
     if not practical_significance_time:
