@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 BASELINES = {
     'cpu': {'total_time': 1.6391, 'grids_per_second': 199.27},
     'gpu': {'total_time': 0.8392, 'grids_per_second': 299.15},
-    'mps': {'total_time': 0.9392, 'grids_per_second': 279.10}  # Example baselines for MPS
+    'mps': {'total_time': 0.0481, 'grids_per_second': 13774.98}  # Updated baselines for MPS
 }
 
 def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, device_type='cpu'):
