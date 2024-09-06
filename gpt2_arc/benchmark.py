@@ -217,7 +217,6 @@ def main(args):
             model, full_dataset, batch_size=args.batch_size, num_batches=args.num_batches, num_runs=args.num_runs, device_type=args.device
         )
         logger.info(f"Full run {run_num + 1} - Avg Time: {avg_time:.4f}s, Avg Grids per Second: {avg_grids:.2f}")
-        logger.info(f"Per-Batch Metrics: {batch_metrics}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Benchmark the GPT2ARC model.")
