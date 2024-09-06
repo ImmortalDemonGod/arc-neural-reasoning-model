@@ -234,7 +234,7 @@ if __name__ == "__main__":
     parser.add_argument('--n-embd', type=int, default=64, help='Number of embeddings for the model')
     parser.add_argument('--n-head', type=int, default=2, help='Number of attention heads')
     parser.add_argument('--n-layer', type=int, default=1, help='Number of layers')
-    parser.add_argument('--device', choices=['cpu', 'gpu'], default='cpu', help='Device to run the benchmark on (cpu, gpu, or mps)')
+    parser.add_argument('--device', choices=['cpu', 'gpu', 'mps'], default='cpu', help='Device to run the benchmark on (cpu, gpu, or mps)')
     
     args = parser.parse_args()
     main(args)
