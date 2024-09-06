@@ -45,10 +45,14 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     device = torch.device("cuda" if device_type == "gpu" and torch.cuda.is_available() else
                           "mps" if device_type == "mps" and torch.backends.mps.is_available() else "cpu")
     model = model.to(device)
-    if device.type != "mps":
-        compiled_model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
-    else:
-        compiled_model = model  # Use the model directly for MPS
+    try:
+        if device.type != "mps":
+            compiled_model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
+        else:
+            compiled_model = model  # Use the model directly for MPS
+    except ImportError as e:
+        logger.warning(f"Compilation failed with error: {e}. Falling back to eager execution.")
+        compiled_model = model
 
     for run in range(num_runs):
         dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
