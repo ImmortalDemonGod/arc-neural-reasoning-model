@@ -214,7 +214,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
 
 
 def main(args):
-    # Load the dataset
+    # Set the float32 matmul precision
+    torch.set_float32_matmul_precision(args.precision)
     train_set, _ = arckit.load_data()
     full_dataset = ARCDataset(train_set, is_test=False)
 
@@ -240,6 +241,7 @@ if __name__ == "__main__":
     parser.add_argument('--n-head', type=int, default=2, help='Number of attention heads')
     parser.add_argument('--n-layer', type=int, default=1, help='Number of layers')
     parser.add_argument('--device', choices=['cpu', 'gpu', 'mps'], default='cpu', help='Device to run the benchmark on (cpu, gpu, or mps)')
+    parser.add_argument('--precision', choices=['highest', 'high', 'medium'], default='highest', help='Precision level for float32 matrix multiplications')
     
     args = parser.parse_args()
     main(args)
