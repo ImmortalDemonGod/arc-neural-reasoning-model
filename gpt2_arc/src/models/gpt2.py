@@ -67,10 +67,12 @@ class TransformerBlock(nn.Module):
         )
 
     def forward(self, x, mask=None):
-        logger.debug(f"TransformerBlock input shape: {x.shape}")
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"TransformerBlock input shape: {x.shape}")
         x = x + self.attention(self.ln1(x), mask)
         x = x + self.feed_forward(self.ln2(x))
-        logger.debug(f"TransformerBlock output shape: {x.shape}")
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"TransformerBlock output shape: {x.shape}")
         return x
 
 
