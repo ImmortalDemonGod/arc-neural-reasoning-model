@@ -163,8 +163,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     logger.info(f" • Effect Size (Total Time): {effect_size_time:.4f}, Effect Size (Grids per Second): {effect_size_grids:.4f}")
 
     # Determine if there was an improvement
-    improvement_time = time_improvement_percent < -20
-    improvement_grids = grids_per_second_improvement_percent > 20
+    improvement_time = avg_total_time < BASELINES[device.type]['total_time']
+    improvement_grids = avg_grids_per_second > BASELINES[device.type]['grids_per_second']
     csv_file_path = 'benchmark_results.csv'
     file_exists = os.path.isfile(csv_file_path)
     with open(csv_file_path, 'a', newline='') as csvfile:
