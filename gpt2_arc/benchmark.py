@@ -162,10 +162,27 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     practical_significance_grids = grids_per_second_improvement_percent >= practical_threshold
 
     # Log practical significance
-    if not practical_significance_time:
-        logger.info("The change in average total time is not practically significant.")
-    if not practical_significance_grids:
-        logger.info("The change in average grids per second is not practically significant.")
+    if improvement_time:
+        if practical_significance_time:
+            logger.info("The improvement in average total time is practically significant.")
+        else:
+            logger.info("The improvement in average total time is not practically significant.")
+    else:
+        if practical_significance_time:
+            logger.info("The regression in average total time is practically significant.")
+        else:
+            logger.info("The regression in average total time is not practically significant.")
+
+    if improvement_grids:
+        if practical_significance_grids:
+            logger.info("The improvement in average grids per second is practically significant.")
+        else:
+            logger.info("The improvement in average grids per second is not practically significant.")
+    else:
+        if practical_significance_grids:
+            logger.info("The regression in average grids per second is practically significant.")
+        else:
+            logger.info("The regression in average grids per second is not practically significant.")
 
     # Perform a one-sample t-test
     t_stat_time, p_value_time = stats.ttest_1samp(total_time_runs, BASELINES[device.type]['total_time'])
