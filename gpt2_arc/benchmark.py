@@ -37,6 +37,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     memory_usages = []
 
     run_results = []  # Initialize run_results to store each run's data
+    gpu_usages = []  # Initialize gpu_usages to store GPU utilization data
 
     # Select device based on the argument (including support for MPS)
     device = torch.device("cuda" if device_type == "gpu" and torch.cuda.is_available() else
@@ -61,7 +62,12 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             memory_info = psutil.virtual_memory()
             cpu_usages.append(cpu_percent)
             memory_usages.append(memory_info.percent)
-            logger.info(f"Run {run+1}, Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%")
+            if device.type == 'cuda':
+                gpu_utilization = torch.cuda.utilization(device.index)
+                gpu_usages.append(gpu_utilization)
+                logger.info(f"Run {run+1}, Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%, GPU Utilization: {gpu_utilization}%")
+            else:
+                logger.info(f"Run {run+1}, Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%")
 
             # Measure the time taken to process the batch
             start_time = time.time()
@@ -95,6 +101,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             'grids_per_second': grids_per_second,
             'cpu_usage': np.mean(cpu_usages),
             'memory_usage': np.mean(memory_usages),
+            'gpu_usage': np.mean(gpu_usages) if gpu_usages else None,
             'batch_size': batch_size,
             'num_batches': num_batches,
             'device': device.type,
