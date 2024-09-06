@@ -130,12 +130,21 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     effect_size_time = (avg_total_time - BASELINES[device.type]['total_time']) / std_total_time
     effect_size_grids = (avg_grids_per_second - BASELINES[device.type]['grids_per_second']) / std_grids_per_second
 
-    # Compare with baseline
+    # Define a threshold for practical significance
+    practical_threshold = 20.0
     if avg_total_time < BASELINES[device.type]['total_time']:
         time_improvement = BASELINES[device.type]['total_time'] - avg_total_time
         time_improvement_percent = (time_improvement / BASELINES[device.type]['total_time']) * 100
         logger.info(f"Improvement in total time: -{time_improvement:.4f} seconds ({time_improvement_percent:.2f}%)")
         grids_per_second_regression_percent = 0.0
+    if time_improvement_percent < practical_threshold:
+        logger.info("The improvement in total time is not practically significant.")
+    if time_regression_percent < practical_threshold:
+        logger.info("The regression in total time is not practically significant.")
+    if grids_per_second_improvement_percent < practical_threshold:
+        logger.info("The improvement in grids per second is not practically significant.")
+    if grids_per_second_regression_percent < practical_threshold:
+        logger.info("The regression in grids per second is not practically significant.")
     else:
         grids_per_second_improvement_percent = 0.0
         time_regression = avg_total_time - BASELINES[device.type]['total_time']
@@ -189,7 +198,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             'avg_grids_per_second', 'std_grids_per_second', 'ci_grids_per_second',
             'effect_size_time', 'effect_size_grids', 'percent_change_time', 'percent_change_grids',
             't_stat_time', 'p_value_time', 't_stat_grids', 'p_value_grids',
-            'improvement_time', 'improvement_grids'
+            'improvement_time', 'improvement_grids',
+            'practical_significance_time', 'practical_significance_grids'
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         if not stats_file_exists:
@@ -212,7 +222,9 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             't_stat_grids': t_stat_grids,
             'p_value_grids': p_value_grids,
             'improvement_time': improvement_time,
-            'improvement_grids': improvement_grids
+            'improvement_grids': improvement_grids,
+            'practical_significance_time': time_improvement_percent >= practical_threshold,
+            'practical_significance_grids': grids_per_second_improvement_percent >= practical_threshold
         })
 
     return avg_total_time, avg_grids_per_second
