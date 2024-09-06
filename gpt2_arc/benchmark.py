@@ -251,8 +251,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             'p_value_grids': p_value_grids,
             'improvement_time': improvement_time,
             'improvement_grids': improvement_grids,
-            'practical_significance_time': time_improvement_percent >= practical_threshold or time_regression_percent < practical_threshold,
-            'practical_significance_grids': grids_per_second_improvement_percent >= practical_threshold or grids_per_second_regression_percent < practical_threshold
+            'practical_significance_time': practical_significance_time,
+            'practical_significance_grids': practical_significance_grids
         })
 
     return avg_total_time, avg_grids_per_second
