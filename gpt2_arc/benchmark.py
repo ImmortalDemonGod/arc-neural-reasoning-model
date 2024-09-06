@@ -131,21 +131,23 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     effect_size_grids = (avg_grids_per_second - BASELINES[device.type]['grids_per_second']) / std_grids_per_second
 
     # Compare with baseline
-    time_improvement = avg_total_time - BASELINES[device.type]['total_time']
-    grids_per_second_improvement = avg_grids_per_second - BASELINES[device.type]['grids_per_second']
-
-    time_improvement_percent = (time_improvement / BASELINES[device.type]['total_time']) * 100
-    grids_per_second_improvement_percent = (grids_per_second_improvement / BASELINES[device.type]['grids_per_second']) * 100
-
-    if -20 < time_improvement_percent < 20:
-        logger.info("No improvement in total time")
+    if avg_total_time < BASELINES[device.type]['total_time']:
+        time_improvement = BASELINES[device.type]['total_time'] - avg_total_time
+        time_improvement_percent = (time_improvement / BASELINES[device.type]['total_time']) * 100
+        logger.info(f"Improvement in total time: -{time_improvement:.4f} seconds ({time_improvement_percent:.2f}%)")
     else:
-        logger.info(f"Improvement in total time: {time_improvement:.4f} seconds ({time_improvement_percent:.2f}%)")
+        time_regression = avg_total_time - BASELINES[device.type]['total_time']
+        time_regression_percent = (time_regression / BASELINES[device.type]['total_time']) * 100
+        logger.info(f"Regression in total time: +{time_regression:.4f} seconds ({time_regression_percent:.2f}%)")
 
-    if -20 < grids_per_second_improvement_percent < 20:
-        logger.info("No improvement in grids per second")
+    if avg_grids_per_second > BASELINES[device.type]['grids_per_second']:
+        grids_per_second_improvement = avg_grids_per_second - BASELINES[device.type]['grids_per_second']
+        grids_per_second_improvement_percent = (grids_per_second_improvement / BASELINES[device.type]['grids_per_second']) * 100
+        logger.info(f"Improvement in grids per second: +{grids_per_second_improvement:.2f} ({grids_per_second_improvement_percent:.2f}%)")
     else:
-        logger.info(f"Improvement in grids per second: {grids_per_second_improvement:.2f} ({grids_per_second_improvement_percent:.2f}%)")
+        grids_per_second_regression = BASELINES[device.type]['grids_per_second'] - avg_grids_per_second
+        grids_per_second_regression_percent = (grids_per_second_regression / BASELINES[device.type]['grids_per_second']) * 100
+        logger.info(f"Regression in grids per second: -{grids_per_second_regression:.2f} ({grids_per_second_regression_percent:.2f}%)")
 
     # Perform a one-sample t-test
     t_stat_time, p_value_time = stats.ttest_1samp(total_time_runs, BASELINES[device.type]['total_time'])
