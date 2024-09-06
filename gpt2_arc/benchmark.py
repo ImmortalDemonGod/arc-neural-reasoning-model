@@ -31,6 +31,7 @@ BASELINES = {
 def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, device_type='cpu'):
     run_id = str(uuid.uuid4())
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    practical_threshold = 20.0  # Define a threshold for practical significance
     total_time_runs = []
     grids_per_second_runs = []
 
