@@ -210,7 +210,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     with open(csv_file_path, 'a', newline='') as csvfile:
         fieldnames = [
             'run_id', 'datetime', 'run', 'total_time', 'grids_per_second', 'cpu_usage', 'memory_usage',
-            'batch_size', 'num_batches', 'device', 'n_embd', 'n_head', 'n_layer', 'gpu_usage'
+            'batch_size', 'num_batches', 'device', 'n_embd', 'n_head', 'n_layer', 'gpu_usage', 'precision'
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         if not file_exists:
