@@ -41,7 +41,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
 
     # Select device based on the argument (including support for MPS)
     device = torch.device("cuda" if device_type == "gpu" and torch.cuda.is_available() else
-                          "mps" if device_type == "gpu" and torch.backends.mps.is_available() else "cpu")
+                          "mps" if device_type == "mps" and torch.backends.mps.is_available() else "cpu")
     model.to(device)
 
     for run in range(num_runs):
