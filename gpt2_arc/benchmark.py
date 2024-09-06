@@ -161,7 +161,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
 
     # Determine if there was an improvement
     improvement_time = time_improvement_percent > 20
-    improvement_grids = grids_per_second_improvement_percent > 20
+    improvement_grids = grids_per_second_improvement_percent < -20
     csv_file_path = 'benchmark_results.csv'
     file_exists = os.path.isfile(csv_file_path)
     with open(csv_file_path, 'a', newline='') as csvfile:
