@@ -159,7 +159,9 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     logger.info(f" • Avg Grids per Second: {avg_grids_per_second:.2f} (CI 95%: ±{ci_grids_per_second:.2f})")
     logger.info(f" • Effect Size (Total Time): {effect_size_time:.4f}, Effect Size (Grids per Second): {effect_size_grids:.4f}")
 
-    # Write results to CSV
+    # Determine if there was an improvement
+    improvement_time = time_improvement_percent > 0
+    improvement_grids = grids_per_second_improvement_percent > 0
     csv_file_path = 'benchmark_results.csv'
     file_exists = os.path.isfile(csv_file_path)
     with open(csv_file_path, 'a', newline='') as csvfile:
@@ -181,7 +183,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             'run_id', 'datetime', 'avg_total_time', 'std_total_time', 'ci_total_time',
             'avg_grids_per_second', 'std_grids_per_second', 'ci_grids_per_second',
             'effect_size_time', 'effect_size_grids', 'percent_change_time', 'percent_change_grids',
-            't_stat_time', 'p_value_time', 't_stat_grids', 'p_value_grids'
+            't_stat_time', 'p_value_time', 't_stat_grids', 'p_value_grids',
+            'improvement_time', 'improvement_grids'
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         if not stats_file_exists:
@@ -202,7 +205,9 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             't_stat_time': t_stat_time,
             'p_value_time': p_value_time,
             't_stat_grids': t_stat_grids,
-            'p_value_grids': p_value_grids
+            'p_value_grids': p_value_grids,
+            'improvement_time': improvement_time,
+            'improvement_grids': improvement_grids
         })
 
     return avg_total_time, avg_grids_per_second
