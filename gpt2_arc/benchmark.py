@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Dynamically adjustable baseline values for CPU, GPU, and MPS
 BASELINES = {
     'cpu': {'total_time': 1.6391, 'grids_per_second': 199.27},
-    'gpu': {'total_time': 0.8392, 'grids_per_second': 299.15},
+    'gpu': {'total_time': 0.0481, 'grids_per_second': 13774.98},
     'mps': {'total_time': 0.0481, 'grids_per_second': 13774.98}  # Updated baselines for MPS
 }
 
