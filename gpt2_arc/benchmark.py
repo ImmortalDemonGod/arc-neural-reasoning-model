@@ -130,37 +130,37 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     effect_size_time = (avg_total_time - BASELINES[device.type]['total_time']) / std_total_time
     effect_size_grids = (avg_grids_per_second - BASELINES[device.type]['grids_per_second']) / std_grids_per_second
 
-    # Define a threshold for practical significance
-    practical_threshold = 20.0
-    time_improvement_percent = 0.0
-    time_regression_percent = 0.0
-    grids_per_second_improvement_percent = 0.0
-    grids_per_second_regression_percent = 0.0
+    # Calculate improvements and regressions based on averages
+    time_improvement = BASELINES[device.type]['total_time'] - avg_total_time
+    time_improvement_percent = (time_improvement / BASELINES[device.type]['total_time']) * 100
+    time_regression = avg_total_time - BASELINES[device.type]['total_time']
+    time_regression_percent = (time_regression / BASELINES[device.type]['total_time']) * 100
+
+    grids_per_second_improvement = avg_grids_per_second - BASELINES[device.type]['grids_per_second']
+    grids_per_second_improvement_percent = (grids_per_second_improvement / BASELINES[device.type]['grids_per_second']) * 100
+    grids_per_second_regression = BASELINES[device.type]['grids_per_second'] - avg_grids_per_second
+    grids_per_second_regression_percent = (grids_per_second_regression / BASELINES[device.type]['grids_per_second']) * 100
+
+    # Log improvements or regressions based on averages
     if avg_total_time < BASELINES[device.type]['total_time']:
-        time_improvement = BASELINES[device.type]['total_time'] - avg_total_time
-        time_improvement_percent = (time_improvement / BASELINES[device.type]['total_time']) * 100
-        logger.info(f"Improvement in total time: -{time_improvement:.4f} seconds ({time_improvement_percent:.2f}%)")
+        logger.info(f"Improvement in average total time: -{time_improvement:.4f} seconds ({time_improvement_percent:.2f}%)")
     else:
-        time_regression = avg_total_time - BASELINES[device.type]['total_time']
-        time_regression_percent = (time_regression / BASELINES[device.type]['total_time']) * 100
-        logger.info(f"Regression in total time: +{time_regression:.4f} seconds ({time_regression_percent:.2f}%)")
-    if time_improvement_percent < practical_threshold:
-        logger.info("The improvement in total time is not practically significant.")
-    if time_regression_percent < practical_threshold:
-        logger.info("The regression in total time is not practically significant.")
-    if grids_per_second_improvement_percent < practical_threshold:
-        logger.info("The improvement in grids per second is not practically significant.")
-    if grids_per_second_regression_percent < practical_threshold:
-        logger.info("The regression in grids per second is not practically significant.")
+        logger.info(f"Regression in average total time: +{time_regression:.4f} seconds ({time_regression_percent:.2f}%)")
 
     if avg_grids_per_second > BASELINES[device.type]['grids_per_second']:
-        grids_per_second_improvement = avg_grids_per_second - BASELINES[device.type]['grids_per_second']
-        grids_per_second_improvement_percent = (grids_per_second_improvement / BASELINES[device.type]['grids_per_second']) * 100
-        logger.info(f"Improvement in grids per second: +{grids_per_second_improvement:.2f} ({grids_per_second_improvement_percent:.2f}%)")
+        logger.info(f"Improvement in average grids per second: +{grids_per_second_improvement:.2f} ({grids_per_second_improvement_percent:.2f}%)")
     else:
-        grids_per_second_regression = BASELINES[device.type]['grids_per_second'] - avg_grids_per_second
-        grids_per_second_regression_percent = (grids_per_second_regression / BASELINES[device.type]['grids_per_second']) * 100
-        logger.info(f"Regression in grids per second: -{grids_per_second_regression:.2f} ({grids_per_second_regression_percent:.2f}%)")
+        logger.info(f"Regression in average grids per second: -{grids_per_second_regression:.2f} ({grids_per_second_regression_percent:.2f}%)")
+
+    # Update practical significance checks
+    practical_significance_time = time_improvement_percent >= practical_threshold or time_regression_percent < practical_threshold
+    practical_significance_grids = grids_per_second_improvement_percent >= practical_threshold or grids_per_second_regression_percent < practical_threshold
+
+    # Log practical significance
+    if not practical_significance_time:
+        logger.info("The change in average total time is not practically significant.")
+    if not practical_significance_grids:
+        logger.info("The change in average grids per second is not practically significant.")
 
     # Perform a one-sample t-test
     t_stat_time, p_value_time = stats.ttest_1samp(total_time_runs, BASELINES[device.type]['total_time'])
