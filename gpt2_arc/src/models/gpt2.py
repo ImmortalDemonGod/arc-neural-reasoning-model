@@ -24,7 +24,8 @@ class Attention(nn.Module):
 
     def forward(self, x, mask=None):
         B, T, C = x.size()
-        logger.debug(f"Attention input shape: {x.shape}")
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"Attention input shape: {x.shape}")
         k = self.key(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         q = self.query(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         v = self.value(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
@@ -36,7 +37,8 @@ class Attention(nn.Module):
         y = att @ v
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         output = self.proj(y)
-        logger.debug(f"Attention output shape: {output.shape}")
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"Attention output shape: {output.shape}")
         return output
 
 
