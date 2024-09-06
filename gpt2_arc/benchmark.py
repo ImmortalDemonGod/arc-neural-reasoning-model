@@ -28,7 +28,7 @@ BASELINES = {
     'mps': {'total_time': 0.0481, 'grids_per_second': 13774.98}  # Updated baselines for MPS
 }
 
-def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, device_type='cpu'):
+def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, device_type='cpu', precision='highest'):
     run_id = str(uuid.uuid4())
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     practical_threshold = 20.0  # Define a threshold for practical significance
@@ -113,7 +113,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             'device': device.type,
             'n_embd': model.config.n_embd,
             'n_head': model.config.n_head,
-            'n_layer': model.config.n_layer
+            'n_layer': model.config.n_layer,
+            'precision': precision  # Add precision here
         })
 
         total_time_runs.append(total_time)
@@ -252,7 +253,8 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             'improvement_time': improvement_time,
             'improvement_grids': improvement_grids,
             'practical_significance_time': practical_significance_time,
-            'practical_significance_grids': practical_significance_grids
+            'practical_significance_grids': practical_significance_grids,
+            'precision': precision  # Add precision here
         })
 
     return avg_total_time, avg_grids_per_second
@@ -272,7 +274,7 @@ def main(args):
     for run_num in range(args.num_full_runs):
         logger.info(f"Starting full benchmark run {run_num + 1}/{args.num_full_runs}")
         avg_time, avg_grids = benchmark_model(
-            model, full_dataset, batch_size=args.batch_size, num_batches=args.num_batches, num_runs=args.num_runs, device_type=args.device
+            model, full_dataset, batch_size=args.batch_size, num_batches=args.num_batches, num_runs=args.num_runs, device_type=args.device, precision=args.precision
         )
         logger.info(f"Full run {run_num + 1} - Avg Time: {avg_time:.4f}s, Avg Grids per Second: {avg_grids:.2f}")
 
