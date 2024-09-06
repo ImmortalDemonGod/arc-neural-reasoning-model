@@ -1,4 +1,4 @@
-import argparse
+import torch._dynamo
 import csv
 import uuid
 from datetime import datetime
@@ -45,7 +45,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     device = torch.device("cuda" if device_type == "gpu" and torch.cuda.is_available() else
                           "mps" if device_type == "mps" and torch.backends.mps.is_available() else "cpu")
     model = model.to(device)
-    try:
+    torch._dynamo.config.suppress_errors = True
         if device.type != "mps":
             compiled_model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
         else:
