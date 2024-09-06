@@ -111,7 +111,8 @@ class GPT2ARC(nn.Module):
         # No initialization for nn.LayerNorm, using default
 
     def forward(self, input_ids, attention_mask=None):
-        logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         
         # Check if input_ids is already in the correct shape
         if input_ids.dim() == 4:
