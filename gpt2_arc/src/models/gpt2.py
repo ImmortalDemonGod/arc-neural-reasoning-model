@@ -51,9 +51,11 @@ class FeedForward(nn.Module):
         logger.debug(f"Initialized FeedForward with n_embd={n_embd}")
 
     def forward(self, x):
-        logger.debug(f"FeedForward input shape: {x.shape}")
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"FeedForward input shape: {x.shape}")
         output = self.net(x)
-        logger.debug(f"FeedForward output shape: {output.shape}")
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"FeedForward output shape: {output.shape}")
         return output
 
 
