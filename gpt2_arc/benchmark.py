@@ -10,7 +10,7 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import ModelConfig
 import time
-from torch.cuda.amp import autocast
+from torch.amp import autocast
 import psutil
 import logging
 import statistics
@@ -76,7 +76,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
 
-            with torch.no_grad(), autocast(device.type, dtype=torch.float16):
+            with torch.no_grad(), autocast(device=device.type, dtype=torch.float16):
                 model(inputs, attention_mask)
 
             if torch.cuda.is_available():
