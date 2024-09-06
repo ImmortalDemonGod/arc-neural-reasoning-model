@@ -33,9 +33,11 @@ Reproduce the GPT-2 (124M) model for the Abstraction and Reasoning Corpus (ARC) 
 
 ## Next Steps and TODO List
 
-Add the full training data to the repo
-run the model on the training data
+Add the full training data to the repo *done
+run the model on the training data *done
 do everything after verifying the first 2
+figure out how to do weight sharing
+test effeciny gains: torch compile, lower precision
 
 1. **Address Warnings**
    - Fix PyTorch Lightning logging warnings in trainer tests
