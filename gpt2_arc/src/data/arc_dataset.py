@@ -81,6 +81,7 @@ class ARCDataset(Dataset):
         logger.debug(f"First train input shape: {np.array(self.data[0]['train'][0]['input']).shape}")
         self.is_test = is_test
         self.num_symbols = num_symbols
+        self.test_split = test_split
         logger.debug(f"test_split set to: {self.test_split}")
         self.test_split = test_split
         self.samples = []
