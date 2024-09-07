@@ -22,9 +22,31 @@ def mock_dataset():
     dataset.__len__.return_value = 100
     # Return a tuple of two tensors for each item
     dataset.__getitem__.return_value = (torch.randn(1, 30, 30), torch.randn(1, 30, 30))
+    print(f"Created mock dataset with length {dataset.__len__.return_value}")
     return dataset
 
 def test_benchmark_model_normal_operation(mock_model, mock_dataset):
+    print("Starting test_benchmark_model_normal_operation")
+    with patch('torch.device', return_value=torch.device('cpu')) as mock_device, \
+         patch('time.time', side_effect=[i for i in range(100)]) as mock_time, \
+         patch('psutil.cpu_percent', return_value=50) as mock_cpu, \
+         patch('psutil.virtual_memory', return_value=MagicMock(percent=60)) as mock_memory:
+
+        print(f"Mocked device: {mock_device.return_value}")
+        print(f"Mocked time side effect: {mock_time.side_effect[:5]}...")
+        print(f"Mocked CPU percent: {mock_cpu.return_value}")
+        print(f"Mocked memory percent: {mock_memory.return_value.percent}")
+
+        avg_time, avg_grids = benchmark_model(mock_model, mock_dataset)
+
+        print(f"Benchmark results - avg_time: {avg_time}, avg_grids: {avg_grids}")
+
+        assert isinstance(avg_time, float), f"avg_time is not a float: {type(avg_time)}"
+        assert isinstance(avg_grids, float), f"avg_grids is not a float: {type(avg_grids)}"
+        assert avg_time > 0, f"avg_time is not positive: {avg_time}"
+        assert avg_grids > 0, f"avg_grids is not positive: {avg_grids}"
+
+    print("test_benchmark_model_normal_operation completed successfully")
     with patch('torch.device', return_value=torch.device('cpu')), \
          patch('time.time', side_effect=[0, 1] * 30), \
          patch('psutil.cpu_percent', return_value=50), \

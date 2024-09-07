@@ -30,6 +30,7 @@ BASELINES = {
 }
 
 def benchmark_model(model, dataset, batch_size=32, num_batches=1, num_runs=1, device_type='cpu', precision='medium'):
+    print(f"Starting benchmark_model with parameters: batch_size={batch_size}, num_batches={num_batches}, num_runs={num_runs}, device_type={device_type}, precision={precision}")
     run_id = str(uuid.uuid4())
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     practical_threshold = 20.0  # Define a threshold for practical significance
@@ -60,11 +61,13 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=1, num_runs=1, de
             compiled_model = model
 
     for run in range(num_runs):
+        print(f"Starting run {run + 1}/{num_runs}")
         dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
         total_time = 0.0
         total_grids = 0
 
         for i, (inputs, outputs) in enumerate(dataloader):
+            print(f"Processing batch {i + 1}/{num_batches}")
             if i >= num_batches:
                 break
 
@@ -103,9 +106,14 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=1, num_runs=1, de
             end_time = time.time()
 
             batch_time = end_time - start_time
+            print(f"Batch time: {batch_time}")
+            if batch_time <= 0:
+                print(f"WARNING: Invalid batch time: {batch_time}. Skipping this batch.")
+                continue
             total_time += batch_time
             total_grids += len(inputs)
 
+        print(f"Run {run + 1} completed. Total time: {total_time}, Total grids: {total_grids}")
         # Average metrics for the run
         grids_per_second = total_grids / total_time
 
@@ -133,7 +141,9 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=1, num_runs=1, de
         total_time_runs.append(total_time)
         grids_per_second_runs.append(grids_per_second)
 
-    # Calculate average and standard deviation over multiple runs
+    if total_time <= 0 or total_grids <= 0:
+        print(f"ERROR: Invalid total time ({total_time}) or total grids ({total_grids}). Check the benchmark implementation.")
+        return 0, 0  # Return sensible defaults instead of negative values
     avg_total_time = np.mean(total_time_runs)
     avg_grids_per_second = np.mean(grids_per_second_runs)
     std_total_time = np.std(total_time_runs, ddof=1)
@@ -270,10 +280,12 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=1, num_runs=1, de
             'precision': precision  # Add precision here
         })
 
+    print(f"Benchmark completed. Final results - avg_time: {avg_total_time}, avg_grids: {avg_grids_per_second}")
     return avg_total_time, avg_grids_per_second
 
 
 def main(args):
+    print(f"Starting main function with args: {args}")
     # Set the float32 matmul precision
     torch.set_float32_matmul_precision(args.precision)
     train_set, _ = arckit.load_data()
