@@ -20,6 +20,8 @@ def mock_model():
 def mock_dataset():
     dataset = MagicMock()
     dataset.__len__.return_value = 100
+    # Return a tuple of two tensors for each item
+    dataset.__getitem__.return_value = (torch.randn(1, 30, 30), torch.randn(1, 30, 30))
     return dataset
 
 def test_benchmark_model_normal_operation(mock_model, mock_dataset):
