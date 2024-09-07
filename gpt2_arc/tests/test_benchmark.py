@@ -2,6 +2,10 @@ import pytest
 import torch
 import numpy as np
 from unittest.mock import patch, MagicMock
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 from gpt2_arc.benchmark import benchmark_model, main, BASELINES
 
 @pytest.fixture
