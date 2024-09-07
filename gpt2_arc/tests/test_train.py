@@ -348,7 +348,7 @@ def test_arctrainer_training_step(trainer):
     batch = {
         "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
         "attention_mask": torch.ones((batch_size, seq_length)).float(),
-        "labels": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        "labels": torch.randint(0, vocab_size, (batch_size, seq_length), dtype=torch.long),
     }
     loss = trainer.training_step(batch, 0)
 
