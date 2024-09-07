@@ -38,6 +38,8 @@ class ARCTrainer(pl.LightningModule):
         # Ensure tensors are float32
         input_ids = input_ids.to(torch.float32)
         attention_mask = attention_mask.to(torch.float32)
+        outputs = self(input_ids, attention_mask)
+        loss = self.compute_loss(outputs, labels)
         self.log("train_loss", loss)
         self.train_losses.append(loss.item())
         end_time = time.time()
