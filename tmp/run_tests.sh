@@ -10,7 +10,11 @@ mkdir -p $TMP_DIR
 rm -rf $TMP_DIR/compressed_output.txt $TMP_DIR/uncompressed_output.txt $TMP_DIR/test_output.log
 rm -rf /Volumes/Totallynotaharddrive/arc-neural-reasoning-model/tmp/*.txt
 
-# Correct path to the Python script
+# Check if GITHUB_TOKEN is set, if not, generate a random token
+if [ -z "$GITHUB_TOKEN" ]; then
+    echo "GITHUB_TOKEN not set. Generating a random token."
+    export GITHUB_TOKEN=$(openssl rand -hex 16)
+fi
 PYTHON_SCRIPT="/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/tmp/1filellm/onefilellm.py"
 
 # Run the Python script if it exists
