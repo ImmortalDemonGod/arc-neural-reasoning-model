@@ -111,3 +111,9 @@ def test_benchmark_model_extreme_batch_sizes(mock_model, mock_dataset, batch_siz
         assert avg_grids > 0
 
 # Add more tests here for error handling, performance testing, etc.
+"""Next steps:
+
+Implement error handling tests
+Add performance tests with simple thresholds
+Implement mutation tests for critical parts (statistical calculations and error handling)
+Create basic tests for the main function"""
