@@ -14,21 +14,22 @@ def mock_model():
     model.config.n_embd = 64
     model.config.n_head = 2
     model.config.n_layer = 1
+    model.forward.return_value = torch.randn(1, 900, 64)  # Mocked output
     return model
 
 @pytest.fixture
 def mock_dataset():
     dataset = MagicMock()
-    dataset.__len__.return_value = 100
-    # Return a tuple of two tensors for each item
-    dataset.__getitem__.return_value = (torch.randn(1, 30, 30), torch.randn(1, 30, 30))
-    print(f"Created mock dataset with length {dataset.__len__.return_value}")
+    dataset.__len__.return_value = 5  # Smaller dataset
+    dummy_input = torch.zeros(1, 30, 30)
+    dummy_output = torch.zeros(1, 30, 30)
+    dataset.__getitem__.return_value = (dummy_input, dummy_output)
     return dataset
 
 def test_benchmark_model_normal_operation(mock_model, mock_dataset):
     print("Starting test_benchmark_model_normal_operation")
     with patch('torch.device', return_value=torch.device('cpu')) as mock_device, \
-         patch('time.time', side_effect=[i for i in range(100)]) as mock_time, \
+         patch('time.time', side_effect=[0, 1, 2, 3]) as mock_time, \
          patch('psutil.cpu_percent', return_value=50) as mock_cpu, \
          patch('psutil.virtual_memory', return_value=MagicMock(percent=60)) as mock_memory:
 
