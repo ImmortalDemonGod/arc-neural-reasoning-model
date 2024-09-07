@@ -13,6 +13,7 @@ scipy
 psutil
 ultralytics-thop
 mypy
+pynvml
 tox
 tensorboard
 arckit
