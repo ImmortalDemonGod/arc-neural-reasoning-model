@@ -44,7 +44,7 @@ class ARCDataset(Dataset):
         is_test: bool = False,
         num_symbols: int = 10,
         test_split: float = 0.2,
-        debug=False
+        debug=False,
     ):
         set_debug_mode(debug)  # Set debug mode based on parameter
         logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")
@@ -79,6 +79,7 @@ class ARCDataset(Dataset):
         logger.debug(f"First train input shape: {np.array(self.data[0]['train'][0]['input']).shape}")
         self.is_test = is_test
         self.num_symbols = num_symbols
+        self.test_split = test_split
         self.test_split = test_split
         self.samples = []
         if TaskSet is not None and isinstance(data_source, TaskSet):
