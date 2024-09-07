@@ -81,7 +81,6 @@ class ARCDataset(Dataset):
         logger.debug(f"First train input shape: {np.array(self.data[0]['train'][0]['input']).shape}")
         self.is_test = is_test
         self.num_symbols = num_symbols
-        self.test_split = test_split
         logger.debug(f"test_split set to: {self.test_split}")
         self.test_split = test_split
         self.samples = []
@@ -129,7 +128,13 @@ class ARCDataset(Dataset):
                 ]
             }
             processed_data.append(processed_task)
-        return processed_data
+        # Flatten the data structure
+        flattened_data = []
+        for task in processed_data:
+            flattened_data.extend(task['train'])
+            flattened_data.extend(task['test'])
+        
+        return flattened_data
 
     def _validate_data(self):
         for task in self.data:
