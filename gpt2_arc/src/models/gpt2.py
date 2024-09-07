@@ -80,7 +80,15 @@ class TransformerBlock(nn.Module):
         return x
 
 
+from dataclasses import dataclass
 from src.config import ModelConfig
+
+@dataclass
+class ModelConfig:
+    n_embd: int = 768
+    n_head: int = 12
+    n_layer: int = 12
+    dropout: float = 0.1
 
 
 class GPT2ARC(nn.Module):
