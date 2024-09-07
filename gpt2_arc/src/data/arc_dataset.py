@@ -115,12 +115,9 @@ class ARCDataset(Dataset):
         self._validate_data()
 
     def _process_json_data(self, raw_data: List[Dict]) -> List[Dict]:
-        logger.debug(f"_process_synthetic_data called with directory: {directory}")
-        logger.debug(f"Debug attribute: {self.debug_attr}")
-        if not os.path.isdir(directory):
-            logger.error(f"Invalid directory: {directory}")
-            return []
+        processed_data = []
         for task in raw_data:
+            logger.debug(f"Processing task: {task}")
             processed_task = {
                 "train": [
                     {"input": np.array(example["input"]), "output": np.array(example["output"])}
