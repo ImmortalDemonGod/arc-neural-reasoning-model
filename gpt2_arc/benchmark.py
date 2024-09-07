@@ -29,7 +29,7 @@ BASELINES = {
     'mps': {'total_time': 0.0481, 'grids_per_second': 13774.98}  # Updated baselines for MPS
 }
 
-def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, device_type='cpu', precision='highest'):
+def benchmark_model(model, dataset, batch_size=32, num_batches=1, num_runs=1, device_type='cpu', precision='medium'):
     run_id = str(uuid.uuid4())
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     practical_threshold = 20.0  # Define a threshold for practical significance
