@@ -77,7 +77,9 @@ class ARCDataset(Dataset):
         logger.debug(f"First task structure: {self.data[0].keys()}")
         logger.debug(f"First train sample structure: {self.data[0]['train'][0].keys()}")
         logger.debug(f"First train input shape: {np.array(self.data[0]['train'][0]['input']).shape}")
+        self.is_test = is_test
         self.num_symbols = num_symbols
+        self.test_split = test_split
         self.test_split = test_split
         self.samples = []
         if TaskSet is not None and isinstance(data_source, TaskSet):
