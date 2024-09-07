@@ -38,27 +38,6 @@ class ARCTrainer(pl.LightningModule):
         # Ensure tensors are float32
         input_ids = input_ids.to(torch.float32)
         attention_mask = attention_mask.to(torch.float32)
-        labels = labels.to(torch.float32)
-
-        logger.debug(f"Training step input_ids dtype: {input_ids.dtype}")
-        logger.debug(f"Training step attention_mask dtype: {attention_mask.dtype}")
-        logger.debug(f"Training step labels dtype: {labels.dtype}")
-
-        logger.debug(f"Validation step input_ids dtype: {input_ids.dtype}")
-        logger.debug(f"Validation step attention_mask dtype: {attention_mask.dtype}")
-        logger.debug(f"Validation step labels dtype: {labels.dtype}")
-
-        outputs = self(input_ids, attention_mask)
-        loss = self.compute_loss(outputs, labels.long())
-        logger.info(f"Epoch {self.current_epoch}, Batch {batch_idx}: Training loss = {loss.item()}")
-
-        # Ensure tensors are float32
-        input_ids = input_ids.to(torch.float32)
-        attention_mask = attention_mask.to(torch.float32)
-        labels = labels.to(torch.float32)
-
-        outputs = self(input_ids, attention_mask)
-        loss = self.compute_loss(outputs, labels)
         self.log("train_loss", loss)
         self.train_losses.append(loss.item())
         end_time = time.time()
