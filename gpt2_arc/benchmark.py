@@ -29,7 +29,7 @@ BASELINES = {
     'mps': {'total_time': 0.0481, 'grids_per_second': 13774.98}  # Updated baselines for MPS
 }
 
-def benchmark_model(model, dataset, batch_size=32, num_batches=1, num_runs=1, device_type='cpu', precision='medium'):
+def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, device_type='cpu', precision='medium'):
     print(f"Starting benchmark_model with parameters: batch_size={batch_size}, num_batches={num_batches}, num_runs={num_runs}, device_type={device_type}, precision={precision}")
     run_id = str(uuid.uuid4())
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

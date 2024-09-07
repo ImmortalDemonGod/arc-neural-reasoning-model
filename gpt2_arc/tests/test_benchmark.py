@@ -37,7 +37,7 @@ def test_benchmark_model_normal_operation(mock_model, mock_dataset):
         print(f"Mocked CPU percent: {mock_cpu.return_value}")
         print(f"Mocked memory percent: {mock_memory.return_value.percent}")
 
-        avg_time, avg_grids = benchmark_model(mock_model, mock_dataset)
+        avg_time, avg_grids = benchmark_model(mock_model, mock_dataset, num_runs=1)
 
         print(f"Benchmark results - avg_time: {avg_time}, avg_grids: {avg_grids}")
 
