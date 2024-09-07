@@ -80,6 +80,7 @@ class ARCDataset(Dataset):
         self.is_test = is_test
         self.num_symbols = num_symbols
         self.test_split = test_split
+        logger.debug(f"test_split set to: {self.test_split}")
         self.test_split = test_split
         self.samples = []
         if TaskSet is not None and isinstance(data_source, TaskSet):
@@ -176,6 +177,7 @@ class ARCDataset(Dataset):
         return processed_data
 
     def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
+        logger.debug(f"Inside _process_single_task, test_split is: {self.test_split}")
         if isinstance(task_data, dict):
             train_examples = task_data.get("train", [])
             test_examples = task_data.get("test", [])
