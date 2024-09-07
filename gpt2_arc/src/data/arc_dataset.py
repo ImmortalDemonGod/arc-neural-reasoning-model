@@ -14,8 +14,28 @@ try:
 except ImportError:
     TaskSet = None
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)  # Set to ERROR by default
+
+# Create a handler that writes to stderr
+handler = logging.StreamHandler()
+handler.setLevel(logging.ERROR)
+
+# Create a formatting for the logs
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(handler)
+
+# Function to set debug mode
+def set_debug_mode(debug=False):
+    if debug:
+        logger.setLevel(logging.DEBUG)
+        handler.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.ERROR)
+        handler.setLevel(logging.ERROR)
 
 class ARCDataset(Dataset):
     def __init__(
@@ -24,8 +44,10 @@ class ARCDataset(Dataset):
         is_test: bool = False,
         num_symbols: int = 10,
         test_split: float = 0.2,
+        debug=False
     ):
-        logger.debug(f"Data source type: {type(data_source)}")
+        set_debug_mode(debug)  # Set debug mode based on parameter
+        logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")
         if isinstance(data_source, str):
             logger.debug(f"Data source path: {data_source}")
             if os.path.isdir(data_source):
@@ -254,7 +276,7 @@ class ARCDataset(Dataset):
         return symbol_counts / symbol_counts.sum()
 
     def _preprocess_grid(self, grid: Union[dict, np.ndarray]) -> torch.Tensor:
-        if isinstance(grid, dict):
+        logger.debug(f"Original grid shape: {input_grid.shape}")
             input_grid = np.array(grid['input'])
             logger.debug(f"Original grid shape: {input_grid.shape}")
             logger.debug(f"Original grid content:\n{input_grid}")

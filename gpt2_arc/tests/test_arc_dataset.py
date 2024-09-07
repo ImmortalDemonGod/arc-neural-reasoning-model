@@ -4,7 +4,17 @@ import numpy as np
 import pytest
 import torch
 import random
-import logging
+from src.data.arc_dataset import ARCDataset, set_debug_mode
+
+# Set up logging for tests
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
+
+@pytest.fixture(scope="module")
+def debug_mode():
+    set_debug_mode(True)
+    yield
+    set_debug_mode(False)
 from src.data.arc_dataset import ARCDataset
 from unittest.mock import Mock
 from arckit.data import TaskSet
@@ -36,14 +46,14 @@ def mock_taskset():
     mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
-def test_arc_dataset_initialization(sample_data):
-    dataset = ARCDataset(sample_data)
-    print(f"Dataset length: {len(dataset)}, Expected: {len(sample_data)}")
+def test_arc_dataset_initialization(sample_data, debug_mode):
+    dataset = ARCDataset(sample_data, debug=True)
+    logger.debug(f"Dataset length: {len(dataset)}, expected: {len(sample_data)}")
     assert len(dataset) == len(sample_data), "Dataset length mismatch"
     
     input_grid, output_grid = dataset[0]
-    print(f"Input grid shape: {input_grid.shape}, Expected: (1, 30, 30)")
-    print(f"Output grid shape: {output_grid.shape}, Expected: (1, 30, 30)")
+    logger.debug(f"Input grid shape: {input_grid.shape}, expected: (1, 30, 30)")
+    logger.debug(f"Output grid shape: {output_grid.shape}, expected: (1, 30, 30)")
     
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
@@ -56,8 +66,8 @@ def test_arc_dataset_initialization(sample_data):
     center_input = input_grid[0, 14:16, 14:16]
     center_output = output_grid[0, 14:16, 14:16]
     
-    print(f"Center input: {center_input}")
-    print(f"Center output: {center_output}")
+    logger.debug(f"Center input:\n{center_input}")
+    logger.debug(f"Center output:\n{center_output}")
     
     assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
     assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
@@ -80,21 +90,21 @@ def test_arc_dataset_initialization(sample_data):
     assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
     assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
 
-def test_arc_dataset_synthetic_data():
+def test_arc_dataset_synthetic_data(debug_mode):
     synthetic_data_path = "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/syntheticARC/tasks"
-    train_dataset = ARCDataset(synthetic_data_path, is_test=False)
-    test_dataset = ARCDataset(synthetic_data_path, is_test=True)
+    train_dataset = ARCDataset(synthetic_data_path, is_test=False, debug=True)
+    test_dataset = ARCDataset(synthetic_data_path, is_test=True, debug=True)
 
     assert len(train_dataset) > 0, "Synthetic train dataset should not be empty"
     assert len(test_dataset) > 0, "Synthetic test dataset should not be empty"
-    print(f"Loaded {len(train_dataset.data)} synthetic tasks")
-    print(f"Total train dataset length: {len(train_dataset)}")
-    print(f"Total test dataset length: {len(test_dataset)}")
+    logger.debug(f"Loaded {len(train_dataset.data)} synthetic tasks")
+    logger.debug(f"Total train dataset length: {len(train_dataset)}")
+    logger.debug(f"Total test dataset length: {len(test_dataset)}")
 
     total_train = sum(len(task['train']) for task in train_dataset.data)
     total_test = sum(len(task['test']) for task in test_dataset.data)
-    print(f"Total train samples: {total_train}")
-    print(f"Total test samples: {total_test}")
+    logger.debug(f"Total train samples: {total_train}")
+    logger.debug(f"Total test samples: {total_test}")
 
     for i, task in enumerate(train_dataset.data):
         print(f"Task {i} - Train samples: {len(task['train'])}, Test samples: {len(task['test'])}")
