@@ -45,7 +45,7 @@ def test_arctrainer_forward_pass(trainer):
     output = trainer(input_ids, attention_mask)
 
     assert isinstance(output, torch.Tensor)
-    assert output.shape == (batch_size, seq_length, trainer.model.config["n_embd"])
+    assert output.shape == (batch_size, seq_length, trainer.model.config.n_embd)
 
 
 @pytest.mark.parametrize("batch_format", ["tuple", "dict"])
