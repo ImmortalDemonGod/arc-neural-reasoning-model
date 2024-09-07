@@ -11,6 +11,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def set_logging_level(level=logging.ERROR):
+    logger = logging.getLogger()
+    logger.setLevel(level)
+
 # Add the project root to the PYTHONPATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 import argparse
@@ -218,6 +222,7 @@ def test_batch_size_extremes(mock_args, batch_size):
 
 @pytest.mark.parametrize("learning_rate", [1e-10, 1000])
 def test_learning_rate_extremes(mock_args, learning_rate):
+    set_logging_level(logging.WARNING)  # Suppress INFO and DEBUG messages
     mock_args.learning_rate = learning_rate
     with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
