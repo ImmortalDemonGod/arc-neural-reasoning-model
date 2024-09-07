@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 import torch
 import random
+import logging
 from src.data.arc_dataset import ARCDataset, set_debug_mode
 
 # Set up logging for tests
@@ -15,12 +16,8 @@ def debug_mode():
     set_debug_mode(True)
     yield
     set_debug_mode(False)
-from src.data.arc_dataset import ARCDataset
 from unittest.mock import Mock
 from arckit.data import TaskSet
-
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 
 @pytest.fixture

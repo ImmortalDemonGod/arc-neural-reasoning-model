@@ -276,7 +276,7 @@ class ARCDataset(Dataset):
         return symbol_counts / symbol_counts.sum()
 
     def _preprocess_grid(self, grid: Union[dict, np.ndarray]) -> torch.Tensor:
-        logger.debug(f"Original grid shape: {input_grid.shape}")
+        if isinstance(grid, dict):
             input_grid = np.array(grid['input'])
             logger.debug(f"Original grid shape: {input_grid.shape}")
             logger.debug(f"Original grid content:\n{input_grid}")
