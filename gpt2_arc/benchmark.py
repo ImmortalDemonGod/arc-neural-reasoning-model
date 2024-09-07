@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Dynamically adjustable baseline values for CPU, GPU, and MPS
 BASELINES = {
     'cpu': {'total_time': 1.6391, 'grids_per_second': 199.27},
-    'gpu': {'total_time': 0.0481, 'grids_per_second': 13774.98},
+    'cuda': {'total_time': 0.0481, 'grids_per_second': 13774.98},
     'mps': {'total_time': 0.0481, 'grids_per_second': 13774.98}  # Updated baselines for MPS
 }
 
@@ -43,7 +43,7 @@ def benchmark_model(model, dataset, batch_size=32, num_batches=10, num_runs=30, 
     gpu_usages = []  # Initialize gpu_usages to store GPU utilization data
 
     # Select device based on the argument (including support for MPS)
-    device = torch.device("cuda" if device_type == "gpu" and torch.cuda.is_available() else
+    device = torch.device("cuda" if device_type == "cuda" and torch.cuda.is_available() else
                           "mps" if device_type == "mps" and torch.backends.mps.is_available() else "cpu")
     model = model.to(device)
     torch._dynamo.config.suppress_errors = True
@@ -300,7 +300,7 @@ if __name__ == "__main__":
     parser.add_argument('--n-embd', type=int, default=64, help='Number of embeddings for the model')
     parser.add_argument('--n-head', type=int, default=2, help='Number of attention heads')
     parser.add_argument('--n-layer', type=int, default=1, help='Number of layers')
-    parser.add_argument('--device', choices=['cpu', 'gpu', 'mps'], default='cpu', help='Device to run the benchmark on (cpu, gpu, or mps)')
+    parser.add_argument('--device', choices=['cpu', 'cuda', 'mps'], default='cpu', help='Device to run the benchmark on (cpu, cuda, or mps)')
     parser.add_argument('--precision', choices=['highest', 'high', 'medium'], default='highest', help='Precision level for float32 matrix multiplications')
     
     args = parser.parse_args()
