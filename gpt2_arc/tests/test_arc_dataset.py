@@ -89,6 +89,7 @@ def test_arc_dataset_initialization(sample_data, debug_mode):
 
 def test_arc_dataset_synthetic_data(debug_mode):
     synthetic_data_path = "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/syntheticARC/tasks"
+    assert os.path.isdir(synthetic_data_path), f"Directory does not exist: {synthetic_data_path}"
     train_dataset = ARCDataset(synthetic_data_path, is_test=False, debug=True)
     test_dataset = ARCDataset(synthetic_data_path, is_test=True, debug=True)
 

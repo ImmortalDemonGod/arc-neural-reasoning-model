@@ -46,6 +46,8 @@ class ARCDataset(Dataset):
         test_split: float = 0.2,
         debug=False,
     ):
+        logger.debug(f"ARCDataset.__init__ called with data_source: {data_source}")
+        self.debug_attr = "test"  # Simple attribute for testing
         set_debug_mode(debug)  # Set debug mode based on parameter
         logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")
         if isinstance(data_source, str):
@@ -113,7 +115,11 @@ class ARCDataset(Dataset):
         self._validate_data()
 
     def _process_json_data(self, raw_data: List[Dict]) -> List[Dict]:
-        processed_data = []
+        logger.debug(f"_process_synthetic_data called with directory: {directory}")
+        logger.debug(f"Debug attribute: {self.debug_attr}")
+        if not os.path.isdir(directory):
+            logger.error(f"Invalid directory: {directory}")
+            return []
         for task in raw_data:
             processed_task = {
                 "train": [
