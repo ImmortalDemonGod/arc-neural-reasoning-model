@@ -209,12 +209,20 @@ class ARCDataset(Dataset):
                     symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
         return symbol_counts / symbol_counts.sum()
 
-    def _preprocess_grid(self, grid: np.ndarray) -> torch.Tensor:
-        logger.debug(f"Original grid shape: {grid.shape}")
-        logger.debug(f"Original grid content:\n{grid}")
+    def _preprocess_grid(self, grid: Union[dict, np.ndarray]) -> torch.Tensor:
+        if isinstance(grid, dict):
+            input_grid = np.array(grid['input'])
+            logger.debug(f"Original grid shape: {input_grid.shape}")
+            logger.debug(f"Original grid content:\n{input_grid}")
+        elif isinstance(grid, np.ndarray):
+            input_grid = grid
+            logger.debug(f"Original grid shape: {input_grid.shape}")
+            logger.debug(f"Original grid content:\n{input_grid}")
+        else:
+            raise ValueError(f"Unexpected grid type: {type(grid)}")
 
         # Pad the grid to 30x30
-        padded_grid = self._pad_grid(grid, height=30, width=30)
+        padded_grid = self._pad_grid(input_grid, height=30, width=30)
 
         # Convert to tensor and add channel dimension
         grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
