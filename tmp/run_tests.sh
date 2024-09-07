@@ -23,7 +23,7 @@ fi
 
 # Run pytest with specified options and redirect logs to the tmp directory
 cd /Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc
-pytest -s -v --log-cli-level=ERROR --capture=no --maxfail=1 > $TMP_DIR/test_output.log 2>&1
+pytest -s -v --log-cli-level=DEBUG --capture=no --maxfail=1 > $TMP_DIR/test_output.log 2>&1
 
 # Specify the path for compressed output
 COMPRESSED_OUTPUT="$TMP_DIR/compressed_output.txt"
