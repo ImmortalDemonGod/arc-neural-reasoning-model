@@ -80,7 +80,6 @@ class ARCDataset(Dataset):
         self.is_test = is_test
         self.num_symbols = num_symbols
         self.test_split = test_split
-        self.test_split = test_split
         self.samples = []
         if TaskSet is not None and isinstance(data_source, TaskSet):
             for task in data_source.tasks:

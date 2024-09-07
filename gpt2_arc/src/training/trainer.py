@@ -31,7 +31,7 @@ class ARCTrainer(pl.LightningModule):
         elif isinstance(batch, dict):
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
-            labels = batch["labels"]
+            labels = batch["labels"].long()
         else:
             raise ValueError("Batch must be either a tuple or a dictionary")
 
