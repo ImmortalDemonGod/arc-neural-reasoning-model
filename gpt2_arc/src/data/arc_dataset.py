@@ -25,7 +25,36 @@ class ARCDataset(Dataset):
         num_symbols: int = 10,
         test_split: float = 0.2,
     ):
-        self.is_test = is_test
+        logger.debug(f"Data source type: {type(data_source)}")
+        if isinstance(data_source, str):
+            logger.debug(f"Data source path: {data_source}")
+            if os.path.isdir(data_source):
+                logger.debug("Processing synthetic data from directory")
+                self.data = self._process_synthetic_data(data_source)
+            elif os.path.isfile(data_source):
+                logger.debug("Processing JSON data from file")
+                with open(data_source, 'r') as f:
+                    raw_data = json.load(f)
+                self.data = self._process_json_data(raw_data)
+            else:
+                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
+        elif isinstance(data_source, list):
+            logger.debug("Processing list data")
+            self.data = self._process_list_data(data_source)
+        elif isinstance(data_source, tuple):
+            logger.debug("Processing combined data")
+            self.data = self._combine_data(*data_source)
+        elif TaskSet is not None and isinstance(data_source, TaskSet):
+            logger.debug("Processing ARCkit data")
+            self.data = self._process_arckit_data(data_source)
+        else:
+            logger.error(f"Invalid data_source type: {type(data_source)}")
+            raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
+
+        logger.debug(f"Number of tasks: {len(self.data)}")
+        logger.debug(f"First task structure: {self.data[0].keys()}")
+        logger.debug(f"First train sample structure: {self.data[0]['train'][0].keys()}")
+        logger.debug(f"First train input shape: {np.array(self.data[0]['train'][0]['input']).shape}")
         self.num_symbols = num_symbols
         self.test_split = test_split
         self.samples = []
@@ -88,9 +117,24 @@ class ARCDataset(Dataset):
         for task in self.data:
             for split in ['train', 'test']:
                 for sample in task[split]:
-                    h, w = sample['input'].shape
+                    if isinstance(sample['input'], torch.Tensor):
+                        if sample['input'].dim() == 3:
+                            h, w = sample['input'].shape[1], sample['input'].shape[2]
+                        elif sample['input'].dim() == 2:
+                            h, w = sample['input'].shape
+                        else:
+                            raise ValueError(f"Unexpected tensor dimensions: {sample['input'].dim()}")
+                    elif isinstance(sample['input'], np.ndarray):
+                        h, w = sample['input'].shape
+                    elif isinstance(sample['input'], list):
+                        h, w = len(sample['input']), len(sample['input'][0])
+                    else:
+                        raise TypeError(f"Unexpected input type: {type(sample['input'])}")
+                    
                     max_h = max(max_h, h)
                     max_w = max(max_w, w)
+        
+        logger.debug(f"Computed max grid size: ({max_h}, {max_w})")
         return (max_h, max_w)
 
     def _combine_data(self, official_data, synthetic_data_path):
