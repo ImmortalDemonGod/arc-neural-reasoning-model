@@ -35,7 +35,12 @@ Reproduce the GPT-2 (124M) model for the Abstraction and Reasoning Corpus (ARC) 
 
 Add the full training data to the repo *done
 run the model on the training data *done
-do everything after verifying the first 2
+write the eval code and test
+implement the on the measure of int metrics
+finish improvements from zero to hero
+desgin graph/logical network protype using py/java
+create features from the functions of arc synthetic data generator for model
+
 figure out how to do weight sharing
 test effeciny gains: torch compile, lower precision
 
