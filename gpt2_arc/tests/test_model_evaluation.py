@@ -27,7 +27,7 @@ def inputs():
 
 @pytest.fixture
 def attention_mask():
-    return torch.ones(2, 1, 32, 768)  # Adjust this to match model expectations
+    return torch.ones(2, 1, 32, 32)  # Adjust to match the expected input shape
 
 @pytest.fixture
 def dataloader(inputs, attention_mask):
