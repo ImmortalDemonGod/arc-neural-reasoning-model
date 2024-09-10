@@ -68,8 +68,8 @@ def test_standard_pixel_accuracy(model, inputs, targets):
     logger.debug("Starting test_standard_pixel_accuracy")
     outputs = model(inputs)
     logger.debug(f"Outputs shape: {outputs.shape}, Targets shape: {targets.shape}")
+    outputs = outputs.view(targets.shape[0], -1, targets.shape[1], targets.shape[2])
     predicted = outputs.argmax(dim=1)
-    predicted = predicted.view_as(targets)
     accuracy = (predicted == targets).float().mean().item()
     logger.debug(f"Calculated accuracy: {accuracy}")
     assert 0.0 <= accuracy <= 1.0, f"Accuracy should be between 0 and 1, got {accuracy}"
@@ -78,8 +78,8 @@ def test_differential_pixel_accuracy(model, inputs, targets):
     logger.debug("Starting test_differential_pixel_accuracy")
     outputs = model(inputs)
     logger.debug(f"Outputs shape: {outputs.shape}, Targets shape: {targets.shape}")
+    outputs = outputs.view(targets.shape[0], -1, targets.shape[1], targets.shape[2])
     predicted = outputs.argmax(dim=1)
-    predicted = predicted.view_as(targets)
     diff_accuracy = differential_pixel_accuracy(inputs, targets, predicted)
     logger.debug(f"Calculated differential accuracy: {diff_accuracy}")
     assert 0.0 <= diff_accuracy <= 1.0, f"Differential pixel accuracy should be between 0 and 1, got {diff_accuracy}"
@@ -91,6 +91,7 @@ def test_task_accuracies_tracking(model, dataloader, is_training=False):
     for batch_idx, (inputs, targets, attention_mask) in enumerate(dataloader):
         outputs = model(inputs, attention_mask=attention_mask)
         logger.debug(f"Batch {batch_idx}: Outputs shape: {outputs.shape}, Targets shape: {targets.shape}")
+        outputs = outputs.view(targets.shape[0], -1, targets.shape[1], targets.shape[2])
         accuracy = (outputs.argmax(dim=1) == targets).float().mean().item()
         task_id = getattr(dataloader, 'task_id', 'default_task')
         if hasattr(model, '_update_task_accuracies'):
@@ -106,7 +107,8 @@ def test_final_metric_calculation(model, dataloader, attention_mask):
     for batch_idx, (inputs, targets, attention_mask) in enumerate(dataloader):
         outputs = model(inputs, attention_mask=attention_mask)
         logger.debug(f"Batch {batch_idx}: Outputs shape: {outputs.shape}, Targets shape: {targets.shape}")
-        loss = torch.nn.functional.cross_entropy(outputs.view(-1, outputs.size(-1)), targets.view(-1))
+        outputs = outputs.view(targets.shape[0], -1, targets.shape[1], targets.shape[2])
+        loss = torch.nn.functional.cross_entropy(outputs.view(-1, outputs.size(1)), targets.view(-1))
         total_loss += loss.item()
         accuracy = (outputs.argmax(dim=1) == targets).float().mean().item()
         total_accuracy += accuracy
