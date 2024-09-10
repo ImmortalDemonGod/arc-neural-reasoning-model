@@ -1,5 +1,6 @@
 import pytest
 import torch
+from pytest_mock import mocker
 from src.models.gpt2 import GPT2ARC
 from src.config import Config
 from torch.utils.data import DataLoader
@@ -13,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def model(mocker):
-    mock_model = Mock()
-    mock_model.eval = Mock()
+    mock_model = mocker.Mock()
+    mock_model.eval = mocker.Mock()
     mock_model.return_value = torch.randn(1, 4, 2, 2)  # mock output
     logger.debug(f"Created mock model with output shape: {mock_model.return_value.shape}")
     return mock_model
@@ -154,7 +155,7 @@ def test_return_of_evaluation_results(model, dataloader):
     logger.debug("Starting test_return_of_evaluation_results")
     if not hasattr(model, 'evaluate'):
         logger.warning("Model does not have an 'evaluate' method. Adding mock method.")
-        model.evaluate = Mock(return_value={'loss': 0.5, 'accuracy': 0.75})
+        model.evaluate = mocker.Mock(return_value={'loss': 0.5, 'accuracy': 0.75})
     results = model.evaluate(dataloader)
     logger.debug(f"Evaluation results: {results}")
     assert "loss" in results and "accuracy" in results, "Evaluation results should return loss and accuracy."
