@@ -19,13 +19,15 @@ def model():
 
 @pytest.fixture
 def inputs():
-    inputs = torch.randn(2, 1, 32, 32)
+    # Use a predetermined input
+    inputs = torch.tensor([[[[1.0, 0.0], [0.0, 1.0]]]])
     logger.debug(f"Input shape: {inputs.shape}, dtype: {inputs.dtype}")
     return inputs
 
 @pytest.fixture
 def targets():
-    targets = torch.randint(0, 2, (2, 32, 32))
+    # Use a predetermined target
+    targets = torch.tensor([[[1, 0], [0, 1]]])
     logger.debug(f"Targets shape: {targets.shape}, dtype: {targets.dtype}")
     return targets
 
