@@ -4,7 +4,9 @@ import torch
 import logging
 from torch import nn, optim
 import time
-from typing import Any
+from typing import Any, Dict, Optional
+from collections import deque
+from torch.optim.lr_scheduler import LambdaLR
 from src.config import Config
 from torch.utils.data import DataLoader
 
@@ -76,7 +78,7 @@ class ARCTrainer(pl.LightningModule):
         return {"test_accuracy": accuracy}
 
     def configure_optimizers(self):
-        return torch.optim.AdamW(self.parameters(), lr=self.lr)
+        return [optimizer], [lr_scheduler]
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=7)
