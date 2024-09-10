@@ -1,0 +1,2 @@
+run_id,datetime,avg_total_time,std_total_time,ci_total_time,avg_grids_per_second,std_grids_per_second,ci_grids_per_second,effect_size_time,effect_size_grids,percent_change_time,percent_change_grids,t_stat_time,p_value_time,t_stat_grids,p_value_grids,improvement_time,improvement_grids,practical_significance_time,practical_significance_grids,precision
+de04de49-927d-4f63-918d-6fa3b8823881,2024-09-07 18:22:09,-1.0,nan,nan,-32.0,nan,nan,nan,nan,161.0090903544628,116.05861394088424,nan,nan,nan,nan,True,False,True,False,medium

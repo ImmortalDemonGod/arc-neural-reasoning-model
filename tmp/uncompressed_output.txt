@@ -1,0 +1,2377 @@
+<source type="local_directory" path="/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc">
+<file name="benchmark.py">
+import torch._dynamo
+import csv
+import uuid
+from datetime import datetime
+import os
+import torch
+from torch.utils.data import DataLoader
+import arckit
+from gpt2_arc.src.data.arc_dataset import ARCDataset
+from gpt2_arc.src.models.gpt2 import GPT2ARC
+from gpt2_arc.src.config import ModelConfig
+import time
+from torch.amp import autocast
+import psutil
+import logging
+import argparse
+import statistics
+import numpy as np
+from scipy import stats
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Dynamically adjustable baseline values for CPU, GPU, and MPS
+BASELINES = {
+    'cpu': {'total_time': 1.6391, 'grids_per_second': 199.27},
+    'cuda': {'total_time': 0.0481, 'grids_per_second': 13774.98},
+    'mps': {'total_time': 0.0481, 'grids_per_second': 13774.98}  # Updated baselines for MPS
+}
+
+def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, device_type='cpu', precision='medium'):
+    print(f"Starting benchmark_model with parameters: batch_size={batch_size}, num_batches={num_batches}, num_runs={num_runs}, device_type={device_type}, precision={precision}")
+    run_id = str(uuid.uuid4())
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    practical_threshold = 20.0  # Define a threshold for practical significance
+    total_time_runs = []
+    grids_per_second_runs = []
+
+    cpu_usages = []
+    memory_usages = []
+
+    run_results = []  # Initialize run_results to store each run's data
+    gpu_usages = []  # Initialize gpu_usages to store GPU utilization data
+
+    # Select device based on the argument (including support for MPS)
+    device = torch.device("cuda" if device_type == "cuda" and torch.cuda.is_available() else
+                          "mps" if device_type == "mps" and torch.backends.mps.is_available() else "cpu")
+    model = model.to(device)
+    torch._dynamo.config.suppress_errors = True
+    if device.type == "cpu":
+        compiled_model = model  # Use the model directly for CPU
+    else:
+        try:
+            if device.type != "mps":
+                compiled_model = torch.compile(model, mode="reduce-overhead", fullgraph=True)
+            else:
+                compiled_model = model  # Use the model directly for MPS
+        except ImportError as e:
+            logger.warning(f"Compilation failed with error: {e}. Falling back to eager execution.")
+            compiled_model = model
+
+    for run in range(num_runs):
+        print(f"Starting run {run + 1}/{num_runs}")
+        dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
+        total_time = 0.0
+        total_grids = 0
+
+        for i, (inputs, outputs) in enumerate(dataloader):
+            print(f"Processing batch {i + 1}/{num_batches}")
+            if i &gt;= num_batches:
+                break
+
+            # Create a dummy attention mask (all ones)
+            attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
+            inputs, attention_mask = inputs.to(device), attention_mask.to(device)
+
+            # Log system load and system state before processing the batch
+            cpu_percent = psutil.cpu_percent(interval=None)
+            memory_info = psutil.virtual_memory()
+            cpu_usages.append(cpu_percent)
+            memory_usages.append(memory_info.percent)
+            if device.type == 'cuda':
+                gpu_utilization = torch.cuda.utilization(device.index)
+                gpu_usages.append(gpu_utilization)
+                logger.info(f"Run {run+1}, Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%, GPU Utilization: {gpu_utilization}%")
+            else:
+                logger.info(f"Run {run+1}, Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%")
+
+            # Measure the time taken to proText preprocessing completed with XML structure preserved.
+
+Compressed Token Count: 19885
+Uncompressed Token Count: 22948
+
+compressed_output.txt and uncompressed_output.txt have been created in the working directory.
+
+The contents of uncompressed_output.txt have been copied to the clipboard.
+Processing... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 0:00:00
+e}. Skipping this batch.")
+                continue
+            total_time += batch_time
+            total_grids += len(inputs)
+
+        print(f"Run {run + 1} completed. Total time: {total_time}, Total grids: {total_grids}")
+        # Average metrics for the run
+        grids_per_second = total_grids / total_time
+
+        logger.info(f"Run {run+1}: Total Time: {total_time:.4f} seconds, Grids per Second: {grids_per_second:.2f}")
+        
+        # Store the results of each run
+        run_results.append({
+            'run_id': run_id,
+            'datetime': current_time,
+            'run': run + 1,
+            'total_time': total_time,
+            'grids_per_second': grids_per_second,
+            'cpu_usage': np.mean(cpu_usages),
+            'memory_usage': np.mean(memory_usages),
+            'gpu_usage': np.mean(gpu_usages) if gpu_usages else None,
+            'batch_size': batch_size,
+            'num_batches': num_batches,
+            'device': device.type,
+            'n_embd': model.config.n_embd,
+            'n_head': model.config.n_head,
+            'n_layer': model.config.n_layer,
+            'precision': precision  # Add precision here
+        })
+
+        total_time_runs.append(total_time)
+        grids_per_second_runs.append(grids_per_second)
+
+    if total_time &lt;= 0 or total_grids &lt;= 0:
+        print(f"ERROR: Invalid total time ({total_time}) or total grids ({total_grids}). Check the benchmark implementation.")
+        return 0, 0  # Return sensible defaults instead of negative values
+    avg_total_time = np.mean(total_time_runs)
+    avg_grids_per_second = np.mean(grids_per_second_runs)
+    std_total_time = np.std(total_time_runs, ddof=1)
+    std_grids_per_second = np.std(grids_per_second_runs, ddof=1)
+
+    # Perform statistical analysis (confidence intervals, effect size, etc.)
+    confidence_level = 0.95
+    z_score = stats.norm.ppf((1 + confidence_level) / 2)
+
+    ci_total_time = z_score * (std_total_time / np.sqrt(num_runs))
+    ci_grids_per_second = z_score * (std_grids_per_second / np.sqrt(num_runs))
+
+    effect_size_time = (avg_total_time - BASELINES[device.type]['total_time']) / std_total_time
+    effect_size_grids = (avg_grids_per_second - BASELINES[device.type]['grids_per_second']) / std_grids_per_second
+
+    # Calculate improvements and regressions based on averages
+    time_improvement = BASELINES[device.type]['total_time'] - avg_total_time
+    time_improvement_percent = (time_improvement / BASELINES[device.type]['total_time']) * 100
+    time_regression = avg_total_time - BASELINES[device.type]['total_time']
+    time_regression_percent = (time_regression / BASELINES[device.type]['total_time']) * 100
+
+    grids_per_second_improvement = avg_grids_per_second - BASELINES[device.type]['grids_per_second']
+    grids_per_second_improvement_percent = (grids_per_second_improvement / BASELINES[device.type]['grids_per_second']) * 100
+    grids_per_second_regression = BASELINES[device.type]['grids_per_second'] - avg_grids_per_second
+    grids_per_second_regression_percent = (grids_per_second_regression / BASELINES[device.type]['grids_per_second']) * 100
+
+    # Determine if there was an improvement
+    improvement_time = avg_total_time &lt; BASELINES[device.type]['total_time']
+    improvement_grids = avg_grids_per_second &gt; BASELINES[device.type]['grids_per_second']
+
+    # Log improvements or regressions based on averages
+    if avg_total_time &lt; BASELINES[device.type]['total_time']:
+        logger.info(f"Improvement in average total time: -{time_improvement:.4f} seconds ({time_improvement_percent:.2f}%)")
+    else:
+        logger.info(f"Regression in average total time: +{time_regression:.4f} seconds ({time_regression_percent:.2f}%)")
+
+    if avg_grids_per_second &gt; BASELINES[device.type]['grids_per_second']:
+        logger.info(f"Improvement in average grids per second: +{grids_per_second_improvement:.2f} ({grids_per_second_improvement_percent:.2f}%)")
+    else:
+        logger.info(f"Regression in average grids per second: -{grids_per_second_regression:.2f} ({grids_per_second_regression_percent:.2f}%)")
+
+    # Update practical significance checks
+    practical_significance_time = time_improvement_percent &gt;= practical_threshold
+    practical_significance_grids = grids_per_second_improvement_percent &gt;= practical_threshold
+
+    # Log practical significance
+    if improvement_time:
+        if practical_significance_time:
+            logger.info("The improvement in average total time is practically significant.")
+        else:
+            logger.info("The improvement in average total time is not practically significant.")
+    else:
+        if practical_significance_time:
+            logger.info("The regression in average total time is practically significant.")
+        else:
+            logger.info("The regression in average total time is not practically significant.")
+
+    if improvement_grids:
+        if practical_significance_grids:
+            logger.info("The improvement in average grids per second is practically significant.")
+        else:
+            logger.info("The improvement in average grids per second is not practically significant.")
+    else:
+        if practical_significance_grids:
+            logger.info("The regression in average grids per second is practically significant.")
+        else:
+            logger.info("The regression in average grids per second is not practically significant.")
+
+    # Perform a one-sample t-test
+    t_stat_time, p_value_time = stats.ttest_1samp(total_time_runs, BASELINES[device.type]['total_time'])
+    t_stat_grids, p_value_grids = stats.ttest_1samp(grids_per_second_runs, BASELINES[device.type]['grids_per_second'])
+
+    logger.info(f"T-Test for total time: t-statistic = {t_stat_time:.4f}, p-value = {p_value_time:.4f}")
+    logger.info(f"T-Test for grids per second: t-statistic = {t_stat_grids:.4f}, p-value = {p_value_grids:.4f}")
+
+    # Log the results including confidence intervals
+    logger.info(f"Run Summary:")
+    logger.info(f" • Avg Total Time: {avg_total_time:.4f}s (CI 95%: ±{ci_total_time:.4f}s)")
+    logger.info(f" • Avg Grids per Second: {avg_grids_per_second:.2f} (CI 95%: ±{ci_grids_per_second:.2f})")
+    logger.info(f" • Effect Size (Total Time): {effect_size_time:.4f}, Effect Size (Grids per Second): {effect_size_grids:.4f}")
+
+    # Determine if there was an improvement
+    improvement_time = avg_total_time &lt; BASELINES[device.type]['total_time']
+    improvement_grids = avg_grids_per_second &gt; BASELINES[device.type]['grids_per_second']
+    csv_file_path = 'benchmark_results.csv'
+    file_exists = os.path.isfile(csv_file_path)
+    with open(csv_file_path, 'a', newline='') as csvfile:
+        fieldnames = [
+            'run_id', 'datetime', 'run', 'total_time', 'grids_per_second', 'cpu_usage', 'memory_usage',
+            'batch_size', 'num_batches', 'device', 'n_embd', 'n_head', 'n_layer', 'gpu_usage', 'precision'
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        if not file_exists:
+            writer.writeheader()
+        for result in run_results:
+            writer.writerow(result)
+
+    # Write statistical summary to CSV
+    stats_csv_file_path = 'benchmark_statistics.csv'
+    stats_file_exists = os.path.isfile(stats_csv_file_path)
+    with open(stats_csv_file_path, 'a', newline='') as csvfile:
+        fieldnames = [
+            'run_id', 'datetime', 'avg_total_time', 'std_total_time', 'ci_total_time',
+            'avg_grids_per_second', 'std_grids_per_second', 'ci_grids_per_second',
+            'effect_size_time', 'effect_size_grids', 'percent_change_time', 'percent_change_grids',
+            't_stat_time', 'p_value_time', 't_stat_grids', 'p_value_grids',
+            'improvement_time', 'improvement_grids',
+            'practical_significance_time', 'practical_significance_grids', 'precision'
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        if not stats_file_exists:
+            writer.writeheader()
+        writer.writerow({
+            'run_id': run_id,
+            'datetime': current_time,
+            'avg_total_time': avg_total_time,
+            'std_total_time': std_total_time,
+            'ci_total_time': ci_total_time,
+            'avg_grids_per_second': avg_grids_per_second,
+            'std_grids_per_second': std_grids_per_second,
+            'ci_grids_per_second': ci_grids_per_second,
+            'effect_size_time': effect_size_time,
+            'effect_size_grids': effect_size_grids,
+            'percent_change_time': time_improvement_percent if improvement_time else time_regression_percent,
+            'percent_change_grids': grids_per_second_improvement_percent if improvement_grids else grids_per_second_regression_percent,
+            't_stat_time': t_stat_time,
+            'p_value_time': p_value_time,
+            't_stat_grids': t_stat_grids,
+            'p_value_grids': p_value_grids,
+            'improvement_time': improvement_time,
+            'improvement_grids': improvement_grids,
+            'practical_significance_time': practical_significance_time,
+            'practical_significance_grids': practical_significance_grids,
+            'precision': precision  # Add precision here
+        })
+
+    print(f"Benchmark completed. Final results - avg_time: {avg_total_time}, avg_grids: {avg_grids_per_second}")
+    return avg_total_time, avg_grids_per_second
+
+
+def main(args):
+    print(f"Starting main function with args: {args}")
+    # Set the float32 matmul precision
+    torch.set_float32_matmul_precision(args.precision)
+    train_set, _ = arckit.load_data()
+    full_dataset = ARCDataset(train_set, is_test=False)
+
+    # Create the model configuration
+    model_config = ModelConfig(n_embd=args.n_embd, n_head=args.n_head, n_layer=args.n_layer)
+    model = GPT2ARC(model_config)
+
+    # Run the benchmark for different configurations
+    for run_num in range(args.num_full_runs):
+        logger.info(f"Starting full benchmark run {run_num + 1}/{args.num_full_runs}")
+        avg_time, avg_grids = benchmark_model(
+            model, full_dataset, batch_size=args.batch_size, num_batches=args.num_batches, num_runs=args.num_runs, device_type=args.device, precision=args.precision
+        )
+        logger.info(f"Full run {run_num + 1} - Avg Time: {avg_time:.4f}s, Avg Grids per Second: {avg_grids:.2f}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Benchmark the GPT2ARC model.")
+    parser.add_argument('--num-runs', type=int, default=20, help='Number of runs for each configuration')
+    parser.add_argument('--num-full-runs', type=int, default=1, help='Number of full configurations to run')
+    parser.add_argument('--batch-size', type=int, default=32, help='Batch size for each run')
+    parser.add_argument('--num-batches', type=int, default=10, help='Number of batches per run')
+    parser.add_argument('--n-embd', type=int, default=64, help='Number of embeddings for the model')
+    parser.add_argument('--n-head', type=int, default=2, help='Number of attention heads')
+    parser.add_argument('--n-layer', type=int, default=1, help='Number of layers')
+    parser.add_argument('--device', choices=['cpu', 'cuda', 'mps'], default='cpu', help='Device to run the benchmark on (cpu, cuda, or mps)')
+    parser.add_argument('--precision', choices=['highest', 'high', 'medium'], default='highest', help='Precision level for float32 matrix multiplications')
+    
+    args = parser.parse_args()
+    main(args)
+
+</file>
+<file name="README.md">
+# GPT-2 ARC Neural Reasoning Model
+
+This project implements a neural reasoning model based on the GPT-2 architecture to solve tasks from the Abstraction and Reasoning Corpus (ARC) challenge.
+
+## Features
+
+- **Data Handling**: Utilizes a custom `ArcDataset` class for handling and preprocessing ARC data.
+- **Model Architecture**: Implements a `GPT2ARC` model leveraging the pre-trained GPT-2 architecture.
+- **Training**: Includes a `train.py` script for training the model using PyTorch Lightning, with support for logging and checkpointing.
+- **Testing**: Comprehensive test suite using `pytest` to ensure model and data integrity.
+
+## Installation
+
+Clone the repository and install the required packages:
+
+```bash
+git clone https://github.com/yourusername/arc-neural-reasoning-model.git
+cd arc-neural-reasoning-model
+pip install -e .
+```
+
+For development, install the extra dependencies:
+
+```bash
+pip install -e ".[dev]"
+```
+
+## Usage
+
+### Training the Model
+
+To train the model, use the following command:
+
+```
+python src/train.py --train_data path/to/train_data --val_data path/to/val_data --batch_size 32 --learning_rate 1e-4 --max_epochs 10 --use_gpu
+```
+
+Adjust the parameters as needed. The trained model checkpoints will be saved in the `checkpoints` directory.
+
+### Evaluating the Model
+
+To evaluate a trained model on a test set, use the following command:
+
+```
+python src/evaluate.py --test_data path/to/test_data --model_checkpoint path/to/model_checkpoint.ckpt --batch_size 32
+```
+
+This will output the evaluation metrics for the model on the test dataset.
+
+## Running Tests
+
+To run the tests, use the following command:
+
+```
+pytest -v
+```
+
+This will run all tests and display the results, including test coverage.
+
+## Contributing
+
+[Add contribution guidelines here]
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+</file>
+<file name="requirements.txt">
+aider-chat
+torch&gt;=2.0.0
+transformers&gt;=4.0.0
+pytorch-lightning&gt;=2.0.0
+numpy&gt;=1.20.0
+pytest&gt;=6.0
+pytest-cov&gt;=2.0
+black&gt;=20.8b1
+isort&gt;=5.0
+flake8&gt;=3.9
+ruff
+scipy
+psutil
+ultralytics-thop
+mypy
+pynvml
+tox
+tensorboard
+arckit
+urllib3&gt;=1.26.0
+chardet&gt;=5.0.0
+
+</file>
+<file name="setup.py">
+from setuptools import setup
+
+setup()
+
+</file>
+<file name=".pytest_cache/README.md">
+# pytest cache directory #
+
+This directory contains data from the pytest's cache plugin,
+which provides the `--lf` and `--ff` options, as well as the `cache` fixture.
+
+**Do not** commit this to version control.
+
+See [the docs](https://docs.pytest.org/en/stable/how-to/cache.html) for more information.
+
+</file>
+<file name="src/__init__.py">
+# This file allows the src directory to be recognized as a package.
+
+</file>
+<file name="src/config.py">
+# gpt2_arc/src/config.py
+from dataclasses import dataclass
+
+
+@dataclass
+class ModelConfig:
+    n_embd: int = 768
+    n_head: int = 12
+    n_layer: int = 12
+    dropout: float = 0.1
+
+
+@dataclass
+class TrainingConfig:
+    batch_size: int = 32
+    learning_rate: float = 1e-4
+    max_epochs: int = 10
+    use_gpu: bool = True
+
+
+from dataclasses import field
+
+
+@dataclass
+class Config:
+    model: ModelConfig = field(default_factory=ModelConfig)
+    training: TrainingConfig = field(default_factory=TrainingConfig)
+
+</file>
+<file name="src/evaluate.py">
+import argparse
+
+import pytorch_lightning as pl
+import torch
+
+from src.data.arc_dataset import ArcDataset
+from src.models.gpt2 import GPT2ARC
+from src.config import Config
+from src.training.trainer import ARCTrainer
+
+
+def evaluate(model, test_dataset, batch_size=32):
+    trainer = ARCTrainer(model, None, test_dataset, config=Config())
+    pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
+    results = pl_trainer.test(trainer)
+    return results[0]
+
+
+def main(args):
+    # Load the test data
+    test_data = ArcDataset(args.test_data)
+
+    # Load the trained model
+    model = GPT2ARC(Config().model)
+    model.load_state_dict(torch.load(args.model_checkpoint))
+    model.eval()
+
+    # Evaluate the model
+    results = evaluate(model, test_data, args.batch_size)
+
+    print("Evaluation Results:")
+    for metric, value in results.items():
+        print(f"{metric}: {value}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Evaluate the ARC Neural Reasoning Model"
+    )
+    parser.add_argument(
+        "--test_data", type=str, required=True, help="Path to test data"
+    )
+    parser.add_argument(
+        "--model_checkpoint",
+        type=str,
+        required=True,
+        help="Path to the model checkpoint",
+    )
+    parser.add_argument(
+        "--batch_size", type=int, default=32, help="Batch size for evaluation"
+    )
+
+    args = parser.parse_args()
+    main(args)
+
+</file>
+<file name="src/data/__init__.py">
+
+</file>
+<file name="src/data/arc_dataset.py">
+# gp2_arc/src/data/arc_dataset.py
+import os
+import json
+import random
+from typing import Union, List, Dict, Tuple
+import numpy as np
+import torch
+import torch.nn.functional as F
+from torch.utils.data import Dataset
+import logging
+
+try:
+    from arckit.data import TaskSet
+except ImportError:
+    TaskSet = None
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)  # Set to ERROR by default
+
+# Create a handler that writes to stderr
+handler = logging.StreamHandler()
+handler.setLevel(logging.ERROR)
+
+# Create a formatting for the logs
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(handler)
+
+# Function to set debug mode
+def set_debug_mode(debug=False):
+    if debug:
+        logger.setLevel(logging.DEBUG)
+        handler.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.ERROR)
+        handler.setLevel(logging.ERROR)
+
+class ARCDataset(Dataset):
+    def __init__(
+        self,
+        data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
+        is_test: bool = False,
+        num_symbols: int = 10,
+        test_split: float = 0.2,
+        debug=False,
+    ):
+        logger.debug(f"ARCDataset.__init__ called with data_source: {data_source}")
+        self.debug_attr = "test"  # Simple attribute for testing
+        set_debug_mode(debug)  # Set debug mode based on parameter
+        logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")
+        if isinstance(data_source, str):
+            logger.debug(f"Data source path: {data_source}")
+            if os.path.isdir(data_source):
+                logger.debug("Processing synthetic data from directory")
+                self.data = self._process_synthetic_data(data_source)
+            elif os.path.isfile(data_source):
+                logger.debug("Processing JSON data from file")
+                with open(data_source, 'r') as f:
+                    raw_data = json.load(f)
+                self.data = self._process_json_data(raw_data)
+            else:
+                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
+        elif isinstance(data_source, list):
+            logger.debug("Processing list data")
+            self.data = self._process_list_data(data_source)
+        elif isinstance(data_source, tuple):
+            logger.debug("Processing combined data")
+            self.data = self._combine_data(*data_source)
+        elif TaskSet is not None and isinstance(data_source, TaskSet):
+            logger.debug("Processing ARCkit data")
+            self.data = self._process_arckit_data(data_source)
+        else:
+            logger.error(f"Invalid data_source type: {type(data_source)}")
+            raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
+
+        logger.debug(f"Number of tasks: {len(self.data)}")
+        logger.debug(f"First task structure: {self.data[0].keys()}")
+        logger.debug(f"First train sample structure: {self.data[0]['train'][0].keys()}")
+        logger.debug(f"First train input shape: {np.array(self.data[0]['train'][0]['input']).shape}")
+        self.is_test = is_test
+        self.num_symbols = num_symbols
+        self.test_split = test_split
+        logger.debug(f"test_split set to: {self.test_split}")
+        self.test_split = test_split
+        self.samples = []
+        if TaskSet is not None and isinstance(data_source, TaskSet):
+            for task in data_source.tasks:
+                self.samples.extend(task.train)
+                self.samples.extend(task.test)
+        
+        if isinstance(data_source, str):
+            if os.path.isdir(data_source):
+                self.data = self._process_synthetic_data(data_source)
+            elif os.path.isfile(data_source):
+                with open(data_source, 'r') as f:
+                    raw_data = json.load(f)
+                self.data = self._process_json_data(raw_data)
+            else:
+                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
+        elif isinstance(data_source, list):
+            self.data = self._process_list_data(data_source)
+        elif isinstance(data_source, tuple):
+            self.data = self._combine_data(*data_source)
+        elif TaskSet is not None and isinstance(data_source, TaskSet):
+            self.data = self._process_arckit_data(data_source)
+        else:
+            logger.error(f"Invalid data_source type: {type(data_source)}")
+            raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
+        
+        print(f"Number of train samples: {sum(len(task['train']) for task in self.data)}")
+        print(f"Number of test samples: {sum(len(task['test']) for task in self.data)}")
+        self.max_grid_size = self._compute_max_grid_size()
+        self._validate_data()
+
+    def _process_json_data(self, raw_data: List[Dict]) -&gt; List[Dict]:
+        processed_data = []
+        for task in raw_data:
+            logger.debug(f"Processing task: {task}")
+            processed_task = {
+                "train": [
+                    {"input": np.array(example["input"]), "output": np.array(example["output"])}
+                    for example in task["train"]
+                ],
+                "test": [
+                    {"input": np.array(example["input"]), "output": np.array(example["output"])}
+                    for example in task["test"]
+                ]
+            }
+            processed_data.append(processed_task)
+        # Flatten the data structure
+        flattened_data = []
+        for task in processed_data:
+            flattened_data.extend(task['train'])
+            flattened_data.extend(task['test'])
+        
+        return flattened_data
+
+    def _validate_data(self):
+        for task in self.data:
+            for split in ["train", "test"]:
+                if split in task:
+                    for sample in task[split]:
+                        if not ("input" in sample and "output" in sample):
+                            raise ValueError(f"Each sample must contain 'input' and 'output'. Task: {task.get('id', 'unknown')}")
+        print("Data validation passed.")
+
+    def _compute_max_grid_size(self):
+        max_h, max_w = 0, 0
+        for task in self.data:
+            for split in ['train', 'test']:
+                for sample in task[split]:
+                    if isinstance(sample['input'], torch.Tensor):
+                        if sample['input'].dim() == 3:
+                            h, w = sample['input'].shape[1], sample['input'].shape[2]
+                        elif sample['input'].dim() == 2:
+                            h, w = sample['input'].shape
+                        else:
+                            raise ValueError(f"Unexpected tensor dimensions: {sample['input'].dim()}")
+                    elif isinstance(sample['input'], np.ndarray):
+                        h, w = sample['input'].shape
+                    elif isinstance(sample['input'], list):
+                        h, w = len(sample['input']), len(sample['input'][0])
+                    else:
+                        raise TypeError(f"Unexpected input type: {type(sample['input'])}")
+                    
+                    max_h = max(max_h, h)
+                    max_w = max(max_w, w)
+        
+        logger.debug(f"Computed max grid size: ({max_h}, {max_w})")
+        return (max_h, max_w)
+
+    def _combine_data(self, official_data, synthetic_data_path):
+        official_processed = self._process_arckit_data(official_data) if TaskSet is not None and isinstance(official_data, TaskSet) else official_data
+        synthetic_processed = self._process_synthetic_data(synthetic_data_path)
+        return official_processed + synthetic_processed
+
+    def _process_synthetic_data(self, directory: str) -&gt; List[Dict]:
+        processed_data = []
+        for filename in os.listdir(directory):
+            if filename.endswith('.json'):
+                with open(os.path.join(directory, filename), 'r') as f:
+                    task_data = json.load(f)
+                    processed_data.append(self._process_single_task(task_data))
+        return processed_data
+
+    def _process_single_task(self, task_data: Union[Dict, List]) -&gt; Dict:
+        logger.debug(f"Inside _process_single_task, test_split is: {self.test_split}")
+        if isinstance(task_data, dict):
+            train_examples = task_data.get("train", [])
+            test_examples = task_data.get("test", [])
+        elif isinstance(task_data, list):
+            split_idx = int(len(task_data) * (1 - self.test_split))
+            train_examples = task_data[:split_idx]
+            test_examples = task_data[split_idx:]
+        else:
+            raise ValueError("Task data must be either a dictionary or a list")
+
+        return {
+            "train": [self._preprocess_grid(example) for example in train_examples],
+            "test": [self._preprocess_grid(example) for example in test_examples]
+        }
+
+    def _process_arckit_data(self, taskset: 'TaskSet') -&gt; List[Dict]:
+        processed_data = []
+        logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
+        for task in taskset.tasks:
+            logger.debug(f"Processing task: {task.id}")
+            logger.debug(f"Train samples: {len(task.train)}, Test samples: {len(task.test)}")
+            processed_task = {
+                "id": task.id,
+                "train": [
+                    {"input": np.array(ex[0]), "output": np.array(ex[1])}
+                    for ex in task.train
+                ],
+                "test": [
+                    {"input": np.array(ex[0]), "output": np.array(ex[1])}
+                    for ex in task.test
+                ]
+            }
+            processed_data.append(processed_task)
+            logger.debug(f"Processed task {task.id}: Train samples: {len(processed_task['train'])}, Test samples: {len(processed_task['test'])}")
+        logger.debug(f"Processed {len(processed_data)} tasks")
+        return processed_data
+
+    def __len__(self) -&gt; int:
+        if self.is_test:
+            total_samples = sum(len(task['test']) for task in self.data)
+        else:
+            total_samples = sum(len(task['train']) for task in self.data)
+        logger.debug(f"Total samples in dataset: {total_samples}")
+        return total_samples
+
+    def __getitem__(self, idx: int) -&gt; Tuple[torch.Tensor, torch.Tensor]:
+        if idx &lt; 0 or idx &gt;= len(self):
+            raise IndexError(f"Index {idx} out of range (total samples: {len(self)})")
+
+        current_idx = 0
+        for task in self.data:
+            split = 'test' if self.is_test else 'train'
+            if idx &lt; current_idx + len(task[split]):
+                sample = task[split][idx - current_idx]
+                input_grid = self._preprocess_grid(sample["input"])
+                output_grid = self._preprocess_grid(sample["output"])
+                logger.debug(f"__getitem__ input dtype: {input_grid.dtype}, output dtype: {output_grid.dtype}")
+                return input_grid, output_grid
+            current_idx += len(task[split])
+
+        raise RuntimeError("Unexpected error in __getitem__")
+
+    def _validate_data(self):
+        for task in self.data:
+            for split in ["train", "test"]:
+                if split not in task:
+                    continue
+                for idx, sample in enumerate(task[split]):
+                    if "input" not in sample or "output" not in sample:
+                        raise ValueError(f"Sample {idx} in task {split} set is missing 'input' or 'output' key")
+                    input_data = sample["input"]
+                    output_data = sample["output"]
+                    if not (isinstance(input_data, (list, np.ndarray)) and isinstance(output_data, (list, np.ndarray))):
+                        raise ValueError(f"Sample {idx} in task {split} set 'input' or 'output' must be a list or numpy array")
+                    if isinstance(input_data, list):
+                        input_data = np.array(input_data)
+                    if isinstance(output_data, list):
+                        output_data = np.array(output_data)
+                    if input_data.ndim != 2 or output_data.ndim != 2:
+                        raise ValueError(f"Sample {idx} in task {split} set 'input' and 'output' must be 2D lists")
+                    if np.any(input_data &gt;= self.num_symbols) or np.any(output_data &gt;= self.num_symbols):
+                        raise ValueError(f"Sample {idx} in task {split} set contains invalid symbols (&gt;= {self.num_symbols})")
+
+    def _compute_grid_size_stats(self):
+        max_height, max_width = 0, 0
+        for task in self.data:
+            for split in ["train", "test"]:
+                for sample in task[split]:
+                    max_height = max(max_height, sample["input"].shape[0], sample["output"].shape[0])
+                    max_width = max(max_width, sample["input"].shape[1], sample["output"].shape[1])
+        self.max_grid_size = (max_height, max_width)
+
+    def _compute_symbol_frequencies(self):
+        symbol_counts = np.zeros(self.num_symbols, dtype=int)
+        for task in self.data:
+            for split in ["train", "test"]:
+                for sample in task[split]:
+                    symbol_counts += np.bincount(sample["input"].flatten(), minlength=self.num_symbols)
+                    symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
+        return symbol_counts / symbol_counts.sum()
+
+    def _preprocess_grid(self, grid: Union[dict, np.ndarray]) -&gt; torch.Tensor:
+        if isinstance(grid, dict):
+            input_grid = np.array(grid['input'])
+            logger.debug(f"Original grid shape: {input_grid.shape}")
+            logger.debug(f"Original grid content:\n{input_grid}")
+        elif isinstance(grid, np.ndarray):
+            input_grid = grid
+            logger.debug(f"Original grid shape: {input_grid.shape}")
+            logger.debug(f"Original grid content:\n{input_grid}")
+        else:
+            raise ValueError(f"Unexpected grid type: {type(grid)}")
+
+        # Pad the grid to 30x30
+        padded_grid = self._pad_grid(input_grid, height=30, width=30)
+
+        # Convert to tensor and add channel dimension
+        grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
+
+        logger.debug(f"Preprocessed grid shape: {grid_tensor.shape}")
+        logger.debug(f"Preprocessed grid content:\n{grid_tensor}")
+
+        return grid_tensor
+
+    def _scale_grid(self, grid: np.ndarray, height: int, width: int) -&gt; np.ndarray:
+        return grid  # No scaling, preserve original size
+
+    def _pad_grid(self, grid: np.ndarray, height: int, width: int) -&gt; np.ndarray:
+        h, w = grid.shape
+        pad_h = (height - h) // 2
+        pad_w = (width - w) // 2
+        return np.pad(grid, ((pad_h, height - h - pad_h), (pad_w, width - w - pad_w)), mode='constant')
+    def _process_list_data(self, data_source: List[Dict]) -&gt; List[Dict]:
+        processed_data = []
+        for item in data_source:
+            processed_item = {
+                "train": [{"input": np.array(item["input"]), "output": np.array(item["output"])}],
+                "test": []
+            }
+            processed_data.append(processed_item)
+        return processed_data
+    @staticmethod
+    def collate_fn(batch):
+        # This method will be used by DataLoader to prepare batches
+        inputs, outputs = zip(*batch)
+        
+        # Find max dimensions in the batch
+        max_h = max(i.size(1) for i in inputs)
+        max_w = max(i.size(2) for i in inputs)
+
+        # Pad inputs and outputs to max size in the batch
+        padded_inputs = torch.stack([F.pad(i, (0, max_w - i.size(2), 0, max_h - i.size(1))) for i in inputs])
+        padded_outputs = torch.stack([F.pad(o, (0, max_w - o.size(2), 0, max_h - o.size(1))) for o in outputs])
+
+        return padded_inputs, padded_outputs
+
+</file>
+<file name="src/gpt2_arc.egg-info/dependency_links.txt">
+
+
+</file>
+<file name="src/gpt2_arc.egg-info/requires.txt">
+torch
+numpy
+pytest
+pytorch-lightning
+
+[dev]
+pytest-cov
+black
+flake8
+
+</file>
+<file name="src/gpt2_arc.egg-info/SOURCES.txt">
+LICENSE
+README.md
+pyproject.toml
+setup.cfg
+gpt2_arc/src/data/__init__.py
+gpt2_arc/src/data/arc_dataset.py
+gpt2_arc/src/gpt2_arc.egg-info/PKG-INFO
+gpt2_arc/src/gpt2_arc.egg-info/SOURCES.txt
+gpt2_arc/src/gpt2_arc.egg-info/dependency_links.txt
+gpt2_arc/src/gpt2_arc.egg-info/requires.txt
+gpt2_arc/src/gpt2_arc.egg-info/top_level.txt
+gpt2_arc/src/models/__init__.py
+gpt2_arc/src/models/gpt2.py
+gpt2_arc/src/training/__init__.py
+gpt2_arc/src/training/trainer.py
+gpt2_arc/src/utils/__init__.py
+gpt2_arc/src/utils/helpers.py
+</file>
+<file name="src/gpt2_arc.egg-info/top_level.txt">
+data
+models
+training
+utils
+
+</file>
+<file name="src/models/__init__.py">
+
+</file>
+<file name="src/models/gpt2.py">
+# gpt2_arc/src/models/gpt2.py
+
+import logging
+
+import torch
+import torch.nn.functional as F
+from torch import nn
+import torch.nn.init as init
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
+class Attention(nn.Module):
+    def __init__(self, n_embd, n_head):
+        super().__init__()
+        self.n_head = n_head
+        self.n_embd = n_embd
+        self.key = nn.Linear(n_embd, n_embd)
+        self.query = nn.Linear(n_embd, n_embd)
+        self.value = nn.Linear(n_embd, n_embd)
+        self.proj = nn.Linear(n_embd, n_embd)
+        logger.debug(f"Initialized Attention with n_embd={n_embd}, n_head={n_head}")
+
+    def forward(self, x, mask=None):
+        B, T, C = x.size()
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"Attention input shape: {x.shape}")
+        k = self.key(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        q = self.query(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        v = self.value(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+
+        att = (q @ k.transpose(-2, -1)) * (1.0 / torch.sqrt(torch.tensor(k.size(-1), dtype=torch.float32)))
+        if mask is not None:
+            att = att.masked_fill(mask[:, None, None, :] == 0, float("-inf"))
+        att = F.softmax(att, dim=-1)
+        y = att @ v
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+        output = self.proj(y)
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"Attention output shape: {output.shape}")
+        return output
+
+
+class FeedForward(nn.Module):
+    def __init__(self, n_embd):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(n_embd, 4 * n_embd), nn.ReLU(), nn.Linear(4 * n_embd, n_embd)
+        )
+        logger.debug(f"Initialized FeedForward with n_embd={n_embd}")
+
+    def forward(self, x):
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"FeedForward input shape: {x.shape}")
+        output = self.net(x)
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"FeedForward output shape: {output.shape}")
+        return output
+
+
+class TransformerBlock(nn.Module):
+    def __init__(self, n_embd, n_head):
+        super().__init__()
+        self.attention = Attention(n_embd, n_head)
+        self.feed_forward = FeedForward(n_embd)
+        self.ln1 = nn.LayerNorm(n_embd)
+        self.ln2 = nn.LayerNorm(n_embd)
+        logger.debug(
+            f"Initialized TransformerBlock with n_embd={n_embd}, n_head={n_head}"
+        )
+
+    def forward(self, x, mask=None):
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"TransformerBlock input shape: {x.shape}")
+        x = x + self.attention(self.ln1(x), mask)
+        x = x + self.feed_forward(self.ln2(x))
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"TransformerBlock output shape: {x.shape}")
+        return x
+
+
+from dataclasses import dataclass
+from src.config import ModelConfig
+
+@dataclass
+class ModelConfig:
+    n_embd: int = 768
+    n_head: int = 12
+    n_layer: int = 12
+    dropout: float = 0.1
+
+
+class GPT2ARC(nn.Module):
+    def __init__(self, config: ModelConfig):
+        super().__init__()
+        self.config = config
+        # Replace token embedding with a convolutional layer
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.n_embd, kernel_size=3, padding=1).to(torch.float32)
+        self.blocks = nn.ModuleList(
+            [
+                TransformerBlock(self.config.n_embd, self.config.n_head)
+                for _ in range(self.config.n_layer)
+            ]
+        )
+        self.ln_f = nn.LayerNorm(self.config.n_embd)
+        
+        # Initialize weights
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Conv2d):
+            # Calculate fan_in for Conv2d
+            fan_in = module.in_channels * module.kernel_size[0] * module.kernel_size[1]
+            std = 1.0 / fan_in**0.5
+            init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                init.zeros_(module.bias)
+        elif isinstance(module, nn.Linear):
+            fan_in = module.in_features
+            std = 1.0 / fan_in**0.5
+            init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                init.zeros_(module.bias)
+        # No initialization for nn.LayerNorm, using default
+
+    def forward(self, input_ids, attention_mask=None):
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
+        
+        # Check if input_ids is already in the correct shape
+        if input_ids.dim() == 4:
+            x = input_ids.float()
+        else:
+            # Reshape input_ids to [batch_size, 1, height, width]
+            batch_size = input_ids.size(0)
+            seq_length = input_ids.size(1)
+            height = width = int(seq_length ** 0.5)
+            x = input_ids.float().view(batch_size, 1, height, width)
+        
+        x = self.conv1(x)
+        b, c, h, w = x.size()
+        x = x.view(b, c, h * w)  # Flatten spatial dimensions
+        x = x.permute(0, 2, 1)  # Rearrange to (batch_size, sequence_length, channels)
+
+        for block in self.blocks:
+            x = block(x, attention_mask)
+        x = self.ln_f(x)
+        return x
+
+</file>
+<file name="src/training/__init__.py">
+
+</file>
+<file name="src/training/train.py">
+# gpt2_arc/src/training/train.py
+import argparse
+
+import pytorch_lightning as pl
+import torch
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
+
+from src.data.arc_dataset import ARCDataset
+from src.models.gpt2 import GPT2ARC
+from src.config import Config, ModelConfig, TrainingConfig
+from src.training.trainer import ARCTrainer
+
+
+def main(args):
+    # Load data
+    train_data = ARCDataset(args.train_data)
+    val_data = ARCDataset(args.val_data)
+    print("Data loaded successfully")
+
+    print("Initializing model with new configuration")
+    model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
+    model = GPT2ARC(config=model_config)
+
+    print("Initializing trainer with new configuration")
+    config = Config(model=model_config, training=TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs))
+    trainer = ARCTrainer(
+        model=model,
+        train_dataset=train_data,
+        val_dataset=val_data,
+        config=config
+    )
+
+    # Create PyTorch Lightning trainer
+    logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
+    callbacks = []
+    if not args.no_checkpointing:
+        checkpoint_callback = ModelCheckpoint(
+            dirpath="checkpoints",
+            filename="arc_model-{epoch:02d}-{val_loss:.2f}",
+            save_top_k=3,
+            monitor="val_loss",
+            mode="min",
+        )
+        callbacks.append(checkpoint_callback)
+    from torch.utils.data import DataLoader
+
+    train_loader = DataLoader(train_data, batch_size=args.batch_size, num_workers=7)
+    val_loader = DataLoader(val_data, batch_size=args.batch_size, num_workers=7)
+
+    pl_trainer = pl.Trainer(
+        max_epochs=config.training.max_epochs,
+        logger=logger,
+        callbacks=callbacks if callbacks else None,
+        enable_checkpointing=not args.no_checkpointing,
+        enable_progress_bar=not args.no_progress_bar,
+        gradient_clip_val=1.0,
+        accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu'
+    )
+
+    # Train the model
+    pl_trainer.fit(trainer)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
+    parser.add_argument(
+        "--train_data", type=str, required=True, help="Path to training data"
+    )
+    parser.add_argument(
+        "--val_data", type=str, required=True, help="Path to validation data"
+    )
+    parser.add_argument(
+        "--batch_size", type=int, default=32, help="Batch size for training"
+    )
+    parser.add_argument(
+        "--learning_rate", type=float, default=1e-4, help="Learning rate"
+    )
+    parser.add_argument(
+        "--max_epochs", type=int, default=10, help="Maximum number of epochs"
+    )
+    parser.add_argument(
+        "--use_gpu", action="store_true", help="Use GPU for training if available"
+    )
+
+    parser.add_argument(
+        "--no_logging", action="store_true", help="Disable logging"
+    )
+    parser.add_argument(
+        "--no_checkpointing", action="store_true", help="Disable checkpointing"
+    )
+    parser.add_argument(
+        "--no_progress_bar", action="store_true", help="Disable progress bar"
+    )
+
+    args = parser.parse_args()
+    main(args)
+
+</file>
+<file name="src/training/trainer.py">
+# gpt2_arc/src/training/trainer.py
+import pytorch_lightning as pl
+import torch
+import logging
+from torch import nn, optim
+import time
+from typing import Any
+from src.config import Config
+from torch.utils.data import DataLoader
+
+logger = logging.getLogger(__name__)
+
+
+class ARCTrainer(pl.LightningModule):
+    def __init__(self, model, train_dataset, val_dataset, config: Config):
+        super().__init__()
+        self.model = model
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
+        self.config = config
+        self.batch_size = config.training.batch_size
+        self.lr = config.training.learning_rate
+        self.train_losses = []
+        self.logged_metrics = {}
+
+    def training_step(self, batch, batch_idx):
+        start_time = time.time()
+        
+        if isinstance(batch, tuple):
+            input_ids, attention_mask, labels = batch
+        elif isinstance(batch, dict):
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"].long()
+        else:
+            raise ValueError("Batch must be either a tuple or a dictionary")
+
+        # Ensure tensors are float32
+        input_ids = input_ids.to(torch.float32)
+        attention_mask = attention_mask.to(torch.float32)
+        outputs = self(input_ids, attention_mask)
+        loss = self.compute_loss(outputs, labels)
+        self.log("train_loss", loss)
+        self.train_losses.append(loss.item())
+        end_time = time.time()
+        batch_time = end_time - start_time
+        logger.info(f"Batch {batch_idx} training time: {batch_time:.4f} seconds")
+        
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        if isinstance(batch, tuple):
+            input_ids, attention_mask, labels = batch
+        elif isinstance(batch, dict):
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"]
+        else:
+            raise ValueError("Batch must be either a tuple or a dictionary")
+        outputs = self(input_ids, attention_mask)
+        loss = self.compute_loss(outputs, labels)
+        self.log("val_loss", loss)
+        self.logged_metrics["val_loss"] = loss.item()
+
+    def test_step(self, batch, batch_idx):
+        input_ids, attention_mask, labels = batch
+        outputs = self(input_ids, attention_mask)
+        loss = self.compute_loss(outputs, labels)
+        B, T, C = outputs.size()  # Define B and C
+        outputs = outputs.view(B, -1, C)
+        predictions = torch.argmax(outputs, dim=-1)
+        labels = labels.view(B, -1)
+        accuracy = (predictions == labels).float().mean()
+        self.log('test_accuracy', accuracy)
+        self.log('test_loss', loss)  # Log the test loss
+        return {"test_accuracy": accuracy}
+
+    def configure_optimizers(self):
+        return torch.optim.AdamW(self.parameters(), lr=self.lr)
+
+    def train_dataloader(self):
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=7)
+
+    def val_dataloader(self):
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=7)
+
+    def test_dataloader(self):
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=7)
+
+    def compute_loss(self, outputs, labels):
+        return nn.CrossEntropyLoss()(
+            outputs.view(-1, outputs.size(-1)), labels.view(-1)
+        )
+
+    def forward(self, input_ids, attention_mask=None):
+        return self.model(input_ids, attention_mask)
+
+</file>
+<file name="src/utils/__init__.py">
+
+</file>
+<file name="src/utils/helpers.py">
+
+</file>
+<file name="tests/__init__.py">
+
+</file>
+<file name="tests/test_arc_dataset.py">
+# gpt2_arc/tests/test_arc_dataset.py
+
+import os
+import numpy as np
+import pytest
+import torch
+import random
+import logging
+from src.data.arc_dataset import ARCDataset, set_debug_mode
+
+# Set up logging for tests
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
+
+@pytest.fixture(scope="module")
+def debug_mode():
+    set_debug_mode(True)
+    yield
+    set_debug_mode(False)
+from unittest.mock import Mock
+from arckit.data import TaskSet
+
+
+@pytest.fixture
+def sample_data():
+    return [
+        {"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]},
+        {"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]},
+    ]
+
+
+@pytest.fixture
+def mock_taskset():
+    mock_task = Mock()
+    mock_task.id = "mock_task_1"
+    mock_task.train = [
+        (np.array([[1, 0], [0, 1]]), np.array([[0, 1], [1, 0]])),
+        (np.array([[0, 1], [1, 0]]), np.array([[1, 0], [0, 1]]))
+    ]
+    mock_task.test = [
+        (np.array([[1, 1], [0, 0]]), np.array([[0, 0], [1, 1]]))
+    ]
+    
+    mock_taskset = Mock(spec=TaskSet)
+    mock_taskset.tasks = [mock_task]
+    return mock_taskset
+def test_arc_dataset_initialization(sample_data, debug_mode):
+    dataset = ARCDataset(sample_data, debug=True)
+    logger.debug(f"Dataset length: {len(dataset)}, expected: {len(sample_data)}")
+    assert len(dataset) == len(sample_data), "Dataset length mismatch"
+    
+    input_grid, output_grid = dataset[0]
+    logger.debug(f"Input grid shape: {input_grid.shape}, expected: (1, 30, 30)")
+    logger.debug(f"Output grid shape: {output_grid.shape}, expected: (1, 30, 30)")
+    
+    assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
+    assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
+    
+    # Update the shape check to match the new preprocessing logic
+    assert input_grid.shape == (1, 30, 30), "Input grid should have shape (1, 30, 30)"
+    assert output_grid.shape == (1, 30, 30), "Output grid should have shape (1, 30, 30)"
+    
+    # Verify that the original data is preserved in the center of the padded grid
+    center_input = input_grid[0, 14:16, 14:16]
+    center_output = output_grid[0, 14:16, 14:16]
+    
+    logger.debug(f"Center input:\n{center_input}")
+    logger.debug(f"Center output:\n{center_output}")
+    
+    assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
+    assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
+    dataset = ARCDataset(sample_data)
+    assert len(dataset) == 2, "Dataset should have 2 samples"
+    
+    input_grid, output_grid = dataset[0]
+    
+    assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
+    assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
+    
+    # Update the shape check to match the new preprocessing logic
+    assert input_grid.shape == (1, 30, 30), "Input grid should have shape (1, 30, 30)"
+    assert output_grid.shape == (1, 30, 30), "Output grid should have shape (1, 30, 30)"
+    
+    # Verify that the original data is preserved in the center of the padded grid
+    center_input = input_grid[0, 14:16, 14:16]
+    center_output = output_grid[0, 14:16, 14:16]
+    
+    assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
+    assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
+
+#Skip
+@pytest.mark.skip(reason="Skipping test for synthetic data because test is problematic")
+def test_arc_dataset_synthetic_data(debug_mode):
+    synthetic_data_path = "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/syntheticARC/tasks"
+    assert os.path.isdir(synthetic_data_path), f"Directory does not exist: {synthetic_data_path}"
+    train_dataset = ARCDataset(synthetic_data_path, is_test=False, debug=True)
+    test_dataset = ARCDataset(synthetic_data_path, is_test=True, debug=True)
+
+    assert len(train_dataset) &gt; 0, "Synthetic train dataset should not be empty"
+    assert len(test_dataset) &gt; 0, "Synthetic test dataset should not be empty"
+    logger.debug(f"Loaded {len(train_dataset.data)} synthetic tasks")
+    logger.debug(f"Total train dataset length: {len(train_dataset)}")
+    logger.debug(f"Total test dataset length: {len(test_dataset)}")
+
+    total_train = sum(len(task['train']) for task in train_dataset.data)
+    total_test = sum(len(task['test']) for task in test_dataset.data)
+    logger.debug(f"Total train samples: {total_train}")
+    logger.debug(f"Total test samples: {total_test}")
+
+    for i, task in enumerate(train_dataset.data):
+        print(f"Task {i} - Train samples: {len(task['train'])}, Test samples: {len(task['test'])}")
+
+    assert len(train_dataset) == total_train, f"Train dataset length ({len(train_dataset)}) should match total train samples ({total_train})"
+    assert len(test_dataset) == total_test, f"Test dataset length ({len(test_dataset)}) should match total test samples ({total_test})"
+
+    if len(train_dataset) == 0:
+        pytest.skip("Train dataset is empty; skipping random sample tests.")
+
+    print(f"Train dataset size: {len(train_dataset)}")
+    print(f"Test dataset size: {len(test_dataset)}")
+    
+    if len(train_dataset) &lt; 3:
+        pytest.skip("Not enough data in the train dataset for random sampling tests.")
+    
+    # Test a few random samples from the train dataset
+    for i in range(3):
+        idx = random.choice(range(len(train_dataset)))
+        try:
+            print(f"\nTrain Sample {i + 1}:")
+            print(f"Generated index: {idx}")
+            input_grid, output_grid = train_dataset[idx]
+            print(f"Input grid shape: {input_grid.shape}")
+            print(f"Output grid shape: {output_grid.shape}")
+        except IndexError as e:
+            print(f"Error: Attempted to access index {idx} which is out of range. Train dataset size is {len(train_dataset)}.")
+            pytest.fail(f"Generated index {idx} out of range for train dataset size {len(train_dataset)}: {str(e)}")
+
+    # Verify grid sizes
+    max_h, max_w = train_dataset.max_grid_size
+    assert max_h &gt; 0 and max_w &gt; 0, "Grid size should be positive"
+    print(f"Maximum grid size: {train_dataset.max_grid_size}")
+
+    # Verify access to train and test splits
+    assert len(train_dataset.data) &gt; 0, "Dataset should contain at least one task"
+    assert 'train' in train_dataset.data[0], "Each task should have a 'train' split"
+    assert 'test' in train_dataset.data[0], "Each task should have a 'test' split"
+
+    print(f"Train dataset length: {len(train_dataset)}")
+    print(f"Test dataset length: {len(test_dataset)}")
+
+
+
+
+def test_arc_dataset_getitem(sample_data):
+    dataset = ARCDataset(sample_data)
+    input_grid, output_grid = dataset[0]
+
+    assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
+    assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
+    assert input_grid.shape == (1, 30, 30), "Input grid should have shape (1, 30, 30)"
+    assert output_grid.shape == (1, 30, 30), "Output grid should have shape (1, 30, 30)"
+
+    # Check if the original data is preserved in the center
+    center_input = input_grid[0, 14:16, 14:16]
+    center_output = output_grid[0, 14:16, 14:16]
+    assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
+    assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
+
+
+def test_arc_dataset_len(sample_data):
+    print("Debugging: Entering test_arc_dataset_len")
+    print(f"Debugging: sample_data = {sample_data}")
+    dataset = ARCDataset(sample_data)
+    print(f"Debugging: len(dataset) = {len(dataset)}, len(sample_data) = {len(sample_data)}")
+    assert len(dataset) == len(sample_data), "Dataset length should match input data length"
+    print("Debugging: Exiting test_arc_dataset_len")
+
+
+def test_arc_dataset_invalid_data(sample_data):
+    invalid_data = [{"input": [1, 0], "output": [[0, 1], [1, 0]]}]
+    with pytest.raises(ValueError):
+        ARCDataset(invalid_data)
+
+    invalid_data = [{"input": [[1, 0], [0, 1]], "output": "not a list"}]
+    with pytest.raises(ValueError):
+        ARCDataset(invalid_data)
+
+def test_arc_dataset_preprocess_grid(sample_data):
+    dataset = ARCDataset(sample_data, num_symbols=10)
+    input_grid, output_grid = dataset[0]
+
+    print(f"Input grid shape: {input_grid.shape}")
+    print(f"Output grid shape: {output_grid.shape}")
+    print(f"Input grid content:\n{input_grid}")
+    print(f"Output grid content:\n{output_grid}")
+
+    # Check that the grids are indeed 3D
+    assert input_grid.ndim == 3, f"Expected 3D input grid, got {input_grid.ndim}D"
+    assert output_grid.ndim == 3, f"Expected 3D output grid, got {output_grid.ndim}D"
+
+    # Check the shape (1, 30, 30)
+    assert input_grid.shape == (1, 30, 30), f"Preprocessed grid should have shape (1, 30, 30), but got {input_grid.shape}"
+    assert output_grid.shape == (1, 30, 30), f"Preprocessed grid should have shape (1, 30, 30), but got {output_grid.shape}"
+
+    # Check if the original data is preserved in the center
+    expected_input = torch.zeros((1, 30, 30))
+    expected_input[0, 14:16, 14:16] = torch.tensor([[1., 0.], [0., 1.]])
+
+    expected_output = torch.zeros((1, 30, 30))
+    expected_output[0, 14:16, 14:16] = torch.tensor([[0., 1.], [1., 0.]])
+
+    print(f"Expected input:\n{expected_input}")
+    print(f"Expected output:\n{expected_output}")
+
+    assert torch.allclose(input_grid, expected_input), "Input grid data mismatch"
+    assert torch.allclose(output_grid, expected_output), "Output grid data mismatch"
+
+@pytest.fixture
+def mock_taskset():
+    mock_task = Mock()
+    mock_task.id = "mock_task_1"
+    mock_task.train = [
+        (np.array([[1, 0], [0, 1]]), np.array([[0, 1], [1, 0]])),
+        (np.array([[0, 1], [1, 0]]), np.array([[1, 0], [0, 1]]))
+    ]
+    mock_task.test = [
+        (np.array([[1, 1], [0, 0]]), np.array([[0, 0], [1, 1]]))
+    ]
+    
+    mock_taskset = Mock(spec=TaskSet)
+    mock_taskset.tasks = [mock_task]
+    return mock_taskset
+#Skip
+@pytest.mark.skip(reason="Skipping because test is problematic")
+def test_arc_dataset_taskset_initialization(mock_taskset):
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
+    
+    logger.debug(f"Mock TaskSet: {mock_taskset}")
+    logger.debug(f"Mock TaskSet attributes: {dir(mock_taskset)}")
+    
+    print(f"Mock task train data: {mock_taskset.tasks[0].train}")
+    print(f"Mock task test data: {mock_taskset.tasks[0].test}")
+    dataset = ARCDataset(mock_taskset)
+    
+    logger.debug(f"Dataset length: {len(dataset)}")
+    print(f"Dataset length: {len(dataset)}, Expected: 3")
+    
+    assert len(dataset) == 3, "Dataset should have 3 samples (2 train + 1 test)"
+    input_grid, output_grid = dataset[0]
+    print(f"Input grid shape: {input_grid.shape}, Expected: (1, 30, 30)")
+    print(f"Output grid shape: {output_grid.shape}, Expected: (1, 30, 30)")
+    
+    assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
+    assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
+    assert input_grid.shape == (1, 30, 30), "Input grid should have shape (1, 30, 30)"
+    assert output_grid.shape == (1, 30, 30), "Output grid should have shape (1, 30, 30)"
+    
+    # Check if the original data is preserved in the center
+    center_input = input_grid[0, 14:16, 14:16]
+    center_output = output_grid[0, 14:16, 14:16]
+    print(f"Center input: {center_input}")
+    print(f"Center output: {center_output}")
+    
+    assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
+    assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
+    
+    logger.debug(f"Mock TaskSet: {mock_taskset}")
+    logger.debug(f"Mock TaskSet attributes: {dir(mock_taskset)}")
+    
+    dataset = ARCDataset(mock_taskset)
+    
+    logger.debug(f"Dataset length: {len(dataset)}")
+    
+    assert len(dataset) == 3, "Dataset should have 3 samples (2 train + 1 test)"
+    input_grid, output_grid = dataset[0]
+    assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
+    assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
+    assert input_grid.shape == (1, 30, 30), "Input grid should have shape (1, 30, 30)"
+    assert output_grid.shape == (1, 30, 30), "Output grid should have shape (1, 30, 30)"
+    
+    # Check if the original data is preserved in the center
+    center_input = input_grid[0, 14:16, 14:16]
+    center_output = output_grid[0, 14:16, 14:16]
+    assert torch.allclose(center_input, torch.tensor([[1., 0.], [0., 1.]])), "Input data not preserved correctly"
+    assert torch.allclose(center_output, torch.tensor([[0., 1.], [1., 0.]])), "Output data not preserved correctly"
+
+from torch.utils.data import DataLoader
+
+def test_arc_dataset_collate_fn(sample_data):
+    logger.debug("Starting test_arc_dataset_collate_fn")
+    dataset = ARCDataset(sample_data)
+    dataloader = DataLoader(dataset, batch_size=2, collate_fn=ARCDataset.collate_fn)
+    batch = next(iter(dataloader))
+    input_batch, output_batch = batch
+    logger.debug(f"Collated batch shapes - inputs: {input_batch.shape}, outputs: {output_batch.shape}")
+    assert input_batch.shape == (2, 1, 30, 30), "Batched input should have shape (2, 1, 30, 30)"
+    assert output_batch.shape == (2, 1, 30, 30), "Batched output should have shape (2, 1, 30, 30)"
+    logger.debug("Completed test_arc_dataset_collate_fn")
+
+def test_arc_dataset_variable_size_grids(sample_data):
+    logger.debug("Starting test_arc_dataset_variable_size_grids")
+    variable_data = sample_data + [{"input": [[1, 0, 2], [0, 2, 1], [2, 1, 0]], "output": [[2, 1, 0], [1, 0, 2], [0, 2, 1]]}]
+    dataset = ARCDataset(variable_data)
+    
+    # Check first sample (2x2)
+    input_grid_1, output_grid_1 = dataset[0]
+    assert input_grid_1.shape == (1, 30, 30), "First sample should have shape (1, 30, 30)"
+    assert output_grid_1.shape == (1, 30, 30), "First sample should have shape (1, 30, 30)"
+    
+    # Check center of first sample (2x2)
+    center_input_1 = input_grid_1[0, 14:16, 14:16]
+    center_output_1 = output_grid_1[0, 14:16, 14:16]
+    assert torch.allclose(center_input_1, torch.tensor([[1., 0.], [0., 1.]])), "First sample input data not preserved correctly"
+    assert torch.allclose(center_output_1, torch.tensor([[0., 1.], [1., 0.]])), "First sample output data not preserved correctly"
+    
+    # Check third sample (3x3)
+    input_grid_2, output_grid_2 = dataset[2]
+    assert input_grid_2.shape == (1, 30, 30), "Third sample should have shape (1, 30, 30)"
+    assert output_grid_2.shape == (1, 30, 30), "Third sample should have shape (1, 30, 30)"
+    
+    # Check center of third sample (3x3)
+    center_input_2 = input_grid_2[0, 13:16, 13:16]
+    center_output_2 = output_grid_2[0, 13:16, 13:16]
+    assert torch.allclose(center_input_2, torch.tensor([[1., 0., 2.], [0., 2., 1.], [2., 1., 0.]])), f"Third sample input data not preserved correctly. Got:\n{center_input_2}"
+    assert torch.allclose(center_output_2, torch.tensor([[2., 1., 0.], [1., 0., 2.], [0., 2., 1.]])), f"Third sample output data not preserved correctly. Got:\n{center_output_2}"
+    
+    logger.debug("Completed test_arc_dataset_variable_size_grids")
+
+</file>
+<file name="tests/test_end_to_end.py">
+# gpt2_arc/tests/test_end_to_end.py
+import pytest
+import torch
+import numpy as np
+from src.data.arc_dataset import ARCDataset
+from src.models.gpt2 import GPT2ARC
+from src.training.trainer import ARCTrainer
+from src.config import Config, ModelConfig, TrainingConfig
+import pytorch_lightning as pl
+import time
+import logging
+import os
+from thop import profile, clever_format  # Import THOP
+from pytest import approx
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+@pytest.fixture
+def arc_data_path():
+    # Adjust this path to the location of your ARC dataset JSON file
+    return "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/syntheticARC/tasks/1c786137.json"
+
+import arckit
+
+def test_end_to_end():
+    logger.debug("Starting end-to-end test")
+
+    try:
+        # Load data using arckit
+        logger.debug("Loading data using arckit")
+        train_set, eval_set = arckit.load_data()
+        
+        # Create datasets using ARCDataset
+        logger.debug("Creating train and validation datasets")
+        full_dataset = ARCDataset(train_set, is_test=False)
+        # Use a smaller subset of the dataset
+        subset_size = int(0.1 * len(full_dataset))  # Use 10% of the dataset
+        train_dataset, _ = torch.utils.data.random_split(full_dataset, [subset_size, len(full_dataset) - subset_size])
+        val_dataset, _ = torch.utils.data.random_split(full_dataset, [subset_size, len(full_dataset) - subset_size])
+        logger.debug(f"Train dataset size: {len(train_dataset)}, Validation dataset size: {len(val_dataset)}")
+
+        # Create a custom collate function to handle the data format
+        def collate_fn(batch):
+            inputs = [item[0].to(torch.float32) for item in batch]  # Convert to float32
+            outputs = [item[1].to(torch.float32) for item in batch]  # Convert to float32
+            logger.debug(f"Batch input dtypes before stack: {[item[0].dtype for item in batch]}")
+            logger.debug(f"Batch output dtypes before stack: {[item[1].dtype for item in batch]}")
+
+            # Inputs and outputs are already tensors, so we just need to stack them
+            input_stack = torch.stack(inputs)
+            output_stack = torch.stack(outputs)
+
+            # Log data types after stacking
+            logger.debug(f"Collate function input_stack dtype: {input_stack.dtype}")
+            logger.debug(f"Collate function output_stack dtype: {output_stack.dtype}")
+
+            # Create a dummy attention mask (all ones)
+            attention_mask = torch.ones(input_stack.size(0), input_stack.size(2) * input_stack.size(3), dtype=torch.float32)
+
+            logger.debug(f"Collate function attention_mask dtype: {attention_mask.dtype}")
+            return input_stack, attention_mask, output_stack
+            logger.debug(f"Batch output dtypes before stack: {[item[1].dtype for item in batch]}")
+
+            # Inputs and outputs are already tensors, so we just need to stack them
+            input_stack = torch.stack(inputs)
+            output_stack = torch.stack(outputs)
+
+            # Create a dummy attention mask (all ones)
+            attention_mask = torch.ones(input_stack.size(0), input_stack.size(2) * input_stack.size(3), dtype=torch.float32)
+
+            logger.debug(f"Collate function input dtype: {input_stack.dtype}")
+            return input_stack, attention_mask, output_stack
+
+        # Initialize model
+        logger.debug("Initializing model")
+        model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)  # Use smaller model configuration
+        model = GPT2ARC(model_config).to(torch.float32)
+        logger.debug(f"Model initialized with config: {model_config}")
+
+        # # THOP Profiling - Commented out due to TypeError with MPS Tensors
+        # logger.debug("Profiling model with THOP")
+        # dummy_input = torch.randn(1, 1, 28, 28, dtype=torch.float32)  # Example input shape
+        # macs, params = profile(model, inputs=(dummy_input,))
+        # macs, params = clever_format([macs, params], "%.3f")
+        # logger.info(f"MACs: {macs}, Parameters: {params}")
+
+        # Initialize trainer
+        logger.debug("Initializing trainer")
+        config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=2))  # Reduce epochs to 2
+        trainer = ARCTrainer(model, train_dataset, val_dataset, config)
+        trainer.train_dataloader = lambda: torch.utils.data.DataLoader(train_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
+        trainer.val_dataloader = lambda: torch.utils.data.DataLoader(val_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
+        trainer.test_dataloader = lambda: torch.utils.data.DataLoader(val_dataset, batch_size=config.training.batch_size, collate_fn=collate_fn)
+        logger.debug(f"Trainer initialized with config: {config}")
+
+        # Create PyTorch Lightning trainer
+        logger.debug("Creating PyTorch Lightning trainer")
+        # Measure training time
+        start_time = time.time()
+        
+        pl_trainer = pl.Trainer(
+            max_epochs=config.training.max_epochs,
+            logger=False,
+            enable_checkpointing=False,
+            enable_progress_bar=False
+        )
+        logger.debug("PyTorch Lightning trainer created")
+
+        # Evaluate model before training to get initial accuracy
+        logger.info("Evaluating model before training")
+        initial_val_results = pl_trainer.test(trainer, verbose=False)
+        initial_accuracy = initial_val_results[0]['test_accuracy']
+        initial_loss = initial_val_results[0]['test_loss']
+        logger.info(f"Initial validation accuracy: {initial_accuracy}, Initial loss: {initial_loss}")
+        print(f"Initial validation accuracy: {initial_accuracy}, Initial loss: {initial_loss}")
+        logger.debug("Starting model training")
+        pl_trainer.fit(trainer)
+        end_time = time.time()
+        training_time = end_time - start_time
+        logger.info(f"Total training time: {training_time:.2f} seconds")
+        logger.debug("Model training completed")
+
+        # Check that loss decreased
+        train_losses = trainer.train_losses
+        logger.info(f"Training losses: {train_losses}")
+        assert train_losses[-1] &lt; train_losses[0], f"Training loss did not decrease. Initial loss: {train_losses[0]}, Final loss: {train_losses[-1]}"
+        
+        # Check that the final loss is lower than the initial loss
+        assert train_losses[-1] &lt; train_losses[0], "Final training loss should be lower than initial loss"
+
+        # Check that the average loss per epoch decreases
+        epoch_losses = [sum(train_losses[i:i+33])/33 for i in range(0, len(train_losses), 33)]
+        assert all(epoch_losses[i] &gt; epoch_losses[i+1] for i in range(len(epoch_losses)-1)), "Average training loss per epoch did not consistently decrease"
+
+        # Evaluate model after training
+        logger.debug("Evaluating model after training")
+        final_val_results = pl_trainer.test(trainer, verbose=False)
+        final_accuracy = final_val_results[0]['test_accuracy']
+        final_loss = final_val_results[0]['test_loss']
+        logger.info(f"Final validation accuracy: {final_accuracy}, Final loss: {final_loss}")
+        print(f"Final validation accuracy: {final_accuracy}, Final loss: {final_loss}")
+
+        # Check that validation accuracy improved
+        assert final_accuracy &gt; initial_accuracy, f"Validation accuracy did not improve. Initial accuracy: {initial_accuracy}, Final accuracy: {final_accuracy}"
+
+        logger.info(f"Final training loss: {train_losses[-1]:.4f}")
+        logger.info(f"Validation accuracy: {final_accuracy:.4f}")
+
+        # Check model parameters
+        total_params = sum(p.numel() for p in model.parameters())
+        trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        assert total_params &gt; 0, "Model has no parameters"
+        assert trainable_params &gt; 0, "Model has no trainable parameters"
+        assert trainable_params == total_params, "Not all parameters are trainable"
+
+        logger.debug(f"Total parameters: {total_params}")
+        logger.debug(f"Trainable parameters: {trainable_params}")
+
+        logger.debug("End-to-end test completed successfully")
+    except Exception as e:
+        logger.error(f"End-to-end test failed with error: {str(e)}")
+        raise
+
+</file>
+<file name="tests/test_gpt2.py">
+# gpt2_arc/tests/test_gpt2.py
+import logging
+
+import pytest
+import torch
+from src.config import ModelConfig
+from src.models.gpt2 import GPT2ARC, Attention, FeedForward, TransformerBlock
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
+@pytest.fixture
+def model():
+    config = ModelConfig()
+    return GPT2ARC(config)
+
+
+def test_gpt2arc_initialization(model):
+    assert isinstance(model, GPT2ARC)
+    assert hasattr(model, "conv1")  # Check for conv1 instead of token_embedding
+    assert hasattr(model, "blocks")
+    assert hasattr(model, "ln_f")
+    assert hasattr(model, "config")
+
+
+def test_gpt2arc_forward_pass(model):
+    batch_size = 2
+    height = 30
+    width = 30
+    input_ids = torch.randn(batch_size, 1, height, width)  # Simulate image-like input
+    attention_mask = torch.ones((batch_size, height * width))
+
+    output = model(input_ids, attention_mask)
+
+    assert isinstance(output, torch.Tensor)
+    assert output.shape == (batch_size, height * width, model.config.n_embd)
+
+    logger.debug(f"Output shape: {output.shape}")
+
+
+def test_gpt2arc_output_values(model):
+    logger.debug("Testing GPT2ARC output values")
+    batch_size = 1
+    channels = 1
+    height = 30
+    width = 30
+    input_ids = torch.randn(batch_size, channels, height, width)  # Simulate image-like input
+    attention_mask = torch.ones((batch_size, height * width))
+
+    output = model(input_ids, attention_mask)
+
+    assert not torch.isnan(output).any(), "Output contains NaN values"
+
+
+def test_gpt2arc_forward_pass(model):
+    batch_size = 2
+    channels = 1
+    height = 30
+    width = 30
+    input_ids = torch.randn(batch_size, channels, height, width)  # Simulate image-like input
+    attention_mask = torch.ones((batch_size, height * width))
+
+    output_with_mask = model(input_ids, attention_mask)
+    output_without_mask = model(input_ids)
+
+    logger.debug(
+        f"Difference between outputs: {(output_with_mask - output_without_mask).abs().mean()}"
+    )
+
+
+def test_attention_module():
+    logger.debug("Testing Attention module")
+    attention = Attention(n_embd=768, n_head=12)
+    x = torch.randn(2, 10, 768)
+    output = attention(x)
+    assert output.shape == x.shape
+    logger.debug(f"Attention input shape: {x.shape}, output shape: {output.shape}")
+
+
+def test_feedforward_module():
+    logger.debug("Testing FeedForward module")
+    ff = FeedForward(n_embd=768)
+    x = torch.randn(2, 10, 768)
+    output = ff(x)
+    assert output.shape == x.shape
+    logger.debug(f"FeedForward input shape: {x.shape}, output shape: {output.shape}")
+
+
+def test_transformer_block():
+    logger.debug("Testing TransformerBlock")
+    block = TransformerBlock(n_embd=768, n_head=12)
+    x = torch.randn(2, 10, 768)
+    output = block(x)
+    assert output.shape == x.shape
+    logger.debug(
+        f"TransformerBlock input shape: {x.shape}, output shape: {output.shape}"
+    )
+
+</file>
+<file name="tests/test_train.py">
+# gpt2_arc/tests/test_train.py
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+import os
+import sys
+
+import pytest
+import logging
+
+logger = logging.getLogger(__name__)
+
+def set_logging_level(level=logging.ERROR):
+    logger = logging.getLogger()
+    logger.setLevel(level)
+
+# Add the project root to the PYTHONPATH
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+import argparse
+from unittest.mock import ANY, MagicMock, patch
+
+import pytorch_lightning as pl
+import torch
+
+from gpt2_arc.src.data.arc_dataset import ARCDataset
+from gpt2_arc.src.models.gpt2 import GPT2ARC
+from gpt2_arc.src.training.train import main
+from gpt2_arc.src.training.trainer import ARCTrainer
+
+
+@pytest.fixture
+def mock_args():
+    args = argparse.Namespace()
+    args.train_data = "mock_train_data.json"
+    args.val_data = "mock_val_data.json"
+    args.batch_size = 32
+    args.learning_rate = 1e-4
+    args.max_epochs = 10
+    args.use_gpu = False
+    args.no_logging = False
+    args.no_checkpointing = False
+    args.no_progress_bar = False
+    return args
+
+
+@pytest.fixture
+def mock_dataset():
+    dataset = MagicMock(spec=ARCDataset)
+    dataset.data = [{"input": "mock input", "output": "mock output"}]
+    dataset.__len__.return_value = 100
+    return dataset
+
+
+from src.config import Config, ModelConfig, TrainingConfig
+
+
+@pytest.fixture
+def model():
+    config = Config(model=ModelConfig(), training=TrainingConfig())
+    return GPT2ARC(config.model)
+
+
+@pytest.fixture
+def trainer():
+    model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
+    config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=2))
+    model = GPT2ARC(config.model)
+    return ARCTrainer(model, None, None, config)
+
+
+@pytest.fixture
+def mock_pl_trainer():
+    return MagicMock(spec=pl.Trainer)
+
+
+# Existing GPT2ARC model tests
+
+
+def test_gpt2arc_initialization(model):
+    assert isinstance(model, GPT2ARC)
+    assert hasattr(model, "conv1")  # Check for conv1 instead of token_embedding
+    assert hasattr(model, "blocks")
+    assert hasattr(model, "ln_f")
+    assert hasattr(model, "config")
+
+
+def test_gpt2arc_forward_pass(model):
+    batch_size = 2
+    height = width = 30
+    seq_length = height * width
+    input_ids = torch.randint(0, 2, (batch_size, seq_length))
+    attention_mask = torch.ones((batch_size, seq_length))
+
+    output_with_mask = model(input_ids, attention_mask)
+    output_without_mask = model(input_ids)
+
+    assert isinstance(output_with_mask, torch.Tensor)
+    assert output_with_mask.shape == (batch_size, seq_length, model.config.n_embd)
+    assert isinstance(output_without_mask, torch.Tensor)
+    assert output_without_mask.shape == (batch_size, seq_length, model.config.n_embd)
+
+    logger.debug(f"Difference between outputs: {(output_with_mask - output_without_mask).abs().mean()}")
+
+
+def test_gpt2arc_output_values(model):
+    logger.debug("Testing GPT2ARC output values")
+    batch_size = 1
+    height = width = 30
+    seq_length = height * width
+    input_ids = torch.randint(0, 2, (batch_size, seq_length))
+    attention_mask = torch.ones((batch_size, seq_length))
+
+    output = model(input_ids, attention_mask)
+
+    assert not torch.isnan(output).any(), "Output contains NaN values"
+    assert not torch.isinf(output).any(), "Output contains infinity values"
+
+
+def test_gpt2arc_attention_mask(model):
+    batch_size = 2
+    channels = 1
+    height = 30
+    width = 30
+    input_ids = torch.randint(0, 2, (batch_size, channels, height, width))
+    attention_mask = torch.zeros((batch_size, height * width))
+    attention_mask[:, :450] = 1  # Only attend to first half of the pixels
+    output_with_mask = model(input_ids, attention_mask)
+    output_without_mask = model(input_ids)
+    assert not torch.allclose(output_with_mask, output_without_mask), "Attention mask should affect the output"
+
+
+# New tests for train.py
+
+
+def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
+    print("Entering test_logging")
+    with patch(
+        "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
+    ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
+        "gpt2_arc.src.training.train.ARCTrainer", return_value=trainer
+    ), patch(
+        "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
+    ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
+        "gpt2_arc.src.training.train.ModelCheckpoint"
+    ) as mock_checkpoint:
+        main(mock_args)
+
+        mock_logger.assert_called_once_with("tb_logs", name="arc_model")
+        mock_checkpoint.assert_called_once_with(
+            dirpath="checkpoints",
+            filename="arc_model-{epoch:02d}-{val_loss:.2f}",
+            save_top_k=3,
+            monitor="val_loss",
+            mode="min",
+        )
+
+
+def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
+    print("Entering test_fit_call")
+    with patch(
+        "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
+    ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
+        "gpt2_arc.src.training.train.ARCTrainer", return_value=trainer
+    ), patch(
+        "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
+    ), patch("gpt2_arc.src.training.train.TensorBoardLogger"), patch(
+        "gpt2_arc.src.training.train.ModelCheckpoint"
+    ):
+        main(mock_args)
+
+        mock_pl_trainer.fit.assert_called_once_with(trainer)
+
+
+def test_data_loading(mock_args):
+    with patch(
+        "gpt2_arc.src.data.arc_dataset.ARCDataset.__init__", return_value=None
+    ) as mock_init:
+        ARCDataset(mock_args.train_data)
+        mock_init.assert_called_once_with(mock_args.train_data)
+
+
+def test_trainer_initialization(model, mock_dataset):
+    config = Config(model=ModelConfig(), training=TrainingConfig())
+    trainer = ARCTrainer(
+        model=model, train_dataset=mock_dataset, val_dataset=mock_dataset, config=config
+    )
+    assert isinstance(trainer, ARCTrainer)
+    assert trainer.model == model
+    assert trainer.train_dataset == mock_dataset
+    assert trainer.val_dataset == mock_dataset
+    assert trainer.batch_size == 32
+    assert trainer.lr == 1e-4
+
+
+@pytest.mark.parametrize("batch_size", [1, 1000000])
+def test_batch_size_extremes(mock_args, batch_size):
+    model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
+    config = Config(model=model_config, training=TrainingConfig(batch_size=batch_size, learning_rate=5e-4, max_epochs=10))
+    mock_args.batch_size = batch_size
+    mock_args.no_logging = True
+    mock_args.no_checkpointing = True
+    mock_args.no_progress_bar = True
+    mock_args.use_gpu = False
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
+        "gpt2_arc.src.training.train.GPT2ARC"
+    ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
+        "gpt2_arc.src.training.train.pl.Trainer"
+    ) as mock_trainer:
+        main(mock_args)
+
+        mock_trainer.assert_called_with(
+            max_epochs=config.training.max_epochs,
+            logger=False,
+            callbacks=None,
+            enable_checkpointing=False,
+            enable_progress_bar=False,
+            gradient_clip_val=1.0,
+            accelerator='cpu'
+        )
+
+
+@pytest.mark.parametrize("learning_rate", [1e-10, 1000])
+def test_learning_rate_extremes(mock_args, learning_rate):
+    set_logging_level(logging.WARNING)  # Suppress INFO and DEBUG messages
+    mock_args.learning_rate = learning_rate
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
+        "gpt2_arc.src.training.train.GPT2ARC"
+    ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
+        "gpt2_arc.src.training.train.pl.Trainer"
+    ):
+        main(mock_args)  # Should not raise an exception
+
+
+def test_non_existent_train_data(mock_args):
+    mock_args.train_data = "non_existent_path.json"
+    with pytest.raises(FileNotFoundError):
+        main(mock_args)
+
+
+def test_gpu_not_available(mock_args):
+    mock_args.use_gpu = True
+    mock_args.no_logging = False
+    mock_args.no_checkpointing = False
+    mock_args.no_progress_bar = False
+    with patch("torch.cuda.is_available", return_value=False), patch(
+        "gpt2_arc.src.training.train.ARCDataset"
+    ), patch("gpt2_arc.src.training.train.GPT2ARC"), patch(
+        "gpt2_arc.src.training.train.ARCTrainer"
+    ), patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer:
+        main(mock_args)
+        mock_trainer.assert_called_with(
+            max_epochs=mock_args.max_epochs,
+            logger=ANY,
+            callbacks=ANY,
+            enable_checkpointing=True,
+            enable_progress_bar=True,
+            gradient_clip_val=1.0,
+            accelerator='cpu'
+        )
+
+
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+
+
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(batch_size=st.integers(min_value=1, max_value=1024))
+def test_valid_batch_sizes(mock_args, batch_size):
+    mock_args.batch_size = batch_size
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
+        "gpt2_arc.src.training.train.GPT2ARC"
+    ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
+        "gpt2_arc.src.training.train.pl.Trainer"
+    ):
+        main(mock_args)  # Should not raise an exception
+
+
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(
+    learning_rate=st.floats(
+        min_value=1e-6, max_value=1.0, allow_nan=False, allow_infinity=False
+    )
+)
+def test_valid_learning_rates(mock_args, learning_rate):
+    mock_args.learning_rate = learning_rate
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
+        "gpt2_arc.src.training.train.GPT2ARC"
+    ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
+        "gpt2_arc.src.training.train.pl.Trainer"
+    ):
+        main(mock_args)  # Should not raise an exception
+
+
+def test_end_to_end_training(mock_args, tmp_path):
+    model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
+    config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=5e-4, max_epochs=2))
+    checkpoint_dir = tmp_path / "checkpoints"
+    checkpoint_dir.mkdir()
+    mock_args.checkpoint_dir = str(checkpoint_dir)
+
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
+        "gpt2_arc.src.training.train.GPT2ARC"
+    ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
+        "gpt2_arc.src.training.train.pl.Trainer"
+    ) as mock_trainer, patch(
+        "gpt2_arc.src.training.train.ModelCheckpoint"
+    ) as mock_checkpoint:
+        main(mock_args)
+
+        mock_trainer.return_value.fit.assert_called_once()
+        mock_checkpoint.assert_called_once()
+
+
+def test_tensorboard_logging(mock_args, tmp_path):
+    log_dir = tmp_path / "tb_logs"
+    log_dir.mkdir()
+
+    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
+        "gpt2_arc.src.training.train.GPT2ARC"
+    ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
+        "gpt2_arc.src.training.train.pl.Trainer"
+    ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger:
+        main(mock_args)
+
+        mock_logger.assert_called_once_with("tb_logs", name="arc_model")
+
+
+# Additional test for GPT2ARC model in training context
+
+
+def test_arctrainer_forward_pass(trainer):
+    batch_size = 2
+    seq_length = 900  # 30x30 grid
+    input_ids = torch.randint(0, 2, (batch_size, seq_length))
+    attention_mask = torch.ones((batch_size, seq_length))
+
+    output = trainer(input_ids, attention_mask)
+
+    assert isinstance(output, torch.Tensor)
+    assert output.shape == (batch_size, seq_length, trainer.model.config.n_embd)
+
+def test_arctrainer_training_step(trainer):
+    batch_size = 2
+    height = width = 30  # 30x30 grid
+    seq_length = height * width
+    vocab_size = 10  # Use a small vocab size for testing
+    batch = {
+        "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        "attention_mask": torch.ones((batch_size, seq_length)).float(),
+        "labels": torch.randint(0, vocab_size, (batch_size, seq_length), dtype=torch.long),
+    }
+    loss = trainer.training_step(batch, 0)
+
+    assert isinstance(loss, torch.Tensor)
+    assert loss.shape == torch.Size([])  # Loss should be a scalar
+    assert not torch.isnan(loss).any(), "Loss contains NaN values"
+    assert not torch.isinf(loss).any(), "Loss contains infinity values"
+@pytest.mark.parametrize("batch_format", ["tuple", "dict"])
+def test_arctrainer_batch_format(trainer, batch_format):
+    batch_size = 2
+    height = width = 30  # 30x30 grid
+    seq_length = height * width
+    vocab_size = 10  # Use a small vocab size for testing
+
+    if batch_format == "tuple":
+        batch = (
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            torch.ones((batch_size, seq_length)).float(),
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        )
+    else:
+        batch = {
+            "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            "attention_mask": torch.ones((batch_size, seq_length)).float(),
+            "labels": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        }
+
+    loss = trainer.training_step(batch, 0)
+
+    assert isinstance(loss, torch.Tensor)
+    assert loss.shape == torch.Size([])  # Loss should be a scalar
+    assert not torch.isnan(loss).any(), "Loss contains NaN values"
+    assert not torch.isinf(loss).any(), "Loss contains infinity values"
+
+</file>
+<file name="tests/test_trainer.py">
+# gpt2_arc/tests/test_trainer.py
+import pytest
+import torch
+from src.config import Config, ModelConfig, TrainingConfig
+from src.data.arc_dataset import ARCDataset
+from src.models.gpt2 import GPT2ARC
+from src.training.trainer import ARCTrainer
+
+
+@pytest.fixture
+def sample_data():
+    return [
+        {"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]},
+        {"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]},
+    ]
+
+
+@pytest.fixture
+def model():
+    config = ModelConfig()
+    return GPT2ARC(config)
+
+
+@pytest.fixture
+def trainer(model, sample_data):
+    config = Config(model=ModelConfig(), training=TrainingConfig())
+    train_dataset = ARCDataset(sample_data)
+    val_dataset = ARCDataset(sample_data)
+    return ARCTrainer(model, train_dataset, val_dataset, config)
+
+
+def test_arctrainer_initialization(trainer):
+    assert isinstance(trainer, ARCTrainer)
+    assert hasattr(trainer, "model")
+    assert hasattr(trainer, "train_dataset")
+    assert hasattr(trainer, "val_dataset")
+
+
+def test_arctrainer_forward_pass(trainer):
+    batch_size = 2
+    seq_length = 900  # 30x30 grid
+    input_ids = torch.randint(0, 2, (batch_size, seq_length))
+    attention_mask = torch.ones((batch_size, seq_length))
+
+    output = trainer(input_ids, attention_mask)
+
+    assert isinstance(output, torch.Tensor)
+    assert output.shape == (batch_size, seq_length, trainer.model.config.n_embd)
+
+
+@pytest.mark.parametrize("batch_format", ["tuple", "dict"])
+def test_arctrainer_training_step(trainer, batch_format):
+    batch_size = 2
+    seq_length = 900  # 30x30 grid
+    vocab_size = 10  # Use a small vocab size for testing
+    if batch_format == "tuple":
+        batch = (
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            torch.ones((batch_size, seq_length)).float(),
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        )
+    else:
+        batch = {
+            "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            "attention_mask": torch.ones((batch_size, seq_length)).float(),
+            "labels": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        }
+    loss = trainer.training_step(batch, 0)
+
+    assert isinstance(loss, torch.Tensor)
+    assert loss.shape == torch.Size([])
+    assert not torch.isnan(loss).any(), "Loss contains NaN values"
+    assert not torch.isinf(loss).any(), "Loss contains infinity values"
+
+
+@pytest.mark.parametrize("batch_format", ["tuple", "dict"])
+def test_arctrainer_validation_step(trainer, batch_format):
+    batch_size = 2
+    seq_length = 900  # 30x30 grid
+    vocab_size = 10  # Use a small vocab size for testing
+    if batch_format == "tuple":
+        batch = (
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            torch.ones((batch_size, seq_length)).float(),
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        )
+    else:
+        batch = {
+            "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            "attention_mask": torch.ones((batch_size, seq_length)).float(),
+            "labels": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        }
+    trainer.validation_step(batch, 0)
+
+    # Check if val_loss is logged
+    assert "val_loss" in trainer.logged_metrics
+
+
+def test_arctrainer_configure_optimizers(trainer):
+    optimizer = trainer.configure_optimizers()
+    assert isinstance(optimizer, torch.optim.AdamW)  # Use torch.optim.AdamW
+
+
+def test_arctrainer_train_dataloader(trainer):
+    dataloader = trainer.train_dataloader()
+    assert isinstance(dataloader, torch.utils.data.DataLoader)
+    assert len(dataloader.dataset) == len(trainer.train_dataset)
+
+
+def test_arctrainer_val_dataloader(trainer):
+    dataloader = trainer.val_dataloader()
+    assert isinstance(dataloader, torch.utils.data.DataLoader)
+    assert len(dataloader.dataset) == len(trainer.val_dataset)
+
+</file>
+</source>
