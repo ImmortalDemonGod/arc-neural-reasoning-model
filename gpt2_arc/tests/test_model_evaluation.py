@@ -31,6 +31,7 @@ def attention_mask():
 
 @pytest.fixture
 def dataloader(inputs, attention_mask):
+    targets = torch.randint(0, 2, (2, 32, 32))  # Example target tensor
     dataset = list(zip(inputs, targets, attention_mask))
     return DataLoader(dataset, batch_size=1)
 
@@ -43,6 +44,7 @@ def test_no_grad_calculation(model, inputs, attention_mask):
     with torch.no_grad():
         outputs = model(inputs, attention_mask=attention_mask)
         assert outputs.requires_grad == False, "Gradients should not be tracked in evaluation mode."
+        print(f"Input shape: {inputs.shape}, Output shape: {outputs.shape}")
 
 def test_data_loop_for_evaluation(model, dataloader):
     model.eval()  # Set the model to evaluation mode
@@ -56,19 +58,23 @@ def test_model_predictions(model, inputs, attention_mask):
 
 def test_loss_calculation(model, inputs, targets, loss_fn):
     outputs = model(inputs)
+    targets = targets.view(-1)  # Flatten targets
+    outputs = outputs.view(-1, outputs.size(-1))  # Adjust output shape
     loss = loss_fn(outputs, targets)
     assert loss is not None and isinstance(loss.item(), float), "Loss should be a valid float value."
 
 def test_standard_pixel_accuracy(model, inputs, targets):
     outputs = model(inputs)
     predicted = outputs.argmax(dim=1)
+    predicted = predicted.view_as(targets)  # Adjust shape to match targets
     accuracy = (predicted == targets).float().mean().item()
     assert 0.0 <= accuracy <= 1.0, "Accuracy should be between 0 and 1."
 
 def test_differential_pixel_accuracy(model, inputs, targets):
     outputs = model(inputs)
     predicted = outputs.argmax(dim=1)
-    diff_accuracy = differential_pixel_accuracy(inputs.view(outputs.shape), targets, predicted)
+    predicted = predicted.view_as(targets)  # Adjust shape to match targets
+    diff_accuracy = differential_pixel_accuracy(inputs, targets, predicted)
     assert 0.0 <= diff_accuracy <= 1.0, "Differential pixel accuracy should be between 0 and 1."
 
 def test_task_accuracies_tracking(model, dataloader, is_training):
