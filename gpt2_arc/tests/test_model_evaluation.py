@@ -153,8 +153,6 @@ def test_final_metric_calculation(model, dataloader, attention_mask):
 
 def test_return_of_evaluation_results(model, dataloader, mocker):
     logger.debug("Starting test_return_of_evaluation_results")
-    mock_results = {'loss': 0.5, 'accuracy': 0.75}
-    model.evaluate = mocker.Mock(return_value=mock_results)
     results = model.evaluate(dataloader)
     logger.debug(f"Evaluation results: {results}")
     assert "loss" in results and "accuracy" in results, "Evaluation results should return loss and accuracy."
