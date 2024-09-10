@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 def model(mocker):
     mock_model = mocker.Mock()
     mock_model.eval = mocker.Mock()
-    mock_model.return_value = torch.randn(1, 4, 2, 2)  # mock output
-    logger.debug(f"Created mock model with output shape: {mock_model.return_value.shape}")
+    mock_model.side_effect = lambda inputs, attention_mask: torch.randn(1, 4, 2, 2)
+    logger.debug(f"Created mock model")
     return mock_model
 
 @pytest.fixture
@@ -88,7 +88,7 @@ def test_standard_pixel_accuracy(model, inputs, targets):
     assert 0.0 <= accuracy <= 1.0, f"Accuracy should be between 0 and 1, got {accuracy}"
     
     # Test with known values
-    known_outputs = torch.tensor([[[[0.9, 0.1], [0.1, 0.9]]]])
+    known_outputs = torch.FloatTensor([[[[0.9, 0.1], [0.1, 0.9]]]])
     known_targets = torch.tensor([[[1, 0], [0, 1]]])
     known_accuracy = (known_outputs.argmax(dim=1) == known_targets).float().mean().item()
     logger.debug(f"Known accuracy: {known_accuracy}")
@@ -151,11 +151,10 @@ def test_final_metric_calculation(model, dataloader, attention_mask):
     assert avg_loss >= 0, f"Average loss should be non-negative, got {avg_loss}"
     assert 0.0 <= avg_accuracy <= 1.0, f"Average accuracy should be between 0 and 1, got {avg_accuracy}"
 
-def test_return_of_evaluation_results(model, dataloader):
+def test_return_of_evaluation_results(model, dataloader, mocker):
     logger.debug("Starting test_return_of_evaluation_results")
-    if not hasattr(model, 'evaluate'):
-        logger.warning("Model does not have an 'evaluate' method. Adding mock method.")
-        model.evaluate = mocker.Mock(return_value={'loss': 0.5, 'accuracy': 0.75})
+    mock_results = {'loss': 0.5, 'accuracy': 0.75}
+    model.evaluate = mocker.Mock(return_value=mock_results)
     results = model.evaluate(dataloader)
     logger.debug(f"Evaluation results: {results}")
     assert "loss" in results and "accuracy" in results, "Evaluation results should return loss and accuracy."
