@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def model(mocker):
     mock_model = mocker.Mock()
     mock_model.eval = mocker.Mock()
-    mock_model.side_effect = lambda inputs, attention_mask: torch.randn(1, 4, 2, 2)
+    mock_model.side_effect = lambda inputs, attention_mask=None: torch.randn(1, 4, 2, 2)
     logger.debug(f"Created mock model")
     return mock_model
 
