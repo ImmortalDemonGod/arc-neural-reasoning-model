@@ -16,6 +16,7 @@ def loss_fn():
 @pytest.fixture
 def is_training():
     return False
+@pytest.fixture
 def model():
     config = Config().model
     return GPT2ARC(config)
@@ -80,7 +81,8 @@ def test_task_accuracies_tracking(model, dataloader, is_training):
         model._update_task_accuracies(task_accuracies, accuracy, diff_accuracy=None, dataloader=dataloader, is_training=is_training)
         assert task_id in task_accuracies, "Task ID should be logged in task accuracies."
 
-def test_task_wise_metrics_aggregation(task_accuracies):
+def test_task_wise_metrics_aggregation():
+    task_accuracies = {}
     task_id = "some_task"
     accuracy = 0.8
     task_accuracies[task_id] = {"train": [accuracy]}
