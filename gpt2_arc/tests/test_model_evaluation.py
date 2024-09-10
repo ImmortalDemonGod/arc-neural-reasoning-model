@@ -33,7 +33,7 @@ def targets():
 
 @pytest.fixture
 def attention_mask():
-    mask = torch.ones(2, 32*32)
+    mask = torch.ones(1, 4)
     logger.debug(f"Attention mask shape: {mask.shape}, dtype: {mask.dtype}")
     return mask
 
