@@ -1,5 +1,8 @@
 # gpt2_arc/src/training/train.py
 import argparse
+import sys
+
+print("Current PYTHONPATH:", sys.path)
 
 import pytorch_lightning as pl
 import torch
