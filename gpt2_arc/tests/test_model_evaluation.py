@@ -85,7 +85,7 @@ def test_task_accuracies_tracking(model, dataloader, is_training):
     task_accuracies = {}
     model.eval()
     for inputs, targets, attention_mask in dataloader:
-        outputs = model(inputs)
+        outputs = model(inputs, attention_mask=attention_mask)
         accuracy = (outputs.argmax(dim=1) == targets).float().mean().item()
         task_id = dataloader.task_id
         model._update_task_accuracies(task_accuracies, accuracy, diff_accuracy=None, dataloader=dataloader, is_training=is_training)
@@ -98,12 +98,11 @@ def test_task_wise_metrics_aggregation():
     task_accuracies[task_id] = {"train": [accuracy]}
     assert task_accuracies[task_id]["train"] == [accuracy], "Task accuracy should be tracked and aggregated correctly."
 
-def test_final_metric_calculation(model, dataloader):
+def test_final_metric_calculation(model, dataloader, attention_mask):
     model.eval()
     total_loss, total_accuracy, total_diff_accuracy = 0, 0, 0
-    for batch in dataloader:
-        inputs, targets = batch
-        outputs = model(inputs)
+    for inputs, targets, attention_mask in dataloader:
+        outputs = model(inputs, attention_mask=attention_mask)
         loss = model._compute_loss(outputs, targets)
         total_loss += loss.item()
         accuracy = (outputs.argmax(dim=1) == targets).float().mean().item()
