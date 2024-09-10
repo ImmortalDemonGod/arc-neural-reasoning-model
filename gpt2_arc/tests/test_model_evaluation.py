@@ -68,8 +68,7 @@ def test_loss_calculation(model, inputs, targets, loss_fn):
 def test_standard_pixel_accuracy(model, inputs, targets):
     outputs = model(inputs)
     predicted = outputs.argmax(dim=1)
-    # Adjust the shape to match targets
-    predicted = predicted.view_as(targets)
+    predicted = predicted.view_as(targets)  # Ensure shape matches targets
     print(f"Outputs shape: {outputs.shape}, Targets shape: {targets.shape}")
     accuracy = (predicted == targets).float().mean().item()
     assert 0.0 <= accuracy <= 1.0, "Accuracy should be between 0 and 1."
@@ -77,7 +76,7 @@ def test_standard_pixel_accuracy(model, inputs, targets):
 def test_differential_pixel_accuracy(model, inputs, targets):
     outputs = model(inputs)
     predicted = outputs.argmax(dim=1)
-    predicted = predicted.view_as(targets)  # Adjust shape to match targets
+    predicted = predicted.view_as(targets)  # Ensure shape matches targets
     diff_accuracy = differential_pixel_accuracy(inputs, targets, predicted)
     assert 0.0 <= diff_accuracy <= 1.0, "Differential pixel accuracy should be between 0 and 1."
 
