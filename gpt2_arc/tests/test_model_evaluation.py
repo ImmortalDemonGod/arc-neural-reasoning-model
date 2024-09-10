@@ -122,8 +122,8 @@ def test_task_accuracies_tracking(model, dataloader, is_training=False):
         accuracy = (outputs.argmax(dim=1) == targets).float().mean().item()
         task_id = getattr(dataloader, 'task_id', 'default_task')
         if task_id not in task_accuracies:
-            task_accuracies[task_id] = []
-        task_accuracies[task_id].append(accuracy)
+            task_accuracies[task_id] = {'train': [], 'test': []}
+        task_accuracies[task_id]['train' if is_training else 'test'].append(accuracy)
         logger.debug(f"Task accuracies after batch {batch_idx}: {task_accuracies}")
     assert task_accuracies, "Task accuracies dictionary should not be empty"
     assert 'default_task' in task_accuracies, "Default task should be logged in task accuracies"
@@ -141,6 +141,7 @@ def test_final_metric_calculation(model, dataloader, attention_mask):
         loss = torch.nn.functional.cross_entropy(outputs.view(-1, outputs.size(1)), targets.view(-1))
         total_loss += loss.item()
         accuracy = (outputs.argmax(dim=1) == targets).float().mean().item()
+        logger.debug(f"Batch {batch_idx}: Loss: {loss.item()}, Accuracy: {accuracy}")
         total_accuracy += accuracy
         num_batches += 1
     avg_loss = total_loss / num_batches
@@ -149,7 +150,6 @@ def test_final_metric_calculation(model, dataloader, attention_mask):
     assert avg_loss >= 0, f"Average loss should be non-negative, got {avg_loss}"
     assert 0.0 <= avg_accuracy <= 1.0, f"Average accuracy should be between 0 and 1, got {avg_accuracy}"
 
-@pytest.mark.skip(reason="Model does not have an 'evaluate' method.")
 def test_return_of_evaluation_results(model, dataloader):
     logger.debug("Starting test_return_of_evaluation_results")
     if not hasattr(model, 'evaluate'):
