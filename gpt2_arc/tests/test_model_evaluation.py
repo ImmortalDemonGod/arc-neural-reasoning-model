@@ -8,6 +8,20 @@ from src.utils.helpers import differential_pixel_accuracy
 import logging
 from unittest.mock import Mock
 
+def test_validation_step_with_incorrect_batch_format(trainer):
+    """Test that the validation_step raises a ValueError for an incorrect batch format."""
+
+    # Create a batch with an incorrect format (e.g., a list)
+    incorrect_batch = [
+        torch.randint(0, 10, (2, 900)),  # Random input data
+        torch.ones((2, 900)),  # Random attention mask
+        torch.randint(0, 10, (2, 900))  # Random labels
+    ]
+
+    # Check if a ValueError is raised with the incorrect batch
+    with pytest.raises(ValueError, match="Batch must be either a tuple or a dictionary"):
+        trainer.validation_step(incorrect_batch, 0)
+
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
