@@ -75,10 +75,10 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
     parser.add_argument(
-        "--train_data", type=str, required=True, help="Path to training data"
+        "--train_data", type=str, required=False, help="Path to training data"
     )
     parser.add_argument(
-        "--val_data", type=str, required=True, help="Path to validation data"
+        "--val_data", type=str, required=False, help="Path to validation data"
     )
     parser.add_argument(
         "--batch_size", type=int, default=32, help="Batch size for training"
