@@ -356,6 +356,18 @@ def test_arctrainer_training_step(trainer):
     assert loss.shape == torch.Size([])  # Loss should be a scalar
     assert not torch.isnan(loss).any(), "Loss contains NaN values"
     assert not torch.isinf(loss).any(), "Loss contains infinity values"
+def test_validation_step_with_incorrect_batch_format(trainer):
+    # Create a batch with an incorrect format (e.g., a list instead of a tuple or dictionary)
+    incorrect_batch = [
+        torch.randint(0, 10, (2, 900)),  # Random input data
+        torch.ones((2, 900)),            # Random attention mask
+        torch.randint(0, 10, (2, 900))   # Random labels
+    ]
+
+    # Attempt to run the validation step with the incorrect batch format
+    with pytest.raises(ValueError, match="Batch must be either a tuple or a dictionary"):
+        trainer.validation_step(incorrect_batch, 0)
+
 @pytest.mark.parametrize("batch_format", ["tuple", "dict"])
 def test_arctrainer_batch_format(trainer, batch_format):
     batch_size = 2
