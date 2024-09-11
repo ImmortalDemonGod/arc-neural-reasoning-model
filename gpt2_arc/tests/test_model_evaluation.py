@@ -5,6 +5,16 @@ from src.models.gpt2 import GPT2ARC
 from src.config import Config
 from torch.utils.data import DataLoader
 from src.utils.helpers import differential_pixel_accuracy
+from src.config import Config, ModelConfig, TrainingConfig
+from src.models.gpt2 import GPT2ARC
+from src.training.trainer import ARCTrainer
+
+@pytest.fixture
+def trainer():
+    model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
+    config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=2))
+    model = GPT2ARC(config.model)
+    return ARCTrainer(model, None, None, config)
 import logging
 from unittest.mock import Mock
 
