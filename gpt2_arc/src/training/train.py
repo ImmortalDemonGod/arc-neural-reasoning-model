@@ -14,10 +14,10 @@ import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
-from gpt2_arc.src.data.arc_dataset import ARCDataset
-from gpt2_arc.src.models.gpt2 import GPT2ARC
-from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
-from gpt2_arc.src.training.trainer import ARCTrainer
+from ..data.arc_dataset import ARCDataset
+from ..models.gpt2 import GPT2ARC
+from ..config import Config, ModelConfig, TrainingConfig
+from .trainer import ARCTrainer
 
 
 def main(args):
