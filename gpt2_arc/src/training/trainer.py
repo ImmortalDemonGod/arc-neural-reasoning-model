@@ -31,6 +31,9 @@ class ARCTrainer(pl.LightningModule):
         print(f"Validation step - Batch type: {type(batch)}")
         print(f"Validation step - Batch content: {batch}")
 
+        print(f"Validation step - Batch type: {type(batch)}")
+        print(f"Validation step - Batch content: {batch}")
+
         if isinstance(batch, tuple):
             input_ids, attention_mask, labels = batch
         elif isinstance(batch, dict):
