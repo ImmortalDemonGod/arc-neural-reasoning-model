@@ -22,9 +22,11 @@ from gpt2_arc.src.training.trainer import ARCTrainer
 
 def main(args):
     # Load data
-    train_data = ARCDataset(args.train_data)
-    val_data = ARCDataset(args.val_data)
-    print("Data loaded successfully")
+    import arckit
+    train_set, eval_set = arckit.load_data()
+    train_data = ARCDataset(train_set)
+    val_data = ARCDataset(eval_set)
+    print("Data loaded successfully using arckit")
 
     print("Initializing model with new configuration")
     model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
