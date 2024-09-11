@@ -34,7 +34,10 @@ class ARCTrainer(pl.LightningModule):
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"].long()
-        else:
+        elif isinstance(batch, list) and len(batch) == 1:
+            input_ids = batch[0]
+            attention_mask = None
+            labels = None
             raise ValueError("Batch must be either a tuple or a dictionary")
 
         # Ensure tensors are float32
