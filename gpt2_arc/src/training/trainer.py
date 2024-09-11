@@ -7,7 +7,7 @@ import time
 from typing import Any, Dict, Optional
 from collections import deque
 from torch.optim.lr_scheduler import LambdaLR
-from src.config import Config
+from ..config import Config
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
