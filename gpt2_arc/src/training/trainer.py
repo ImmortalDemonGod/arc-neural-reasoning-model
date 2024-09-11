@@ -78,6 +78,11 @@ class ARCTrainer(pl.LightningModule):
         return {"test_accuracy": accuracy}
 
     def configure_optimizers(self):
+        optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        lr_scheduler = {
+            'scheduler': optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.95),
+            'name': 'learning_rate',
+        }
         return [optimizer], [lr_scheduler]
 
     def train_dataloader(self):
