@@ -81,7 +81,7 @@ class TransformerBlock(nn.Module):
 
 
 from dataclasses import dataclass
-from src.config import ModelConfig
+from ..config import ModelConfig
 
 @dataclass
 class ModelConfig:
