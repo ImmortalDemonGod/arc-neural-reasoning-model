@@ -1,6 +1,11 @@
 # gpt2_arc/src/training/train.py
 import argparse
 import sys
+import os
+
+# Add the root directory of the project to the PYTHONPATH
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+sys.path.insert(0, project_root)
 
 print("Current PYTHONPATH:", sys.path)
 
