@@ -270,7 +270,8 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
             'effect_size_time', 'effect_size_grids', 'percent_change_time', 'percent_change_grids',
             't_stat_time', 'p_value_time', 't_stat_grids', 'p_value_grids',
             'improvement_time', 'improvement_grids',
-            'practical_significance_time', 'practical_significance_grids', 'precision'
+            'practical_significance_time', 'practical_significance_grids', 'precision',
+            'checkpoint_used', 'checkpoint_info'
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         if not stats_file_exists:
