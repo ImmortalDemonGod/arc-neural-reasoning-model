@@ -314,6 +314,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Benchmark the GPT2ARC model.")
+    parser.add_argument('--model_checkpoint', type=str, help='Path to the model checkpoint')
     parser.add_argument('--num-runs', type=int, default=20, help='Number of runs for each configuration')
     parser.add_argument('--num-full-runs', type=int, default=1, help='Number of full configurations to run')
     parser.add_argument('--batch-size', type=int, default=32, help='Batch size for each run')
