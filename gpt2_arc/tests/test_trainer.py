@@ -26,7 +26,10 @@ def trainer(model, sample_data):
     config = Config(model=ModelConfig(), training=TrainingConfig())
     train_dataset = ARCDataset(sample_data)
     val_dataset = ARCDataset(sample_data)
-    return ARCTrainer(model, train_dataset, val_dataset, config)
+    trainer = ARCTrainer(model, train_dataset, val_dataset, config)
+    trainer.logged_metrics = {}
+    trainer.log = lambda name, value: trainer.logged_metrics.update({name: value})
+    return trainer
 
 
 def test_arctrainer_initialization(trainer):
