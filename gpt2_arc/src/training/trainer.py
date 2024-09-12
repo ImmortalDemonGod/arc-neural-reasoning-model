@@ -108,7 +108,7 @@ class ARCTrainer(pl.LightningModule):
 
     def on_save_checkpoint(self, checkpoint):
         # Add model configuration to the checkpoint
-        checkpoint['config'] = self.config.model
+        checkpoint['config'] = self.config.model.__dict__
         logger.debug("Model configuration added to checkpoint.")
 
     def configure_optimizers(self):
