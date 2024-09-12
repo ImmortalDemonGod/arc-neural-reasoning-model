@@ -28,29 +28,6 @@ def evaluate(model, test_dataset, batch_size=32):
     trainer = ARCTrainer(model, None, test_dataset, config=Config())
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
-    # Calculate differential pixel accuracy for each batch
-    dataloader = trainer.test_dataloader()
-    differential_accuracies = []
-
-    for batch in dataloader:
-        if len(batch) == 3:
-            input_ids, attention_mask, labels = batch
-        elif len(batch) == 2:
-            input_ids, labels = batch
-            attention_mask = None  # or create a default attention mask if needed
-        else:
-            raise ValueError(f"Unexpected batch format with {len(batch)} elements")
-        outputs = model(input_ids, attention_mask)
-        predictions = torch.argmax(outputs, dim=-1)
-
-        # Calculate differential pixel accuracy
-        accuracy, _, _ = differential_pixel_accuracy(input_ids, labels, predictions)
-        differential_accuracies.append(accuracy)
-
-    # Log the average differential pixel accuracy
-    avg_differential_accuracy = sum(differential_accuracies) / len(differential_accuracies)
-    logger.info(f"Average Differential Pixel Accuracy: {avg_differential_accuracy:.4f}")
-
     return results[0]
 
 

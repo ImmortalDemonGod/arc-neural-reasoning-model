@@ -123,7 +123,19 @@ class ARCTrainer(pl.LightningModule):
         accuracy = (predictions == labels).float().mean()
         self.log('test_accuracy', accuracy)
         self.log('test_loss', loss)  # Log the test loss
-        return {"test_accuracy": accuracy, "test_loss": loss}
+        # Calculate differential pixel accuracy
+        differential_accuracy, _, _ = differential_pixel_accuracy(input_ids, labels, predictions)
+
+        # Log all metrics
+        self.log('test_accuracy', accuracy)
+        self.log('test_loss', loss)
+        self.log('differential_pixel_accuracy', differential_accuracy)
+
+        return {
+            "test_accuracy": accuracy,
+            "test_loss": loss,
+            "differential_pixel_accuracy": differential_accuracy
+        }
 
     def on_save_checkpoint(self, checkpoint):
         config_dict = {
