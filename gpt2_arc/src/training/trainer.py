@@ -107,9 +107,14 @@ class ARCTrainer(pl.LightningModule):
         return {"test_accuracy": accuracy}
 
     def on_save_checkpoint(self, checkpoint):
-        # Add model configuration to the checkpoint
-        checkpoint['config'] = self.config.model.__dict__
-        logger.debug("Model configuration added to checkpoint.")
+        config_dict = {
+            'n_embd': self.config.model.n_embd,
+            'n_head': self.config.model.n_head,
+            'n_layer': self.config.model.n_layer,
+            'dropout': self.config.model.dropout
+        }
+        checkpoint['config'] = config_dict
+        logger.debug(f"Model configuration added to checkpoint: {config_dict}")
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.lr)

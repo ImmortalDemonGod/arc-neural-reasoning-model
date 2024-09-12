@@ -6,16 +6,22 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..
 sys.path.insert(0, project_root)
 print("Current PYTHONPATH:", sys.path)
 
+import sys
+import os
+import json
 import pytest
 import torch
 from pytest_mock import mocker
-from src.models.gpt2 import GPT2ARC
-from src.config import Config
+from gpt2_arc.src.models.gpt2 import GPT2ARC
+from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
 from torch.utils.data import DataLoader
-from src.utils.helpers import differential_pixel_accuracy
-from src.config import Config, ModelConfig, TrainingConfig
-from src.models.gpt2 import GPT2ARC
-from src.training.trainer import ARCTrainer
+from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
+from gpt2_arc.src.training.trainer import ARCTrainer
+
+# Add the project root to the Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.insert(0, project_root)
+print(f"Updated Python path: {sys.path}")
 
 @pytest.fixture
 def trainer():
@@ -195,27 +201,60 @@ def test_validation_step_with_incorrect_batch_format(trainer):
 
 def test_model_loading_from_checkpoint(mocker):
     logger.debug("Starting test_model_loading_from_checkpoint")
-    # Load the model checkpoint from the specified path
+    
+    # Load the model checkpoint
     checkpoint_path = "checkpoints/arc_model-epoch=00-val_loss=0.73.ckpt"
-    # Load the checkpoint
-    checkpoint = torch.load(checkpoint_path)
+    logger.debug(f"Attempting to load checkpoint from: {checkpoint_path}")
     
-    # Extract the model configuration from the checkpoint
+    try:
+        checkpoint = torch.load(checkpoint_path)
+        logger.debug(f"Checkpoint loaded successfully. Keys: {checkpoint.keys()}")
+    except Exception as e:
+        logger.error(f"Failed to load checkpoint: {str(e)}")
+        pytest.fail(f"Failed to load checkpoint: {str(e)}")
+
+    # Extract and print the config from the checkpoint
     if 'config' in checkpoint:
-        model_config = checkpoint['config']
+        config_dict = checkpoint['config']
+        logger.debug(f"Config found in checkpoint: {json.dumps(config_dict, indent=2)}")
     else:
-        pytest.fail("Model configuration not found in checkpoint.")
-    
-    # Initialize the model with the checkpoint's configuration
-    model = GPT2ARC(model_config)
-    
-    # Load the state_dict
-    state_dict = {k.replace("model.", ""): v for k, v in checkpoint['state_dict'].items()}
-    model.load_state_dict(state_dict)
+        logger.error("Config not found in checkpoint")
+        pytest.fail("Config not found in checkpoint")
+
+    # Reconstruct ModelConfig
+    try:
+        model_config = ModelConfig(
+            n_embd=config_dict['n_embd'],
+            n_head=config_dict['n_head'],
+            n_layer=config_dict['n_layer'],
+            dropout=config_dict['dropout']
+        )
+        logger.debug(f"ModelConfig reconstructed: {model_config}")
+    except KeyError as e:
+        logger.error(f"Missing key in config_dict: {str(e)}")
+        pytest.fail(f"Failed to reconstruct ModelConfig: {str(e)}")
+
+    # Initialize the model
+    try:
+        model = GPT2ARC(model_config)
+        logger.debug("Model initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize model: {str(e)}")
+        pytest.fail(f"Failed to initialize model: {str(e)}")
+
+    # Load the state dict
+    try:
+        state_dict = {k.replace("model.", ""): v for k, v in checkpoint['state_dict'].items()}
+        model.load_state_dict(state_dict)
+        logger.debug("State dict loaded successfully")
+    except Exception as e:
+        logger.error(f"Failed to load state dict: {str(e)}")
+        pytest.fail(f"Failed to load state dict: {str(e)}")
 
     # Ensure the model is in evaluation mode
     model.eval()
     assert not model.training, "Model should be in evaluation mode after calling eval()"
+    
     logger.debug("Completed test_model_loading_from_checkpoint")
 
 
