@@ -7,3 +7,4 @@ ruff>=0.0.1
 mypy>=0.910
 urllib3>=1.26.0
 chardet>=5.0.0
+pytest-mock
