@@ -10,6 +10,7 @@ import argparse
 import pytorch_lightning as pl
 import torch
 
+from gpt2_arc.src.config import Config, ModelConfig
 import arckit
 import logging
 from gpt2_arc.src.data.arc_dataset import ARCDataset
@@ -33,6 +34,9 @@ def main(args):
     # Load the test data using arckit
     _, test_set = arckit.load_data()
     test_data = ARCDataset(test_set)
+
+    # Load the checkpoint
+    checkpoint = torch.load(args.model_checkpoint)
 
     # Extract the model configuration from the checkpoint
     if 'config' in checkpoint:
