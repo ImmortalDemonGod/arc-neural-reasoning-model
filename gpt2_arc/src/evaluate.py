@@ -26,12 +26,13 @@ def main(args):
     # Load the trained model
     model = GPT2ARC(Config().model)
     model.load_state_dict(torch.load(args.model_checkpoint))
-    model.eval()
+    model.eval()  # Ensure the model is in evaluation mode
+    logger.info("Model set to evaluation mode")
 
     # Evaluate the model
     results = evaluate(model, test_data, args.batch_size)
 
-    print("Evaluation Results:")
+    logger.info("Evaluation Results:")
     for metric, value in results.items():
         print(f"{metric}: {value}")
 

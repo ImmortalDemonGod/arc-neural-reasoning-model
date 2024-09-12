@@ -94,7 +94,36 @@ class ARCTrainer(pl.LightningModule):
         self.logged_metrics["val_loss"] = loss.item()
 
     def test_step(self, batch, batch_idx):
-        input_ids, attention_mask, labels = batch
+        logger.debug(f"Test step - Batch type: {type(batch)}, length: {len(batch)}")
+        logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
+
+        if isinstance(batch, tuple):
+            input_ids, attention_mask, labels = batch
+        elif isinstance(batch, dict):
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"].long()
+        elif isinstance(batch, list) and len(batch) == 2:
+            input_ids, labels = batch
+            attention_mask = None
+        else:
+            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
+
+        # Ensure tensors are float32
+        input_ids = input_ids.to(torch.float32)
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(torch.float32)
+        labels = labels.long()  # Ensure labels are of type Long
+        outputs = self(input_ids, attention_mask)
+        loss = self.compute_loss(outputs, labels)
+        B, T, C = outputs.size()  # Define B and C
+        outputs = outputs.view(B, -1, C)
+        predictions = torch.argmax(outputs, dim=-1)
+        labels = labels.view(B, -1)
+        accuracy = (predictions == labels).float().mean()
+        self.log('test_accuracy', accuracy)
+        self.log('test_loss', loss)  # Log the test loss
+        return {"test_accuracy": accuracy, "test_loss": loss}
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         B, T, C = outputs.size()  # Define B and C
