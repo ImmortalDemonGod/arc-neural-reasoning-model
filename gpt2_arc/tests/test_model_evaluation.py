@@ -11,7 +11,7 @@ from src.training.trainer import ARCTrainer
 
 @pytest.fixture
 def trainer():
-    model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
+    model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
     config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=2))
     model = GPT2ARC(config.model)
     return ARCTrainer(model, None, None, config)
