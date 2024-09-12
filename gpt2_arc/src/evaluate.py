@@ -4,7 +4,7 @@ import argparse
 import pytorch_lightning as pl
 import torch
 
-from src.data.arc_dataset import ARCDataset
+import arckit
 from src.models.gpt2 import GPT2ARC
 from src.config import Config
 from src.training.trainer import ARCTrainer
@@ -18,8 +18,9 @@ def evaluate(model, test_dataset, batch_size=32):
 
 
 def main(args):
-    # Load the test data
-    test_data = ARCDataset(args.test_data)
+    # Load the test data using arckit
+    _, test_set = arckit.load_data()
+    test_data = ARCDataset(test_set)
 
     # Load the trained model
     model = GPT2ARC(Config().model)
@@ -37,9 +38,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Evaluate the ARC Neural Reasoning Model"
-    )
-    parser.add_argument(
-        "--test_data", type=str, required=True, help="Path to test data"
     )
     parser.add_argument(
         "--model_checkpoint",
