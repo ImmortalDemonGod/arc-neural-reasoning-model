@@ -382,6 +382,6 @@ def test_arc_dataset_with_arckit_data():
     batch = [dataset[i] for i in range(2)]  # Create a batch of two samples
     collated_inputs, collated_outputs, collated_task_ids = ARCDataset.collate_fn(batch)
 
-    assert collated_task_ids.shape[0] == 2, "Batch size should be 2"
+    assert len(collated_task_ids) == 2, "Batch size should be 2"
     assert collated_inputs.shape[0] == 2, "Batch size should be 2"
     assert collated_outputs.shape[0] == 2, "Batch size should be 2"
