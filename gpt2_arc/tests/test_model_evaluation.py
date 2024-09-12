@@ -187,14 +187,11 @@ def test_validation_step_with_incorrect_batch_format(trainer):
 
 def test_model_loading_from_checkpoint(mocker):
     logger.debug("Starting test_model_loading_from_checkpoint")
-    # Mock the torch.load function to simulate loading a checkpoint
-    mock_checkpoint = {'state_dict': {'some_key': torch.tensor([1.0])}}
-    mocker.patch('torch.load', return_value=mock_checkpoint)
-
-    # Create a model and load the state dict
+    # Load the model checkpoint from the specified path
+    checkpoint_path = "checkpoints/arc_model-epoch=09-val_loss=0.41.ckpt"
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
     model = GPT2ARC(model_config)
-    model.load_state_dict(mock_checkpoint['state_dict'])
+    model.load_state_dict(torch.load(checkpoint_path)['state_dict'])
 
     # Ensure the model is in evaluation mode
     model.eval()
