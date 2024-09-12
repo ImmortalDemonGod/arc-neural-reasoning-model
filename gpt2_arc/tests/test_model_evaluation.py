@@ -188,7 +188,7 @@ def test_validation_step_with_incorrect_batch_format(trainer):
 def test_model_loading_from_checkpoint(mocker):
     logger.debug("Starting test_model_loading_from_checkpoint")
     # Load the model checkpoint from the specified path
-    checkpoint_path = "checkpoints/arc_model-epoch=09-val_loss=0.41.ckpt"
+    checkpoint_path = "checkpoints/arc_model-epoch=00-val_loss=0.73.ckpt"
     # Load the checkpoint
     checkpoint = torch.load(checkpoint_path)
     
