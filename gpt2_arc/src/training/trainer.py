@@ -100,13 +100,14 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
         if isinstance(batch, tuple):
-            input_ids, attention_mask, labels = batch
+            input_ids, attention_mask, labels, task_ids = batch
         elif isinstance(batch, dict):
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"].long()
-        elif isinstance(batch, list) and len(batch) == 2:
-            input_ids, labels = batch
+            task_ids = batch["task_ids"]
+        elif isinstance(batch, list) and len(batch) == 3:
+            input_ids, labels, task_ids = batch
             attention_mask = None
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
