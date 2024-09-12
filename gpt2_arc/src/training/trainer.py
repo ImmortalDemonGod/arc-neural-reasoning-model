@@ -45,6 +45,9 @@ class ARCTrainer(pl.LightningModule):
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
+        # Ensure task_ids are handled correctly
+        task_ids = [str(task_id) for task_id in task_ids]
+
         # Ensure tensors are float32
         input_ids = input_ids.to(torch.float32)
         if attention_mask is not None:
