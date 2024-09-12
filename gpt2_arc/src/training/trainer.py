@@ -102,55 +102,50 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Test step - Batch type: {type(batch)}, length: {len(batch)}")
         logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
-        if isinstance(batch, tuple):
-            input_ids, attention_mask, labels, task_ids = batch
-        elif isinstance(batch, dict):
-            input_ids = batch["input_ids"]
-            attention_mask = batch["attention_mask"]
-            labels = batch["labels"].long()
-            task_ids = batch["task_ids"]
-        elif isinstance(batch, list) and len(batch) == 3:
-            input_ids, labels, task_ids = batch
+        if isinstance(batch, tuple) and len(batch) == 3:
+            inputs, outputs, task_ids = batch
             attention_mask = None
+        elif isinstance(batch, tuple) and len(batch) == 4:
+            inputs, attention_mask, outputs, task_ids = batch
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
-        # Ensure tensors are float32
-        input_ids = input_ids.to(torch.float32)
-        if attention_mask is not None:
-            attention_mask = attention_mask.to(torch.float32)
-        labels = labels.long()  # Ensure labels are of type Long
-        outputs = self(input_ids, attention_mask)
-        loss = self.compute_loss(outputs, labels)
-        B, T, C = outputs.size()  # Define B and C
-        outputs = outputs.view(B, -1, C)
-        predictions = torch.argmax(outputs, dim=-1)
-        labels = labels.view(B, -1)
-        accuracy = (predictions == labels).float().mean()
-        self.log('test_accuracy', accuracy)
-        self.log('test_loss', loss)  # Log the test loss
-        # Calculate differential pixel accuracy
-        differential_accuracy, _, _ = differential_pixel_accuracy(input_ids, labels, predictions)
+        # Ensure inputs and outputs are the correct type
+        inputs = inputs.float()
+        outputs = outputs.long()
 
-        # Log all metrics
-        self.log('test_accuracy', accuracy)
+        # Create a dummy attention mask if it's None
+        if attention_mask is None:
+            attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32, device=inputs.device)
+
+        model_outputs = self(inputs, attention_mask)
+        loss = self.compute_loss(model_outputs, outputs)
+        
+        B, T, C = model_outputs.size()
+        model_outputs = model_outputs.view(B, -1, C)
+        predictions = torch.argmax(model_outputs, dim=-1)
+        outputs = outputs.view(B, -1)
+        
+        accuracy = (predictions == outputs).float().mean()
+        diff_accuracy, _, _ = differential_pixel_accuracy(inputs, outputs, predictions)
+
+        # Log overall metrics
         self.log('test_loss', loss)
-        self.log('differential_pixel_accuracy', differential_accuracy)
+        self.log('test_accuracy', accuracy)
+        self.log('test_diff_accuracy', diff_accuracy)
 
-        task_metrics = {
-            task_id: {
-                "test_accuracy": accuracy.item(),
-                "test_loss": loss.item(),
-                "differential_pixel_accuracy": differential_accuracy
-            }
-            for task_id in task_ids
+        # Log task-specific metrics
+        for i, task_id in enumerate(task_ids):
+            self.log(f'{task_id}_test_loss', loss[i] if loss.dim() > 0 else loss)
+            self.log(f'{task_id}_test_accuracy', accuracy[i] if accuracy.dim() > 0 else accuracy)
+            self.log(f'{task_id}_test_diff_accuracy', diff_accuracy[i] if isinstance(diff_accuracy, torch.Tensor) and diff_accuracy.dim() > 0 else diff_accuracy)
+
+        return {
+            'test_loss': loss,
+            'test_accuracy': accuracy,
+            'test_diff_accuracy': diff_accuracy,
+            'task_ids': task_ids
         }
-
-        # Log individual task metrics
-        for task_id, metrics in task_metrics.items():
-            logger.info(f"Task {task_id}: {metrics}")
-
-        return task_metrics
 
     def on_save_checkpoint(self, checkpoint):
         config_dict = {

@@ -153,3 +153,34 @@ def test_arctrainer_val_dataloader(trainer):
     dataloader = trainer.val_dataloader()
     assert isinstance(dataloader, torch.utils.data.DataLoader)
     assert len(dataloader.dataset) == len(trainer.val_dataset)
+def test_arctrainer_test_step_with_task_ids(trainer):
+    batch_size = 2
+    height = width = 30
+    num_symbols = 10
+    
+    # Create a mock batch
+    inputs = torch.randint(0, num_symbols, (batch_size, 1, height, width)).float()
+    outputs = torch.randint(0, num_symbols, (batch_size, 1, height, width)).long()
+    task_ids = ['task1', 'task2']
+    
+    batch = (inputs, outputs, task_ids)
+    
+    # Run the test step
+    result = trainer.test_step(batch, 0)
+    
+    # Check if the result contains the expected keys
+    assert 'test_loss' in result
+    assert 'test_accuracy' in result
+    assert 'test_diff_accuracy' in result
+    assert 'task_ids' in result
+    
+    # Check if task-specific metrics were logged
+    for task_id in task_ids:
+        assert f'{task_id}_test_loss' in trainer.logged_metrics
+        assert f'{task_id}_test_accuracy' in trainer.logged_metrics
+        assert f'{task_id}_test_diff_accuracy' in trainer.logged_metrics
+
+    # Check if the overall metrics were logged
+    assert 'test_loss' in trainer.logged_metrics
+    assert 'test_accuracy' in trainer.logged_metrics
+    assert 'test_diff_accuracy' in trainer.logged_metrics
