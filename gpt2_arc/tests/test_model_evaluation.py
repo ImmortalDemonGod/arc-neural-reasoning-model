@@ -208,11 +208,23 @@ def test_model_loading_from_checkpoint(mocker):
     assert not model.training, "Model should be in evaluation mode after calling eval()"
     logger.debug("Completed test_model_loading_from_checkpoint")
 
-    # Check if the checkpoint contains model configuration
-    if 'config' in checkpoint:
-        model_config = checkpoint['config']
-        logger.debug(f"Model configuration found in checkpoint: {model_config}")
-        # Add assertions to verify the configuration matches expected values
-    else:
-        logger.debug("Model configuration not found in checkpoint.")
-        # Consider adding a feature to save the configuration if needed
+
+def test_checkpoint_contains_model_config():                                                                                      
+    checkpoint_path = "checkpoints/arc_model-epoch=09-val_loss=0.41.ckpt"                                                         
+                                                                                                                                
+    try:                                                                                                                          
+        checkpoint = torch.load(checkpoint_path)                                                                                  
+    except FileNotFoundError:                                                                                                     
+        pytest.fail(f"Checkpoint file not found: {checkpoint_path}")                                                              
+                                                                                                                                
+    # Log the keys in the checkpoint                                                                                              
+    print("Checkpoint keys:", checkpoint.keys())                                                                                  
+                                                                                                                                
+    # Check for model configuration                                                                                               
+    if 'config' in checkpoint:                                                                                                    
+        model_config = checkpoint['config']                                                                                       
+        print("Model configuration found:", model_config)                                                                         
+        # Add assertions to verify the configuration matches expected values                                                      
+    else:                                                                                                                         
+        print("Model configuration not found in checkpoint.")                                                                     
+        # Consider adding a feature to save the configuration if needed 
