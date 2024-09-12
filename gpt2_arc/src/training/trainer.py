@@ -40,11 +40,11 @@ class ARCTrainer(pl.LightningModule):
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"].long()
-        elif isinstance(batch, list) and len(batch) == 1:
-            input_ids = batch[0]
+        elif isinstance(batch, list) and len(batch) == 2:
+            input_ids, labels = batch
             attention_mask = None
-            labels = None
-            raise ValueError("Batch must be either a tuple or a dictionary")
+        else:
+            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
         # Ensure tensors are float32
         input_ids = input_ids.to(torch.float32)
@@ -75,16 +75,11 @@ class ARCTrainer(pl.LightningModule):
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
-        elif isinstance(batch, list):
-            if len(batch) == 2:
-                input_ids, labels = batch
-                attention_mask = None
-            elif len(batch) == 1:
-                input_ids = batch[0]
-                labels = input_ids  # Assume the input is also the target
-                attention_mask = None
-            else:
-                raise ValueError(f"Unexpected list length in batch: {len(batch)}")
+        elif isinstance(batch, list) and len(batch) == 2:
+            input_ids, labels = batch
+            attention_mask = None
+        else:
+            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 

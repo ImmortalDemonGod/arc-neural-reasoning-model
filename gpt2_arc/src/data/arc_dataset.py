@@ -347,4 +347,4 @@ class ARCDataset(Dataset):
         padded_outputs = torch.stack([F.pad(o, (0, max_w - o.size(2), 0, max_h - o.size(1))) for o in outputs])
 
         logger.debug(f"Collate function output shapes - inputs: {padded_inputs.shape}, outputs: {padded_outputs.shape}")
-        return padded_inputs, padded_outputs
+        return [padded_inputs, padded_outputs]  # Return as a list to match what the model is receiving
