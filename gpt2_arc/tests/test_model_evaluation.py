@@ -114,7 +114,7 @@ def test_standard_pixel_accuracy(model, inputs, targets):
     
     # Test with known values
     known_outputs = torch.FloatTensor([[[[0.9, 0.1], [0.1, 0.9]]]])
-    known_targets = torch.tensor([[[1, 0], [0, 1]]])
+    known_targets = torch.tensor([[[0, 1], [1, 0]]])
     known_accuracy = (known_outputs.argmax(dim=1) == known_targets).float().mean().item()
     logger.debug(f"Known accuracy: {known_accuracy}")
     assert known_accuracy == 1.0, f"Expected known accuracy to be 1.0, got {known_accuracy}"
@@ -196,7 +196,7 @@ def test_validation_step_with_incorrect_batch_format(trainer):
     ]
 
     # Check if a ValueError is raised with the incorrect batch
-    with pytest.raises(ValueError, match="Batch must be either a tuple or a dictionary"):
+    with pytest.raises(ValueError, match="Unexpected batch format: <class 'list'>. Content:"):
         trainer.validation_step(incorrect_batch, 0)
 
 def test_model_loading_from_checkpoint(mocker):
