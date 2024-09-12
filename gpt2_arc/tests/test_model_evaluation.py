@@ -184,3 +184,19 @@ def test_validation_step_with_incorrect_batch_format(trainer):
     # Check if a ValueError is raised with the incorrect batch
     with pytest.raises(ValueError, match="Batch must be either a tuple or a dictionary"):
         trainer.validation_step(incorrect_batch, 0)
+
+def test_model_loading_from_checkpoint(mocker):
+    logger.debug("Starting test_model_loading_from_checkpoint")
+    # Mock the torch.load function to simulate loading a checkpoint
+    mock_checkpoint = {'state_dict': {'some_key': torch.tensor([1.0])}}
+    mocker.patch('torch.load', return_value=mock_checkpoint)
+
+    # Create a model and load the state dict
+    model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
+    model = GPT2ARC(model_config)
+    model.load_state_dict(mock_checkpoint['state_dict'])
+
+    # Ensure the model is in evaluation mode
+    model.eval()
+    assert not model.training, "Model should be in evaluation mode after calling eval()"
+    logger.debug("Completed test_model_loading_from_checkpoint")
