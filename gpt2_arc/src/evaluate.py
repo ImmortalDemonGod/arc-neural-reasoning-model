@@ -37,7 +37,7 @@ def main(args):
     # Load the trained model
     model = GPT2ARC(Config().model)
     checkpoint = torch.load(args.model_checkpoint)
-    state_dict = checkpoint['state_dict']
+    state_dict = {k.replace("model.", ""): v for k, v in checkpoint['state_dict'].items()}
     model.load_state_dict(state_dict)
     model.eval()  # Ensure the model is in evaluation mode
     logger.info("Model set to evaluation mode")
