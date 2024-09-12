@@ -114,3 +114,42 @@ def test_validation_step_with_list_input():
 
     assert "val_loss" in trainer.logged_metrics, "Validation loss should be logged"
     assert isinstance(trainer.logged_metrics["val_loss"], float), "Logged validation loss should be a float"
+
+@pytest.mark.parametrize("batch_format", ["tuple", "dict"])
+def test_arctrainer_validation_step(trainer, batch_format):
+    batch_size = 2
+    seq_length = 900  # 30x30 grid
+    vocab_size = 10  # Use a small vocab size for testing
+    if batch_format == "tuple":
+        batch = (
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            torch.ones((batch_size, seq_length)).float(),
+            torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        )
+    else:
+        batch = {
+            "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+            "attention_mask": torch.ones((batch_size, seq_length)).float(),
+            "labels": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        }
+    trainer.validation_step(batch, 0)
+
+    # Check if val_loss is logged
+    assert "val_loss" in trainer.logged_metrics
+
+
+def test_arctrainer_configure_optimizers(trainer):
+    optimizer = trainer.configure_optimizers()
+    assert isinstance(optimizer, torch.optim.AdamW)  # Use torch.optim.AdamW
+
+
+def test_arctrainer_train_dataloader(trainer):
+    dataloader = trainer.train_dataloader()
+    assert isinstance(dataloader, torch.utils.data.DataLoader)
+    assert len(dataloader.dataset) == len(trainer.train_dataset)
+
+
+def test_arctrainer_val_dataloader(trainer):
+    dataloader = trainer.val_dataloader()
+    assert isinstance(dataloader, torch.utils.data.DataLoader)
+    assert len(dataloader.dataset) == len(trainer.val_dataset)
