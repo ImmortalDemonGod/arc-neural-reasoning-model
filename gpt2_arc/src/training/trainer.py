@@ -138,7 +138,7 @@ class ARCTrainer(pl.LightningModule):
         self.log('differential_pixel_accuracy', differential_accuracy)
 
         task_metrics = {
-            task_id.item(): {
+            task_id: {
                 "test_accuracy": accuracy.item(),
                 "test_loss": loss.item(),
                 "differential_pixel_accuracy": differential_accuracy
