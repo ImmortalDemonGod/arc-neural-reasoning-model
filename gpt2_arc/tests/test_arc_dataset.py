@@ -6,6 +6,7 @@ import pytest
 import torch
 import random
 import logging
+import arckit
 from torch.utils.data import DataLoader
 from src.data.arc_dataset import ARCDataset, set_debug_mode
 
