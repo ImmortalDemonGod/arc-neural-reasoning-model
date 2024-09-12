@@ -217,14 +217,14 @@ def test_checkpoint_contains_model_config():
     except FileNotFoundError:                                                                                                     
         pytest.fail(f"Checkpoint file not found: {checkpoint_path}")                                                              
                                                                                                                                 
-    # Log the keys in the checkpoint                                                                                              
-    print("Checkpoint keys:", checkpoint.keys())                                                                                  
-                                                                                                                                
-    # Check for model configuration                                                                                               
-    if 'config' in checkpoint:                                                                                                    
-        model_config = checkpoint['config']                                                                                       
-        print("Model configuration found:", model_config)                                                                         
-        # Add assertions to verify the configuration matches expected values                                                      
-    else:                                                                                                                         
-        print("Model configuration not found in checkpoint.")                                                                     
-        # Consider adding a feature to save the configuration if needed 
+    # Log the keys in the checkpoint
+    logger.debug(f"Checkpoint keys: {checkpoint.keys()}")
+
+    # Check for model configuration
+    if 'config' in checkpoint:
+        model_config = checkpoint['config']
+        logger.debug(f"Model configuration found in checkpoint: {model_config}")
+        # Add assertions to verify the configuration matches expected values
+    else:
+        logger.debug("Model configuration not found in checkpoint.")
+        # Consider adding a feature to save the configuration if needed
