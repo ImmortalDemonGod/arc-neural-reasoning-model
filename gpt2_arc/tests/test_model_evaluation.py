@@ -197,8 +197,11 @@ def test_model_loading_from_checkpoint(mocker):
     # Debug: Print the keys of the state_dict
     logger.debug(f"State dict keys: {list(checkpoint['state_dict'].keys())}")
     
-    # Load the state_dict into the model
-    model.load_state_dict(checkpoint['state_dict'])
+    # Adjust the keys in the state_dict
+    state_dict = {k.replace("model.", ""): v for k, v in checkpoint['state_dict'].items()}
+    
+    # Load the adjusted state_dict into the model
+    model.load_state_dict(state_dict)
 
     # Ensure the model is in evaluation mode
     model.eval()
