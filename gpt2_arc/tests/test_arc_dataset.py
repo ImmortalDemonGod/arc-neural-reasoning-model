@@ -363,3 +363,24 @@ def test_arc_dataset_variable_size_grids(sample_data):
     assert torch.allclose(center_output_2, torch.tensor([[2., 1., 0.], [1., 0., 2.], [0., 2., 1.]])), f"Third sample output data not preserved correctly. Got:\n{center_output_2}"
     
     logger.debug("Completed test_arc_dataset_variable_size_grids")
+
+def test_arc_dataset_with_arckit_data():
+    # Load data using arckit
+    train_set, _ = arckit.load_data()
+
+    # Initialize the dataset
+    dataset = ARCDataset(train_set, is_test=False)
+
+    # Check that __getitem__ returns the correct structure
+    input_grid, output_grid, task_id = dataset[0]
+    assert isinstance(input_grid, torch.Tensor), "Input grid should be a torch.Tensor"
+    assert isinstance(output_grid, torch.Tensor), "Output grid should be a torch.Tensor"
+    assert isinstance(task_id, int), "Task ID should be an integer"
+
+    # Test the collate_fn
+    batch = [dataset[i] for i in range(2)]  # Create a batch of two samples
+    collated_inputs, collated_outputs, collated_task_ids = ARCDataset.collate_fn(batch)
+
+    assert collated_task_ids.shape[0] == 2, "Batch size should be 2"
+    assert collated_inputs.shape[0] == 2, "Batch size should be 2"
+    assert collated_outputs.shape[0] == 2, "Batch size should be 2"
