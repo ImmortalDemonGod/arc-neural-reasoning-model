@@ -32,7 +32,8 @@ BASELINES = {
 def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, device_type='cpu', precision='medium', model_checkpoint=None):
     print(f"Starting benchmark_model with parameters: batch_size={batch_size}, num_batches={num_batches}, num_runs={num_runs}, device_type={device_type}, precision={precision}, model_checkpoint={model_checkpoint}")
 
-    # Load model from checkpoint if provided
+    checkpoint_used = False
+    checkpoint_info = {}
     if model_checkpoint:
         checkpoint = torch.load(model_checkpoint)
         model_config = ModelConfig(**checkpoint['config'])
@@ -40,7 +41,12 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
         model.load_state_dict(checkpoint['state_dict'])
         model.to(device_type)
         model.eval()
-    run_id = str(uuid.uuid4())
+        checkpoint_used = True
+        checkpoint_info = {
+            'checkpoint_path': model_checkpoint,
+            'config': checkpoint['config'],
+            'state_dict_keys': list(checkpoint['state_dict'].keys())
+        }
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     practical_threshold = 20.0  # Define a threshold for practical significance
     total_time_runs = []
@@ -144,7 +150,9 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
             'n_embd': model.config.n_embd,
             'n_head': model.config.n_head,
             'n_layer': model.config.n_layer,
-            'precision': precision  # Add precision here
+            'precision': precision,  # Add precision here
+            'checkpoint_used': checkpoint_used,
+            'checkpoint_info': checkpoint_info
         })
 
         total_time_runs.append(total_time)
@@ -286,7 +294,9 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
             'improvement_grids': improvement_grids,
             'practical_significance_time': practical_significance_time,
             'practical_significance_grids': practical_significance_grids,
-            'precision': precision  # Add precision here
+            'precision': precision,  # Add precision here
+            'checkpoint_used': checkpoint_used,
+            'checkpoint_info': checkpoint_info
         })
 
     print(f"Benchmark completed. Final results - avg_time: {avg_total_time}, avg_grids: {avg_grids_per_second}")
