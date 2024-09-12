@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 import torch
 
 import arckit
+from src.data.arc_dataset import ARCDataset
 from src.models.gpt2 import GPT2ARC
 from src.config import Config
 from src.training.trainer import ARCTrainer
