@@ -102,33 +102,55 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Test step - Batch type: {type(batch)}, length: {len(batch)}")
         logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
-        input_tensors, label_tensors, task_identifiers = batch
-        attention_mask = None
+        if isinstance(batch, tuple):
+            input_ids, attention_mask, labels, task_ids = batch
+        elif isinstance(batch, dict):
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"].long()
+            task_ids = batch["task_ids"]
+        elif isinstance(batch, list) and len(batch) == 3:
+            input_ids, labels, task_ids = batch
+            attention_mask = None
+        else:
+            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
         # Ensure tensors are float32
-        input_tensors = input_tensors.to(torch.float32)
-        label_tensors = label_tensors.long()
+        input_ids = input_ids.to(torch.float32)
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(torch.float32)
+        labels = labels.long()  # Ensure labels are of type Long
+        outputs = self(input_ids, attention_mask)
+        loss = self.compute_loss(outputs, labels)
+        B, T, C = outputs.size()  # Define B and C
+        outputs = outputs.view(B, -1, C)
+        predictions = torch.argmax(outputs, dim=-1)
+        labels = labels.view(B, -1)
+        accuracy = (predictions == labels).float().mean()
+        self.log('test_accuracy', accuracy)
+        self.log('test_loss', loss)  # Log the test loss
+        # Calculate differential pixel accuracy
+        differential_accuracy, _, _ = differential_pixel_accuracy(input_ids, labels, predictions)
 
-        model_outputs = self(input_tensors, attention_mask)
-        loss_value = self.compute_loss(model_outputs, label_tensors)
-        predicted_labels = torch.argmax(model_outputs, dim=-1)
-        accuracy_value = (predicted_labels == label_tensors).float().mean()
-        differential_accuracy_value, _, _ = differential_pixel_accuracy(input_tensors, label_tensors, predicted_labels)
+        # Log all metrics
+        self.log('test_accuracy', accuracy)
+        self.log('test_loss', loss)
+        self.log('differential_pixel_accuracy', differential_accuracy)
 
-        metrics_per_task = {
+        task_metrics = {
             task_id: {
-                "test_accuracy": accuracy_value.item(),
-                "test_loss": loss_value.item(),
-                "differential_pixel_accuracy": differential_accuracy_value
+                "test_accuracy": accuracy.item(),
+                "test_loss": loss.item(),
+                "differential_pixel_accuracy": differential_accuracy
             }
-            for task_id in task_identifiers
+            for task_id in task_ids
         }
 
         # Log individual task metrics
-        for task_id, metrics in metrics_per_task.items():
+        for task_id, metrics in task_metrics.items():
             logger.info(f"Task {task_id}: {metrics}")
 
-        return metrics_per_task
+        return task_metrics
 
     def on_save_checkpoint(self, checkpoint):
         config_dict = {
