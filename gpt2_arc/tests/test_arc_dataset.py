@@ -365,7 +365,7 @@ def test_arc_dataset_variable_size_grids(sample_data):
     
     logger.debug("Completed test_arc_dataset_variable_size_grids")
 
-def test_arc_dataset_with_arckit_data():
+def test_arc_dataset_with_arckit_data_get_task_id():
     # Load data using arckit
     train_set, _ = arckit.load_data()
 
