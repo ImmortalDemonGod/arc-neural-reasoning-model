@@ -28,6 +28,16 @@ def evaluate(model, test_dataset, batch_size=32):
     trainer = ARCTrainer(model, None, test_dataset, config=Config())
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
+    # Collect individual task metrics
+    individual_metrics = []
+    for result in results:
+        individual_metrics.append(result)
+
+    # Log individual task metrics
+    logger.info("Individual Task Metrics:")
+    for idx, metrics in enumerate(individual_metrics):
+        logger.info(f"Task {idx + 1}: {metrics}")
+
     return results[0]
 
 
