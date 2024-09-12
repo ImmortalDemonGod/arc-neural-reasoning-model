@@ -31,12 +31,13 @@ def evaluate(model, test_dataset, batch_size=32):
     # Collect individual task metrics
     individual_metrics = []
     for result in results:
-        individual_metrics.append(result)
+        task_id = result.get('task_id', 'unknown')
+        individual_metrics.append((task_id, result))
 
     # Log individual task metrics
     logger.info("Individual Task Metrics:")
-    for idx, metrics in enumerate(individual_metrics):
-        logger.info(f"Task {idx + 1}: {metrics}")
+    for task_id, metrics in individual_metrics:
+        logger.info(f"Task {task_id}: {metrics}")
 
     return results[0]
 
