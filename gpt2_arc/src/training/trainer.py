@@ -98,7 +98,7 @@ class ARCTrainer(pl.LightningModule):
         self.log("val_loss", loss)
         self.logged_metrics["val_loss"] = loss.item()
 
-    def evaluate_and_log_metrics_for_each_task(self, batch, batch_index):
+    def test_step(self, batch, batch_index):
         logger.debug(f"Test step - Batch type: {type(batch)}, length: {len(batch)}")
         logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
