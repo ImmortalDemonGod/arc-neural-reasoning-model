@@ -33,13 +33,14 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
         if isinstance(batch, tuple):
-            input_ids, attention_mask, labels = batch
+            input_ids, attention_mask, labels, task_ids = batch
         elif isinstance(batch, dict):
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"].long()
-        elif isinstance(batch, list) and len(batch) == 2:
-            input_ids, labels = batch
+            task_ids = batch["task_ids"]
+        elif isinstance(batch, list) and len(batch) == 3:
+            input_ids, labels, task_ids = batch
             attention_mask = None
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
@@ -132,11 +133,20 @@ class ARCTrainer(pl.LightningModule):
         self.log('test_loss', loss)
         self.log('differential_pixel_accuracy', differential_accuracy)
 
-        return {
-            "test_accuracy": accuracy.item(),
-            "test_loss": loss.item(),
-            "differential_pixel_accuracy": differential_accuracy
+        task_metrics = {
+            task_id.item(): {
+                "test_accuracy": accuracy.item(),
+                "test_loss": loss.item(),
+                "differential_pixel_accuracy": differential_accuracy
+            }
+            for task_id in task_ids
         }
+
+        # Log individual task metrics
+        for task_id, metrics in task_metrics.items():
+            logger.info(f"Task {task_id}: {metrics}")
+
+        return task_metrics
 
     def on_save_checkpoint(self, checkpoint):
         config_dict = {
