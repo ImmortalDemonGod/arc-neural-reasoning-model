@@ -12,11 +12,11 @@ import json
 import pytest
 import torch
 from pytest_mock import mocker
-from gpt2_arc.src.models.gpt2 import GPT2ARC
-from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
+from src.models.gpt2 import GPT2ARC
+from src.config import Config, ModelConfig, TrainingConfig
 from torch.utils.data import DataLoader
-from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
-from gpt2_arc.src.training.trainer import ARCTrainer
+from src.utils.helpers import differential_pixel_accuracy
+from src.training.trainer import ARCTrainer
 
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
