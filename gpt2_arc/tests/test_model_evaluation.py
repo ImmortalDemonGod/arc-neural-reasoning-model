@@ -207,3 +207,12 @@ def test_model_loading_from_checkpoint(mocker):
     model.eval()
     assert not model.training, "Model should be in evaluation mode after calling eval()"
     logger.debug("Completed test_model_loading_from_checkpoint")
+
+    # Check if the checkpoint contains model configuration
+    if 'config' in checkpoint:
+        model_config = checkpoint['config']
+        logger.debug(f"Model configuration found in checkpoint: {model_config}")
+        # Add assertions to verify the configuration matches expected values
+    else:
+        logger.debug("Model configuration not found in checkpoint.")
+        # Consider adding a feature to save the configuration if needed
