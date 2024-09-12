@@ -182,6 +182,9 @@ def test_evaluation_process_with_arckit_data():
     lightning_trainer = pl.Trainer(logger=False, enable_checkpointing=False, enable_progress_bar=False)
     evaluation_results = lightning_trainer.test(trainer)
 
+    # Log the entire evaluation results for debugging
+    logger.debug(f"Evaluation results: {evaluation_results}")
+
     # Verify that metrics are logged for each task ID
     for result in evaluation_results:
         task_id = result.get('task_id', 'unknown')
