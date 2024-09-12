@@ -47,6 +47,7 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
             'config': checkpoint['config'],
             'state_dict_keys': list(checkpoint['state_dict'].keys())
         }
+    run_id = str(uuid.uuid4())
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     practical_threshold = 20.0  # Define a threshold for practical significance
     total_time_runs = []
