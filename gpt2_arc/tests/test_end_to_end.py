@@ -167,7 +167,7 @@ def test_evaluation_process_with_arckit_data():
     logger.debug("Starting evaluation process test with arckit data")
 
     # Load data using arckit
-    training_data, evaluation_data = arckit.load_data()
+    _ , evaluation_data = arckit.load_data()
 
     # Initialize the dataset for testing
     test_dataset = ARCDataset(evaluation_data, is_test=True)
