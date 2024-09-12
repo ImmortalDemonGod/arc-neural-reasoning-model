@@ -3,6 +3,8 @@ def differential_pixel_accuracy(input, target, prediction):
     input_target_diff = input != target
 
     # Count how many of these differing pixels the model predicted correctly
+    # Reshape prediction to match input and target dimensions
+    prediction = prediction.view_as(input)
     correct_diff_predictions = (prediction != input) & input_target_diff
 
     # Calculate accuracy
