@@ -376,7 +376,7 @@ def test_arc_dataset_with_arckit_data():
     input_grid, output_grid, task_id = dataset[0]
     assert isinstance(input_grid, torch.Tensor), "Input grid should be a torch.Tensor"
     assert isinstance(output_grid, torch.Tensor), "Output grid should be a torch.Tensor"
-    assert isinstance(task_id, int), "Task ID should be an integer"
+    assert isinstance(task_id, str), "Task ID should be a string"
 
     # Test the collate_fn
     batch = [dataset[i] for i in range(2)]  # Create a batch of two samples
