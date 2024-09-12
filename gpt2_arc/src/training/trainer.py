@@ -75,10 +75,16 @@ class ARCTrainer(pl.LightningModule):
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
-        elif isinstance(batch, list) and len(batch) == 2:
-            # Handle the case where the batch is a list with two tensors
-            input_ids, labels = batch
-            attention_mask = None
+        elif isinstance(batch, list):
+            if len(batch) == 2:
+                input_ids, labels = batch
+                attention_mask = None
+            elif len(batch) == 1:
+                input_ids = batch[0]
+                labels = input_ids  # Assume the input is also the target
+                attention_mask = None
+            else:
+                raise ValueError(f"Unexpected list length in batch: {len(batch)}")
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
