@@ -34,8 +34,20 @@ def main(args):
     _, test_set = arckit.load_data()
     test_data = ARCDataset(test_set)
 
-    # Load the trained model
-    model = GPT2ARC(Config().model)
+    # Extract the model configuration from the checkpoint
+    if 'config' in checkpoint:
+        config_dict = checkpoint['config']
+        model_config = ModelConfig(
+            n_embd=config_dict['n_embd'],
+            n_head=config_dict['n_head'],
+            n_layer=config_dict['n_layer'],
+            dropout=config_dict['dropout']
+        )
+    else:
+        raise ValueError("Model configuration not found in checkpoint")
+
+    # Initialize the model with the checkpoint configuration
+    model = GPT2ARC(model_config)
     checkpoint = torch.load(args.model_checkpoint)
     state_dict = {k.replace("model.", ""): v for k, v in checkpoint['state_dict'].items()}
     model.load_state_dict(state_dict)
