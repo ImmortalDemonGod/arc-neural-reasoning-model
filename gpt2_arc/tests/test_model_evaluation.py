@@ -259,7 +259,7 @@ def test_model_loading_from_checkpoint(mocker):
 
 
 def test_checkpoint_contains_model_config():                                                                                      
-    checkpoint_path = "checkpoints/arc_model-epoch=09-val_loss=0.41.ckpt"                                                         
+    checkpoint_path = "checkpoints/arc_model-epoch=00-val_loss=0.73.ckpt"                                                         
                                                                                                                                 
     try:                                                                                                                          
         checkpoint = torch.load(checkpoint_path)                                                                                  
