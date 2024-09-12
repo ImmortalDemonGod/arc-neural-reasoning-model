@@ -321,7 +321,7 @@ def main(args):
     for run_num in range(args.num_full_runs):
         logger.info(f"Starting full benchmark run {run_num + 1}/{args.num_full_runs}")
         avg_time, avg_grids = benchmark_model(
-            model, full_dataset, batch_size=args.batch_size, num_batches=args.num_batches, num_runs=args.num_runs, device_type=args.device, precision=args.precision
+            model, full_dataset, batch_size=args.batch_size, num_batches=args.num_batches, num_runs=args.num_runs, device_type=args.device, precision=args.precision, model_checkpoint=args.model_checkpoint
         )
         logger.info(f"Full run {run_num + 1} - Avg Time: {avg_time:.4f}s, Avg Grids per Second: {avg_grids:.2f}")
 
