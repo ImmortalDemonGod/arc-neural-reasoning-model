@@ -75,9 +75,21 @@ class ARCTrainer(pl.LightningModule):
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
+        elif isinstance(batch, list) and len(batch) == 2:
+            # Handle the case where the batch is a list with two tensors
+            input_ids, labels = batch
+            attention_mask = None
         else:
-            logger.debug(f"Batch is of unexpected type: {type(batch)}")
-            raise ValueError("Batch must be either a tuple or a dictionary")
+            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
+
+        if input_ids is None or labels is None:
+            raise ValueError(f"Missing required batch components. Batch content: {batch}")
+
+        # Ensure tensors are float32
+        input_ids = input_ids.to(torch.float32)
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(torch.float32)
+        labels = labels.long()
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("val_loss", loss)
