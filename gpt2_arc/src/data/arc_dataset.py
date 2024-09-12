@@ -246,7 +246,8 @@ class ARCDataset(Dataset):
                 output_grid = self._preprocess_grid(sample["output"])
                 logger.debug(f"Returning input shape: {input_grid.shape}, output shape: {output_grid.shape}")
                 logger.debug(f"__getitem__ input dtype: {input_grid.dtype}, output dtype: {output_grid.dtype}")
-                return input_grid, output_grid
+                task_id = task.get("id", -1)  # Default to -1 if no id is found
+                return input_grid, output_grid, task_id
             current_idx += len(task[split])
 
         raise RuntimeError("Unexpected error in __getitem__")
