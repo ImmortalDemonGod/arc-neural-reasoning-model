@@ -47,6 +47,7 @@ class ARCTrainer(pl.LightningModule):
         input_ids = input_ids.to(torch.float32)
         if attention_mask is not None:
             attention_mask = attention_mask.to(torch.float32)
+        labels = labels.long()  # Ensure labels are of type Long
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("train_loss", loss)
