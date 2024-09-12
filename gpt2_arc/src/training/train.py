@@ -1,6 +1,7 @@
 # gpt2_arc/src/training/train.py
 import argparse
 import sys
+import logging
 import os
 
 # Add the root directory of the project to the PYTHONPATH
@@ -20,19 +21,26 @@ from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
 from gpt2_arc.src.training.trainer import ARCTrainer
 
 
+# Set up logging
+logger = logging.getLogger(__name__)
+
 def main(args):
+    # Set logging level
+    log_level = getattr(logging, args.log_level.upper(), logging.ERROR)
+    logging.basicConfig(level=log_level)
+    logger.setLevel(log_level)
     # Load data
     import arckit
     train_set, eval_set = arckit.load_data()
     train_data = ARCDataset(train_set)
     val_data = ARCDataset(eval_set)
-    print("Data loaded successfully using arckit")
+    logger.info("Data loaded successfully using arckit")
 
-    print("Initializing model with new configuration")
+    logger.info("Initializing model with new configuration")
     model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
     model = GPT2ARC(config=model_config)
 
-    print("Initializing trainer with new configuration")
+    logger.info("Initializing trainer with new configuration")
     config = Config(model=model_config, training=TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs))
     trainer = ARCTrainer(
         model=model,
@@ -106,6 +114,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--no_progress_bar", action="store_true", help="Disable progress bar"
+    )
+
+    parser.add_argument(
+        "--log_level", type=str, default="ERROR", help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
     )
 
     args = parser.parse_args()
