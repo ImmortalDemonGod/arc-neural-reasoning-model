@@ -162,3 +162,34 @@ def test_end_to_end():
     except Exception as e:
         logger.error(f"End-to-end test failed with error: {str(e)}")
         raise
+
+def test_evaluation_process_with_arckit_data():
+    logger.debug("Starting evaluation process test with arckit data")
+
+    # Load data using arckit
+    training_data, evaluation_data = arckit.load_data()
+
+    # Initialize the dataset for testing
+    test_dataset = ARCDataset(evaluation_data, is_test=True)
+
+    # Initialize the model and trainer
+    model_configuration = ModelConfig(n_embd=96, n_head=3, n_layer=1)
+    model = GPT2ARC(model_configuration)
+    training_configuration = Config(model=model_configuration, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=2))
+    trainer = ARCTrainer(model, None, test_dataset, training_configuration)
+
+    # Run the evaluation
+    lightning_trainer = pl.Trainer(logger=False, enable_checkpointing=False, enable_progress_bar=False)
+    evaluation_results = lightning_trainer.test(trainer)
+
+    # Verify that metrics are logged for each task ID
+    for result in evaluation_results:
+        task_id = result.get('task_id', 'unknown')
+        assert task_id != 'unknown', "Task ID should be known"
+        logger.info(f"Task {task_id}: {result}")
+
+    # Check for duplicate metrics
+    unique_task_metrics = {result['task_id']: result for result in evaluation_results}
+    assert len(unique_task_metrics) == len(evaluation_results), "Each task should have unique metrics"
+
+    logger.debug("Completed evaluation process test with arckit data")
