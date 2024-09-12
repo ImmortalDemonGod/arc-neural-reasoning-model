@@ -5,11 +5,16 @@ import pytorch_lightning as pl
 import torch
 
 import arckit
+import logging
 from src.data.arc_dataset import ARCDataset
 from src.models.gpt2 import GPT2ARC
 from src.config import Config
 from src.training.trainer import ARCTrainer
 
+
+# Set up logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 def evaluate(model, test_dataset, batch_size=32):
     trainer = ARCTrainer(model, None, test_dataset, config=Config())
