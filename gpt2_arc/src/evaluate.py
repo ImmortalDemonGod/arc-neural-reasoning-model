@@ -17,6 +17,7 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import Config
 from gpt2_arc.src.training.trainer import ARCTrainer
+from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 
 
 # Set up logging
@@ -27,6 +28,23 @@ def evaluate(model, test_dataset, batch_size=32):
     trainer = ARCTrainer(model, None, test_dataset, config=Config())
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
+    # Calculate differential pixel accuracy for each batch
+    dataloader = trainer.test_dataloader()
+    differential_accuracies = []
+
+    for batch in dataloader:
+        input_ids, attention_mask, labels = batch
+        outputs = model(input_ids, attention_mask)
+        predictions = torch.argmax(outputs, dim=-1)
+
+        # Calculate differential pixel accuracy
+        accuracy, _, _ = differential_pixel_accuracy(input_ids, labels, predictions)
+        differential_accuracies.append(accuracy)
+
+    # Log the average differential pixel accuracy
+    avg_differential_accuracy = sum(differential_accuracies) / len(differential_accuracies)
+    logger.info(f"Average Differential Pixel Accuracy: {avg_differential_accuracy:.4f}")
+
     return results[0]
 
 
