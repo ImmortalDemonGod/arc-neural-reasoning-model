@@ -80,8 +80,6 @@ class ARCTrainer(pl.LightningModule):
             attention_mask = None
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
-        else:
-            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
         if input_ids is None or labels is None:
             raise ValueError(f"Missing required batch components. Batch content: {batch}")
