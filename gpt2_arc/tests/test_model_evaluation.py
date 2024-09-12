@@ -189,18 +189,20 @@ def test_model_loading_from_checkpoint(mocker):
     logger.debug("Starting test_model_loading_from_checkpoint")
     # Load the model checkpoint from the specified path
     checkpoint_path = "checkpoints/arc_model-epoch=09-val_loss=0.41.ckpt"
-    model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
-    model = GPT2ARC(model_config)
     # Load the checkpoint
     checkpoint = torch.load(checkpoint_path)
     
-    # Debug: Print the keys of the state_dict
-    logger.debug(f"State dict keys: {list(checkpoint['state_dict'].keys())}")
+    # Extract the model configuration from the checkpoint
+    if 'config' in checkpoint:
+        model_config = checkpoint['config']
+    else:
+        pytest.fail("Model configuration not found in checkpoint.")
     
-    # Adjust the keys in the state_dict
+    # Initialize the model with the checkpoint's configuration
+    model = GPT2ARC(model_config)
+    
+    # Load the state_dict
     state_dict = {k.replace("model.", ""): v for k, v in checkpoint['state_dict'].items()}
-    
-    # Load the adjusted state_dict into the model
     model.load_state_dict(state_dict)
 
     # Ensure the model is in evaluation mode
