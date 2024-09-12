@@ -191,6 +191,9 @@ def test_model_loading_from_checkpoint(mocker):
     checkpoint_path = "checkpoints/arc_model-epoch=09-val_loss=0.41.ckpt"
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
     model = GPT2ARC(model_config)
+    # Load the checkpoint
+    checkpoint = torch.load(checkpoint_path)
+    
     # Debug: Print the keys of the state_dict
     logger.debug(f"State dict keys: {list(checkpoint['state_dict'].keys())}")
     
