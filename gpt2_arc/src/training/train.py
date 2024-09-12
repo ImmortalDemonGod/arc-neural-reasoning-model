@@ -50,7 +50,7 @@ def main(args):
     )
 
     # Create PyTorch Lightning trainer
-    logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
+    tb_logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
     callbacks = []
     if not args.no_checkpointing:
         checkpoint_callback = ModelCheckpoint(
@@ -73,7 +73,7 @@ def main(args):
 
     pl_trainer = pl.Trainer(
         max_epochs=config.training.max_epochs,
-        logger=logger,
+        logger=tb_logger,
         callbacks=callbacks if callbacks else None,
         enable_checkpointing=not args.no_checkpointing,
         enable_progress_bar=not args.no_progress_bar,
