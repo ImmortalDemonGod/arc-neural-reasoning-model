@@ -77,6 +77,7 @@ def main(args):
         callbacks=callbacks if callbacks else None,
         enable_checkpointing=not args.no_checkpointing,
         enable_progress_bar=not args.no_progress_bar,
+        fast_dev_run=args.fast_dev_run,
         gradient_clip_val=1.0,
         accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu'
     )
@@ -118,6 +119,10 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--log_level", type=str, default="ERROR", help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
+    )
+
+    parser.add_argument(
+        "--fast_dev_run", type=int, default=0, help="Run a few batches for debugging purposes"
     )
 
     args = parser.parse_args()
