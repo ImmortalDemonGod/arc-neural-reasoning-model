@@ -28,11 +28,8 @@ class ARCTrainer(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         start_time = time.time()
         
-        print(f"Validation step - Batch type: {type(batch)}")
-        print(f"Validation step - Batch content: {batch}")
-
-        print(f"Validation step - Batch type: {type(batch)}")
-        print(f"Validation step - Batch content: {batch}")
+        logger.debug(f"Training step - Batch type: {type(batch)}, length: {len(batch)}")
+        logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
         if isinstance(batch, tuple):
             input_ids, attention_mask, labels = batch
@@ -60,8 +57,8 @@ class ARCTrainer(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        logger.debug(f"Validation step - Batch type: {type(batch)}")
-        logger.debug(f"Validation step - Batch content: {batch}")
+        logger.debug(f"Validation step - Batch type: {type(batch)}, length: {len(batch)}")
+        logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
         if isinstance(batch, tuple):
             logger.debug(f"Batch is a tuple with {len(batch)} elements")

@@ -233,6 +233,8 @@ class ARCDataset(Dataset):
         return total_samples
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        logger.debug(f"ARCDataset __getitem__ called with idx {idx}")
+        logger.debug(f"Returning input shape: {input_grid.shape}, output shape: {output_grid.shape}")
         if idx < 0 or idx >= len(self):
             raise IndexError(f"Index {idx} out of range (total samples: {len(self)})")
 
@@ -331,7 +333,9 @@ class ARCDataset(Dataset):
     @staticmethod
     def collate_fn(batch):
         logger.debug(f"Collate function called with batch of {len(batch)} items")
-        logger.debug(f"First batch item type: {type(batch[0])}")
+        logger.debug(f"First batch item type: {type(batch[0])}, length: {len(batch[0])}")
+    def collate_fn(batch):
+        logger.debug(f"Inputs shape: {inputs[0].shape}, Outputs shape: {outputs[0].shape}")
         if isinstance(batch[0], tuple):
             logger.debug(f"First batch item has {len(batch[0])} elements")
         
@@ -347,4 +351,5 @@ class ARCDataset(Dataset):
         padded_outputs = torch.stack([F.pad(o, (0, max_w - o.size(2), 0, max_h - o.size(1))) for o in outputs])
 
         logger.debug(f"Collate function output shapes - inputs: {padded_inputs.shape}, outputs: {padded_outputs.shape}")
-        return [padded_inputs, padded_outputs]  # Return as a list to match what the model is receiving
+        logger.debug(f"Collate function output shapes - inputs: {padded_inputs.shape}, outputs: {padded_outputs.shape}")
+        return [padded_inputs, padded_outputs]
