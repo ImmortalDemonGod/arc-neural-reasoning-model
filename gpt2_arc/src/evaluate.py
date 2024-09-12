@@ -4,7 +4,7 @@ import argparse
 import pytorch_lightning as pl
 import torch
 
-from src.data.arc_dataset import ArcDataset
+from src.data.arc_dataset import ARCDataset
 from src.models.gpt2 import GPT2ARC
 from src.config import Config
 from src.training.trainer import ARCTrainer
@@ -19,7 +19,7 @@ def evaluate(model, test_dataset, batch_size=32):
 
 def main(args):
     # Load the test data
-    test_data = ArcDataset(args.test_data)
+    test_data = ARCDataset(args.test_data)
 
     # Load the trained model
     model = GPT2ARC(Config().model)
