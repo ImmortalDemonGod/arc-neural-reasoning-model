@@ -234,7 +234,6 @@ class ARCDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         logger.debug(f"ARCDataset __getitem__ called with idx {idx}")
-        logger.debug(f"Returning input shape: {input_grid.shape}, output shape: {output_grid.shape}")
         if idx < 0 or idx >= len(self):
             raise IndexError(f"Index {idx} out of range (total samples: {len(self)})")
 
@@ -245,6 +244,7 @@ class ARCDataset(Dataset):
                 sample = task[split][idx - current_idx]
                 input_grid = self._preprocess_grid(sample["input"])
                 output_grid = self._preprocess_grid(sample["output"])
+                logger.debug(f"Returning input shape: {input_grid.shape}, output shape: {output_grid.shape}")
                 logger.debug(f"__getitem__ input dtype: {input_grid.dtype}, output dtype: {output_grid.dtype}")
                 return input_grid, output_grid
             current_idx += len(task[split])
@@ -334,14 +334,15 @@ class ARCDataset(Dataset):
     def collate_fn(batch):
         logger.debug(f"Collate function called with batch of {len(batch)} items")
         logger.debug(f"First batch item type: {type(batch[0])}, length: {len(batch[0])}")
+    @staticmethod
     def collate_fn(batch):
-        logger.debug(f"Inputs shape: {inputs[0].shape}, Outputs shape: {outputs[0].shape}")
-        if isinstance(batch[0], tuple):
-            logger.debug(f"First batch item has {len(batch[0])} elements")
-        
+        logger.debug(f"Collate function called with batch of {len(batch)} items")
+        logger.debug(f"First batch item type: {type(batch[0])}, length: {len(batch[0])}")
+
         # This method will be used by DataLoader to prepare batches
         inputs, outputs = zip(*batch)
-        
+        logger.debug(f"Inputs shape: {inputs[0].shape}, Outputs shape: {outputs[0].shape}")
+
         # Find max dimensions in the batch
         max_h = max(i.size(1) for i in inputs)
         max_w = max(i.size(2) for i in inputs)
@@ -350,6 +351,5 @@ class ARCDataset(Dataset):
         padded_inputs = torch.stack([F.pad(i, (0, max_w - i.size(2), 0, max_h - i.size(1))) for i in inputs])
         padded_outputs = torch.stack([F.pad(o, (0, max_w - o.size(2), 0, max_h - o.size(1))) for o in outputs])
 
-        logger.debug(f"Collate function output shapes - inputs: {padded_inputs.shape}, outputs: {padded_outputs.shape}")
         logger.debug(f"Collate function output shapes - inputs: {padded_inputs.shape}, outputs: {padded_outputs.shape}")
         return [padded_inputs, padded_outputs]
