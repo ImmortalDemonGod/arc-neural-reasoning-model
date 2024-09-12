@@ -221,12 +221,7 @@ def test_checkpoint_contains_model_config():
     logger.debug(f"Checkpoint keys: {checkpoint.keys()}")
 
     # Check for model configuration
-    if 'config' in checkpoint:
-        model_config = checkpoint['config']
-        logger.debug(f"Model configuration found in checkpoint: {model_config}")
-        # Add assertions to verify the configuration matches expected values
-        print("Model configuration found in checkpoint:", model_config)  # Add this line
-    else:
-        print("Model configuration not found in checkpoint.")  # Add this line
-        logger.debug("Model configuration not found in checkpoint.")
-        # Consider adding a feature to save the configuration if needed
+    assert 'config' in checkpoint, "Model configuration not found in checkpoint."
+    model_config = checkpoint['config']
+    logger.debug(f"Model configuration found in checkpoint: {model_config}")
+    print("Model configuration found in checkpoint:", model_config)
