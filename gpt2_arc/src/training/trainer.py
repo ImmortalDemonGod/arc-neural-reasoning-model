@@ -106,6 +106,11 @@ class ARCTrainer(pl.LightningModule):
         self.log('test_loss', loss)  # Log the test loss
         return {"test_accuracy": accuracy}
 
+    def on_save_checkpoint(self, checkpoint):
+        # Add model configuration to the checkpoint
+        checkpoint['config'] = self.config.model
+        logger.debug("Model configuration added to checkpoint.")
+
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
         lr_scheduler = {
