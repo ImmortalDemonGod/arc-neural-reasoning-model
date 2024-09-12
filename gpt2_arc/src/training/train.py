@@ -55,8 +55,13 @@ def main(args):
         callbacks.append(checkpoint_callback)
     from torch.utils.data import DataLoader
 
+    logger.debug(f"Initializing train DataLoader with batch_size={args.batch_size}")
     train_loader = DataLoader(train_data, batch_size=args.batch_size, num_workers=7)
+    logger.debug(f"Train DataLoader initialized with {len(train_loader)} batches")
+
+    logger.debug(f"Initializing validation DataLoader with batch_size={args.batch_size}")
     val_loader = DataLoader(val_data, batch_size=args.batch_size, num_workers=7)
+    logger.debug(f"Validation DataLoader initialized with {len(val_loader)} batches")
 
     pl_trainer = pl.Trainer(
         max_epochs=config.training.max_epochs,

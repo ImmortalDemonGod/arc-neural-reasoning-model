@@ -60,13 +60,23 @@ class ARCTrainer(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        logger.debug(f"Validation step - Batch type: {type(batch)}")
+        logger.debug(f"Validation step - Batch content: {batch}")
+
         if isinstance(batch, tuple):
+            logger.debug(f"Batch is a tuple with {len(batch)} elements")
+            for i, item in enumerate(batch):
+                logger.debug(f"Tuple element {i}: type={type(item)}, shape={item.shape if hasattr(item, 'shape') else 'N/A'}")
             input_ids, attention_mask, labels = batch
         elif isinstance(batch, dict):
+            logger.debug(f"Batch is a dictionary with keys: {batch.keys()}")
+            for key, value in batch.items():
+                logger.debug(f"Dict item '{key}': type={type(value)}, shape={value.shape if hasattr(value, 'shape') else 'N/A'}")
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
         else:
+            logger.debug(f"Batch is of unexpected type: {type(batch)}")
             raise ValueError("Batch must be either a tuple or a dictionary")
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
