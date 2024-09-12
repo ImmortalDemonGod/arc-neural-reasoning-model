@@ -33,7 +33,13 @@ def evaluate(model, test_dataset, batch_size=32):
     differential_accuracies = []
 
     for batch in dataloader:
-        input_ids, attention_mask, labels = batch
+        if len(batch) == 3:
+            input_ids, attention_mask, labels = batch
+        elif len(batch) == 2:
+            input_ids, labels = batch
+            attention_mask = None  # or create a default attention mask if needed
+        else:
+            raise ValueError(f"Unexpected batch format with {len(batch)} elements")
         outputs = model(input_ids, attention_mask)
         predictions = torch.argmax(outputs, dim=-1)
 
