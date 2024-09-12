@@ -124,16 +124,6 @@ class ARCTrainer(pl.LightningModule):
         self.log('test_accuracy', accuracy)
         self.log('test_loss', loss)  # Log the test loss
         return {"test_accuracy": accuracy, "test_loss": loss}
-        outputs = self(input_ids, attention_mask)
-        loss = self.compute_loss(outputs, labels)
-        B, T, C = outputs.size()  # Define B and C
-        outputs = outputs.view(B, -1, C)
-        predictions = torch.argmax(outputs, dim=-1)
-        labels = labels.view(B, -1)
-        accuracy = (predictions == labels).float().mean()
-        self.log('test_accuracy', accuracy)
-        self.log('test_loss', loss)  # Log the test loss
-        return {"test_accuracy": accuracy}
 
     def on_save_checkpoint(self, checkpoint):
         config_dict = {
