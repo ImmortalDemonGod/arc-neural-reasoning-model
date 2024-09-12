@@ -330,6 +330,11 @@ class ARCDataset(Dataset):
         return processed_data
     @staticmethod
     def collate_fn(batch):
+        logger.debug(f"Collate function called with batch of {len(batch)} items")
+        logger.debug(f"First batch item type: {type(batch[0])}")
+        if isinstance(batch[0], tuple):
+            logger.debug(f"First batch item has {len(batch[0])} elements")
+        
         # This method will be used by DataLoader to prepare batches
         inputs, outputs = zip(*batch)
         
@@ -341,4 +346,5 @@ class ARCDataset(Dataset):
         padded_inputs = torch.stack([F.pad(i, (0, max_w - i.size(2), 0, max_h - i.size(1))) for i in inputs])
         padded_outputs = torch.stack([F.pad(o, (0, max_w - o.size(2), 0, max_h - o.size(1))) for o in outputs])
 
+        logger.debug(f"Collate function output shapes - inputs: {padded_inputs.shape}, outputs: {padded_outputs.shape}")
         return padded_inputs, padded_outputs
