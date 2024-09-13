@@ -175,6 +175,7 @@ def test_evaluation_process_with_arckit_data():
 
     # Log the structure of evaluation data
     logger.debug(f"Evaluation data structure: {evaluation_data}")
+    logger.debug(f"Evaluation data structure: {evaluation_data}")
     test_dataset = ARCDataset(evaluation_data, is_test=True)
 
     # Initialize the model and trainer

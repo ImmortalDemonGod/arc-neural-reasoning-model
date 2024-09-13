@@ -99,6 +99,7 @@ class ARCTrainer(pl.LightningModule):
 
     def test_step(self, batch, batch_index):
         logger.debug(f"Test step - Batch type: {type(batch)}, length: {len(batch)}")
+        logger.debug(f"Task IDs in batch: {task_ids}")
         logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
         if isinstance(batch, list) and len(batch) == 3:
@@ -142,12 +143,14 @@ class ARCTrainer(pl.LightningModule):
             self.log(f'{task_id}_test_accuracy', accuracy[i] if accuracy.dim() > 0 else accuracy)
             self.log(f'{task_id}_test_diff_accuracy', diff_accuracy[i] if isinstance(diff_accuracy, torch.Tensor) and diff_accuracy.dim() > 0 else diff_accuracy)
 
-        return {
+        result = {
             'test_loss': loss,
             'test_accuracy': accuracy,
             'test_diff_accuracy': diff_accuracy,
             'task_ids': task_ids
         }
+        result['task_id'] = task_ids
+        return result
 
     def on_save_checkpoint(self, checkpoint):
         config_dict = {
