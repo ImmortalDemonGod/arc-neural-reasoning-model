@@ -99,8 +99,6 @@ class ARCTrainer(pl.LightningModule):
 
     def test_step(self, batch, batch_index):
         logger.debug(f"Test step - Batch type: {type(batch)}, length: {len(batch)}")
-        logger.debug(f"Task IDs in batch: {task_ids}")
-        logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
         if isinstance(batch, list) and len(batch) == 3:
             inputs, outputs, task_ids = batch
@@ -110,6 +108,7 @@ class ARCTrainer(pl.LightningModule):
             attention_mask = None
         elif isinstance(batch, tuple) and len(batch) == 4:
             inputs, attention_mask, outputs, task_ids = batch
+            logger.debug(f"Task IDs in batch: {task_ids}")
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
