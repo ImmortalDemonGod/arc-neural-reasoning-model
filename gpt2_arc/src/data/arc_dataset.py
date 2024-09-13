@@ -52,8 +52,6 @@ class ARCDataset(Dataset):
             for item in data_source:
                 if 'task_id' not in item:
                     logger.warning(f"Missing task_id in data item: {item}")
-    ):
-        logger.debug(f"ARCDataset.__init__ called with data_source: {data_source}")
         self.debug_attr = "test"  # Simple attribute for testing
         set_debug_mode(debug)  # Set debug mode based on parameter
         logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")
