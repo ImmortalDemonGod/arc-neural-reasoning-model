@@ -25,6 +25,7 @@ class ARCTrainer(pl.LightningModule):
         self.lr = config.training.learning_rate
         self.train_losses = []
         self.logged_metrics = {}
+        self.test_outputs = []  # Store test outputs for aggregation
 
     def training_step(self, batch, batch_idx):
         start_time = time.time()
@@ -146,20 +147,23 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Batch {batch_index} - Task IDs: {task_ids}")
         logger.debug(f"Batch {batch_index} - Loss: {loss.item()}, Accuracy: {accuracy.item()}")
 
-        return {
+        result = {
             'loss': loss,
             'accuracy': accuracy,
             'task_ids': task_ids
         }
 
-    def test_epoch_end(self, outputs):
+        self.test_outputs.append(result)  # Store the result
+        return result
+
+    def on_test_epoch_end(self):
         all_task_ids = []
         all_losses = []
         all_accuracies = []
 
         logger.debug("Aggregating test results from test_step outputs.")
 
-        for output in outputs:
+        for output in self.test_outputs:
             batch_task_ids = output['task_ids']
             if isinstance(batch_task_ids, torch.Tensor):
                 batch_task_ids = batch_task_ids.tolist()
@@ -180,12 +184,7 @@ class ARCTrainer(pl.LightningModule):
             })
 
         logger.debug(f"Aggregated test results: {self.test_results}")
-        config_dict = {
-            'n_embd': self.config.model.n_embd,
-            'n_head': self.config.model.n_head,
-            'n_layer': self.config.model.n_layer,
-            'dropout': self.config.model.dropout
-        }
+        self.test_outputs.clear()  # Clear outputs after processing
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
