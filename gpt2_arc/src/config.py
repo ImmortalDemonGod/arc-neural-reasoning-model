@@ -16,6 +16,7 @@ class TrainingConfig:
     learning_rate: float = 1e-4
     max_epochs: int = 10
     use_gpu: bool = True
+    log_level: str = "INFO"  # Add log_level attribute with default value
 
 
 from dataclasses import field
