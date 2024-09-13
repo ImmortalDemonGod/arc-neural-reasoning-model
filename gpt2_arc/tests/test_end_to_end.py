@@ -189,9 +189,12 @@ def test_evaluation_process_with_arckit_data():
     # Log the entire evaluation results for debugging
     logger.debug(f"Evaluation results: {evaluation_results}")
 
-    # Verify that metrics are logged for each task ID
+    # Log the entire evaluation results for debugging
+    logger.debug(f"Evaluation results: {evaluation_results}")
     for result in evaluation_results:
         task_id = result.get('task_id', 'unknown')
+        if task_id == 'unknown':
+            logger.error(f"Missing task_id in result: {result}")
         assert task_id != 'unknown', "Task ID should be known"
         logger.info(f"Task {task_id}: {result}")
 
