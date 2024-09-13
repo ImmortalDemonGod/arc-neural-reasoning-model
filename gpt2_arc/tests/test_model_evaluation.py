@@ -191,8 +191,8 @@ def test_validation_step_with_incorrect_batch_format(trainer):
     # Create a batch with an incorrect format (e.g., a list)
     incorrect_batch = [
         torch.randint(0, 10, (2, 900)),  # Random input data
-        torch.ones((2, 900)),  # Random attention mask
-        torch.randint(0, 10, (2, 900))  # Random labels
+        torch.ones((2, 900))             # Random attention mask
+        # Labels are missing
     ]
 
     logger.debug(f"Testing with incorrect batch format: {type(incorrect_batch)}")

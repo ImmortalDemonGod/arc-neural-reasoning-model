@@ -46,6 +46,7 @@ class ARCTrainer(pl.LightningModule):
             labels = batch["labels"]
             task_ids = batch.get("task_ids")
         else:
+            logger.error(f"Unexpected batch format: {type(batch)}. Content: {batch}")
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
         # Ensure tensors are float32
@@ -67,6 +68,7 @@ class ARCTrainer(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         logger.debug(f"Validation step - Batch type: {type(batch)}, length: {len(batch)}")
+        logger.debug(f"Batch content: {batch}")
         
         if isinstance(batch, dict):
             logger.debug(f"Batch['input_ids'] shape: {batch['input_ids'].shape}, Batch['labels'] shape: {batch['labels'].shape}")
@@ -75,9 +77,11 @@ class ARCTrainer(pl.LightningModule):
             labels = batch["labels"]
             task_ids = batch.get("task_ids")
         elif isinstance(batch, (list, tuple)) and len(batch) == 3:
+            logger.debug("Processing list/tuple batch with 3 elements")
             input_ids, attention_mask, labels = batch
             task_ids = None
         elif isinstance(batch, (list, tuple)) and len(batch) == 4:
+            logger.debug("Processing list/tuple batch with 4 elements")
             input_ids, attention_mask, labels, task_ids = batch
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
