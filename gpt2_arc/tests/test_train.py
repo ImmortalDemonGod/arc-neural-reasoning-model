@@ -218,7 +218,6 @@ def test_batch_size_extremes(mock_args, batch_size):
             enable_checkpointing=False,
             enable_progress_bar=False,
             fast_dev_run=False,  # Include fast_dev_run in the expected call
-            fast_dev_run=False,  # Include fast_dev_run in the expected call
             gradient_clip_val=1.0,
             accelerator='cpu'
         )
