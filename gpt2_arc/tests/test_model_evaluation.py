@@ -195,7 +195,7 @@ def test_validation_step_with_incorrect_batch_format(trainer):
         torch.randint(0, 10, (2, 900))  # Random labels
     ]
 
-    # Check if a ValueError is raised with the incorrect batch
+    logger.debug(f"Testing with incorrect batch format: {type(incorrect_batch)}")
     with pytest.raises(ValueError, match="Unexpected batch format: <class 'list'>. Content:"):
         trainer.validation_step(incorrect_batch, 0)
 
