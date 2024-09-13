@@ -148,7 +148,7 @@ class ARCTrainer(pl.LightningModule):
             'test_diff_accuracy': diff_accuracy,
             'task_ids': task_ids
         }
-        result['task_id'] = task_ids
+        result['task_id'] = task_ids if isinstance(task_ids, list) else [task_ids]
         return result
 
     def on_save_checkpoint(self, checkpoint):
