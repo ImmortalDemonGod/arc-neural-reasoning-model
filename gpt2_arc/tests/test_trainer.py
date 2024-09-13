@@ -143,8 +143,9 @@ def test_arctrainer_validation_step(trainer, batch_format):
 
 
 def test_arctrainer_configure_optimizers(trainer):
-    optimizer = trainer.configure_optimizers()
-    assert isinstance(optimizer, torch.optim.AdamW)  # Use torch.optim.AdamW
+    optimizers, schedulers = trainer.configure_optimizers()
+    assert any(isinstance(opt, torch.optim.Adam) for opt in optimizers), "Expected an Adam optimizer"
+    assert any(sch['scheduler'].__class__.__name__ == 'StepLR' for sch in schedulers), "Expected a StepLR scheduler"
 
 
 def test_arctrainer_train_dataloader(trainer):
