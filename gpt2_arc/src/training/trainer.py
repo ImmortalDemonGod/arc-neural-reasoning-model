@@ -67,9 +67,14 @@ class ARCTrainer(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         logger.debug(f"Validation step - Batch type: {type(batch)}, length: {len(batch)}")
-        logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
-
-        if isinstance(batch, list) and len(batch) == 3:
+        
+        if isinstance(batch, dict):
+            logger.debug(f"Batch['input_ids'] shape: {batch['input_ids'].shape}, Batch['labels'] shape: {batch['labels'].shape}")
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"]
+            task_ids = batch.get("task_ids")
+        elif isinstance(batch, list) and len(batch) == 3:
             input_ids, attention_mask, labels = batch
         elif isinstance(batch, list) and len(batch) == 4:
             input_ids, attention_mask, labels, task_ids = batch
