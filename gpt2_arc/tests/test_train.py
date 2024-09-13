@@ -42,6 +42,7 @@ def mock_args():
     args.no_checkpointing = False
     args.no_progress_bar = False
     args.log_level = "INFO"  # Add log_level attribute
+    args.fast_dev_run = False  # Add fast_dev_run attribute
     return args
 
 
