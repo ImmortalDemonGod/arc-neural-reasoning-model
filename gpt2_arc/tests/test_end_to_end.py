@@ -173,7 +173,8 @@ def test_evaluation_process_with_arckit_data():
     # Load data using arckit
     _ , evaluation_data = arckit.load_data()
 
-    # Initialize the dataset for testing
+    # Log the structure of evaluation data
+    logger.debug(f"Evaluation data structure: {evaluation_data}")
     test_dataset = ARCDataset(evaluation_data, is_test=True)
 
     # Initialize the model and trainer
@@ -189,8 +190,11 @@ def test_evaluation_process_with_arckit_data():
     # Log the entire evaluation results for debugging
     logger.debug(f"Evaluation results: {evaluation_results}")
     for result in evaluation_results:
-        if 'task_id' not in result:
-            logger.error(f"Missing task_id in evaluation result: {result}")
+        task_id = result.get('task_id', 'unknown')
+        if task_id == 'unknown':
+            logger.error(f"Missing task_id in result: {result}")
+        else:
+            logger.info(f"Task {task_id}: {result}")
 
     # Log the entire evaluation results for debugging
     logger.debug(f"Evaluation results: {evaluation_results}")

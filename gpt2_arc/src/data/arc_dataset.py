@@ -211,6 +211,8 @@ class ARCDataset(Dataset):
         processed_data = []
         logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
         for task in taskset.tasks:
+            logger.debug(f"Task ID: {task.id}")
+        for task in taskset.tasks:
             logger.debug(f"Processing task: {task.id}")
             logger.debug(f"Train samples: {len(task.train)}, Test samples: {len(task.test)}")
             processed_task = {
