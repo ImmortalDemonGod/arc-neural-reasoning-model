@@ -37,7 +37,8 @@ class ARCTrainer(pl.LightningModule):
             task_ids = None  # We don't have task_ids in this case
         elif isinstance(batch, tuple) and len(batch) == 4:
             input_ids, attention_mask, labels, task_ids = batch
-        elif isinstance(batch, dict):
+        elif len(batch) == 4:
+            input_ids, attention_mask, labels, task_ids = batch
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
@@ -70,7 +71,8 @@ class ARCTrainer(pl.LightningModule):
 
         if isinstance(batch, tuple) and len(batch) == 3:
             input_ids, attention_mask, labels = batch
-        elif isinstance(batch, dict):
+        elif len(batch) == 4:
+            input_ids, attention_mask, labels, task_ids = batch
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
