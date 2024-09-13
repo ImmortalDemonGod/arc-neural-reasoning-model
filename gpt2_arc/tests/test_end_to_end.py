@@ -60,7 +60,11 @@ def test_end_to_end():
             attention_mask = torch.ones(input_stack.size(0), input_stack.size(2) * input_stack.size(3), dtype=torch.float32)
 
             logger.debug(f"Collate function attention_mask dtype: {attention_mask.dtype}")
-            return input_stack, attention_mask, output_stack
+            
+            # Generate dummy task_ids for each item in the batch
+            task_ids = [f"task_{i}" for i in range(len(batch))]
+            
+            return input_stack, attention_mask, output_stack, task_ids
             logger.debug(f"Batch output dtypes before stack: {[item[1].dtype for item in batch]}")
 
             # Inputs and outputs are already tensors, so we just need to stack them
