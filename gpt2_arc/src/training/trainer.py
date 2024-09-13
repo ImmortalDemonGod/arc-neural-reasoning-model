@@ -143,16 +143,43 @@ class ARCTrainer(pl.LightningModule):
             self.log(f'{task_id}_test_accuracy', accuracy[i] if accuracy.dim() > 0 else accuracy)
             self.log(f'{task_id}_test_diff_accuracy', diff_accuracy[i] if isinstance(diff_accuracy, torch.Tensor) and diff_accuracy.dim() > 0 else diff_accuracy)
 
-        result = {
-            'test_loss': loss,
-            'test_accuracy': accuracy,
-            'test_diff_accuracy': diff_accuracy,
+        logger.debug(f"Batch {batch_index} - Task IDs: {task_ids}")
+        logger.debug(f"Batch {batch_index} - Loss: {loss.item()}, Accuracy: {accuracy.item()}")
+
+        return {
+            'loss': loss,
+            'accuracy': accuracy,
             'task_ids': task_ids
         }
-        result['task_id'] = task_ids if isinstance(task_ids, list) else [task_ids]
-        return result
 
-    def on_save_checkpoint(self, checkpoint):
+    def test_epoch_end(self, outputs):
+        all_task_ids = []
+        all_losses = []
+        all_accuracies = []
+
+        logger.debug("Aggregating test results from test_step outputs.")
+
+        for output in outputs:
+            batch_task_ids = output['task_ids']
+            if isinstance(batch_task_ids, torch.Tensor):
+                batch_task_ids = batch_task_ids.tolist()
+
+            all_task_ids.extend(batch_task_ids)
+            all_losses.extend([output['loss'].item()] * len(batch_task_ids))
+            all_accuracies.extend([output['accuracy'].item()] * len(batch_task_ids))
+
+            logger.debug(f"Batch task IDs: {batch_task_ids}")
+            logger.debug(f"Batch losses: {output['loss'].item()}, accuracies: {output['accuracy'].item()}")
+
+        self.test_results = []
+        for task_id, loss, accuracy in zip(all_task_ids, all_losses, all_accuracies):
+            self.test_results.append({
+                'task_id': task_id,
+                'test_loss': loss,
+                'test_accuracy': accuracy
+            })
+
+        logger.debug(f"Aggregated test results: {self.test_results}")
         config_dict = {
             'n_embd': self.config.model.n_embd,
             'n_head': self.config.model.n_head,

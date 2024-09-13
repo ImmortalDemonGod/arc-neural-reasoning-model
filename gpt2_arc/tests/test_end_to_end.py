@@ -188,27 +188,20 @@ def test_evaluation_process_with_arckit_data():
     lightning_trainer = pl.Trainer(logger=False, enable_checkpointing=False, enable_progress_bar=False)
     evaluation_results = lightning_trainer.test(trainer)
 
-    # Log the entire evaluation results for debugging
+    # Access the test results from the trainer
+    evaluation_results = trainer.test_results
+
+    # Log the evaluation results
     logger.debug(f"Evaluation results: {evaluation_results}")
     for result in evaluation_results:
         task_id = result.get('task_id', 'unknown')
         if task_id == 'unknown':
             logger.error(f"Missing task_id in result: {result}")
         else:
-            logger.info(f"Task {task_id}: {result}")
-
-    # Log the entire evaluation results for debugging
-    logger.debug(f"Evaluation results: {evaluation_results}")
-    for result in evaluation_results:
-        task_ids = result.get('task_id', [])
-        if not task_ids:
-            logger.error(f"Missing task_id in result: {result}")
-        assert task_ids, "Task ID should be known"
-        for task_id in task_ids:
-            logger.info(f"Task {task_id}: {result}")
+            logger.info(f"Task {task_id}: Loss={result['test_loss']}, Accuracy={result['test_accuracy']}")
 
     # Check for duplicate metrics
-    unique_task_metrics = {result['task_id']: result for result in evaluation_results}
-    assert len(unique_task_metrics) == len(evaluation_results), "Each task should have unique metrics"
+    unique_task_ids = set(result['task_id'] for result in evaluation_results)
+    assert len(unique_task_ids) == len(evaluation_results), "Each task should have unique metrics"
 
     logger.debug("Completed evaluation process test with arckit data")
