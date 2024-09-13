@@ -41,6 +41,7 @@ def mock_args():
     args.no_logging = False
     args.no_checkpointing = False
     args.no_progress_bar = False
+    args.log_level = "INFO"  # Add log_level attribute
     return args
 
 
