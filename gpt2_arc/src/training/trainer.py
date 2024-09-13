@@ -78,11 +78,7 @@ class ARCTrainer(pl.LightningModule):
             input_ids, attention_mask, labels = batch
             task_ids = None
         elif isinstance(batch, (list, tuple)) and len(batch) == 4:
-            if len(batch) == 3:
-                input_ids, attention_mask, labels = batch
-                task_ids = None
-            else:
-                input_ids, attention_mask, labels, task_ids = batch
+            input_ids, attention_mask, labels, task_ids = batch
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
