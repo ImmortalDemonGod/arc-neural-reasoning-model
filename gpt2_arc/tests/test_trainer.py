@@ -117,11 +117,22 @@ def test_validation_step_with_list_input():
     batch_size = 2
     vocab_size = 10
 
-    # Create a batch as a list (simulating the output from collate_fn)
-    batch = [
-        torch.randint(0, vocab_size, (batch_size, 1, 30, 30)).float(),  # inputs
-        torch.randint(0, vocab_size, (batch_size, 1, 30, 30)).long(),   # outputs
-    ]
+    # Create inputs and labels
+    inputs = torch.randint(0, vocab_size, (batch_size, 1, 30, 30)).float()
+    inputs_flat = inputs.view(batch_size, -1)  # Flatten inputs
+
+    labels = torch.randint(0, vocab_size, (batch_size, 1, 30, 30)).long()
+    labels_flat = labels.view(batch_size, -1)  # Flatten labels
+
+    # Create an attention mask
+    attention_mask = torch.ones((batch_size, inputs_flat.shape[1])).float()
+
+    # Create batch as a tuple of length 3
+    batch = (
+        inputs_flat,       # input_ids
+        attention_mask,    # attention_mask
+        labels_flat        # labels
+    )
 
     trainer.validation_step(batch, 0)
 
