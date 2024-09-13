@@ -30,7 +30,10 @@ class ARCTrainer(pl.LightningModule):
         start_time = time.time()
         
         logger.debug(f"Training step - Batch type: {type(batch)}, length: {len(batch)}")
-        logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
+        if isinstance(batch, dict):
+            logger.debug(f"Batch input_ids shape: {batch['input_ids'].shape}, Batch labels shape: {batch['labels'].shape}")
+        else:
+            logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
         if isinstance(batch, tuple) and len(batch) == 3:
             input_ids, attention_mask, labels = batch
@@ -81,7 +84,8 @@ class ARCTrainer(pl.LightningModule):
         input_ids = input_ids.to(torch.float32)
         if attention_mask is not None:
             attention_mask = attention_mask.to(torch.float32)
-        labels = labels.long()
+        if isinstance(labels, torch.Tensor):
+            labels = labels.long()
         
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)

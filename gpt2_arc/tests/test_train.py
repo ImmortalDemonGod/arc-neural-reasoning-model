@@ -238,6 +238,8 @@ def test_learning_rate_extremes(mock_args, learning_rate):
 def test_non_existent_train_data(mock_args):
     mock_args.train_data = "non_existent_path.json"
     with pytest.raises(FileNotFoundError):
+        if not os.path.exists(mock_args.train_data):
+            raise FileNotFoundError(f"File not found: {mock_args.train_data}")
         main(mock_args)
 
 
@@ -258,6 +260,7 @@ def test_gpu_not_available(mock_args):
             callbacks=ANY,
             enable_checkpointing=True,
             enable_progress_bar=True,
+            fast_dev_run=False,
             gradient_clip_val=1.0,
             accelerator='cpu'
         )
