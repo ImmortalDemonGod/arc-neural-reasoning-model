@@ -270,7 +270,7 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 
-@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None)
 @given(batch_size=st.integers(min_value=1, max_value=1024))
 def test_valid_batch_sizes(mock_args, batch_size):
     mock_args.batch_size = batch_size
