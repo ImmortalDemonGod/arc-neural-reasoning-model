@@ -186,8 +186,6 @@ class ARCTrainer(pl.LightningModule):
             'n_layer': self.config.model.n_layer,
             'dropout': self.config.model.dropout
         }
-        checkpoint['config'] = config_dict
-        logger.debug(f"Model configuration added to checkpoint: {config_dict}")
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
