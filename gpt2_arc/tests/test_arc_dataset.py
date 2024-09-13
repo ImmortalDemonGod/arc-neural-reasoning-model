@@ -189,7 +189,7 @@ def test_arc_dataset_invalid_data(sample_data):
 
 def test_arc_dataset_preprocess_grid(sample_data):
     dataset = ARCDataset(sample_data, num_symbols=10)
-    input_grid, output_grid = dataset[0]
+    input_grid, output_grid, *_ = dataset[0]
 
     print(f"Input grid shape: {input_grid.shape}")
     print(f"Output grid shape: {output_grid.shape}")
@@ -242,7 +242,7 @@ def test_collate_fn_output():
     batch = next(iter(dataloader))
 
     assert isinstance(batch, list), "Collate function should return a list"
-    assert len(batch) == 2, "Collate function should return a list with 2 elements"
+    assert len(batch) == 3, "Collate function should return a list with 3 elements"
     assert isinstance(batch[0], torch.Tensor), "First element should be a tensor (inputs)"
     assert isinstance(batch[1], torch.Tensor), "Second element should be a tensor (outputs)"
     assert batch[0].shape == (2, 1, 30, 30), "Input tensor should have shape (batch_size, 1, 30, 30)"
@@ -255,7 +255,7 @@ def test_getitem_output():
         {"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]},
     ]
     dataset = ARCDataset(sample_data)
-    input_grid, output_grid = dataset[0]
+    input_grid, output_grid, *_ = dataset[0]
 
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
@@ -282,7 +282,7 @@ def test_arc_dataset_taskset_initialization(mock_taskset):
     print(f"Dataset length: {len(dataset)}, Expected: 3")
     
     assert len(dataset) == 3, "Dataset should have 3 samples (2 train + 1 test)"
-    input_grid, output_grid = dataset[0]
+    input_grid, output_grid, *_ = dataset[0]
     print(f"Input grid shape: {input_grid.shape}, Expected: (1, 30, 30)")
     print(f"Output grid shape: {output_grid.shape}, Expected: (1, 30, 30)")
     
@@ -353,7 +353,7 @@ def test_arc_dataset_variable_size_grids(sample_data):
     assert torch.allclose(center_output_1, torch.tensor([[0., 1.], [1., 0.]])), "First sample output data not preserved correctly"
     
     # Check third sample (3x3)
-    input_grid_2, output_grid_2 = dataset[2]
+    input_grid_2, output_grid_2, *_ = dataset[2]
     assert input_grid_2.shape == (1, 30, 30), "Third sample should have shape (1, 30, 30)"
     assert output_grid_2.shape == (1, 30, 30), "Third sample should have shape (1, 30, 30)"
     
