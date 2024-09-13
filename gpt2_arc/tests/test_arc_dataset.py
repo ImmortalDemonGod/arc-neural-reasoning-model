@@ -51,7 +51,7 @@ def test_arc_dataset_initialization(sample_data, debug_mode):
     logger.debug(f"Dataset length: {len(dataset)}, expected: {len(sample_data)}")
     assert len(dataset) == len(sample_data), "Dataset length mismatch"
     
-    input_grid, output_grid = dataset[0]
+    input_grid, output_grid, *_ = dataset[0]
     logger.debug(f"Input grid shape: {input_grid.shape}, expected: (1, 30, 30)")
     logger.debug(f"Output grid shape: {output_grid.shape}, expected: (1, 30, 30)")
     
@@ -74,7 +74,7 @@ def test_arc_dataset_initialization(sample_data, debug_mode):
     dataset = ARCDataset(sample_data)
     assert len(dataset) == 2, "Dataset should have 2 samples"
     
-    input_grid, output_grid = dataset[0]
+    input_grid, output_grid, *_ = dataset[0]
     
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
@@ -155,7 +155,7 @@ def test_arc_dataset_synthetic_data(debug_mode):
 
 def test_arc_dataset_getitem(sample_data):
     dataset = ARCDataset(sample_data)
-    input_grid, output_grid = dataset[0]
+    input_grid, output_grid, *_ = dataset[0]
 
     assert isinstance(input_grid, torch.Tensor), "Input should be a torch.Tensor"
     assert isinstance(output_grid, torch.Tensor), "Output should be a torch.Tensor"
@@ -330,7 +330,7 @@ def test_arc_dataset_collate_fn(sample_data):
     dataset = ARCDataset(sample_data)
     dataloader = DataLoader(dataset, batch_size=2, collate_fn=ARCDataset.collate_fn)
     batch = next(iter(dataloader))
-    input_batch, output_batch = batch
+    input_batch, output_batch, *_ = batch
     logger.debug(f"Collated batch shapes - inputs: {input_batch.shape}, outputs: {output_batch.shape}")
     assert input_batch.shape == (2, 1, 30, 30), "Batched input should have shape (2, 1, 30, 30)"
     assert output_batch.shape == (2, 1, 30, 30), "Batched output should have shape (2, 1, 30, 30)"
@@ -342,7 +342,7 @@ def test_arc_dataset_variable_size_grids(sample_data):
     dataset = ARCDataset(variable_data)
     
     # Check first sample (2x2)
-    input_grid_1, output_grid_1 = dataset[0]
+    input_grid_1, output_grid_1, *_ = dataset[0]
     assert input_grid_1.shape == (1, 30, 30), "First sample should have shape (1, 30, 30)"
     assert output_grid_1.shape == (1, 30, 30), "First sample should have shape (1, 30, 30)"
     
