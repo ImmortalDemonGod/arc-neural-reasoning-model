@@ -32,31 +32,28 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Training step - Batch type: {type(batch)}, length: {len(batch)}")
         logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
-        if isinstance(batch, tuple):
-            input_ids, attention_mask, labels, task_ids = batch
+        if isinstance(batch, tuple) and len(batch) == 3:
+            input_ids, attention_mask, labels = batch
+            task_ids = None  # We don't have task_ids in this case
         elif isinstance(batch, dict):
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
-            labels = batch["labels"].long()
-            task_ids = batch["task_ids"]
-        elif isinstance(batch, list) and len(batch) == 3:
-            input_ids, labels, task_ids = batch
-            attention_mask = None
+            labels = batch["labels"]
+            task_ids = batch.get("task_ids")
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
-
-        # Ensure task_ids are handled correctly
-        task_ids = [str(task_id) for task_id in task_ids]
 
         # Ensure tensors are float32
         input_ids = input_ids.to(torch.float32)
         if attention_mask is not None:
             attention_mask = attention_mask.to(torch.float32)
         labels = labels.long()  # Ensure labels are of type Long
+
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("train_loss", loss)
         self.train_losses.append(loss.item())
+        
         end_time = time.time()
         batch_time = end_time - start_time
         logger.info(f"Batch {batch_idx} training time: {batch_time:.4f} seconds")
@@ -67,32 +64,21 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Validation step - Batch type: {type(batch)}, length: {len(batch)}")
         logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
 
-        if isinstance(batch, tuple):
-            logger.debug(f"Batch is a tuple with {len(batch)} elements")
-            for i, item in enumerate(batch):
-                logger.debug(f"Tuple element {i}: type={type(item)}, shape={item.shape if hasattr(item, 'shape') else 'N/A'}")
+        if isinstance(batch, tuple) and len(batch) == 3:
             input_ids, attention_mask, labels = batch
         elif isinstance(batch, dict):
-            logger.debug(f"Batch is a dictionary with keys: {batch.keys()}")
-            for key, value in batch.items():
-                logger.debug(f"Dict item '{key}': type={type(value)}, shape={value.shape if hasattr(value, 'shape') else 'N/A'}")
             input_ids = batch["input_ids"]
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
-        elif isinstance(batch, list) and len(batch) == 2:
-            input_ids, labels = batch
-            attention_mask = None
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
-
-        if input_ids is None or labels is None:
-            raise ValueError(f"Missing required batch components. Batch content: {batch}")
 
         # Ensure tensors are float32
         input_ids = input_ids.to(torch.float32)
         if attention_mask is not None:
             attention_mask = attention_mask.to(torch.float32)
         labels = labels.long()
+        
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("val_loss", loss)
