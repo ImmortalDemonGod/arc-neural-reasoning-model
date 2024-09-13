@@ -28,6 +28,7 @@ def trainer(model, sample_data):
     val_dataset = ARCDataset(sample_data)
     trainer = ARCTrainer(model, train_dataset, val_dataset, config)
     trainer.logged_metrics = {}
+    trainer.config.training.log_level = "INFO"  # Add this line
     trainer.log = lambda name, value: trainer.logged_metrics.update({name: value})
     return trainer
 
