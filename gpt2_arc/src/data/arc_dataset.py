@@ -46,6 +46,13 @@ class ARCDataset(Dataset):
         test_split: float = 0.2,
         debug=False,
     ):
+        logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
+        # Add logging to verify task_id presence
+        if isinstance(data_source, list):
+            for item in data_source:
+                if 'task_id' not in item:
+                    logger.warning(f"Missing task_id in data item: {item}")
+    ):
         logger.debug(f"ARCDataset.__init__ called with data_source: {data_source}")
         self.debug_attr = "test"  # Simple attribute for testing
         set_debug_mode(debug)  # Set debug mode based on parameter

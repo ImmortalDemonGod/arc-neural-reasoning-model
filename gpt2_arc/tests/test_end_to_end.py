@@ -188,6 +188,9 @@ def test_evaluation_process_with_arckit_data():
 
     # Log the entire evaluation results for debugging
     logger.debug(f"Evaluation results: {evaluation_results}")
+    for result in evaluation_results:
+        if 'task_id' not in result:
+            logger.error(f"Missing task_id in evaluation result: {result}")
 
     # Log the entire evaluation results for debugging
     logger.debug(f"Evaluation results: {evaluation_results}")
