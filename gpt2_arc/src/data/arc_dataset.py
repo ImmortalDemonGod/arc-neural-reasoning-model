@@ -10,7 +10,7 @@ from torch.utils.data import Dataset
 import logging
 
 try:
-    from arckit.data import TaskSet
+    from arckit.data import TaskSet, Task
 except ImportError:
     TaskSet = None
 
