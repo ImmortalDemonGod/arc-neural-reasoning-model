@@ -9,6 +9,7 @@ from collections import deque
 from torch.optim.lr_scheduler import LambdaLR
 from ..config import Config
 from ..utils.helpers import differential_pixel_accuracy
+from ..utils.results_collector import ResultsCollector
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ class ARCTrainer(pl.LightningModule):
         self.logged_metrics = {}
         self.test_outputs = []  # Store test outputs for aggregation
         self.test_results = []  # Initialize test results for storing test outcomes
+        self.results_collector = ResultsCollector(config)
 
     def training_step(self, batch, batch_idx):
         start_time = time.time()
@@ -60,6 +62,7 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("train_loss", loss)
+        self.results_collector.update_train_metrics(self.current_epoch, {"loss": loss.item()})
         self.train_losses.append(loss.item())
         
         end_time = time.time()
@@ -98,6 +101,7 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(input_ids, attention_mask)
         loss = self.compute_loss(outputs, labels)
         self.log("val_loss", loss)
+        self.results_collector.update_val_metrics(self.current_epoch, {"loss": loss.item()})
         self.logged_metrics["val_loss"] = loss.item()
 
     def test_step(self, batch, batch_index):
@@ -154,6 +158,11 @@ class ARCTrainer(pl.LightningModule):
             'task_ids': task_ids
         }
 
+        self.results_collector.add_task_specific_result(task_id, {
+            "loss": loss.item(),
+            "accuracy": accuracy.item(),
+            "diff_accuracy": diff_accuracy
+        })
         self.test_outputs.append(result)  # Store the result
 
         # Calculate task success for TSR
@@ -194,6 +203,15 @@ class ARCTrainer(pl.LightningModule):
 
         logger.debug(f"Aggregated test results: {self.test_results}")
         logger.info(f"Task Success Rate: {task_success_rate:.2f}")
+        self.results_collector.set_test_results({
+            "avg_loss": avg_test_loss.item(),
+            "avg_accuracy": avg_test_accuracy.item()
+        })
+        self.results_collector.set_final_metrics({
+            "final_train_loss": self.trainer.callback_metrics["train_loss"],
+            "final_val_loss": self.trainer.callback_metrics["val_loss"],
+            "final_test_accuracy": avg_test_accuracy.item()
+        })
         self.test_outputs.clear()  # Clear outputs after processing
 
     def configure_optimizers(self):
@@ -203,6 +221,10 @@ class ARCTrainer(pl.LightningModule):
             'name': 'learning_rate',
         }
         return [optimizer], [lr_scheduler]
+
+    def on_fit_end(self):
+        # Save the results to a JSON file
+        self.results_collector.save_to_json(f"results/experiment_{self.results_collector.experiment_id}.json")
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=7)
