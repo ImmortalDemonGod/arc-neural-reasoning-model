@@ -347,6 +347,10 @@ class ARCDataset(Dataset):
     def reverse_scaling(self, X_orig, X_pred):
         print(f"Reverse scaling - Original shape: {X_orig.shape}, Prediction shape: {X_pred.shape}")
         h, w = X_orig.shape
+        # Reshape X_pred to 2D if it's 1D
+        if X_pred.ndim == 1:
+            X_pred = X_pred.reshape((int(np.sqrt(X_pred.size)), -1))
+        
         X_pred_cropped = X_pred[:h, :w]  # Crop to original size
         
         if h == X_pred.shape[0] and w == X_pred.shape[1]:
