@@ -358,13 +358,19 @@ class ARCDataset(Dataset):
             return X_pred_cropped
         
         # Calculate the downscale factor
-        d_h = X_pred.shape[0] // h
-        d_w = X_pred.shape[1] // w
+        d_h = X_pred_cropped.shape[0] // h
+        d_w = X_pred_cropped.shape[1] // w
         
         # Ensure the dimensions are compatible for reshaping
         if d_h > 0 and d_w > 0:
-            X_rev = X_pred_cropped.reshape(h, d_h, w, d_w).mean(axis=(1, 3))
+            try:
+                X_rev = X_pred_cropped.reshape(h, d_h, w, d_w).mean(axis=(1, 3))
+            except ValueError as e:
+                print(f"Error during reshaping: {e}")
+                print(f"X_pred_cropped shape: {X_pred_cropped.shape}, h: {h}, w: {w}, d_h: {d_h}, d_w: {d_w}")
+                raise
         else:
+            print(f"Invalid downscale factors: d_h={d_h}, d_w={d_w}")
             raise ValueError("Invalid dimensions for reverse scaling")
         result = X_rev.round().astype(int)
         print(f"Reverse scaled output shape: {result.shape}")
