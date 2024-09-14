@@ -370,10 +370,16 @@ class ARCDataset(Dataset):
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
         processed_data = []
         for item in data_source:
-            processed_item = {
-                "train": [{"input": np.array(item["input"]), "output": np.array(item["output"])}],
-                "test": []
-            }
+            if isinstance(item, Task):
+                processed_item = {
+                    "train": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.train],
+                    "test": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.test]
+                }
+            else:
+                processed_item = {
+                    "train": [{"input": np.array(item["input"]), "output": np.array(item["output"])}],
+                    "test": []
+                }
             processed_data.append(processed_item)
         return processed_data
 
