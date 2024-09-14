@@ -298,7 +298,28 @@ class ARCDataset(Dataset):
                     symbol_counts += np.bincount(sample["input"].flatten(), minlength=self.num_symbols)
                     symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
         return symbol_counts / symbol_counts.sum()
+    def _preprocess_grid(self, grid: Union[dict, np.ndarray]) -> torch.Tensor:
+        if isinstance(grid, dict):
+            input_grid = np.array(grid['input'])
+            logger.debug(f"Original grid shape: {input_grid.shape}")
+            logger.debug(f"Original grid content:\n{input_grid}")
+        elif isinstance(grid, np.ndarray):
+            input_grid = grid
+            logger.debug(f"Original grid shape: {input_grid.shape}")
+            logger.debug(f"Original grid content:\n{input_grid}")
+        else:
+            raise ValueError(f"Unexpected grid type: {type(grid)}")
 
+        # Pad the grid to 30x30
+        padded_grid = self._pad_grid(input_grid, height=30, width=30)
+
+        # Convert to tensor and add channel dimension
+        grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
+
+        logger.debug(f"Preprocessed grid shape: {grid_tensor.shape}")
+        logger.debug(f"Preprocessed grid content:\n{grid_tensor}")
+
+        return grid_tensor
     def kronecker_scale(self, X, target_height=30, target_width=30):
         print(f"Kronecker scaling input shape: {X.shape}")
         h, w = X.shape
@@ -335,32 +356,6 @@ class ARCDataset(Dataset):
         result = X_rev.round().astype(int)
         print(f"Reverse scaled output shape: {result.shape}")
         return result
-        if isinstance(grid, dict):
-            input_grid = np.array(grid['input'])
-            logger.debug(f"Original grid shape: {input_grid.shape}")
-            logger.debug(f"Original grid content:\n{input_grid}")
-        elif isinstance(grid, np.ndarray):
-            input_grid = grid
-            logger.debug(f"Original grid shape: {input_grid.shape}")
-            logger.debug(f"Original grid content:\n{input_grid}")
-        else:
-            raise ValueError(f"Unexpected grid type: {type(grid)}")
-
-        print(f"Preprocessing grid, input type: {type(grid)}")
-        if isinstance(grid, dict):
-            input_grid = np.array(grid['input'])
-        elif isinstance(grid, np.ndarray):
-            input_grid = grid
-        else:
-            raise ValueError(f"Unexpected grid type: {type(grid)}")
-
-        print(f"Original grid shape: {input_grid.shape}")
-        scaled_grid = self.kronecker_scale(input_grid)
-        padded_grid = self.pad_grid(scaled_grid)
-        
-        grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
-        print(f"Final preprocessed grid shape: {grid_tensor.shape}")
-        return grid_tensor
 
     def _scale_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
         return grid  # No scaling, preserve original size
@@ -380,8 +375,7 @@ class ARCDataset(Dataset):
             processed_data.append(processed_item)
         return processed_data
 
-    @staticmethod
-    def collate_fn(batch):
+
     @staticmethod
     def collate_fn(batch):
         print(f"Collating batch of size: {len(batch)}")
