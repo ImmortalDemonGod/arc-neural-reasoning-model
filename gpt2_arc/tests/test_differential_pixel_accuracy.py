@@ -10,6 +10,7 @@ import torch
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import ModelConfig
+from gpt2_arc.src.data.arc_dataset import ARCDataset
 import arckit
 
 def test_identical_inputs_and_targets():
