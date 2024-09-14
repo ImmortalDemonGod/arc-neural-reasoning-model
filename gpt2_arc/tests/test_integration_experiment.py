@@ -20,8 +20,8 @@ from pytorch_lightning.loggers import TensorBoardLogger
 @pytest.fixture
 def setup_experiment():
     # Mock data setup
-    train_data = [{"input": torch.rand(1, 30, 30), "output": torch.randint(0, 10, (30, 30))}]
-    val_data = [{"input": torch.rand(1, 30, 30), "output": torch.randint(0, 10, (30, 30))}]
+    train_data = [{"input": torch.rand(30, 30), "output": torch.randint(0, 10, (30, 30))}]
+    val_data = [{"input": torch.rand(30, 30), "output": torch.randint(0, 10, (30, 30))}]
     train_dataset = ARCDataset(train_data)
     val_dataset = ARCDataset(val_data)
 
