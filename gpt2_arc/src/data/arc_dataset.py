@@ -166,7 +166,12 @@ class ARCDataset(Dataset):
                         else:
                             raise ValueError(f"Unexpected tensor dimensions: {sample['input'].dim()}")
                     elif isinstance(sample['input'], np.ndarray):
-                        h, w = sample['input'].shape
+                        if sample['input'].ndim == 2:
+                            h, w = sample['input'].shape
+                        elif sample['input'].ndim == 3:
+                            h, w = sample['input'].shape[1], sample['input'].shape[2]
+                        else:
+                            raise ValueError(f"Unexpected ndarray dimensions: {sample['input'].ndim}")
                     elif isinstance(sample['input'], list):
                         h, w = len(sample['input']), len(sample['input'][0])
                     else:
