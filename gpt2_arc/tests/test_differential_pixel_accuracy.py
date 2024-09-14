@@ -53,8 +53,9 @@ def test_differential_pixel_accuracy_with_arckit_data():
                                                                                                                                                         
     # Process the task data                                                                                                                              
     # Assuming task_data.train is a list of (input, output) pairs
-    input_tensor = torch.tensor(task_data.train[0][0]).unsqueeze(0)  # Add batch dimension
-    target_tensor = torch.tensor(task_data.train[0][1]).unsqueeze(0)  # Add batch dimension
+    # Assuming task_data.train[0][0] is a 2D grid, flatten it to match the model's expected input shape
+    input_tensor = torch.tensor(task_data.train[0][0]).flatten().unsqueeze(0)  # Add batch dimension
+    target_tensor = torch.tensor(task_data.train[0][1]).flatten().unsqueeze(0)  # Add batch dimension
                                                                                                                                                         
     # Initialize the model                                                                                                                               
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)                                                                                           
