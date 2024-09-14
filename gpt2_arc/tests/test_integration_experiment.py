@@ -17,13 +17,17 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 
+import arckit
+
 @pytest.fixture
 def setup_experiment():
-    # Mock data setup
-    train_data = [{"input": torch.rand(30, 30), "output": torch.randint(0, 10, (30, 30))}]
-    val_data = [{"input": torch.rand(30, 30), "output": torch.randint(0, 10, (30, 30))}]
-    train_dataset = ARCDataset(train_data)
-    val_dataset = ARCDataset(val_data)
+    # Load a sample task from arckit
+    task_id = "007bbfb7"  # Example task ID
+    task_data = arckit.load_single(task_id)
+    train_data = task_data.train
+    val_data = task_data.test
+    train_dataset = ARCDataset([{"train": train_data, "test": val_data}])
+    val_dataset = ARCDataset([{"train": train_data, "test": val_data}])
 
     # Model and config setup
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
