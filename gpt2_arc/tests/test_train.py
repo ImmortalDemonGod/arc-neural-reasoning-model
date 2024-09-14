@@ -227,10 +227,21 @@ def test_batch_size_extremes(mock_args, batch_size):
 def test_learning_rate_extremes(mock_args, learning_rate):
     set_logging_level(logging.WARNING)  # Suppress INFO and DEBUG messages
     mock_args.learning_rate = learning_rate
+    logger.debug(f"Testing with learning_rate: {learning_rate}")
     with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
+    ), patch(
+        "gpt2_arc.src.training.train.ResultsCollector.get_summary",
+        return_value={
+            "experiment_id": "1234",
+            "timestamp": "2023-10-01 12:00:00",
+            "final_train_loss": 0.1,
+            "final_val_loss": 0.2,
+            "test_accuracy": 0.95,
+            "config": {"model": {}, "training": {}}
+        }
     ), patch(
         "gpt2_arc.src.training.train.ResultsCollector.get_summary",
         return_value={

@@ -89,6 +89,7 @@ def main(args):
     # After training
     results_summary = trainer.results_collector.get_summary()
     print("Experiment Summary:")
+    logger.debug(f"Results summary before serialization: {results_summary}")
     print(json.dumps(results_summary, indent=2))
 
     # You can also save the summary to a separate file or database for quick reference
