@@ -239,8 +239,7 @@ def test_learning_rate_extremes(mock_args, learning_rate):
         "final_val_loss": 0.2,
         "test_accuracy": 0.95,
         "config": {"model": {}, "training": {}}
-    })
-    ):
+    }):
         main(mock_args)  # Should not raise an exception
 
 
