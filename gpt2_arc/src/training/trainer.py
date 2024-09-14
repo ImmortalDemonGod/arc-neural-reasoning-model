@@ -154,6 +154,10 @@ class ARCTrainer(pl.LightningModule):
         }
 
         self.test_outputs.append(result)  # Store the result
+
+        # Calculate task success for TSR
+        task_success = (accuracy == 1.0).float()
+        self.log(f'{task_id}_task_success', task_success)
         return result
 
     def on_test_epoch_end(self):
@@ -175,7 +179,11 @@ class ARCTrainer(pl.LightningModule):
             logger.debug(f"Batch task IDs: {batch_task_ids}")
             logger.debug(f"Batch losses: {output['loss'].item()}, accuracies: {output['accuracy'].item()}")
 
-        self.test_results = []
+        # Calculate Task Success Rate (TSR)
+        total_tasks = len(all_task_ids)
+        successful_tasks = sum(1 for result in self.test_outputs if result['accuracy'] == 1.0)
+        task_success_rate = successful_tasks / total_tasks if total_tasks > 0 else 0.0
+        self.log('task_success_rate', task_success_rate)
         for task_id, loss, accuracy in zip(all_task_ids, all_losses, all_accuracies):
             self.test_results.append({
                 'task_id': task_id,
@@ -184,6 +192,7 @@ class ARCTrainer(pl.LightningModule):
             })
 
         logger.debug(f"Aggregated test results: {self.test_results}")
+        logger.info(f"Task Success Rate: {task_success_rate:.2f}")
         self.test_outputs.clear()  # Clear outputs after processing
 
     def configure_optimizers(self):
