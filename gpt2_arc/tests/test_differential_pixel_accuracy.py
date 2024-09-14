@@ -51,8 +51,9 @@ def test_differential_pixel_accuracy_with_arckit_data():
     task_id = "fe9372f3"  # Replace with the ID of the task you want to test                                                                             
     task_data = arckit.load_single(task_id)                                                                                                                
                                                                                                                                                         
-    # Debug: Print the original task data
-    print(f"Original task data: {task_data}")
+    # Use the show method to print the task data in a visual format
+    print("Original task data:")
+    task_data.show()
     # Assuming task_data.train is a list of (input, output) pairs
     # Determine the original shape of the input grid
     original_shape = task_data.train[0][0].shape
