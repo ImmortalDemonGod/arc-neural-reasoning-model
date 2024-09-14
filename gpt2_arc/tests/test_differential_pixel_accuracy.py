@@ -49,7 +49,7 @@ def test_single_pixel_difference():
 def test_differential_pixel_accuracy_with_arckit_data():                                                                                                 
     # Load a specific task using arckit                                                                                                                  
     task_id = "fe9372f3"  # Replace with the ID of the task you want to test                                                                             
-    task_data = arckit.load_task(task_id)                                                                                                                
+    task_data = arckit.draw_task(task_id)                                                                                                                
                                                                                                                                                         
     # Process the task data                                                                                                                              
     input_tensor = torch.tensor(task_data['input']).unsqueeze(0)  # Add batch dimension                                                                  
