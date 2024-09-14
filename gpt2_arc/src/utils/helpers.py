@@ -13,7 +13,7 @@ def differential_pixel_accuracy(input, target, prediction):
     print(f"Reshaped - Input: {input.shape}, Target: {target.shape}, Prediction: {prediction.shape}")
 
     input_target_diff = input != target
-    correct_diff_predictions = (prediction != input) & input_target_diff
+    correct_diff_predictions = (prediction == target) & input_target_diff
 
     total_diff_pixels = input_target_diff.sum().item()
     correct_diff_pixels = correct_diff_predictions.sum().item()
