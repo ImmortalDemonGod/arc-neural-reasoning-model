@@ -7,6 +7,9 @@ sys.path.insert(0, project_root)
 
 import torch
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
+from gpt2_arc.src.models.gpt2 import GPT2ARC
+from gpt2_arc.src.config import ModelConfig
+import arckit
 
 def test_identical_inputs_and_targets():
     input_tensor = torch.tensor([[1, 2], [3, 4]])
