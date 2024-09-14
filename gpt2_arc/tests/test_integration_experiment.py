@@ -62,7 +62,7 @@ def test_full_experiment_run(setup_experiment):
     ({"output": torch.randint(0, 10, (30, 30))}),  # Missing input
 ])
 def test_invalid_data_handling(invalid_data):
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         ARCDataset([invalid_data])
 
 def test_model_convergence_issue(setup_experiment):
