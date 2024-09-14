@@ -26,6 +26,7 @@ class ARCTrainer(pl.LightningModule):
         self.train_losses = []
         self.logged_metrics = {}
         self.test_outputs = []  # Store test outputs for aggregation
+        self.test_results = []  # Initialize test results for storing test outcomes
 
     def training_step(self, batch, batch_idx):
         start_time = time.time()
