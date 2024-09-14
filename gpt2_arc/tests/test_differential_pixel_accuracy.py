@@ -1,3 +1,10 @@
+import sys
+import os
+
+# Add the root directory of the project to the PYTHONPATH
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.insert(0, project_root)
+
 import torch
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 
