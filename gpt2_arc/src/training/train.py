@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 
 def main(args):
     # Set logging level
-    log_level = getattr(logging, args.log_level.upper(), logging.ERROR)
-    logging.basicConfig(level=log_level)
+    log_level = getattr(logging, args.log_level.upper(), logging.DEBUG)
+    logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger.setLevel(log_level)
     # Load data
     import arckit
