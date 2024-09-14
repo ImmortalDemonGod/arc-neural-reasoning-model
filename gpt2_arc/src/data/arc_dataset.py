@@ -299,7 +299,42 @@ class ARCDataset(Dataset):
                     symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
         return symbol_counts / symbol_counts.sum()
 
-    def _preprocess_grid(self, grid: Union[dict, np.ndarray]) -> torch.Tensor:
+    def kronecker_scale(self, X, target_height=30, target_width=30):
+        print(f"Kronecker scaling input shape: {X.shape}")
+        h, w = X.shape
+        scale_h = target_height / h
+        scale_w = target_width / w
+        d = int(np.floor(min(scale_h, scale_w)))
+        
+        X_scaled = np.kron(X, np.ones((d, d)))
+        print(f"Kronecker scaled output shape: {X_scaled.shape}")
+        return X_scaled
+
+    def pad_grid(self, X, target_height=30, target_width=30):
+        print(f"Padding input shape: {X.shape}")
+        h, w = X.shape
+        pad_h = (target_height - h) // 2
+        pad_w = (target_width - w) // 2
+        padded = np.pad(X, ((pad_h, target_height - h - pad_h), 
+                            (pad_w, target_width - w - pad_w)), 
+                        mode='constant')
+        print(f"Padded output shape: {padded.shape}")
+        return padded
+
+    def reverse_scaling(self, X_orig, X_pred):
+        print(f"Reverse scaling - Original shape: {X_orig.shape}, Prediction shape: {X_pred.shape}")
+        h, w = X_orig.shape
+        X_pred_cropped = X_pred[:h, :w]  # Crop to original size
+        
+        if h == X_pred.shape[0] and w == X_pred.shape[1]:
+            print("No rescaling needed")
+            return X_pred_cropped
+        
+        d = X_pred.shape[0] // h
+        X_rev = X_pred_cropped.reshape(h, d, w, d).mean(axis=(1, 3))
+        result = X_rev.round().astype(int)
+        print(f"Reverse scaled output shape: {result.shape}")
+        return result
         if isinstance(grid, dict):
             input_grid = np.array(grid['input'])
             logger.debug(f"Original grid shape: {input_grid.shape}")
@@ -311,15 +346,20 @@ class ARCDataset(Dataset):
         else:
             raise ValueError(f"Unexpected grid type: {type(grid)}")
 
-        # Pad the grid to 30x30
-        padded_grid = self._pad_grid(input_grid, height=30, width=30)
+        print(f"Preprocessing grid, input type: {type(grid)}")
+        if isinstance(grid, dict):
+            input_grid = np.array(grid['input'])
+        elif isinstance(grid, np.ndarray):
+            input_grid = grid
+        else:
+            raise ValueError(f"Unexpected grid type: {type(grid)}")
 
-        # Convert to tensor and add channel dimension
+        print(f"Original grid shape: {input_grid.shape}")
+        scaled_grid = self.kronecker_scale(input_grid)
+        padded_grid = self.pad_grid(scaled_grid)
+        
         grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
-
-        logger.debug(f"Preprocessed grid shape: {grid_tensor.shape}")
-        logger.debug(f"Preprocessed grid content:\n{grid_tensor}")
-
+        print(f"Final preprocessed grid shape: {grid_tensor.shape}")
         return grid_tensor
 
     def _scale_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
@@ -342,20 +382,25 @@ class ARCDataset(Dataset):
 
     @staticmethod
     def collate_fn(batch):
-        logger.debug(f"Collate function called with batch of {len(batch)} items")
-        logger.debug(f"First batch item type: {type(batch[0])}, length: {len(batch[0])}")
-
-        # This method will be used by DataLoader to prepare batches
+    @staticmethod
+    def collate_fn(batch):
+        print(f"Collating batch of size: {len(batch)}")
         inputs, outputs, task_ids = zip(*batch)
-        logger.debug(f"Inputs shape: {inputs[0].shape}, Outputs shape: {outputs[0].shape}")
+        
+        print(f"Input shapes: {[i.shape for i in inputs]}")
+        print(f"Output shapes: {[o.shape for o in outputs]}")
 
         # Find max dimensions in the batch
         max_h = max(i.size(1) for i in inputs)
         max_w = max(i.size(2) for i in inputs)
 
+        print(f"Max dimensions: height={max_h}, width={max_w}")
+
         # Pad inputs and outputs to max size in the batch
         padded_inputs = torch.stack([F.pad(i, (0, max_w - i.size(2), 0, max_h - i.size(1))) for i in inputs])
         padded_outputs = torch.stack([F.pad(o, (0, max_w - o.size(2), 0, max_h - o.size(1))) for o in outputs])
 
-        logger.debug(f"Collate function output shapes - inputs: {padded_inputs.shape}, outputs: {padded_outputs.shape}")
-        return [padded_inputs, padded_outputs, list(task_ids)]
+        print(f"Padded input shape: {padded_inputs.shape}")
+        print(f"Padded output shape: {padded_outputs.shape}")
+
+        return padded_inputs, padded_outputs, list(task_ids)
