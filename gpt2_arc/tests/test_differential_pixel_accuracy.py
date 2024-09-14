@@ -43,34 +43,30 @@ def test_single_pixel_difference():
     accuracy, _, _ = differential_pixel_accuracy(input_tensor, target_tensor, prediction_tensor)
     assert accuracy == 1.0, "Expected accuracy of 1.0 for single pixel difference"
 
-    # Test with actual ARC data from a single defined task
-    import arckit
-    from gpt2_arc.src.models.gpt2 import GPT2ARC
-    from gpt2_arc.src.config import ModelConfig
-
-    # Load a specific task using arckit
-    task_id = "1c786137"  # Replace with the ID of the task you want to test
-    task_data = arckit.load_task(task_id)
-
-    # Process the task data
-    input_tensor = torch.tensor(task_data['input']).unsqueeze(0)  # Add batch dimension
-    target_tensor = torch.tensor(task_data['output']).unsqueeze(0)  # Add batch dimension
-
-    # Initialize the model
-    model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
-    model = GPT2ARC(model_config)
-    model.eval()  # Set the model to evaluation mode
-
-    # Make predictions
-    with torch.no_grad():
-        prediction_tensor = model(input_tensor)
-
-    # Evaluate the differential_pixel_accuracy
-    accuracy, _, _ = differential_pixel_accuracy(input_tensor, target_tensor, prediction_tensor)
-    print(f"Differential Pixel Accuracy for task {task_id}: {accuracy}")
-
-    # Add assertions as needed
-    assert 0 <= accuracy <= 1, "Accuracy should be between 0 and 1"
+def test_differential_pixel_accuracy_with_arckit_data():                                                                                                 
+    # Load a specific task using arckit                                                                                                                  
+    task_id = "1c786137"  # Replace with the ID of the task you want to test                                                                             
+    task_data = arckit.load_task(task_id)                                                                                                                
+                                                                                                                                                        
+    # Process the task data                                                                                                                              
+    input_tensor = torch.tensor(task_data['input']).unsqueeze(0)  # Add batch dimension                                                                  
+    target_tensor = torch.tensor(task_data['output']).unsqueeze(0)  # Add batch dimension                                                                
+                                                                                                                                                        
+    # Initialize the model                                                                                                                               
+    model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)                                                                                           
+    model = GPT2ARC(model_config)                                                                                                                        
+    model.eval()  # Set the model to evaluation mode                                                                                                     
+                                                                                                                                                        
+    # Make predictions                                                                                                                                   
+    with torch.no_grad():                                                                                                                                
+        prediction_tensor = model(input_tensor)                                                                                                          
+                                                                                                                                                        
+    # Evaluate the differential_pixel_accuracy                                                                                                           
+    accuracy, _, _ = differential_pixel_accuracy(input_tensor, target_tensor, prediction_tensor)                                                         
+    print(f"Differential Pixel Accuracy for task {task_id}: {accuracy}")                                                                                 
+                                                                                                                                                        
+    # Add assertions as needed                                                                                                                           
+    assert 0 <= accuracy <= 1, "Accuracy should be between 0 and 1"  
 
 # Run the tests
 if __name__ == "__main__":
