@@ -1,3 +1,4 @@
+# gpt2_arc/tests/test_differential_pixel_accuracy.py
 import sys
 import os
 
@@ -48,12 +49,12 @@ def test_single_pixel_difference():
 
 def test_differential_pixel_accuracy_with_arckit_data():                                                                                                 
     # Load a specific task using arckit                                                                                                                  
-    task_id = "fe9372f3"  # Replace with the ID of the task you want to test                                                                             
+    task_id = "007bbfb7"  # Replace with the ID of the task you want to test                                                                             
     task_data = arckit.load_single(task_id)                                                                                                                
                                                                                                                                                         
     # Use the show method to print the task data in a visual format
-    print("Original task data:")
-    task_data.show()
+    print(f"Original task data: {task_data.show()}")
+    
     # Assuming task_data.train is a list of (input, output) pairs
     # Determine the original shape of the input grid
     original_shape = task_data.train[0][0].shape

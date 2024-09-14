@@ -339,10 +339,7 @@ class ARCDataset(Dataset):
             }
             processed_data.append(processed_item)
         return processed_data
-    @staticmethod
-    def collate_fn(batch):
-        logger.debug(f"Collate function called with batch of {len(batch)} items")
-        logger.debug(f"First batch item type: {type(batch[0])}, length: {len(batch[0])}")
+
     @staticmethod
     def collate_fn(batch):
         logger.debug(f"Collate function called with batch of {len(batch)} items")
