@@ -139,11 +139,15 @@ class GPT2ARC(nn.Module):
             x = input_ids.float().view(batch_size, 1, height, width)
         
         x = self.conv1(x)
+        logger.debug(f"After conv1 shape: {x.shape}")
         b, c, h, w = x.size()
         x = x.view(b, c, h * w)  # Flatten spatial dimensions
         x = x.permute(0, 2, 1)  # Rearrange to (batch_size, sequence_length, channels)
+        logger.debug(f"Reshaped for transformer blocks: {x.shape}")
 
-        for block in self.blocks:
+        for i, block in enumerate(self.blocks):
             x = block(x, attention_mask)
+            logger.debug(f"After block {i+1} shape: {x.shape}")
+        
         x = self.ln_f(x)
         return x
