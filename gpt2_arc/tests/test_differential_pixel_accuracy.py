@@ -86,9 +86,10 @@ def test_differential_pixel_accuracy_with_arckit_data():
     print(f"Reversed prediction shape: {reversed_prediction.shape}")
 
     # Convert back to tensors for differential_pixel_accuracy
-    input_tensor = torch.tensor(original_input)
-    target_tensor = torch.tensor(original_target)
-    prediction_tensor = torch.tensor(reversed_prediction)
+    # Ensure all tensors have the same shape
+    input_tensor = torch.tensor(original_input, dtype=torch.float32).resize_(original_target.shape)
+    target_tensor = torch.tensor(original_target, dtype=torch.float32)
+    prediction_tensor = torch.tensor(reversed_prediction, dtype=torch.float32).resize_(original_target.shape)
 
     print(f"Final input tensor shape: {input_tensor.shape}")
     print(f"Final target tensor shape: {target_tensor.shape}")

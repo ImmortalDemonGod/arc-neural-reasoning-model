@@ -372,7 +372,8 @@ class ARCDataset(Dataset):
         else:
             print(f"Invalid downscale factors: d_h={d_h}, d_w={d_w}")
             raise ValueError("Invalid dimensions for reverse scaling")
-        result = X_rev.round().astype(int)
+        # Resize the result to match the original target shape
+        result = np.resize(X_rev.round().astype(int), X_orig.shape)
         print(f"Reverse scaled output shape: {result.shape}")
         return result
 
