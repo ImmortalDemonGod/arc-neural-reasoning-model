@@ -85,6 +85,15 @@ def main(args):
     # Train the model
     pl_trainer.fit(trainer)
 
+    # After training
+    results_summary = trainer.results_collector.get_summary()
+    print("Experiment Summary:")
+    print(json.dumps(results_summary, indent=2))
+
+    # You can also save the summary to a separate file or database for quick reference
+    with open(f"results/summary_{trainer.results_collector.experiment_id}.json", 'w') as f:
+        json.dump(results_summary, f, indent=2)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
