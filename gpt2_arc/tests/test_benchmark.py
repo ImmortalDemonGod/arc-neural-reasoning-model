@@ -12,7 +12,7 @@ from src.models.gpt2 import GPT2ARC
 
 @pytest.fixture
 def mock_model():
-    return Mock(spec=GPT2ARC)
+    return MagicMock(spec=GPT2ARC)
 
 @pytest.fixture
 def mock_dataset():
@@ -22,7 +22,7 @@ def mock_dataset():
 
 @pytest.fixture
 def mock_dataloader():
-    dataloader = Mock()
+    dataloader = MagicMock()
     dataloader.__iter__.return_value = iter([
         (torch.randn(32, 1, 30, 30), torch.randn(32, 1, 30, 30))
         for _ in range(10)
@@ -90,7 +90,7 @@ def test_benchmark_model_error_handling(mock_model, mock_dataset):
 @pytest.fixture
 def mock_argparse():
     with patch('benchmark.argparse.ArgumentParser') as mock_argparse:
-        mock_args = Mock()
+        mock_args = MagicMock()
         mock_args.num_runs = 5
         mock_args.num_full_runs = 1
         mock_args.batch_size = 32
@@ -131,7 +131,7 @@ def test_benchmark_model_empty_dataset(mock_model):
 def test_benchmark_model_single_item_dataset(mock_model):
     single_item_dataset = MagicMock()
     single_item_dataset.__len__.return_value = 1
-    mock_dataloader = Mock()
+    mock_dataloader = MagicMock()
     mock_dataloader.__iter__.return_value = iter([
         (torch.randn(1, 1, 30, 30), torch.randn(1, 1, 30, 30))
     ])
