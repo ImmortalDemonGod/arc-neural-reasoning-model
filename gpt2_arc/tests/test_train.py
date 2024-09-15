@@ -206,7 +206,7 @@ def test_batch_size_extremes(mock_args, batch_size):
     mock_args.use_gpu = False
     with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
-    ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
+    ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer"
     ) as mock_trainer:
         main(mock_args)
@@ -232,15 +232,13 @@ def test_learning_rate_extremes(mock_args, learning_rate):
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
-    ), patch("gpt2_arc.src.training.train.ResultsCollector.get_summary", return_value={
-        "experiment_id": "1234",
-        "timestamp": "2023-10-01 12:00:00",
-        "final_train_loss": 0.1,
-        "final_val_loss": 0.2,
-        "test_accuracy": 0.95,
-        "config": {"model": {}, "training": {}}
-    }) as mock_get_summary:
-        mock_get_summary.return_value = {
+    ):
+        # Set up the ARCTrainer mock instance
+        mock_trainer_instance = mock_ARCTrainer.return_value
+
+        # Create a mock ResultsCollector with a real get_summary() method
+        mock_results_collector = MagicMock()
+        mock_results_collector.get_summary.return_value = {
             "experiment_id": "1234",
             "timestamp": "2023-10-01 12:00:00",
             "final_train_loss": 0.1,
