@@ -70,6 +70,7 @@ class ARCTrainer(pl.LightningModule):
         loss = self.compute_loss(outputs, labels)
         self.log("train_loss", loss)
         self.results_collector.update_train_metrics(self.current_epoch, {"loss": loss.item()})
+        self.results_collector.results["train"].append({"epoch": self.current_epoch, "loss": loss.item()})
         self.train_losses.append(loss.item())
         
         end_time = time.time()
