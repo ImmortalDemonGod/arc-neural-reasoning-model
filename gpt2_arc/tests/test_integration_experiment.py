@@ -26,6 +26,12 @@ def setup_experiment():
     task_data = arckit.load_single(task_id)
     train_data = task_data.train
     val_data = task_data.test
+    print(f"DEBUG: task_data type: {type(task_data)}")
+    print(f"DEBUG: task_data attributes: {dir(task_data)}")
+    print(f"DEBUG: train_data type: {type(train_data)}")
+    print(f"DEBUG: train_data content: {train_data}")
+    print(f"DEBUG: val_data type: {type(val_data)}")
+    print(f"DEBUG: val_data content: {val_data}")
     train_dataset = ARCDataset([{"train": train_data, "test": val_data}])
     val_dataset = ARCDataset([{"train": train_data, "test": val_data}])
 

@@ -46,6 +46,9 @@ class ARCDataset(Dataset):
         test_split: float = 0.2,
         debug=False,
     ):
+        print("DEBUG: Starting ARCDataset initialization")
+        print(f"DEBUG: data_source type: {type(data_source)}")
+        print(f"DEBUG: data_source content: {data_source}")
         logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
         # Add logging to verify task_id presence
         if isinstance(data_source, list):
@@ -82,9 +85,21 @@ class ARCDataset(Dataset):
             logger.error(f"Invalid data_source type: {type(data_source)}")
             raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
 
+        print(f"DEBUG: Processed data length: {len(self.data)}")
+        if self.data:
+            print(f"DEBUG: First item keys: {self.data[0].keys()}")
+            if 'train' in self.data[0]:
+                print(f"DEBUG: First train item: {self.data[0]['train'][0] if self.data[0]['train'] else 'No train data'}")
         logger.debug(f"Number of tasks: {len(self.data)}")
         logger.debug(f"First task structure: {self.data[0].keys()}")
-        logger.debug(f"First train sample structure: {self.data[0]['train'][0].keys()}")
+        if self.data and 'train' in self.data[0] and self.data[0]['train']:
+            first_train_sample = self.data[0]['train'][0]
+            if isinstance(first_train_sample, dict):
+                logger.debug(f"First train sample structure: {first_train_sample.keys()}")
+            else:
+                logger.debug(f"First train sample is not a dict. Type: {type(first_train_sample)}, Content: {first_train_sample}")
+        else:
+            logger.debug("No train samples found in first task")
         logger.debug(f"First train input shape: {np.array(self.data[0]['train'][0]['input']).shape}")
         self.is_test = is_test
         self.num_symbols = num_symbols
@@ -391,32 +406,32 @@ class ARCDataset(Dataset):
         pad_h = (height - h) // 2
         pad_w = (width - w) // 2
         return np.pad(grid, ((pad_h, height - h - pad_h), (pad_w, width - w - pad_w)), mode='constant')
-    def _process_list_data(self, data_source: List[Union[Dict, 'Task']]) -> List[Dict]:
+    def _process_list_data(self, data_source):
+        print(f"DEBUG: Processing {len(data_source)} items")
         processed_data = []
-        print(f"Debug: Processing {len(data_source)} items")
         for idx, item in enumerate(data_source):
-            print(f"Debug: Processing item {idx}")
-            print(f"Debug: Item type: {type(item)}")
-            if hasattr(item, 'train') and hasattr(item, 'test'):
-                print(f"Debug: Item has 'train' and 'test' attributes")
+            print(f"DEBUG: Processing item {idx}")
+            print(f"DEBUG: Item type: {type(item)}")
+            print(f"DEBUG: Item content: {item}")
+            
+            if isinstance(item, dict) and 'train' in item and 'test' in item:
                 processed_item = {
-                    "train": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.train],
-                    "test": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.test]
+                    "train": [{"input": np.array(sample[0]), "output": np.array(sample[1])} for sample in item['train']],
+                    "test": [{"input": np.array(sample[0]), "output": np.array(sample[1])} for sample in item['test']]
                 }
-            elif isinstance(item, dict) and "train" in item and "test" in item:
-                print(f"Debug: Item is a dictionary with 'train' and 'test' keys")
-                processed_item = item
             else:
-                print(f"Debug: Item doesn't match expected formats. Keys: {item.keys() if hasattr(item, 'keys') else 'No keys method'}")
+                print(f"DEBUG: Item doesn't match expected format. Keys: {item.keys() if hasattr(item, 'keys') else 'No keys method'}")
                 processed_item = {
                     "train": [{"input": np.array(item.get("input", [])), "output": np.array(item.get("output", []))}],
                     "test": []
                 }
+            
             processed_data.append(processed_item)
-            print(f"Debug: Processed item structure: {processed_item.keys()}")
-            print(f"Debug: Number of train samples: {len(processed_item['train'])}")
-            print(f"Debug: Number of test samples: {len(processed_item['test'])}")
-        print(f"Debug: Finished processing {len(processed_data)} items")
+            print(f"DEBUG: Processed item structure: {processed_item.keys()}")
+            print(f"DEBUG: Number of train samples: {len(processed_item['train'])}")
+            print(f"DEBUG: Number of test samples: {len(processed_item['test'])}")
+        
+        print(f"DEBUG: Finished processing {len(processed_data)} items")
         return processed_data
 
 
