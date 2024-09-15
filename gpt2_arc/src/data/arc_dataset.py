@@ -274,8 +274,7 @@ class ARCDataset(Dataset):
                     continue
                 for idx, sample in enumerate(task[split]):
                     if "input" not in sample or "output" not in sample:
-                        logger.warning(f"Sample {idx} in task {split} set is missing 'input' or 'output' key")
-                        continue
+                        raise KeyError(f"Sample {idx} in task {split} set is missing 'input' or 'output' key")
                     input_data = sample["input"]
                     output_data = sample["output"]
                     if not (isinstance(input_data, (list, np.ndarray)) and isinstance(output_data, (list, np.ndarray))):
@@ -286,8 +285,7 @@ class ARCDataset(Dataset):
                     if isinstance(output_data, list):
                         output_data = np.array(output_data)
                     if input_data.ndim != 2 or output_data.ndim != 2:
-                        logger.warning(f"Sample {idx} in task {split} set 'input' and 'output' must be 2D lists")
-                        continue
+                        raise ValueError(f"Sample {idx} in task {split} set 'input' and 'output' must be 2D lists")
                     if np.any(input_data >= self.num_symbols) or np.any(output_data >= self.num_symbols):
                         logger.warning(f"Sample {idx} in task {split} set contains invalid symbols (>= {self.num_symbols})")
 

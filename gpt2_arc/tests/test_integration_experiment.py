@@ -62,7 +62,7 @@ def test_full_experiment_run(setup_experiment):
     assert "final_val_loss" in results_summary
 
 @pytest.mark.parametrize("invalid_data", [
-    ({"input": torch.rand(1, 30, 30)}),  # Missing output
+    ({"input": torch.rand(30, 30)}),  # Missing output
     ({"output": torch.randint(0, 10, (30, 30))}),  # Missing input
 ])
 def test_invalid_data_handling(invalid_data):

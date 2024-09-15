@@ -49,6 +49,9 @@ class ARCTrainer(pl.LightningModule):
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
             task_ids = batch.get("task_ids")
+        elif isinstance(batch, list) and len(batch) == 3:
+            input_ids, labels, task_ids = batch
+            attention_mask = None
         elif isinstance(batch, list) and len(batch) == 2:
             input_ids, labels = batch
             attention_mask = None
