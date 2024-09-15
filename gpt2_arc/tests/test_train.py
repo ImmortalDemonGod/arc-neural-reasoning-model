@@ -294,7 +294,14 @@ def test_valid_batch_sizes(mock_args, batch_size):
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
-    ):
+    ), patch("gpt2_arc.src.training.train.ResultsCollector.get_summary", return_value={
+        "experiment_id": "test_id",
+        "timestamp": "2023-10-01 12:00:00",
+        "final_train_loss": 0.1,
+        "final_val_loss": 0.2,
+        "test_accuracy": 0.95,
+        "config": {"model": {}, "training": {}}
+    }):
         main(mock_args)  # Should not raise an exception
 
 
