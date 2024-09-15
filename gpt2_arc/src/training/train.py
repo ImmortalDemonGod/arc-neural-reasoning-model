@@ -20,6 +20,7 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
 from gpt2_arc.src.training.trainer import ARCTrainer
+from gpt2_arc.src.utils.results_collector import ResultsCollector
 
 
 # Set up logging
@@ -43,11 +44,13 @@ def main(args):
 
     logger.info("Initializing trainer with new configuration")
     config = Config(model=model_config, training=TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs))
+    results_collector = ResultsCollector(config)
     trainer = ARCTrainer(
         model=model,
         train_dataset=train_data,
         val_dataset=val_data,
-        config=config
+        config=config,
+        results_collector=results_collector
     )
 
     # Create PyTorch Lightning trainer
