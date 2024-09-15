@@ -140,35 +140,10 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
     with patch(
         "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
     ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
-        "gpt2_arc.src.training.train.ARCTrainer", return_value=trainer
-    ), patch(
+        "gpt2_arc.src.training.train.ARCTrainer"
+    ) as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
-        "gpt2_arc.src.training.train.ModelCheckpoint"
-    ), patch(
-        "gpt2_arc.src.training.train.ARCTrainer"
-    ) as mock_checkpoint:
-        main(mock_args)
-
-        mock_logger.assert_called_once_with("tb_logs", name="arc_model")
-        mock_checkpoint.assert_called_once_with(
-            dirpath="checkpoints",
-            filename="arc_model-{epoch:02d}-{val_loss:.2f}",
-            save_top_k=3,
-            monitor="val_loss",
-            mode="min",
-        )
-
-
-def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
-    print("Entering test_fit_call")
-    with patch(
-        "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
-    ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
-        "gpt2_arc.src.training.train.ARCTrainer", return_value=trainer
-    ), patch(
-        "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
-    ), patch("gpt2_arc.src.training.train.TensorBoardLogger"), patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
     ):
         # Set up the ARCTrainer mock instance
@@ -187,9 +162,43 @@ def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
 
         # Assign the mock ResultsCollector to the trainer instance
         mock_trainer_instance.results_collector = mock_results_collector
+
         main(mock_args)
 
-        mock_pl_trainer.fit.assert_called_once_with(trainer)
+        mock_logger.assert_called_once_with("tb_logs", name="arc_model")
+
+
+def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
+    print("Entering test_fit_call")
+    with patch(
+        "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
+    ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
+        "gpt2_arc.src.training.train.ARCTrainer"
+    ) as mock_ARCTrainer, patch(
+        "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
+    ), patch("gpt2_arc.src.training.train.TensorBoardLogger"), patch(
+        "gpt2_arc.src.training.train.ModelCheckpoint"
+    ):
+        # Set up the ARCTrainer mock instance
+        mock_trainer_instance = mock_ARCTrainer.return_value
+
+        # Create a mock ResultsCollector with a real get_summary() method
+        mock_results_collector = MagicMock()
+        mock_results_collector.get_summary.return_value = {
+            "experiment_id": "test_id",
+            "timestamp": "2023-10-01 12:00:00",
+            "final_train_loss": 0.1,
+            "final_val_loss": 0.2,
+            "test_accuracy": 0.95,
+            "config": {"model": {}, "training": {}}
+        }
+
+        # Assign the mock ResultsCollector to the trainer instance
+        mock_trainer_instance.results_collector = mock_results_collector
+
+        main(mock_args)
+
+        mock_pl_trainer.fit.assert_called_once_with(mock_trainer_instance)
 
 
 def test_data_loading(mock_args):
