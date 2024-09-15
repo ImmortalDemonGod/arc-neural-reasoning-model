@@ -387,12 +387,18 @@ def test_tensorboard_logging(mock_args, tmp_path):
     log_dir = tmp_path / "tb_logs"
     log_dir.mkdir()
 
-    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
-        "gpt2_arc.src.training.train.GPT2ARC"
-    ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
-        "gpt2_arc.src.training.train.pl.Trainer"
-    ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
-        "gpt2_arc.src.training.train.ResultsCollector.get_summary", return_value={
+    with patch("gpt2_arc.src.training.train.ARCDataset"), \
+         patch("gpt2_arc.src.training.train.GPT2ARC"), \
+         patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, \
+         patch("gpt2_arc.src.training.train.pl.Trainer"), \
+         patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger:
+
+        # Set up the ARCTrainer mock instance
+        mock_trainer_instance = mock_ARCTrainer.return_value
+
+        # Create a mock ResultsCollector with a real get_summary() method
+        mock_results_collector = MagicMock()
+        mock_results_collector.get_summary.return_value = {
             "experiment_id": "test_id",
             "timestamp": "2023-10-01 12:00:00",
             "final_train_loss": 0.1,
@@ -400,7 +406,10 @@ def test_tensorboard_logging(mock_args, tmp_path):
             "test_accuracy": 0.95,
             "config": {"model": {}, "training": {}}
         }
-    ):
+
+        # Assign the mock ResultsCollector to the trainer instance
+        mock_trainer_instance.results_collector = mock_results_collector
+
         main(mock_args)
 
         mock_logger.assert_called_once_with("tb_logs", name="arc_model")
