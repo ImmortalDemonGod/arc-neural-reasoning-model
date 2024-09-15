@@ -321,30 +321,30 @@ def test_valid_learning_rates(mock_args, learning_rate):
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
     ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer:
-        # Ensure cleanup of generated files
-        yield
-        for file in glob.glob("results/summary_*.json"):
-            os.remove(file)
+        try:
+            # Set up the ARCTrainer mock instance
+            mock_trainer_instance = mock_ARCTrainer.return_value
 
-        # Set up the ARCTrainer mock instance
-        mock_trainer_instance = mock_ARCTrainer.return_value
+            # Create a mock ResultsCollector with a real get_summary() method
+            mock_results_collector = MagicMock()
+            mock_results_collector.get_summary.return_value = {
+                "experiment_id": "test_id",
+                "timestamp": "2023-10-01 12:00:00",
+                "final_train_loss": 0.1,
+                "final_val_loss": 0.2,
+                "test_accuracy": 0.95,
+                "config": {"model": {}, "training": {}}
+            }
+            mock_results_collector.config = {"model": {}, "training": {}}
 
-        # Create a mock ResultsCollector with a real get_summary() method
-        mock_results_collector = MagicMock()
-        mock_results_collector.get_summary.return_value = {
-            "experiment_id": "test_id",
-            "timestamp": "2023-10-01 12:00:00",
-            "final_train_loss": 0.1,
-            "final_val_loss": 0.2,
-            "test_accuracy": 0.95,
-            "config": {"model": {}, "training": {}}
-        }
-        mock_results_collector.config = {"model": {}, "training": {}}
+            # Assign the mock ResultsCollector to the trainer instance
+            mock_trainer_instance.results_collector = mock_results_collector
 
-        # Assign the mock ResultsCollector to the trainer instance
-        mock_trainer_instance.results_collector = mock_results_collector
-
-        main(mock_args)  # Should not raise an exception
+            main(mock_args)  # Should not raise an exception
+        finally:
+            # Ensure cleanup of generated files
+            for file in glob.glob("results/summary_*.json"):
+                os.remove(file)
 
 
 def test_end_to_end_training(mock_args, tmp_path):
