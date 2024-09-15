@@ -391,7 +391,16 @@ def test_tensorboard_logging(mock_args, tmp_path):
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
-    ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger:
+    ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
+        "gpt2_arc.src.training.train.ResultsCollector.get_summary", return_value={
+            "experiment_id": "test_id",
+            "timestamp": "2023-10-01 12:00:00",
+            "final_train_loss": 0.1,
+            "final_val_loss": 0.2,
+            "test_accuracy": 0.95,
+            "config": {"model": {}, "training": {}}
+        }
+    ):
         main(mock_args)
 
         mock_logger.assert_called_once_with("tb_logs", name="arc_model")
