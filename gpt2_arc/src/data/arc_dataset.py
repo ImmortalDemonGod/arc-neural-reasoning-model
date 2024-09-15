@@ -274,19 +274,22 @@ class ARCDataset(Dataset):
                     continue
                 for idx, sample in enumerate(task[split]):
                     if "input" not in sample or "output" not in sample:
-                        raise ValueError(f"Sample {idx} in task {split} set is missing 'input' or 'output' key")
+                        logger.warning(f"Sample {idx} in task {split} set is missing 'input' or 'output' key")
+                        continue
                     input_data = sample["input"]
                     output_data = sample["output"]
                     if not (isinstance(input_data, (list, np.ndarray)) and isinstance(output_data, (list, np.ndarray))):
-                        raise ValueError(f"Sample {idx} in task {split} set 'input' or 'output' must be a list or numpy array")
+                        logger.warning(f"Sample {idx} in task {split} set 'input' or 'output' must be a list or numpy array")
+                        continue
                     if isinstance(input_data, list):
                         input_data = np.array(input_data)
                     if isinstance(output_data, list):
                         output_data = np.array(output_data)
                     if input_data.ndim != 2 or output_data.ndim != 2:
-                        raise ValueError(f"Sample {idx} in task {split} set 'input' and 'output' must be 2D lists")
+                        logger.warning(f"Sample {idx} in task {split} set 'input' and 'output' must be 2D lists")
+                        continue
                     if np.any(input_data >= self.num_symbols) or np.any(output_data >= self.num_symbols):
-                        raise ValueError(f"Sample {idx} in task {split} set contains invalid symbols (>= {self.num_symbols})")
+                        logger.warning(f"Sample {idx} in task {split} set contains invalid symbols (>= {self.num_symbols})")
 
     def _compute_grid_size_stats(self):
         max_height, max_width = 0, 0

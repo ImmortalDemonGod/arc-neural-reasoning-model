@@ -49,6 +49,10 @@ class ARCTrainer(pl.LightningModule):
             attention_mask = batch["attention_mask"]
             labels = batch["labels"]
             task_ids = batch.get("task_ids")
+        elif isinstance(batch, list) and len(batch) == 2:
+            input_ids, labels = batch
+            attention_mask = None
+            task_ids = None
         else:
             logger.error(f"Unexpected batch format: {type(batch)}. Content: {batch}")
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
