@@ -391,29 +391,28 @@ class ARCDataset(Dataset):
         pad_h = (height - h) // 2
         pad_w = (width - w) // 2
         return np.pad(grid, ((pad_h, height - h - pad_h), (pad_w, width - w - pad_w)), mode='constant')
-    def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
+    def _process_list_data(self, data_source: List[Union[Dict, 'Task']]) -> List[Dict]:
         processed_data = []
         print(f"Debug: Processing {len(data_source)} items")
         for idx, item in enumerate(data_source):
             print(f"Debug: Processing item {idx}")
-            print(f"Debug: Item keys: {item.keys()}")
-            if isinstance(item, Task):
+            print(f"Debug: Item type: {type(item)}")
+            if hasattr(item, 'train') and hasattr(item, 'test'):
+                print(f"Debug: Item has 'train' and 'test' attributes")
                 processed_item = {
                     "train": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.train],
                     "test": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.test]
                 }
-            elif "train" in item and "test" in item:
-                processed_item = {
-                    "train": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item["train"]],
-                    "test": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item["test"]]
-                }
+            elif isinstance(item, dict) and "train" in item and "test" in item:
+                print(f"Debug: Item is a dictionary with 'train' and 'test' keys")
+                processed_item = item
             else:
+                print(f"Debug: Item doesn't match expected formats. Keys: {item.keys() if hasattr(item, 'keys') else 'No keys method'}")
                 processed_item = {
                     "train": [{"input": np.array(item.get("input", [])), "output": np.array(item.get("output", []))}],
                     "test": []
                 }
             processed_data.append(processed_item)
-            print(f"Debug: Processed item {idx}")
             print(f"Debug: Processed item structure: {processed_item.keys()}")
             print(f"Debug: Number of train samples: {len(processed_item['train'])}")
             print(f"Debug: Number of test samples: {len(processed_item['test'])}")

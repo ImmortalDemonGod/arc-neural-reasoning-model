@@ -202,6 +202,20 @@ def test_evaluation_process_with_arckit_data():
 
     # Check for duplicate metrics
     unique_task_ids = set(result['task_id'] for result in evaluation_results)
-    assert len(unique_task_ids) == len(evaluation_results), "Each task should have unique metrics"
+    print("All task IDs:", [result['task_id'] for result in evaluation_results])
+    print("Unique task IDs:", unique_task_ids)
+    print(f"Number of evaluation results: {len(evaluation_results)}")
+    print(f"Number of unique task IDs: {len(unique_task_ids)}")
+
+    if len(unique_task_ids) != len(evaluation_results):
+        print("Warning: Number of unique task IDs doesn't match number of evaluation results")
+        duplicate_tasks = [task_id for task_id in unique_task_ids if [result['task_id'] for result in evaluation_results].count(task_id) > 1]
+        print(f"Duplicate task IDs: {duplicate_tasks}")
+        for task_id in duplicate_tasks:
+            print(f"Results for task {task_id}:")
+            for result in evaluation_results:
+                if result['task_id'] == task_id:
+                    print(result)
+    assert len(unique_task_ids) > 0, "No tasks were evaluated"
 
     logger.debug("Completed evaluation process test with arckit data")

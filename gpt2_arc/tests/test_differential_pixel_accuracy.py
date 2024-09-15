@@ -54,6 +54,8 @@ def test_differential_pixel_accuracy_with_arckit_data():
     task_data = arckit.load_single(task_id)
 
     print(f"Loaded task data: {task_data}")
+    print(f"Debug: task_data type: {type(task_data)}")
+    print(f"Debug: task_data attributes: {dir(task_data)}")
 
     dataset = ARCDataset([task_data])  # Wrap in list to simulate multiple tasks
     input_tensor, target_tensor, _ = dataset[0]
