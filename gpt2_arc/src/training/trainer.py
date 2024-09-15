@@ -162,8 +162,8 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Batch {batch_index} - Loss: {loss.item()}, Accuracy: {accuracy.item()}")
 
         result = {
-            'loss': loss,
-            'accuracy': accuracy,
+            'test_loss': loss,
+            'test_accuracy': accuracy,
             'task_ids': task_ids
         }
 
