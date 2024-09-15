@@ -17,7 +17,7 @@ class ResultsCollector:
         self.results = {
             "train": [],
             "validation": [],
-            "test": []
+            "test": {}
         }
         self.metrics = {}
         self.task_specific_results = {}
