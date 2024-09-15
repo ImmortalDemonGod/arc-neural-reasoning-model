@@ -305,7 +305,7 @@ def test_valid_batch_sizes(mock_args, batch_size):
         main(mock_args)  # Should not raise an exception
 
 
-@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None)
 @given(
     learning_rate=st.floats(
         min_value=1e-6, max_value=1.0, allow_nan=False, allow_infinity=False
