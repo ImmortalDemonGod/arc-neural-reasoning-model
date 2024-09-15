@@ -1,4 +1,4 @@
-# test_benchmark.py
+# gpt2_arc/tests/test_benchmark.py
 
 import pytest
 import torch
