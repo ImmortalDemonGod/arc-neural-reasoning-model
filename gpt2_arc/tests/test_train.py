@@ -145,6 +145,8 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
+    ), patch(
+        "gpt2_arc.src.training.train.ARCTrainer"
     ) as mock_checkpoint:
         main(mock_args)
 
