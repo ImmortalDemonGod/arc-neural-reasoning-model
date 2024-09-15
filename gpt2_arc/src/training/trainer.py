@@ -175,10 +175,12 @@ class ARCTrainer(pl.LightningModule):
         all_losses = []
         all_accuracies = []
 
-        logger.debug("Aggregating test results from test_step outputs.")
+        print("Debug: Starting on_test_epoch_end")
+        print(f"Debug: Number of test outputs: {len(self.test_outputs)}")
 
         for output in self.test_outputs:
-            batch_task_ids = output['task_ids']
+            print(f"Debug: Processing output: {output}")
+            batch_task_ids = output.get('task_ids', [])
             if isinstance(batch_task_ids, torch.Tensor):
                 batch_task_ids = batch_task_ids.tolist()
 
@@ -186,14 +188,18 @@ class ARCTrainer(pl.LightningModule):
             all_losses.extend([output['loss'].item()] * len(batch_task_ids))
             all_accuracies.extend([output['accuracy'].item()] * len(batch_task_ids))
 
-            logger.debug(f"Batch task IDs: {batch_task_ids}")
-            logger.debug(f"Batch losses: {output['loss'].item()}, accuracies: {output['accuracy'].item()}")
+            print(f"Debug: Batch task IDs: {batch_task_ids}")
+            print(f"Debug: Batch loss: {output['loss'].item()}, accuracy: {output['accuracy'].item()}")
 
-        # Calculate Task Success Rate (TSR)
         total_tasks = len(all_task_ids)
         successful_tasks = sum(1 for result in self.test_outputs if result['accuracy'] == 1.0)
         task_success_rate = successful_tasks / total_tasks if total_tasks > 0 else 0.0
         self.log('task_success_rate', task_success_rate)
+
+        print(f"Debug: Total tasks: {total_tasks}")
+        print(f"Debug: Successful tasks: {successful_tasks}")
+        print(f"Debug: Task success rate: {task_success_rate}")
+
         for task_id, loss, accuracy in zip(all_task_ids, all_losses, all_accuracies):
             self.test_results.append({
                 'task_id': task_id,
@@ -201,18 +207,20 @@ class ARCTrainer(pl.LightningModule):
                 'test_accuracy': accuracy
             })
 
-        logger.debug(f"Aggregated test results: {self.test_results}")
-        logger.info(f"Task Success Rate: {task_success_rate:.2f}")
+        print(f"Debug: Test results: {self.test_results}")
+
+        avg_test_loss = sum(all_losses) / len(all_losses) if all_losses else 0
+        avg_test_accuracy = sum(all_accuracies) / len(all_accuracies) if all_accuracies else 0
+
+        print(f"Debug: Average test loss: {avg_test_loss}")
+        print(f"Debug: Average test accuracy: {avg_test_accuracy}")
+
         self.results_collector.set_test_results({
-            "avg_loss": avg_test_loss.item(),
-            "avg_accuracy": avg_test_accuracy.item()
+            "avg_loss": avg_test_loss,
+            "avg_accuracy": avg_test_accuracy
         })
-        self.results_collector.set_final_metrics({
-            "final_train_loss": self.trainer.callback_metrics["train_loss"],
-            "final_val_loss": self.trainer.callback_metrics["val_loss"],
-            "final_test_accuracy": avg_test_accuracy.item()
-        })
-        self.test_outputs.clear()  # Clear outputs after processing
+
+        print("Debug: Finished on_test_epoch_end")
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.lr)

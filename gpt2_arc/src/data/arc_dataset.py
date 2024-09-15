@@ -392,18 +392,31 @@ class ARCDataset(Dataset):
         return np.pad(grid, ((pad_h, height - h - pad_h), (pad_w, width - w - pad_w)), mode='constant')
     def _process_list_data(self, data_source: List[Dict]) -> List[Dict]:
         processed_data = []
-        for item in data_source:
+        print(f"Debug: Processing {len(data_source)} items")
+        for idx, item in enumerate(data_source):
+            print(f"Debug: Processing item {idx}")
+            print(f"Debug: Item keys: {item.keys()}")
             if isinstance(item, Task):
                 processed_item = {
                     "train": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.train],
                     "test": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.test]
                 }
+            elif "train" in item and "test" in item:
+                processed_item = {
+                    "train": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item["train"]],
+                    "test": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item["test"]]
+                }
             else:
                 processed_item = {
-                    "train": [{"input": np.array(item["input"]), "output": np.array(item["output"])}],
+                    "train": [{"input": np.array(item.get("input", [])), "output": np.array(item.get("output", []))}],
                     "test": []
                 }
             processed_data.append(processed_item)
+            print(f"Debug: Processed item {idx}")
+            print(f"Debug: Processed item structure: {processed_item.keys()}")
+            print(f"Debug: Number of train samples: {len(processed_item['train'])}")
+            print(f"Debug: Number of test samples: {len(processed_item['test'])}")
+        print(f"Debug: Finished processing {len(processed_data)} items")
         return processed_data
 
 
@@ -428,4 +441,4 @@ class ARCDataset(Dataset):
         print(f"Padded input shape: {padded_inputs.shape}")
         print(f"Padded output shape: {padded_outputs.shape}")
 
-        return padded_inputs, padded_outputs, list(task_ids)
+        return [padded_inputs, padded_outputs, list(task_ids)]
