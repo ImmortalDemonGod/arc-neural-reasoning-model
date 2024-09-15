@@ -90,8 +90,8 @@ class ARCTrainer(pl.LightningModule):
             task_ids = batch.get("task_ids")
         elif isinstance(batch, (list, tuple)) and len(batch) == 3:
             logger.debug("Processing list/tuple batch with 3 elements")
-            input_ids, attention_mask, labels = batch
-            task_ids = None
+            input_ids, labels, task_ids = batch
+            attention_mask = None
         elif isinstance(batch, (list, tuple)) and len(batch) == 4:
             logger.debug("Processing list/tuple batch with 4 elements")
             input_ids, attention_mask, labels, task_ids = batch
