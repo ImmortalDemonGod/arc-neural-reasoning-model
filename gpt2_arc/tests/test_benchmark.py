@@ -3,7 +3,7 @@
 import pytest
 import torch
 import numpy as np
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 from benchmark import benchmark_model, main, BASELINES
 from src.config import ModelConfig
 from src.models.gpt2 import GPT2ARC
@@ -16,7 +16,7 @@ def mock_model():
 
 @pytest.fixture
 def mock_dataset():
-    dataset = Mock()
+    dataset = MagicMock()
     dataset.__len__.return_value = 1000
     return dataset
 
@@ -122,14 +122,14 @@ def test_benchmark_model_performance(benchmark, mock_model, mock_dataset, mock_d
 # Edge case tests
 
 def test_benchmark_model_empty_dataset(mock_model):
-    empty_dataset = Mock()
+    empty_dataset = MagicMock()
     empty_dataset.__len__.return_value = 0
     
     with pytest.raises(ValueError, match="Dataset is empty"):
         benchmark_model(mock_model, empty_dataset)
 
 def test_benchmark_model_single_item_dataset(mock_model):
-    single_item_dataset = Mock()
+    single_item_dataset = MagicMock()
     single_item_dataset.__len__.return_value = 1
     mock_dataloader = Mock()
     mock_dataloader.__iter__.return_value = iter([
