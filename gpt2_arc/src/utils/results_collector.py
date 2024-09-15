@@ -15,9 +15,9 @@ class ResultsCollector:
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         self.config = asdict(config)
         self.results = {
-            "train": {},
-            "validation": {},
-            "test": {}
+            "train": [],
+            "validation": [],
+            "test": []
         }
         self.metrics = {}
         self.task_specific_results = {}
@@ -36,6 +36,9 @@ class ResultsCollector:
         """Update training metrics for a specific epoch."""
         if "train" not in self.results:
             self.results["train"] = {}
+        # Ensure the list is large enough to hold the current epoch
+        while len(self.results["train"]) <= epoch:
+            self.results["train"].append({})
         self.results["train"][epoch] = metrics
 
     def update_val_metrics(self, epoch: int, metrics: Dict[str, float]):
