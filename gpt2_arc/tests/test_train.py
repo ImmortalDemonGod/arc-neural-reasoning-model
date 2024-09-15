@@ -313,11 +313,18 @@ def test_valid_batch_sizes(mock_args, batch_size):
 )
 def test_valid_learning_rates(mock_args, learning_rate):
     mock_args.learning_rate = learning_rate
+    import glob
+    import os
+
     with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
     ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer:
+        # Ensure cleanup of generated files
+        yield
+        for file in glob.glob("results/summary_*.json"):
+            os.remove(file)
 
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
