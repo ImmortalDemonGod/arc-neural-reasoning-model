@@ -239,7 +239,15 @@ def test_learning_rate_extremes(mock_args, learning_rate):
         "final_val_loss": 0.2,
         "test_accuracy": 0.95,
         "config": {"model": {}, "training": {}}
-    }):
+    }) as mock_get_summary:
+        mock_get_summary.return_value = {
+            "experiment_id": "1234",
+            "timestamp": "2023-10-01 12:00:00",
+            "final_train_loss": 0.1,
+            "final_val_loss": 0.2,
+            "test_accuracy": 0.95,
+            "config": {"model": {}, "training": {}}
+        }
         main(mock_args)  # Should not raise an exception
 
 
