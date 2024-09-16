@@ -36,7 +36,7 @@ BASELINES = {
     'mps': {'total_time': 0.0481, 'grids_per_second': 13774.98}  # Updated baselines for MPS
 }
 
-def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cpu', precision='medium', model_checkpoint=None):
+def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, device_type='cpu', precision='medium', model_checkpoint=None):
     print(f"Starting benchmark_model with parameters: batch_size={batch_size}, num_batches={num_batches}, device_type={device_type}, precision={precision}, model_checkpoint={model_checkpoint}")
 
     if len(dataset) == 0:

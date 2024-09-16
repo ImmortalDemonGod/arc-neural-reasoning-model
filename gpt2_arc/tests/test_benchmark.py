@@ -192,7 +192,7 @@ def test_benchmark_model_single_item_dataset(mock_model):
     ])
     
     with patch('benchmark.DataLoader', return_value=mock_dataloader):
-        avg_time, avg_grids = benchmark_model(mock_model, single_item_dataset, batch_size=1, num_batches=1, num_runs=1)
+        avg_time, avg_grids = benchmark_model(mock_model, single_item_dataset, batch_size=1, num_batches=1)
     
     assert isinstance(avg_time, float)
     assert isinstance(avg_grids, float)
