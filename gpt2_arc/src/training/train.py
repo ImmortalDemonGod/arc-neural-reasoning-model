@@ -169,7 +169,7 @@ if __name__ == "__main__":
         val_data = ARCDataset(eval_set)
 
         # Initialize tracker
-        tracker = ExperimentTracker(config, project=args.project)
+        tracker = ExperimentTracker(config, project=args.project, use_wandb=not args.no_wandb)
         tracker.start()
 
         # Initialize trainer

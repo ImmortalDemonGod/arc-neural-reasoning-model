@@ -10,14 +10,14 @@ from dataclasses import asdict
 from typing import Dict, Any, Optional
 
 class ExperimentTracker:
-    def __init__(self, config: Dict[str, Any], project: str, entity: Optional[str] = None):
+    def __init__(self, config: Dict[str, Any], project: str, entity: Optional[str] = None, use_wandb: bool = False):
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         self.config = config
         self.project = project
         self.entity = entity
         self.run = None
-        self.use_wandb = config.get('use_wandb', False)
+        self.use_wandb = use_wandb
         self.results = {
             "train": [],
             "validation": [],
