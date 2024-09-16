@@ -164,7 +164,8 @@ class ARCTrainer(pl.LightningModule):
         result = {
             'loss': loss,
             'accuracy': accuracy,
-            'task_ids': task_ids
+            'task_ids': task_ids,
+            'test_loss': loss  # Add test_loss to the result
         }
 
         self.results_collector.add_task_specific_result(task_id, {
