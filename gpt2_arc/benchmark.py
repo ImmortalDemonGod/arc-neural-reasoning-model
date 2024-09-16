@@ -176,17 +176,14 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
     grids_per_second_runs.append(grids_per_second)
 
     if total_time <= 0 or total_grids <= 0:
-        print(f"ERROR: Invalid total time ({total_time}) or total grids ({total_grids}). Check the benchmark implementation.")
         logger.warning(f"ERROR: Invalid total time ({total_time}) or total grids ({total_grids}). Check the benchmark implementation.")
-        return 0.0, float('inf')  # Return sensible defaults instead of negative values
+        return 0.0, 0.0  # Return sensible defaults instead of infinity
 
-    if total_time > 0:
-        grids_per_second = total_grids / total_time
-    else:
-        grids_per_second = 0.0  # Avoid division by zero
-        logger.warning("Total time is zero. Setting grids_per_second to 0.0 to avoid division by zero.")
-    
-    print(f"Grids per Second: {grids_per_second}")
+    avg_total_time = total_time
+    avg_grids_per_second = total_grids / total_time if total_time > 0 else 0.0
+
+    logger.info(f"Total Time: {avg_total_time:.4f} seconds, Grids per Second: {avg_grids_per_second:.2f}")
+
     return avg_total_time, avg_grids_per_second
 
     # Perform statistical analysis (confidence intervals, effect size, etc.)

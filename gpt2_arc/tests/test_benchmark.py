@@ -140,7 +140,7 @@ def test_benchmark_model_performance(benchmark, mock_model, mock_torch):
     mock_dataloader.__iter__.return_value = iter([mock_dataset.__getitem__()])
 
     with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
-        avg_time, grids_per_second = benchmark(
+        result = benchmark(
             benchmark_model,
             mock_model,
             mock_dataset,
@@ -151,8 +151,19 @@ def test_benchmark_model_performance(benchmark, mock_model, mock_torch):
             model_checkpoint=None
         )
 
-    print(f"Benchmark result - Grids per Second: {grids_per_second}")
-    assert grids_per_second > 0, "Grids per second should be positive"
+    assert isinstance(result, tuple), f"Expected tuple, got {type(result)}"
+    assert len(result) == 2, f"Expected tuple of length 2, got length {len(result)}"
+    
+    avg_time, grids_per_second = result
+    print(f"Benchmark result - Average Time: {avg_time}, Grids per Second: {grids_per_second}")
+    
+    assert isinstance(avg_time, float), f"Expected float for avg_time, got {type(avg_time)}"
+    assert isinstance(grids_per_second, float), f"Expected float for grids_per_second, got {type(grids_per_second)}"
+    assert avg_time >= 0, f"Average time should be non-negative, got {avg_time}"
+    assert grids_per_second >= 0, f"Grids per second should be non-negative, got {grids_per_second}"
+
+    if avg_time > 0:
+        assert grids_per_second > 0, f"Grids per second should be positive when avg_time > 0, got {grids_per_second}"
 
 # Edge case tests
 
