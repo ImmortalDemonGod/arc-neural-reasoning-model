@@ -113,7 +113,9 @@ class ExperimentTracker:
 
     def save_to_json(self, filepath: str):
         try:
-            self._ensure_directory_exists(os.path.dirname(filepath))
+            directory = os.path.dirname(filepath)
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory)
             data = {
                 "experiment_id": self.experiment_id,
                 "timestamp": self.timestamp,
@@ -161,7 +163,7 @@ class ExperimentTracker:
 # Add a simple test
 if __name__ == "__main__":
     config = {"learning_rate": 0.01, "batch_size": 32, "use_wandb": True}
-    tracker = ExperimentTracker(config, project="test-project", entity="arc-abolition-org")
+    tracker = ExperimentTracker(config, project="test-project")
     tracker.start()
     tracker.log_metric("accuracy", 0.85, step=1)
     tracker.update_train_metrics(0, {"loss": 0.5, "accuracy": 0.8})
