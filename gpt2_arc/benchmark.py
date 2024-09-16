@@ -173,9 +173,11 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
 
     if total_time <= 0 or total_grids <= 0:
         print(f"ERROR: Invalid total time ({total_time}) or total grids ({total_grids}). Check the benchmark implementation.")
-        return 0, 0  # Return sensible defaults instead of negative values
-    avg_total_time = np.mean(total_time_runs)
-    avg_grids_per_second = np.mean(grids_per_second_runs)
+        logger.warning(f"ERROR: Invalid total time ({total_time}) or total grids ({total_grids}). Check the benchmark implementation.")
+        return 0.0, float('inf')  # Return sensible defaults instead of negative values
+
+    avg_total_time = total_time / num_runs
+    avg_grids_per_second = total_grids / total_time if total_time > 0 else float('inf')
     std_total_time = np.std(total_time_runs, ddof=1)
     std_grids_per_second = np.std(grids_per_second_runs, ddof=1)
 
