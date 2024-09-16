@@ -93,7 +93,9 @@ def main(args):
     results_summary = trainer.results_collector.get_summary()
     print("Experiment Summary:")
     logger.debug(f"Results summary before serialization: {results_summary}")
-    print(json.dumps(results_summary, indent=2))
+    # Convert any non-serializable objects in results_summary to strings
+    serializable_summary = {k: (str(v) if isinstance(v, MagicMock) else v) for k, v in results_summary.items()}
+    print(json.dumps(serializable_summary, indent=2))
 
     # You can also save the summary to a separate file or database for quick reference
     with open(f"results/summary_{trainer.results_collector.experiment_id}.json", 'w') as f:
