@@ -145,7 +145,7 @@ def test_benchmark_model_performance(benchmark, mock_model, mock_dataset, mock_d
 def test_benchmark_model_empty_dataset(mock_model):
     empty_dataset = MagicMock()
     empty_dataset.__len__.return_value = 0
-    
+
     with pytest.raises(ValueError, match="Dataset is empty"):
         benchmark_model(mock_model, empty_dataset)
 
