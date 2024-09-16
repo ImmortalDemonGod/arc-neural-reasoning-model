@@ -24,8 +24,12 @@ def mock_dataset():
 def mock_dataloader():
     dataloader = MagicMock()
     dataloader.__iter__.return_value = iter([
-        (torch.randn(32, 1, 30, 30), torch.randn(32, 1, 30, 30))
-        for _ in range(10)
+        (
+            torch.randn(32, 1, 30, 30),  # inputs
+            torch.randn(32, 1, 30, 30),  # outputs
+            f"task_{i}"                  # task_ids
+        )
+        for i in range(10)
     ])
     return dataloader
 
