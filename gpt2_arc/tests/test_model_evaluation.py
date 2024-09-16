@@ -113,7 +113,7 @@ def test_standard_pixel_accuracy(model, inputs, targets):
     assert 0.0 <= accuracy <= 1.0, f"Accuracy should be between 0 and 1, got {accuracy}"
     
     # Test with known values
-    known_outputs = torch.FloatTensor([[[[0.9, 0.1], [0.9, 0.1]]]])
+    known_outputs = torch.FloatTensor([[[[0.9, 0.1], [0.1, 0.9]]]])
     known_targets = torch.tensor([[[0, 1], [1, 0]]])
     known_accuracy = (known_outputs.argmax(dim=1) == known_targets).float().mean().item()
     logger.debug(f"Known accuracy: {known_accuracy}")
