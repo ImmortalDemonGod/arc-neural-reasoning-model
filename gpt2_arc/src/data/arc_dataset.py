@@ -422,7 +422,7 @@ class ARCDataset(Dataset):
             else:
                 print(f"DEBUG: Item doesn't match expected format. Keys: {item.keys() if hasattr(item, 'keys') else 'No keys method'}")
                 processed_item = {
-                    "train": [{"input": np.array(item.get("input", [])), "output": np.array(item.get("output", []))}],
+                    "train": [{"input": np.array(item.train[0][0]), "output": np.array(item.train[0][1])}],
                     "test": []
                 }
             
