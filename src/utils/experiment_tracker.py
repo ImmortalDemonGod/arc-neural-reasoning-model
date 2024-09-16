@@ -49,7 +49,7 @@ class ExperimentTracker:
 # Add a simple test
 if __name__ == "__main__":
     config = {"learning_rate": 0.01, "batch_size": 32, "use_wandb": True}
-    tracker = ExperimentTracker(config, project="test-project", entity="test-entity")
+    tracker = ExperimentTracker(config, project="test-project", entity="your-entity-name")
     tracker.start()
     tracker.log_metric("accuracy", 0.85, step=1)
     tracker.finish()
