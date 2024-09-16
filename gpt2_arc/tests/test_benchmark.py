@@ -17,7 +17,12 @@ def mock_model():
 @pytest.fixture
 def mock_dataset():
     dataset = MagicMock()
-    dataset.__len__.return_value = 1000
+    dataset.__getitem__.return_value = (
+        torch.randn(1, 30, 30),  # inputs
+        torch.randint(0, 10, (1, 30, 30)),  # outputs
+        "task_1"  # task_id
+    )
+    dataset.__len__.return_value = 100
     return dataset
 
 @pytest.fixture

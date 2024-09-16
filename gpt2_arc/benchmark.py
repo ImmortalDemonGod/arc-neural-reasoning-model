@@ -104,7 +104,11 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
         else:
             raise ValueError(f"Unexpected batch format. Expected 2 or 3 items, got {len(batch)}")
 
-        print(f"Inputs type: {type(inputs)}, shape: {inputs.shape if isinstance(inputs, torch.Tensor) else 'N/A'}")
+        print(f"Inputs type: {type(inputs)}")
+        if hasattr(inputs, 'shape'):
+            print(f"Inputs shape: {inputs.shape}")
+        else:
+            print("Inputs shape: N/A")
         print(f"Outputs type: {type(outputs)}, shape: {outputs.shape if isinstance(outputs, torch.Tensor) else 'N/A'}")
         print(f"Task IDs: {task_ids}")
 
