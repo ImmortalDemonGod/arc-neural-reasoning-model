@@ -213,7 +213,6 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
 
     logger.info(f"Total Time: {avg_total_time:.4f} seconds, Grids per Second: {avg_grids_per_second:.2f}")
 
-    return avg_total_time, avg_grids_per_second
 
     # Perform statistical analysis (confidence intervals, effect size, etc.)
     confidence_level = 0.95
