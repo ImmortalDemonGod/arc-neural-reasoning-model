@@ -99,17 +99,17 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
         attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
         inputs, attention_mask = inputs.to(device), attention_mask.to(device)
 
-            # Log system load and system state before processing the batch
-            cpu_percent = psutil.cpu_percent(interval=None)
-            memory_info = psutil.virtual_memory()
-            cpu_usages.append(cpu_percent)
-            memory_usages.append(memory_info.percent)
-            if device.type == 'cuda':
-                gpu_utilization = torch.cuda.utilization(device.index)
-                gpu_usages.append(gpu_utilization)
-                logger.info(f"Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%, GPU Utilization: {gpu_utilization}%")
-            else:
-                logger.info(f"Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%")
+        # Log system load and system state before processing the batch
+        cpu_percent = psutil.cpu_percent(interval=None)
+        memory_info = psutil.virtual_memory()
+        cpu_usages.append(cpu_percent)
+        memory_usages.append(memory_info.percent)
+        if device.type == 'cuda':
+            gpu_utilization = torch.cuda.utilization(device.index)
+            gpu_usages.append(gpu_utilization)
+            logger.info(f"Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%, GPU Utilization: {gpu_utilization}%")
+        else:
+            logger.info(f"Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%")
 
             # Measure the time taken to process the batch
             start_time = time.time()
