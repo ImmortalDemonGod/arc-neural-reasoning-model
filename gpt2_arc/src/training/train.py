@@ -241,3 +241,12 @@ if __name__ == "__main__":
         results_path = os.path.join(args.results_dir, f"results_{args.run_name}.json")
         tracker.save_to_json(results_path)
 
+    except Exception as e:
+        print(f"Training interrupted: {e}")
+        if 'tracker' in locals():
+            tracker.log_metric("training_interrupted", 1)
+            tracker.log_metric("error_message", str(e))
+    finally:
+        if 'tracker' in locals():
+            tracker.finish()
+
