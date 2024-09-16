@@ -198,7 +198,10 @@ class ARCTrainer(pl.LightningModule):
                 all_losses.extend([output['loss'].item()] * len(batch_task_ids))
             else:
                 logger.error("Missing 'loss' key in output")
-            all_accuracies.extend([output['accuracy'].item()] * len(batch_task_ids))
+            if 'accuracy' in output:
+                all_accuracies.extend([output['accuracy'].item()] * len(batch_task_ids))
+            else:
+                logger.error("Missing 'accuracy' key in output")
 
             print(f"Debug: Batch task IDs: {batch_task_ids}")
             print(f"Debug: Batch loss: {output['loss'].item()}, accuracy: {output['accuracy'].item()}")
