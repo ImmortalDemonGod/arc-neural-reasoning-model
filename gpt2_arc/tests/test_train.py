@@ -293,7 +293,18 @@ def test_gpu_not_available(mock_args):
         "gpt2_arc.src.training.train.ARCDataset"
     ), patch("gpt2_arc.src.training.train.GPT2ARC"), patch(
         "gpt2_arc.src.training.train.ARCTrainer"
-    ), patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer:
+    ), patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
+         patch("gpt2_arc.src.utils.results_collector.ResultsCollector.get_summary") as mock_get_summary:
+
+        # Mock the get_summary method to return a serializable dictionary
+        mock_get_summary.return_value = {
+            "experiment_id": "test_id",
+            "timestamp": "2023-10-01 12:00:00",
+            "final_train_loss": 0.1,
+            "final_val_loss": 0.2,
+            "test_accuracy": 0.95,
+            "config": {"model": {}, "training": {}}
+        }
         main(mock_args)
         mock_trainer.assert_called_with(
             max_epochs=mock_args.max_epochs,

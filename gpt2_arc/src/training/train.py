@@ -94,11 +94,22 @@ def main(args):
     results_summary = trainer.results_collector.get_summary()
     print("Experiment Summary:")
     logger.debug(f"Results summary before serialization: {results_summary}")
-    print(json.dumps(results_summary, indent=2))
+    try:
+        print(json.dumps(results_summary, indent=2))
+    except TypeError as e:
+        print(f"Error serializing results summary: {e}")
+        print("Results summary (non-serialized):")
+        print(results_summary)
 
     # Save the summary to a separate file
-    with open(f"results/summary_{trainer.results_collector.experiment_id}.json", 'w') as f:
-        json.dump(results_summary, f, indent=2)
+    try:
+        with open(f"results/summary_{trainer.results_collector.experiment_id}.json", 'w') as f:
+            json.dump(results_summary, f, indent=2)
+    except TypeError as e:
+        print(f"Error saving results summary: {e}")
+        # Fallback to saving as string representation
+        with open(f"results/summary_{trainer.results_collector.experiment_id}.txt", 'w') as f:
+            f.write(str(results_summary))
 
 
 if __name__ == "__main__":
