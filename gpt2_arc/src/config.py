@@ -1,5 +1,5 @@
 # gpt2_arc/src/config.py
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 
 @dataclass
