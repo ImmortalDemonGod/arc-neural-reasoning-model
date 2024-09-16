@@ -105,9 +105,9 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
             if device.type == 'cuda':
                 gpu_utilization = torch.cuda.utilization(device.index)
                 gpu_usages.append(gpu_utilization)
-                logger.info(f"Run {run+1}, Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%, GPU Utilization: {gpu_utilization}%")
+                logger.info(f"Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%, GPU Utilization: {gpu_utilization}%")
             else:
-                logger.info(f"Run {run+1}, Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%")
+                logger.info(f"Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%")
 
             # Measure the time taken to process the batch
             start_time = time.time()
@@ -135,36 +135,35 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
             total_time += batch_time
             total_grids += len(inputs)
 
-        print(f"Run {run + 1} completed. Total time: {total_time}, Total grids: {total_grids}")
-        # Average metrics for the run
+    print(f"Benchmark completed. Total time: {total_time}, Total grids: {total_grids}")
+    # Average metrics for the run
     if total_time > 0:
         grids_per_second = total_grids / total_time
     else:
         grids_per_second = 0.0  # Avoid division by zero
         logger.warning("Total time is zero. Setting grids_per_second to 0.0 to avoid division by zero.")
 
-        logger.info(f"Run {run+1}: Total Time: {total_time:.4f} seconds, Grids per Second: {grids_per_second:.2f}")
-        
-        # Store the results of each run
-        run_results.append({
-            'run_id': run_id,
-            'datetime': current_time,
-            'run': run + 1,
-            'total_time': total_time,
-            'grids_per_second': grids_per_second,
-            'cpu_usage': np.mean(cpu_usages),
-            'memory_usage': np.mean(memory_usages),
-            'gpu_usage': np.mean(gpu_usages) if gpu_usages else None,
-            'batch_size': batch_size,
-            'num_batches': num_batches,
-            'device': device.type,
-            'n_embd': model.config.n_embd,
-            'n_head': model.config.n_head,
-            'n_layer': model.config.n_layer,
-            'precision': precision,  # Add precision here
-            'checkpoint_used': checkpoint_used,
-            'checkpoint_info': checkpoint_info
-        })
+    logger.info(f"Total Time: {total_time:.4f} seconds, Grids per Second: {grids_per_second:.2f}")
+    
+    # Store the results of the run
+    run_results.append({
+        'run_id': run_id,
+        'datetime': current_time,
+        'total_time': total_time,
+        'grids_per_second': grids_per_second,
+        'cpu_usage': np.mean(cpu_usages),
+        'memory_usage': np.mean(memory_usages),
+        'gpu_usage': np.mean(gpu_usages) if gpu_usages else None,
+        'batch_size': batch_size,
+        'num_batches': num_batches,
+        'device': device.type,
+        'n_embd': model.config.n_embd,
+        'n_head': model.config.n_head,
+        'n_layer': model.config.n_layer,
+        'precision': precision,  # Add precision here
+        'checkpoint_used': checkpoint_used,
+        'checkpoint_info': checkpoint_info
+    })
 
         total_time_runs.append(total_time)
         grids_per_second_runs.append(grids_per_second)
