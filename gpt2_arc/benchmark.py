@@ -88,10 +88,10 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
     total_time = 0.0
     total_grids = 0
 
-        for i, (inputs, outputs) in enumerate(dataloader):
-            print(f"Processing batch {i + 1}/{num_batches}")
-            if i >= num_batches:
-                break
+    for i, (inputs, outputs) in enumerate(dataloader):
+        print(f"Processing batch {i + 1}/{num_batches}")
+        if i >= num_batches:
+            break
 
             # Create a dummy attention mask (all ones)
             attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
