@@ -24,5 +24,7 @@ from dataclasses import field
 
 @dataclass
 class Config:
+    def to_dict(self):
+        return asdict(self)
     model: ModelConfig = field(default_factory=ModelConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)

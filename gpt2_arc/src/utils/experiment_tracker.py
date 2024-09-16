@@ -29,7 +29,7 @@ class ExperimentTracker:
         self.checkpoint_path = None
 
         # Add debug logging
-        print(f"ExperimentTracker initialized with config: {json.dumps(config, indent=2)}")
+        print(f"ExperimentTracker initialized with config: {json.dumps(config.to_dict(), indent=2)}")
         print(f"Project: {project}, Entity: {entity}")
         print(f"use_wandb: {self.use_wandb}")
 

@@ -233,7 +233,12 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(f"Training interrupted: {e}")
-        tracker.log_metric("training_interrupted", 1)
-        tracker.log_metric("error_message", str(e))
+        except Exception as e:
+            print(f"Training interrupted: {e}")
+            if 'tracker' in locals():
+                tracker.log_metric("training_interrupted", 1)
+                tracker.log_metric("error_message", str(e))
     finally:
-        tracker.finish()
+        finally:
+            if 'tracker' in locals():
+                tracker.finish()
