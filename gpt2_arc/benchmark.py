@@ -91,10 +91,20 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
     total_time = 0.0
     total_grids = 0
 
-    for i, (inputs, outputs, task_ids) in enumerate(dataloader):
+    for i, batch in enumerate(dataloader):
         if i >= num_batches:
             break
         print(f"Processing batch {i+1}/{num_batches}")
+
+        if len(batch) == 3:
+            inputs, outputs, task_ids = batch
+        elif len(batch) == 2:
+            inputs, outputs = batch
+            task_ids = None
+        else:
+            raise ValueError(f"Unexpected batch format. Expected 2 or 3 items, got {len(batch)}")
+
+        print(f"Inputs shape: {inputs.shape}, Outputs shape: {outputs.shape}, Task IDs: {task_ids}")
         print(f"Inputs shape: {inputs.shape}, Outputs shape: {outputs.shape}, Task IDs: {task_ids}")
         attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
         inputs, attention_mask = inputs.to(device), attention_mask.to(device)

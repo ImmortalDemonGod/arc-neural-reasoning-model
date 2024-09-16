@@ -210,10 +210,16 @@ def test_benchmark_model_out_of_memory(mock_model, mock_dataset, mock_dataloader
 # Precision tests
 
 @pytest.mark.parametrize("precision", ['highest', 'high', 'medium'])
-def test_benchmark_model_precision(mock_model, mock_dataset, mock_dataloader, mock_torch, precision):
-    with patch('benchmark.DataLoader', return_value=mock_dataloader), \
-         patch('benchmark.torch.set_float32_matmul_precision') as mock_set_precision:
-        benchmark_model(mock_model, mock_dataset, precision=precision)
+def test_benchmark_model_precision(mock_model, mock_dataset, mock_torch, precision):
+    with patch('gpt2_arc.benchmark.DataLoader') as mock_dataloader_class:
+        mock_dataloader = MagicMock()
+        mock_dataloader.__iter__.return_value = iter([
+            (torch.randn(1, 30, 30), torch.randint(0, 10, (1, 30, 30)))
+        ])
+        mock_dataloader_class.return_value = mock_dataloader
+
+        with patch('gpt2_arc.benchmark.torch.set_float32_matmul_precision') as mock_set_precision:
+            benchmark_model(mock_model, mock_dataset, precision=precision)
     
     mock_set_precision.assert_called_once_with(precision)
 
