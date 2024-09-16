@@ -187,8 +187,7 @@ if __name__ == "__main__":
             model=model,
             train_dataset=train_data,
             val_dataset=val_data,
-            config=config,
-            tracker=tracker
+            config=config
         )
 
         # Initialize DataLoader
