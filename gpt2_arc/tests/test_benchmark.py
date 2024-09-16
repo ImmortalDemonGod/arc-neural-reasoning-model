@@ -227,7 +227,11 @@ def test_benchmark_model_precision(mock_model, mock_dataset, mock_torch, precisi
     with patch('gpt2_arc.benchmark.DataLoader') as mock_dataloader_class:
         mock_dataloader = MagicMock()
         mock_dataloader.__iter__.return_value = iter([
-            (torch.randn(1, 1, 30, 30), torch.randint(0, 10, (1, 30, 30)))
+            mock_input = torch.randn(1, 1, 30, 30)
+            mock_output = torch.randint(0, 10, (1, 30, 30))
+            mock_dataloader.__iter__.return_value = iter([(mock_input, mock_output)])
+            print(f"Mock input shape: {mock_input.shape}")
+            print(f"Mock output shape: {mock_output.shape}")
         ])
         mock_dataloader_class.return_value = mock_dataloader
 
