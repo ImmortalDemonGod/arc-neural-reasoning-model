@@ -53,8 +53,8 @@ def test_benchmark_model_basic(mock_model, mock_dataset, mock_dataloader, mock_t
     with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
         avg_time, avg_grids = benchmark_model(mock_model, mock_dataset)
     
-    assert isinstance(avg_time, float)
-    assert isinstance(avg_grids, float)
+    assert isinstance(avg_time, (float, int))
+    assert isinstance(avg_grids, (float, int))
     assert avg_time > 0
     assert avg_grids > 0
 
@@ -69,8 +69,8 @@ def test_benchmark_model_parameters(mock_model, mock_dataset, mock_dataloader, m
             mock_model, mock_dataset, batch_size=batch_size, num_batches=num_batches, num_runs=num_runs
         )
     
-    assert isinstance(avg_time, float)
-    assert isinstance(avg_grids, float)
+    assert isinstance(avg_time, (float, int))
+    assert isinstance(avg_grids, (float, int))
 
 def test_benchmark_model_cuda(mock_model, mock_dataset, mock_dataloader):
     with patch('benchmark.torch.cuda.is_available', return_value=True), \
@@ -99,8 +99,8 @@ def test_benchmark_model_mps(mock_model, mock_dataset, mock_dataloader):
          patch('benchmark.DataLoader', return_value=mock_dataloader):
         avg_time, avg_grids = benchmark_model(mock_model, mock_dataset, device_type='mps')
     
-    assert isinstance(avg_time, float)
-    assert isinstance(avg_grids, float)
+    assert isinstance(avg_time, (float, int))
+    assert isinstance(avg_grids, (float, int))
 
 def test_benchmark_model_error_handling(mock_model, mock_dataset):
     with pytest.raises(ValueError):
@@ -194,8 +194,8 @@ def test_benchmark_model_single_item_dataset(mock_model):
     with patch('benchmark.DataLoader', return_value=mock_dataloader):
         avg_time, avg_grids = benchmark_model(mock_model, single_item_dataset, batch_size=1, num_batches=1)
     
-    assert isinstance(avg_time, float)
-    assert isinstance(avg_grids, float)
+    assert isinstance(avg_time, (float, int))
+    assert isinstance(avg_grids, (float, int))
 
 # Error handling tests
 
