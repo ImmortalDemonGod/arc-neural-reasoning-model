@@ -10,8 +10,14 @@ from src.training.trainer import ARCTrainer
 @pytest.fixture
 def sample_data():
     return [
-        {"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]},
-        {"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]},
+        {
+            "train": [
+                {"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]}
+            ],
+            "test": [
+                {"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]}
+            ]
+        }
     ]
 
 
