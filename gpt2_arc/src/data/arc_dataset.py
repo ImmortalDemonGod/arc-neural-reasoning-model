@@ -438,8 +438,18 @@ class ARCDataset(Dataset):
     @staticmethod
     def collate_fn(batch):
         print(f"Collating batch of size: {len(batch)}")
-        inputs, outputs, task_ids = zip(*batch)
+        if not batch:
+            print("Warning: Empty batch received")
+            return torch.tensor([]), torch.tensor([]), []
         
+        try:
+            inputs, outputs, task_ids = zip(*batch)
+        except ValueError as e:
+            print(f"Error unpacking batch: {e}")
+            print(f"Batch content: {batch}")
+            # Return empty tensors and list if unpacking fails
+            return torch.tensor([]), torch.tensor([]), []
+
         print(f"Input shapes: {[i.shape for i in inputs]}")
         print(f"Output shapes: {[o.shape for o in outputs]}")
 
