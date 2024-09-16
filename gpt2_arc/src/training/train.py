@@ -22,6 +22,7 @@ from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
 from gpt2_arc.src.training.trainer import ARCTrainer
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
+from gpt2_arc.src.utils.results_collector import ResultsCollector
 import os
 
 
@@ -46,6 +47,7 @@ def main(args):
 
     logger.info("Initializing trainer with new configuration")
     config = Config(model=model_config, training=TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs))
+    results_collector = ResultsCollector(config)
     tracker = ExperimentTracker(config, project=args.project)
     tracker.start()
     trainer = ARCTrainer(
@@ -152,7 +154,8 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    try:
+    tracker = ExperimentTracker(config, project=args.project)
+    tracker.start()
         main(args)
     except Exception as e:
         print(f"Training interrupted: {e}")
