@@ -126,10 +126,19 @@ def test_main_function(mock_argparse, mock_dataset, mock_model):
 
 @pytest.mark.benchmark(group="benchmark_model")
 def test_benchmark_model_performance(benchmark, mock_model, mock_dataset, mock_dataloader, mock_torch):
-    with patch('benchmark.DataLoader', return_value=mock_dataloader):
-        result = benchmark(benchmark_model, mock_model, mock_dataset, num_runs=3)
+    with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
+        grids_per_second = benchmark(
+            benchmark_model,
+            mock_model,
+            mock_dataset,
+            batch_size=1,
+            num_batches=1,
+            device_type='cpu',
+            precision='medium',
+            model_checkpoint=None
+        )
     
-    assert result.stats['mean'] > 0, "Average grids per second should be positive"
+    assert grids_per_second > 0, "Average grids per second should be positive"
 
 # Edge case tests
 
