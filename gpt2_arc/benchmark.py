@@ -91,8 +91,6 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
     for i, (inputs, outputs) in enumerate(dataloader):
         print(f"Processing batch {i + 1}/{num_batches}")
         if i >= num_batches:
-            break
-
             # Create a dummy attention mask (all ones)
             attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
             inputs, attention_mask = inputs.to(device), attention_mask.to(device)
@@ -165,8 +163,8 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
         'checkpoint_info': checkpoint_info
     })
 
-        total_time_runs.append(total_time)
-        grids_per_second_runs.append(grids_per_second)
+    total_time_runs.append(total_time)
+    grids_per_second_runs.append(grids_per_second)
 
     if total_time <= 0 or total_grids <= 0:
         print(f"ERROR: Invalid total time ({total_time}) or total grids ({total_grids}). Check the benchmark implementation.")
