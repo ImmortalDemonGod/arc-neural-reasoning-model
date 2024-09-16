@@ -4,6 +4,7 @@ import sys
 import logging
 import os
 import json
+from unittest.mock import MagicMock
 
 # Add the root directory of the project to the PYTHONPATH
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
