@@ -117,7 +117,7 @@ def test_benchmark_model_performance(benchmark, mock_model, mock_dataset, mock_d
     with patch('benchmark.DataLoader', return_value=mock_dataloader):
         result = benchmark(benchmark_model, mock_model, mock_dataset, num_runs=3)
     
-    assert benchmark.stats.mean > 0, "Average grids per second should be positive"
+    assert result.stats['mean'] > 0, "Average grids per second should be positive"
 
 # Edge case tests
 
