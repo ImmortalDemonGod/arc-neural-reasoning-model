@@ -96,13 +96,10 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
             break
         print(f"Processing batch {i+1}/{num_batches}")
 
-        if len(batch) == 3:
-            inputs, outputs, task_ids = batch
-        elif len(batch) == 2:
-            inputs, outputs = batch
-            task_ids = None
-        else:
-            raise ValueError(f"Unexpected batch format. Expected 2 or 3 items, got {len(batch)}")
+        logger.debug(f"Batch content before unpacking: {batch}")
+        if len(batch) != 3:
+            raise ValueError(f"Unexpected batch format. Expected 3 items, got {len(batch)}")
+        inputs, outputs, task_ids = batch
 
         print(f"Inputs type: {type(inputs)}")
         if hasattr(inputs, 'shape'):
@@ -112,8 +109,8 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
         print(f"Outputs type: {type(outputs)}, shape: {outputs.shape if isinstance(outputs, torch.Tensor) else 'N/A'}")
         print(f"Task IDs: {task_ids}")
 
-        if not isinstance(inputs, torch.Tensor):
-            raise ValueError(f"Inputs should be a torch.Tensor, got {type(inputs)}")
+        if inputs is None or not isinstance(inputs, torch.Tensor):
+            raise ValueError(f"Expected inputs to be a torch.Tensor, got {type(inputs)}")
 
         if inputs.numel() == 0:
             raise ValueError("Inputs tensor is empty")
