@@ -138,6 +138,7 @@ def test_benchmark_model_performance(benchmark, mock_model, mock_dataset, mock_d
             model_checkpoint=None
         )
     
+    print(f"Benchmark result - Grids per Second: {grids_per_second}")
     assert grids_per_second > 0, "Average grids per second should be positive"
 
 # Edge case tests

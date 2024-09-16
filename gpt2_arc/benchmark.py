@@ -91,12 +91,13 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
     total_time = 0.0
     total_grids = 0
 
-    for i, (inputs, outputs) in enumerate(dataloader):
-        print(f"Processing batch {i + 1}/{num_batches}")
+    for i, (inputs, outputs, task_ids) in enumerate(dataloader):
         if i >= num_batches:
-            # Create a dummy attention mask (all ones)
-            attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
-            inputs, attention_mask = inputs.to(device), attention_mask.to(device)
+            break
+        print(f"Processing batch {i+1}/{num_batches}")
+        print(f"Inputs shape: {inputs.shape}, Outputs shape: {outputs.shape}, Task IDs: {task_ids}")
+        attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
+        inputs, attention_mask = inputs.to(device), attention_mask.to(device)
 
             # Log system load and system state before processing the batch
             cpu_percent = psutil.cpu_percent(interval=None)
