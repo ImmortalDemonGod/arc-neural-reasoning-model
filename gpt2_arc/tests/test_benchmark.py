@@ -55,7 +55,7 @@ def test_benchmark_model_basic(mock_model, mock_dataset, mock_dataloader, mock_t
     (128, 2, 3)
 ])
 def test_benchmark_model_parameters(mock_model, mock_dataset, mock_dataloader, mock_torch, batch_size, num_batches, num_runs):
-    with patch('benchmark.DataLoader', return_value=mock_dataloader):
+    with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
         avg_time, avg_grids = benchmark_model(
             mock_model, mock_dataset, batch_size=batch_size, num_batches=num_batches, num_runs=num_runs
         )
@@ -117,7 +117,7 @@ def test_benchmark_model_performance(benchmark, mock_model, mock_dataset, mock_d
     with patch('benchmark.DataLoader', return_value=mock_dataloader):
         result = benchmark(benchmark_model, mock_model, mock_dataset, num_runs=3)
     
-    assert result.stats.mean > 0
+    assert benchmark.stats.mean > 0, "Average grids per second should be positive"
 
 # Edge case tests
 

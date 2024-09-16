@@ -84,11 +84,9 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
             logger.warning(f"Compilation failed with error: {e}. Falling back to eager execution.")
             compiled_model = model
 
-    for run in range(num_runs):
-        print(f"Starting run {run + 1}/{num_runs}")
-        dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
-        total_time = 0.0
-        total_grids = 0
+    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
+    total_time = 0.0
+    total_grids = 0
 
         for i, (inputs, outputs) in enumerate(dataloader):
             print(f"Processing batch {i + 1}/{num_batches}")
@@ -139,11 +137,11 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
 
         print(f"Run {run + 1} completed. Total time: {total_time}, Total grids: {total_grids}")
         # Average metrics for the run
-        if total_time > 0:
-            grids_per_second = total_grids / total_time if total_time > 0 else 0.0
-        else:
-            logger.warning(f"Total time is zero for run {run + 1}. Setting grids_per_second to infinity.")
-            grids_per_second = float('inf')
+    if total_time > 0:
+        grids_per_second = total_grids / total_time
+    else:
+        grids_per_second = 0.0  # Avoid division by zero
+        logger.warning("Total time is zero. Setting grids_per_second to 0.0 to avoid division by zero.")
 
         logger.info(f"Run {run+1}: Total Time: {total_time:.4f} seconds, Grids per Second: {grids_per_second:.2f}")
         
