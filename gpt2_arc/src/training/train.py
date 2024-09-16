@@ -156,7 +156,7 @@ if __name__ == "__main__":
     
     tracker = ExperimentTracker(config, project=args.project)
     tracker.start()
-        main(args)
+    main(args)
     except Exception as e:
         print(f"Training interrupted: {e}")
         tracker.log_metric("training_interrupted", 1)
