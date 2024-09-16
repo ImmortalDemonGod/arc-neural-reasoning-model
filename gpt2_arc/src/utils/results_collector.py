@@ -93,12 +93,26 @@ class ResultsCollector:
             os.makedirs(directory)
 
     def get_summary(self) -> Dict[str, Any]:
-        """Generate a summary of the experiment results."""
-        return {
+        """Get a summary of the results."""
+        summary = {
             "experiment_id": self.experiment_id,
             "timestamp": self.timestamp,
             "final_train_loss": self.results["train"][-1]["loss"] if self.results["train"] else None,
             "final_val_loss": self.results["validation"][-1]["loss"] if self.results["validation"] else None,
             "test_accuracy": self.results["test"].get("accuracy"),
-            "config": self.config
+            "config": self._serialize_config(self.config)
         }
+        return {k: self._make_serializable(v) for k, v in summary.items()}
+
+    def _make_serializable(self, obj):
+        if isinstance(obj, (int, float, str, bool, type(None))):
+            return obj
+        elif isinstance(obj, (list, tuple)):
+            return [self._make_serializable(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {k: self._make_serializable(v) for k, v in obj.items()}
+        else:
+            return str(obj)
+
+    def _serialize_config(self, config):
+        return {k: self._make_serializable(v) for k, v in config.items()}
