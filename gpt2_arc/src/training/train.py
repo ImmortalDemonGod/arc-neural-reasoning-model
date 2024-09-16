@@ -154,13 +154,67 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    tracker = ExperimentTracker(config, project=args.project)
-    tracker.start()
-    main(args)
+    try:
+        tracker = ExperimentTracker(config, project=args.project)
+        tracker.start()
+
+        trainer = ARCTrainer(
+            model=model,
+            train_dataset=train_data,
+            val_dataset=val_data,
+            config=config,
+            tracker=tracker
+        )
+
+        # Create PyTorch Lightning trainer
+        tb_logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
+        callbacks = []
+        if not args.no_checkpointing:
+            checkpoint_callback = ModelCheckpoint(
+                dirpath="checkpoints",
+                filename="arc_model-{epoch:02d}-{val_loss:.2f}",
+                save_top_k=3,
+                monitor="val_loss",
+                mode="min",
+            )
+            callbacks.append(checkpoint_callback)
+
+        pl_trainer = pl.Trainer(
+            max_epochs=config.training.max_epochs,
+            logger=tb_logger,
+            callbacks=callbacks if callbacks else None,
+            enable_checkpointing=not args.no_checkpointing,
+            enable_progress_bar=not args.no_progress_bar,
+            fast_dev_run=args.fast_dev_run,
+            gradient_clip_val=1.0,
+            accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu'
+        )
+
+        # Train the model
+        pl_trainer.fit(trainer)
+
+        # After training
+        test_results = trainer.test_step(val_loader, batch_idx=0)
+        tracker.set_test_results(test_results)
+
+        tracker.set_final_metrics({
+            "best_val_loss": trainer.best_val_loss,
+            "best_epoch": trainer.best_epoch,
+        })
+
+        # If you're saving a checkpoint
+        checkpoint_path = os.path.join(args.results_dir, f"model_checkpoint_{args.run_name}.pth")
+        torch.save(model.state_dict(), checkpoint_path)
+        tracker.set_checkpoint_path(checkpoint_path)
+
+        # Save results to JSON
+        os.makedirs(args.results_dir, exist_ok=True)
+        results_path = os.path.join(args.results_dir, f"results_{args.run_name}.json")
+        tracker.save_to_json(results_path)
+
     except Exception as e:
         print(f"Training interrupted: {e}")
         tracker.log_metric("training_interrupted", 1)
         tracker.log_metric("error_message", str(e))
     finally:
         tracker.finish()
-    main(args)
