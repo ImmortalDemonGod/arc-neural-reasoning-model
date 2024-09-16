@@ -48,15 +48,16 @@ def main(args):
     logger.info("Initializing trainer with new configuration")
     config = Config(model=model_config, training=TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs))
     results_collector = ResultsCollector(config)
-    tracker = ExperimentTracker(config, project=args.project)
-    tracker.start()
-    trainer = ARCTrainer(
-        model=model,
-        train_dataset=train_data,
-        val_dataset=val_data,
-        config=config,
-        results_collector=results_collector
-    )
+    try:
+        tracker = ExperimentTracker(config, project=args.project)
+        tracker.start()
+        trainer = ARCTrainer(
+            model=model,
+            train_dataset=train_data,
+            val_dataset=val_data,
+            config=config,
+            results_collector=results_collector
+        )
 
     # Create PyTorch Lightning trainer
     tb_logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
