@@ -18,7 +18,7 @@ class ExperimentTracker:
     def start(self):
         if self.use_wandb:
             try:
-                self.run = wandb.init(project=self.project, entity=self.entity, config=self.config)
+                self.run = wandb.init(project=self.project, config=self.config)
                 print(f"Wandb run initialized: {self.run.id}")
             except Exception as e:
                 print(f"Error initializing wandb: {str(e)}")
