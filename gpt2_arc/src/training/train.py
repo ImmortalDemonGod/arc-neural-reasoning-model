@@ -155,9 +155,24 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     try:
+        # Initialize configurations
+        model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
+        config = Config(model=model_config, training=TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs))
+
+        # Initialize model
+        model = GPT2ARC(config=model_config)
+
+        # Load data
+        import arckit
+        train_set, eval_set = arckit.load_data()
+        train_data = ARCDataset(train_set)
+        val_data = ARCDataset(eval_set)
+
+        # Initialize tracker
         tracker = ExperimentTracker(config, project=args.project)
         tracker.start()
 
+        # Initialize trainer
         trainer = ARCTrainer(
             model=model,
             train_dataset=train_data,
@@ -165,6 +180,10 @@ if __name__ == "__main__":
             config=config,
             tracker=tracker
         )
+
+        # Initialize DataLoader
+        from torch.utils.data import DataLoader
+        val_loader = DataLoader(val_data, batch_size=args.batch_size, num_workers=7)
 
         # Create PyTorch Lightning trainer
         tb_logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
@@ -203,8 +222,8 @@ if __name__ == "__main__":
         })
 
         # If you're saving a checkpoint
-        checkpoint_path = os.path.join(args.results_dir, f"model_checkpoint_{args.run_name}.pth")
-        torch.save(model.state_dict(), checkpoint_path)
+        checkpoint_path = os.path.join(args.results_dir, "model_checkpoint.pth")
+        torch.save(trainer.model.state_dict(), checkpoint_path)
         tracker.set_checkpoint_path(checkpoint_path)
 
         # Save results to JSON
