@@ -36,8 +36,8 @@ BASELINES = {
     'mps': {'total_time': 0.0481, 'grids_per_second': 13774.98}  # Updated baselines for MPS
 }
 
-def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, device_type='cpu', precision='medium', model_checkpoint=None):
-    print(f"Starting benchmark_model with parameters: batch_size={batch_size}, num_batches={num_batches}, num_runs={num_runs}, device_type={device_type}, precision={precision}, model_checkpoint={model_checkpoint}")
+def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cpu', precision='medium', model_checkpoint=None):
+    print(f"Starting benchmark_model with parameters: batch_size={batch_size}, num_batches={num_batches}, device_type={device_type}, precision={precision}, model_checkpoint={model_checkpoint}")
 
     checkpoint_used = False
     checkpoint_info = {}
@@ -171,10 +171,14 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
         logger.warning(f"ERROR: Invalid total time ({total_time}) or total grids ({total_grids}). Check the benchmark implementation.")
         return 0.0, float('inf')  # Return sensible defaults instead of negative values
 
-    avg_total_time = total_time / num_runs
-    avg_grids_per_second = total_grids / total_time if total_time > 0 else float('inf')
-    std_total_time = np.std(total_time_runs, ddof=1)
-    std_grids_per_second = np.std(grids_per_second_runs, ddof=1)
+    if total_time > 0:
+        grids_per_second = total_grids / total_time
+    else:
+        grids_per_second = 0.0  # Avoid division by zero
+        logger.warning("Total time is zero. Setting grids_per_second to 0.0 to avoid division by zero.")
+    
+    print(f"Grids per Second: {grids_per_second}")
+    return grids_per_second
 
     # Perform statistical analysis (confidence intervals, effect size, etc.)
     confidence_level = 0.95
