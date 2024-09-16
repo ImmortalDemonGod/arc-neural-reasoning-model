@@ -413,24 +413,40 @@ class ARCDataset(Dataset):
             print(f"DEBUG: Processing item {idx}")
             print(f"DEBUG: Item type: {type(item)}")
             print(f"DEBUG: Item content: {item}")
-            
+        
             if isinstance(item, dict) and 'train' in item and 'test' in item:
+                # Print sample structure
+                for sample_idx, sample in enumerate(item['train']):
+                    print(f"DEBUG: Sample {sample_idx} in 'train': {sample}")
+                for sample_idx, sample in enumerate(item['test']):
+                    print(f"DEBUG: Sample {sample_idx} in 'test': {sample}")
+            
+                # Modify code to handle dictionaries with 'input' and 'output' keys
                 processed_item = {
-                    "train": [{"input": np.array(sample[0]), "output": np.array(sample[1])} for sample in item['train']],
-                    "test": [{"input": np.array(sample[0]), "output": np.array(sample[1])} for sample in item['test']]
+                    "train": [
+                        {
+                            "input": np.array(sample["input"]),
+                            "output": np.array(sample["output"])
+                        } for sample in item['train']
+                    ],
+                    "test": [
+                        {
+                            "input": np.array(sample["input"]),
+                            "output": np.array(sample["output"])
+                        } for sample in item['test']
+                    ]
                 }
             else:
-                print(f"DEBUG: Item doesn't match expected format. Keys: {item.keys() if hasattr(item, 'keys') else 'No keys method'}")
-                processed_item = {
-                    "train": [{"input": np.array(sample["input"]), "output": np.array(sample["output"])} for sample in item['train']],
-                    "test": [{"input": np.array(sample["input"]), "output": np.array(sample["output"])} for sample in item['test']]
-                }
-            
+                print(f"DEBUG: Item doesn't match expected format. Keys: {list(item.keys()) if hasattr(item, 'keys') else 'No keys method'}")
+                # Handle other formats if necessary
+                # For now, raise an error to avoid silent failures
+                raise ValueError("Unexpected item format in data_source.")
+        
             processed_data.append(processed_item)
             print(f"DEBUG: Processed item structure: {processed_item.keys()}")
             print(f"DEBUG: Number of train samples: {len(processed_item['train'])}")
             print(f"DEBUG: Number of test samples: {len(processed_item['test'])}")
-        
+    
         print(f"DEBUG: Finished processing {len(processed_data)} items")
         return processed_data
 
