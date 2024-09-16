@@ -188,7 +188,7 @@ def test_benchmark_model_single_item_dataset(mock_model):
     single_item_dataset.__len__.return_value = 1
     mock_dataloader = MagicMock()
     mock_dataloader.__iter__.return_value = iter([
-        (torch.randn(1, 1, 30, 30), torch.randn(1, 1, 30, 30))
+        (torch.randn(1, 1, 30, 30), torch.randn(1, 1, 30, 30), "task_1")
     ])
     
     with patch('benchmark.DataLoader', return_value=mock_dataloader):
