@@ -89,28 +89,22 @@ def main(args):
         accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu'
     )
 
-    # Train the model
-    pl_trainer.fit(trainer)
+    global_step = 0
+    for epoch in range(args.max_epochs):
+        for batch in train_loader:
+            # ... (training step)
+            loss = trainer.training_step(batch, batch_idx=global_step)
+            
+            tracker.log_metric("train_loss", loss.item(), step=global_step)
+            tracker.update_train_metrics(epoch, {"loss": loss.item()})
+            
+            # ... (backward pass, optimizer step, etc.)
+            global_step += 1
 
-    # After training
-    # Assuming you have a test function
-    test_results = trainer.test_step(test_loader, batch_idx=global_step)
-    tracker.set_test_results(test_results)
-    
-    tracker.set_final_metrics({
-        "best_val_loss": best_val_loss,
-        "best_epoch": best_epoch,
-    })
-    
-    # If you're saving a checkpoint
-    checkpoint_path = os.path.join(args.results_dir, f"model_checkpoint_{args.run_name}.pth")
-    torch.save(model.state_dict(), checkpoint_path)
-    tracker.set_checkpoint_path(checkpoint_path)
-    
-    # Save results to JSON
-    os.makedirs(args.results_dir, exist_ok=True)
-    results_path = os.path.join(args.results_dir, f"results_{args.run_name}.json")
-    tracker.save_to_json(results_path)
+        # Validation loop
+        val_loss = trainer.validation_step(val_loader, batch_idx=global_step)
+        tracker.log_metric("val_loss", val_loss, step=global_step)
+        tracker.update_val_metrics(epoch, {"loss": val_loss})
 
 
 if __name__ == "__main__":
