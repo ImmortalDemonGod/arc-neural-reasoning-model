@@ -137,7 +137,12 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
             total_grids += len(inputs)
 
     print(f"Benchmark completed. Total time: {total_time}, Total grids: {total_grids}")
-    # Average metrics for the run
+    # Calculate average and standard deviation for the runs
+    num_runs = len(total_time_runs)
+    avg_total_time = np.mean(total_time_runs)
+    std_total_time = np.std(total_time_runs)
+    avg_grids_per_second = np.mean(grids_per_second_runs)
+    std_grids_per_second = np.std(grids_per_second_runs)
     if total_time > 0:
         grids_per_second = total_grids / total_time
     else:
@@ -181,7 +186,7 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
         logger.warning("Total time is zero. Setting grids_per_second to 0.0 to avoid division by zero.")
     
     print(f"Grids per Second: {grids_per_second}")
-    return grids_per_second
+    return avg_total_time, avg_grids_per_second
 
     # Perform statistical analysis (confidence intervals, effect size, etc.)
     confidence_level = 0.95
