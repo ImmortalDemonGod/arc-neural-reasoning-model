@@ -107,8 +107,15 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, device_type='cp
         print(f"Inputs shape: {inputs.shape}, Outputs shape: {outputs.shape}, Task IDs: {task_ids}")
         print(f"Inputs shape: {inputs.shape}, Outputs shape: {outputs.shape}, Task IDs: {task_ids}")
         
-        if inputs.dim() < 4:
-            raise ValueError(f"Unexpected input dimensions: {inputs.dim()}. Expected at least 4 dimensions.")
+        if inputs.dim() == 2:
+            # If inputs is 2D (batch_size, sequence_length), reshape it to 4D
+            height = width = int(inputs.size(1)**0.5)
+            inputs = inputs.view(inputs.size(0), 1, height, width)
+        elif inputs.dim() == 3:
+            # If inputs is 3D (batch_size, height, width), add a channel dimension
+            inputs = inputs.unsqueeze(1)
+        elif inputs.dim() != 4:
+            raise ValueError(f"Unexpected input dimensions: {inputs.dim()}. Expected 2, 3, or 4 dimensions.")
         
         attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
         inputs, attention_mask = inputs.to(device), attention_mask.to(device)
