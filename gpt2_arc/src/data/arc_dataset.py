@@ -426,8 +426,6 @@ class ARCDataset(Dataset):
                 }
             else:
                 raise ValueError("Unexpected item format in data_source.")
-            else:
-                raise ValueError("Item is not a dictionary.")
         
             processed_data.append(processed_item)
     
