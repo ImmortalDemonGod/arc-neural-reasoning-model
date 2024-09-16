@@ -106,7 +106,7 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
             print(f"Inputs shape: {inputs.shape}")
         else:
             print("Inputs shape: N/A")
-        print(f"Outputs type: {type(outputs)}, shape: {outputs.shape if isinstance(outputs, torch.Tensor) else 'N/A'}")
+        print(f"Outputs type: {type(outputs)}, shape: {outputs.shape if torch.is_tensor(outputs) else 'N/A'}")
         print(f"Task IDs: {task_ids}")
 
         if inputs is None or not isinstance(inputs, torch.Tensor):
