@@ -21,7 +21,8 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
 from gpt2_arc.src.training.trainer import ARCTrainer
-from gpt2_arc.src.utils.results_collector import ResultsCollector
+from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
+import os
 
 
 # Set up logging
@@ -45,7 +46,8 @@ def main(args):
 
     logger.info("Initializing trainer with new configuration")
     config = Config(model=model_config, training=TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs))
-    results_collector = ResultsCollector(config)
+    tracker = ExperimentTracker(config, project=args.project)
+    tracker.start()
     trainer = ARCTrainer(
         model=model,
         train_dataset=train_data,
@@ -91,25 +93,24 @@ def main(args):
     pl_trainer.fit(trainer)
 
     # After training
-    results_summary = trainer.results_collector.get_summary()
-    print("Experiment Summary:")
-    logger.debug(f"Results summary before serialization: {results_summary}")
-    try:
-        print(json.dumps(results_summary, indent=2))
-    except TypeError as e:
-        print(f"Error serializing results summary: {e}")
-        print("Results summary (non-serialized):")
-        print(results_summary)
-
-    # Save the summary to a separate file
-    try:
-        with open(f"results/summary_{trainer.results_collector.experiment_id}.json", 'w') as f:
-            json.dump(results_summary, f, indent=2)
-    except TypeError as e:
-        print(f"Error saving results summary: {e}")
-        # Fallback to saving as string representation
-        with open(f"results/summary_{trainer.results_collector.experiment_id}.txt", 'w') as f:
-            f.write(str(results_summary))
+    # Assuming you have a test function
+    test_results = trainer.test_step(test_loader, batch_idx=global_step)
+    tracker.set_test_results(test_results)
+    
+    tracker.set_final_metrics({
+        "best_val_loss": best_val_loss,
+        "best_epoch": best_epoch,
+    })
+    
+    # If you're saving a checkpoint
+    checkpoint_path = os.path.join(args.results_dir, f"model_checkpoint_{args.run_name}.pth")
+    torch.save(model.state_dict(), checkpoint_path)
+    tracker.set_checkpoint_path(checkpoint_path)
+    
+    # Save results to JSON
+    os.makedirs(args.results_dir, exist_ok=True)
+    results_path = os.path.join(args.results_dir, f"results_{args.run_name}.json")
+    tracker.save_to_json(results_path)
 
 
 if __name__ == "__main__":
@@ -151,5 +152,18 @@ if __name__ == "__main__":
         "--fast_dev_run", type=int, default=0, help="Run a few batches for debugging purposes"
     )
 
+    parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
+    parser.add_argument("--no-wandb", action="store_true", help="Disable W&B logging")
+    parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
+    
     args = parser.parse_args()
+    
+    try:
+        main(args)
+    except Exception as e:
+        print(f"Training interrupted: {e}")
+        tracker.log_metric("training_interrupted", 1)
+        tracker.log_metric("error_message", str(e))
+    finally:
+        tracker.finish()
     main(args)
