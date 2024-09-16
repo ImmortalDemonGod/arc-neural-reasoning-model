@@ -125,7 +125,20 @@ def test_main_function(mock_argparse, mock_dataset, mock_model):
 # Performance tests
 
 @pytest.mark.benchmark(group="benchmark_model")
-def test_benchmark_model_performance(benchmark, mock_model, mock_dataset, mock_dataloader, mock_torch):
+def test_benchmark_model_performance(benchmark, mock_model, mock_torch):
+    # Create a mock dataset with one item
+    mock_dataset = MagicMock()
+    mock_dataset.__len__.return_value = 1
+    mock_dataset.__getitem__.return_value = (
+        torch.randn(1, 30, 30),  # input
+        torch.randint(0, 10, (1, 30, 30)),  # output
+        "task_1"  # task_id
+    )
+
+    # Create a mock dataloader that returns the mock dataset item
+    mock_dataloader = MagicMock()
+    mock_dataloader.__iter__.return_value = iter([mock_dataset.__getitem__()])
+
     with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
         grids_per_second = benchmark(
             benchmark_model,
@@ -137,7 +150,7 @@ def test_benchmark_model_performance(benchmark, mock_model, mock_dataset, mock_d
             precision='medium',
             model_checkpoint=None
         )
-    
+
     print(f"Benchmark result - Grids per Second: {grids_per_second}")
     assert grids_per_second > 0, "Average grids per second should be positive"
 
