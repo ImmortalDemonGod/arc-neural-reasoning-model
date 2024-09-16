@@ -194,12 +194,21 @@ def test_benchmark_model_single_item_dataset(mock_model):
 
 # Error handling tests
 
+def test_benchmark_model_with_correct_data(mock_model, mock_dataset, mock_dataloader):
+    with patch('benchmark.DataLoader', return_value=mock_dataloader):
+        avg_time, avg_grids = benchmark_model(mock_model, mock_dataset)
+        
+        assert isinstance(avg_time, float), "avg_time should be a float"
+        assert isinstance(avg_grids, float), "avg_grids should be a float"
+        assert avg_time > 0, "avg_time should be positive"
+        assert avg_grids > 0, "avg_grids should be positive"
+
 def test_benchmark_model_model_error(mock_model, mock_dataset, mock_dataloader):
     mock_model.side_effect = RuntimeError("Model execution failed")
     
-    with patch('benchmark.DataLoader', return_value=mock_dataloader), \
-         pytest.raises(RuntimeError, match="Model execution failed"):
-        benchmark_model(mock_model, mock_dataset)
+    with patch('benchmark.DataLoader', return_value=mock_dataloader):
+        with pytest.raises(RuntimeError, match="Model execution failed"):
+            benchmark_model(mock_model, mock_dataset)
 
 #skip
 @pytest.mark.skip(reason="I dont want to crash my computer")
