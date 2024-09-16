@@ -41,7 +41,7 @@ def mock_torch():
 # Tests for benchmark_model function
 
 def test_benchmark_model_basic(mock_model, mock_dataset, mock_dataloader, mock_torch):
-    with patch('benchmark.DataLoader', return_value=mock_dataloader):
+    with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
         avg_time, avg_grids = benchmark_model(mock_model, mock_dataset)
     
     assert isinstance(avg_time, float)

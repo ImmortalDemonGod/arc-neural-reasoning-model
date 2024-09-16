@@ -140,7 +140,7 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
         print(f"Run {run + 1} completed. Total time: {total_time}, Total grids: {total_grids}")
         # Average metrics for the run
         if total_time > 0:
-            grids_per_second = total_grids / total_time
+            grids_per_second = total_grids / total_time if total_time > 0 else 0.0
         else:
             logger.warning(f"Total time is zero for run {run + 1}. Setting grids_per_second to infinity.")
             grids_per_second = float('inf')
