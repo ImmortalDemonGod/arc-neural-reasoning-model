@@ -226,13 +226,11 @@ def test_benchmark_model_out_of_memory(mock_model, mock_dataset, mock_dataloader
 def test_benchmark_model_precision(mock_model, mock_dataset, mock_torch, precision):
     with patch('gpt2_arc.benchmark.DataLoader') as mock_dataloader_class:
         mock_dataloader = MagicMock()
-        mock_dataloader.__iter__.return_value = iter([
-            mock_input = torch.randn(1, 1, 30, 30)
-            mock_output = torch.randint(0, 10, (1, 30, 30))
-            mock_dataloader.__iter__.return_value = iter([(mock_input, mock_output)])
-            print(f"Mock input shape: {mock_input.shape}")
-            print(f"Mock output shape: {mock_output.shape}")
-        ])
+        mock_input = torch.randn(1, 1, 30, 30)
+        mock_output = torch.randint(0, 10, (1, 30, 30))
+        mock_dataloader.__iter__.return_value = iter([(mock_input, mock_output)])
+        print(f"Mock input shape: {mock_input.shape}")
+        print(f"Mock output shape: {mock_output.shape}")
         mock_dataloader_class.return_value = mock_dataloader
 
         with patch('gpt2_arc.benchmark.torch.set_float32_matmul_precision') as mock_set_precision:
