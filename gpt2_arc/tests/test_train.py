@@ -159,6 +159,7 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
             "test_accuracy": 0.95,
             "config": {"model": {}, "training": {}}
         }
+        mock_trainer_instance.results_collector = mock_results_collector
 
         # Assign the mock ResultsCollector to the trainer instance
         mock_trainer_instance.results_collector = mock_results_collector
