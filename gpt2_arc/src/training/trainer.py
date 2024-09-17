@@ -176,9 +176,11 @@ class ARCTrainer(pl.LightningModule):
         diff_accuracy, _, _ = differential_pixel_accuracy(inputs, outputs, predictions)
 
         # Log overall metrics
-        self.log('test_loss', loss)
-        self.log('test_accuracy', accuracy)
-        self.log('test_diff_accuracy', diff_accuracy)
+        # Ensure logging is done in supported contexts
+        if self.trainer and self.trainer.testing:
+            self.log('test_loss', loss)
+            self.log('test_accuracy', accuracy)
+            self.log('test_diff_accuracy', diff_accuracy)
 
         # Log task-specific metrics
         for i, task_id in enumerate(task_ids):
