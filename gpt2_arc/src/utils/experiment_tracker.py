@@ -13,7 +13,7 @@ class ExperimentTracker:
     def __init__(self, config: Dict[str, Any], project: str, entity: Optional[str] = None, use_wandb: bool = False):
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.config = config
+        self.config = config.to_dict() if hasattr(config, 'to_dict') else self._config_to_dict(config)
         self.project = project
         self.entity = entity
         self.run = None
@@ -29,7 +29,7 @@ class ExperimentTracker:
         self.checkpoint_path = None
 
         # Add debug logging
-        print(f"ExperimentTracker initialized with config: {json.dumps(config.to_dict(), indent=2)}")
+        print(f"ExperimentTracker initialized with config: {json.dumps(self.config, indent=2)}")
         print(f"Project: {project}, Entity: {entity}")
         print(f"use_wandb: {self.use_wandb}")
 
@@ -40,7 +40,13 @@ class ExperimentTracker:
             "gpu_info": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
         }
 
-    def start(self):
+    def _config_to_dict(self, config):
+        if isinstance(config, dict):
+            return {k: self._config_to_dict(v) for k, v in config.items()}
+        elif hasattr(config, '__dict__'):
+            return {k: self._config_to_dict(v) for k, v in config.__dict__.items() if not k.startswith('_')}
+        else:
+            return config
         if self.use_wandb:
             try:
                 self.run = wandb.init(project=self.project, entity=self.entity, config=self.config)
