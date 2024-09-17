@@ -161,6 +161,7 @@ if __name__ == "__main__":
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
     parser.add_argument("--no-wandb", action="store_true", help="Disable W&B logging")
     parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
+    parser.add_argument("--run_name", type=str, default="default_run", help="Name of the run for saving results")
     
     args = parser.parse_args()
     
