@@ -73,6 +73,9 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
     run_results = []  # Initialize run_results to store each run's data
     gpu_usages = []  # Initialize gpu_usages to store GPU utilization data
 
+    # Set the float32 matmul precision
+    torch.set_float32_matmul_precision(precision)
+
     # Select device based on the argument (including support for MPS)
     device = torch.device("cuda" if device_type == "cuda" and torch.cuda.is_available() else
                           "mps" if device_type == "mps" and torch.backends.mps.is_available() else "cpu")
