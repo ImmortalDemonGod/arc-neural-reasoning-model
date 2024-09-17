@@ -35,12 +35,15 @@ Reproduce the GPT-2 (124M) model for the Abstraction and Reasoning Corpus (ARC) 
 
 Add the full training data to the repo *done
 run the model on the training data *done
-write the eval code and test
+write the eval code *in progress
+write eval test code *done
 replace benchmark code with new critque one
-get vpn for computer
-buy modifinal
+get vpn for computer *done
+buy modifinal*
+replace mentions of accuracy with grid-cell-accuracy
 get va/student loans *done
 Do fasfa
+confirm that diff accuracy is actually being calcuated correclty
 implement the on the measure of int metrics
 finish improvements from zero to hero
 desgin graph/logical network protype using py/java
@@ -48,7 +51,26 @@ create features from the functions of arc synthetic data generator for model
 
 figure out how to do weight sharing
 test effeciny gains: torch compile, lower precision
+===
+                    
+To provide a more targeted evaluation similar to differential_pixel_accuracy, you can create a metric that focuses on specific aspects of the model's     
+predictions. Here are a few ideas for targeted evaluations:                                                                                               
 
+ 1 Change Detection Accuracy: Similar to differential pixel accuracy, this metric would focus on the model's ability to detect changes between the input  
+   and target. It would evaluate how well the model predicts the presence or absence of changes, regardless of the specific values.                       
+ 2 Class-Specific Accuracy: Calculate accuracy for specific classes or symbols within the dataset. This can help identify if the model is particularly    
+   good or bad at predicting certain classes.                                                                                                             
+ 3 Boundary Accuracy: Focus on the model's ability to predict boundaries or edges within the data. This could be useful in tasks where the shape or       
+   outline of objects is important.                                                                                                                       
+ 4 Contextual Accuracy: Evaluate the model's predictions in the context of surrounding pixels. This could involve checking if the model's predictions are 
+   consistent with the local context or neighborhood.                                                                                                     
+ 5 Weighted Accuracy: Assign different weights to different types of errors or classes, allowing you to emphasize certain aspects of the predictions more 
+   than others.                                                                                                                                           
+
+To implement one of these targeted evaluations, you would need to define the specific criteria for the metric and then calculate it based on the model's  
+predictions and the ground truth data. This would involve writing a new function similar to differential_pixel_accuracy that captures the desired aspect  
+of the model's performance.   
+===
 1. **Address Warnings**
    - Fix PyTorch Lightning logging warnings in trainer tests
 
