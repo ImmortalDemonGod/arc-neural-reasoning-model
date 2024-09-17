@@ -1,2 +1,0 @@
-run_id,datetime,run,total_time,grids_per_second,cpu_usage,memory_usage,batch_size,num_batches,device,n_embd,n_head,n_layer,gpu_usage,precision
-de04de49-927d-4f63-918d-6fa3b8823881,2024-09-07 18:22:09,1,-1.0,-32.0,50.0,60.0,32,1,cpu,<MagicMock name='mock.to().config.n_embd' id='6264243840'>,<MagicMock name='mock.to().config.n_head' id='6290131280'>,<MagicMock name='mock.to().config.n_layer' id='6290135024'>,,medium
