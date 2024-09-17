@@ -115,6 +115,7 @@ def test_end_to_end():
         # Evaluate model before training to get initial accuracy
         logger.info("Evaluating model before training")
         initial_val_results = pl_trainer.test(trainer, verbose=False)
+        logger.debug(f"Initial validation results: {initial_val_results}")
         initial_accuracy = initial_val_results[0].get('test_accuracy', None)
         initial_loss = initial_val_results[0].get('test_loss', None)
 
