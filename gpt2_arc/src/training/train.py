@@ -50,7 +50,6 @@ def main(args):
     results_collector = ResultsCollector(config)
     try:
         tracker = ExperimentTracker(config, project=args.project)
-        tracker.start()
         trainer = ARCTrainer(
             model=model,
             train_dataset=train_data,

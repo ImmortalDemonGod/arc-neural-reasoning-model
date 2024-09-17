@@ -18,6 +18,14 @@ class ExperimentTracker:
         self.entity = entity
         self.run = None
         self.use_wandb = use_wandb
+        if self.use_wandb:
+            try:
+                self.run = wandb.init(project=self.project, entity=self.entity, config=self.config)
+                print(f"Wandb run initialized: {self.run.id}")
+            except Exception as e:
+                print(f"Error initializing wandb: {str(e)}")
+                self.use_wandb = False
+
         self.results = {
             "train": [],
             "validation": [],
