@@ -38,18 +38,13 @@ def mock_dataloader():
     ])
     return dataloader
 
-@pytest.fixture
-def mock_torch():
-    with patch('benchmark.torch', wraps=torch) as mock_torch:
-        # Mock specific functions if necessary
-        mock_torch.cuda.is_available.return_value = False
-        mock_torch.backends.mps.is_available.return_value = False
-        yield mock_torch
 
 # Tests for benchmark_model function
 
-def test_benchmark_model_basic(mock_model, mock_dataset, mock_dataloader, mock_torch):
-    with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
+def test_benchmark_model_basic(mock_model, mock_dataset, mock_dataloader):
+    with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader), \
+         patch('gpt2_arc.benchmark.torch.cuda.is_available', return_value=False), \
+         patch('gpt2_arc.benchmark.torch.backends.mps.is_available', return_value=False):
         avg_time, avg_grids = benchmark_model(mock_model, mock_dataset)
     
     assert isinstance(avg_time, (float, int))
@@ -62,8 +57,10 @@ def test_benchmark_model_basic(mock_model, mock_dataset, mock_dataloader, mock_t
     (64, 20, 5),
     (128, 2, 3)
 ])
-def test_benchmark_model_parameters(mock_model, mock_dataset, mock_dataloader, mock_torch, batch_size, num_batches, num_runs):
-    with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
+def test_benchmark_model_parameters(mock_model, mock_dataset, mock_dataloader, batch_size, num_batches, num_runs):
+    with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader), \
+         patch('gpt2_arc.benchmark.torch.cuda.is_available', return_value=False), \
+         patch('gpt2_arc.benchmark.torch.backends.mps.is_available', return_value=False):
         avg_time, avg_grids = benchmark_model(
             mock_model, mock_dataset, batch_size=batch_size, num_batches=num_batches, num_runs=num_runs
         )
@@ -133,7 +130,7 @@ def test_main_function(mock_argparse, mock_dataset, mock_model):
 # Performance tests
 
 @pytest.mark.benchmark(group="benchmark_model")
-def test_benchmark_model_performance(benchmark, mock_model, mock_torch):
+def test_benchmark_model_performance(benchmark, mock_model):
     # Create a mock dataset with one item
     mock_dataset = MagicMock()
     mock_dataset.__len__.return_value = 1
@@ -147,7 +144,9 @@ def test_benchmark_model_performance(benchmark, mock_model, mock_torch):
     mock_dataloader = MagicMock()
     mock_dataloader.__iter__.return_value = iter([mock_dataset.__getitem__()])
 
-    with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
+    with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader), \
+         patch('gpt2_arc.benchmark.torch.cuda.is_available', return_value=False), \
+         patch('gpt2_arc.benchmark.torch.backends.mps.is_available', return_value=False):
         result = benchmark(
             benchmark_model,
             mock_model,
