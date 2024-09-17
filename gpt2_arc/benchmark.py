@@ -151,6 +151,7 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
                 if torch.cuda.is_available():
                     torch.cuda.synchronize()
 
+                logger.debug("Invoking the model with inputs and attention_mask")
                 with torch.no_grad():
                     if device.type == 'cuda':
                         with autocast(device_type=device.type, dtype=torch.float16):
