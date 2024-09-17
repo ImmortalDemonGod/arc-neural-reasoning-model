@@ -201,7 +201,7 @@ class ARCTrainer(pl.LightningModule):
 
     def on_validation_epoch_end(self):
         # Compute average validation loss
-        avg_val_loss = torch.stack([x['val_loss'] for x in self.validation_step_outputs]).mean()
+        avg_val_loss = torch.stack([x['val_loss'] for x in self.trainer.logged_metrics if 'val_loss' in x]).mean()
         
         # Update best_val_loss and best_epoch
         if avg_val_loss < self.best_val_loss:
@@ -212,33 +212,32 @@ class ARCTrainer(pl.LightningModule):
         self.log('val_loss', avg_val_loss)
         self.log('best_val_loss', self.best_val_loss)
         self.log('best_epoch', self.best_epoch)
-        # Aggregate test results
-        test_loss = torch.stack([x['test_loss'] for x in self.test_step_outputs]).mean()
-        test_accuracy = torch.stack([x['test_accuracy'] for x in self.test_step_outputs]).mean()
-        test_diff_accuracy = torch.stack([x['test_diff_accuracy'] for x in self.test_step_outputs]).mean()
 
-        # Log test metrics
-        self.log('test_loss', test_loss)
-        self.log('test_accuracy', test_accuracy)
-        self.log('test_diff_accuracy', test_diff_accuracy)
+        # If you have test results, you can log them here
+        if hasattr(self, 'test_step_outputs'):
+            test_loss = torch.stack([x['test_loss'] for x in self.test_step_outputs]).mean()
+            test_accuracy = torch.stack([x['test_accuracy'] for x in self.test_step_outputs]).mean()
+            test_diff_accuracy = torch.stack([x['test_diff_accuracy'] for x in self.test_step_outputs]).mean()
 
-        # Compute task success rate
-        all_task_ids = [item for sublist in [x['task_ids'] for x in self.test_step_outputs] for item in sublist]
-        total_tasks = len(all_task_ids)
-        successful_tasks = sum(1 for result in self.test_step_outputs if result['test_accuracy'] == 1.0)
-        task_success_rate = successful_tasks / total_tasks if total_tasks > 0 else 0.0
+            # Log test metrics
+            self.log('test_loss', test_loss)
+            self.log('test_accuracy', test_accuracy)
+            self.log('test_diff_accuracy', test_diff_accuracy)
 
-        # Calculate average test loss and accuracy
-        avg_test_loss = test_loss.item()
-        avg_test_accuracy = test_accuracy.item()
-        # Instead of logging, store these values in the results collector
-        self.results_collector.set_test_results({
-            "avg_loss": avg_test_loss,
-            "avg_accuracy": avg_test_accuracy,
-            "task_success_rate": task_success_rate
+            # Compute task success rate if you have task_ids
+            if 'task_ids' in self.test_step_outputs[0]:
+                all_task_ids = [item for sublist in [x['task_ids'] for x in self.test_step_outputs] for item in sublist]
+                total_tasks = len(all_task_ids)
+                successful_tasks = sum(1 for result in self.test_step_outputs if result['test_accuracy'] == 1.0)
+                task_success_rate = successful_tasks / total_tasks if total_tasks > 0 else 0.0
+                self.log('task_success_rate', task_success_rate)
+
+        # Update the results collector
+        self.results_collector.update_val_metrics(self.current_epoch, {
+            "avg_loss": avg_val_loss.item(),
+            "best_val_loss": self.best_val_loss,
+            "best_epoch": self.best_epoch
         })
-
-        logger.info(f"Test Results - Avg Loss: {avg_test_loss:.4f}, Avg Accuracy: {avg_test_accuracy:.4f}, Task Success Rate: {task_success_rate:.4f}")
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
