@@ -113,7 +113,7 @@ class ARCTrainer(pl.LightningModule):
         self.results_collector.update_val_metrics(self.current_epoch, {"loss": loss.item()})
         self.logged_metrics["val_loss"] = loss.item()
 
-    def test_step(self, batch, batch_index):
+    def test_step(self, batch, batch_idx):
         logger.debug(f"Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
         if isinstance(batch, list) and len(batch) == 3:

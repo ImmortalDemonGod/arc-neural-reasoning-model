@@ -222,7 +222,8 @@ if __name__ == "__main__":
         pl_trainer.fit(trainer)
 
         # After training
-        test_results = trainer.test_step(val_loader)
+        for batch_idx, batch in enumerate(val_loader):
+            test_results = trainer.test_step(batch, batch_idx)
         tracker.set_test_results(test_results)
 
         tracker.set_final_metrics({
