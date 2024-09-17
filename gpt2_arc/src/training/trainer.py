@@ -32,6 +32,17 @@ class ARCTrainer(pl.LightningModule):
         self.results_collector.results["train"] = []  # Initialize train results as a list
 
     def training_step(self, batch, batch_idx):
+        """
+        The `training_step` function processes a batch of data for training a model, ensuring correct tensor
+        types and logging training metrics.
+        
+        :param batch: The `batch` parameter in the `training_step` function is the input data batch that the
+        model will use for training. It can be in various formats such as a dictionary, tuple, or list
+        depending on how the data is structured and passed to the model
+        :param batch_idx: `batch_idx` is the index of the current batch being processed during training. It
+        is used to keep track of which batch is currently being trained on
+        :return: The `training_step` method returns the loss calculated during the training step.
+        """
         start_time = time.time()
         
         logger.debug(f"Training step - Batch type: {type(batch)}, length: {len(batch)}")
@@ -114,6 +125,23 @@ class ARCTrainer(pl.LightningModule):
         self.logged_metrics["val_loss"] = loss.item()
 
     def test_step(self, batch, batch_idx):
+        """
+        The `test_step` function processes a batch of data for testing a model, computes metrics such as
+        loss and accuracy, logs the results, and stores them for further analysis.
+        
+        :param batch: The `batch` parameter in the `test_step` function is expected to contain input data,
+        attention masks (optional), target outputs, and task IDs. The function processes the batch based on
+        its format and performs inference using a model. It calculates loss, accuracy, and differential
+        pixel accuracy metrics for evaluation
+        :param batch_idx: Batch index is used to keep track of the current batch being processed during
+        testing. It helps in identifying and logging information specific to each batch, such as loss and
+        accuracy values. The batch index is typically an integer value that increments for each batch
+        processed during testing
+        :return: The `test_step` method returns a dictionary named `result` containing the keys 'loss',
+        'accuracy', 'task_ids', and 'test_loss'. Additionally, it logs various metrics such as test_loss,
+        test_accuracy, and test_diff_accuracy. The method also appends the result to `self.test_outputs` and
+        calculates task success for TSR, logging it as well.
+        """
         logger.debug(f"Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
         if isinstance(batch, list) and len(batch) == 3:
