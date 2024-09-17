@@ -227,8 +227,8 @@ if __name__ == "__main__":
         tracker.set_test_results(test_results)
 
         tracker.set_final_metrics({
-            "best_val_loss": trainer.best_val_loss,
-            "best_epoch": trainer.best_epoch,
+            "best_val_loss": trainer.results_collector.results.get("best_val_loss"),
+            "best_epoch": trainer.results_collector.results.get("best_epoch"),
         })
 
         # If you're saving a checkpoint

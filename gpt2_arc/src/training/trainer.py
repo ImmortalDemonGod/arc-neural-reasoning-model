@@ -28,6 +28,8 @@ class ARCTrainer(pl.LightningModule):
         self.logged_metrics = {}
         self.test_outputs = []  # Store test outputs for aggregation
         self.test_results = []  # Initialize test results for storing test outcomes
+        self.best_val_loss = float('inf')
+        self.best_epoch = 0
         self.results_collector = ResultsCollector(config)
         self.results_collector.results["train"] = []  # Initialize train results as a list
 
@@ -189,58 +191,42 @@ class ARCTrainer(pl.LightningModule):
             'test_diff_accuracy': diff_accuracy
         }
 
-        # Log metrics safely
-        try:
-            self.log_dict(metrics)
-        except Exception as e:
-            logger.warning(f"Failed to log metrics: {e}")
-
-        # Store result for later processing
-        result = {
-            'loss': loss.item(),
-            'accuracy': accuracy.item(),
+        # Return metrics instead of logging
+        return {
+            'test_loss': loss.item(),
+            'test_accuracy': accuracy.item(),
+            'test_diff_accuracy': diff_accuracy.item(),
             'task_ids': task_ids,
-            'test_loss': loss.item()
         }
-        self.test_outputs.append(result)
 
-        return result
+    def on_validation_epoch_end(self):
+        # Compute average validation loss
+        avg_val_loss = torch.stack([x['val_loss'] for x in self.validation_step_outputs]).mean()
+        
+        # Update best_val_loss and best_epoch
+        if avg_val_loss < self.best_val_loss:
+            self.best_val_loss = avg_val_loss
+            self.best_epoch = self.current_epoch
 
-    def on_test_epoch_end(self):
-        all_task_ids = []
-        all_losses = []
-        all_accuracies = []
+        # Log validation metrics
+        self.log('val_loss', avg_val_loss)
+        self.log('best_val_loss', self.best_val_loss)
+        self.log('best_epoch', self.best_epoch)
+        # Aggregate test results
+        test_loss = torch.stack([x['test_loss'] for x in self.test_step_outputs]).mean()
+        test_accuracy = torch.stack([x['test_accuracy'] for x in self.test_step_outputs]).mean()
+        test_diff_accuracy = torch.stack([x['test_diff_accuracy'] for x in self.test_step_outputs]).mean()
 
-        print("Debug: Starting on_test_epoch_end")
-        print(f"Debug: Number of test outputs: {len(self.test_outputs)}")
+        # Log test metrics
+        self.log('test_loss', test_loss)
+        self.log('test_accuracy', test_accuracy)
+        self.log('test_diff_accuracy', test_diff_accuracy)
 
-        for output in self.test_outputs:
-            print(f"Debug: Processing output: {output}")
-            batch_task_ids = output.get('task_ids', [])
-            if isinstance(batch_task_ids, torch.Tensor):
-                batch_task_ids = batch_task_ids.tolist()
-
-            all_task_ids.extend(batch_task_ids)
-            if 'loss' in output:
-                all_losses.extend([output['loss'].item()] * len(batch_task_ids))
-            else:
-                logger.error("Missing 'loss' key in output")
-            if 'accuracy' in output:
-                all_accuracies.extend([output['accuracy'].item()] * len(batch_task_ids))
-            else:
-                logger.error("Missing 'accuracy' key in output")
-
-            print(f"Debug: Batch task IDs: {batch_task_ids}")
-            if 'loss' in output and 'accuracy' in output:
-                print(f"Debug: Batch loss: {output['loss'].item()}, accuracy: {output['accuracy'].item()}")
-            else:
-                logger.error("Missing 'loss' or 'accuracy' key in output")
-
+        # Compute task success rate
+        all_task_ids = [item for sublist in [x['task_ids'] for x in self.test_step_outputs] for item in sublist]
         total_tasks = len(all_task_ids)
-        successful_tasks = sum(1 for result in self.test_outputs if result['accuracy'] == 1.0)
+        successful_tasks = sum(1 for result in self.test_step_outputs if result['test_accuracy'] == 1.0)
         task_success_rate = successful_tasks / total_tasks if total_tasks > 0 else 0.0
-        avg_test_loss = sum(all_losses) / len(all_losses) if all_losses else 0
-        avg_test_accuracy = sum(all_accuracies) / len(all_accuracies) if all_accuracies else 0
 
         # Instead of logging, store these values in the results collector
         self.results_collector.set_test_results({
