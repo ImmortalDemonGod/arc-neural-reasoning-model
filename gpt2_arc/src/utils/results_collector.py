@@ -36,7 +36,9 @@ class ResultsCollector:
         """Update training metrics for a specific epoch."""
         if "train" not in self.results:
             self.results["train"] = {}
-        self.results["train"][epoch] = metrics
+        if epoch not in self.results["train"]:
+            self.results["train"][epoch] = {}
+        self.results["train"][epoch].update(metrics)
 
     def update_val_metrics(self, epoch: int, metrics: Dict[str, float]):
         """Update validation metrics for a specific epoch."""
