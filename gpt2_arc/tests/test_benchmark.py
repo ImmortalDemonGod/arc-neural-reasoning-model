@@ -212,7 +212,8 @@ def test_benchmark_model_model_error(mock_model, mock_dataset, mock_dataloader):
     with patch('benchmark.DataLoader', return_value=mock_dataloader):
         with pytest.raises(RuntimeError, match="Model execution failed"):
             # Ensure the model is called to trigger the side effect
-            benchmark_model(mock_model, mock_dataset, num_batches=1)
+            for _ in mock_dataloader:
+                benchmark_model(mock_model, mock_dataset, num_batches=1)
 
 #skip
 @pytest.mark.skip(reason="I dont want to crash my computer")
