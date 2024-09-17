@@ -34,97 +34,54 @@ class ARCTrainer(pl.LightningModule):
         self.results_collector.results["train"] = []  # Initialize train results as a list
 
     def training_step(self, batch, batch_idx):
-        """
-        The `training_step` function processes a batch of data for training a model, ensuring correct tensor
-        types and logging training metrics.
-        
-        :param batch: The `batch` parameter in the `training_step` function is the input data batch that the
-        model will use for training. It can be in various formats such as a dictionary, tuple, or list
-        depending on how the data is structured and passed to the model
-        :param batch_idx: `batch_idx` is the index of the current batch being processed during training. It
-        is used to keep track of which batch is currently being trained on
-        :return: The `training_step` method returns the loss calculated during the training step.
-        """
-        start_time = time.time()
-        
         logger.debug(f"Training step - Batch type: {type(batch)}, length: {len(batch)}")
-        if isinstance(batch, dict):
-            logger.debug(f"Batch input_ids shape: {batch['input_ids'].shape}, Batch labels shape: {batch['labels'].shape}")
-        else:
-            logger.debug(f"Batch[0] shape: {batch[0].shape}, Batch[1] shape: {batch[1].shape}")
-
-        if isinstance(batch, tuple) and len(batch) == 3:
-            input_ids, attention_mask, labels = batch
-            task_ids = None  # We don't have task_ids in this case
-        elif isinstance(batch, tuple) and len(batch) == 4:
-            input_ids, attention_mask, labels, task_ids = batch
+        
+        if isinstance(batch, (list, tuple)) and len(batch) >= 2:
+            inputs, labels = batch[:2]
+            task_ids = batch[2] if len(batch) > 2 else None
         elif isinstance(batch, dict):
-            input_ids = batch["input_ids"]
-            attention_mask = batch["attention_mask"]
-            labels = batch["labels"]
+            inputs = batch.get("input_ids")
+            labels = batch.get("labels")
             task_ids = batch.get("task_ids")
-        elif isinstance(batch, list) and len(batch) == 3:
-            input_ids, labels, task_ids = batch
-            attention_mask = None
-        elif isinstance(batch, list) and len(batch) == 2:
-            input_ids, labels = batch
-            attention_mask = None
-            task_ids = None
         else:
-            logger.error(f"Unexpected batch format: {type(batch)}. Content: {batch}")
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
-        # Ensure tensors are float32
-        input_ids = input_ids.to(torch.float32)
-        if attention_mask is not None:
-            attention_mask = attention_mask.to(torch.float32)
-        labels = labels.long()  # Ensure labels are of type Long
+        # Ensure inputs and labels are the correct type
+        inputs = inputs.float()
+        labels = labels.long()
 
-        outputs = self(input_ids, attention_mask)
+        outputs = self(inputs)
         loss = self.compute_loss(outputs, labels)
-        self.log("train_loss", loss)
-        self.results_collector.update_train_metrics(self.current_epoch, {"loss": loss.item()})
-        self.results_collector.results["train"].append({"epoch": self.current_epoch, "loss": loss.item()})
-        self.train_losses.append(loss.item())
         
-        end_time = time.time()
-        batch_time = end_time - start_time
-        logger.info(f"Batch {batch_idx} training time: {batch_time:.4f} seconds")
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.results_collector.update_train_metrics(self.current_epoch, {"loss": loss.item()})
         
         return loss
 
     def validation_step(self, batch, batch_idx):
         logger.debug(f"Validation step - Batch type: {type(batch)}, length: {len(batch)}")
-        logger.debug(f"Batch content: {batch}")
         
-        if isinstance(batch, dict):
-            logger.debug(f"Batch['input_ids'] shape: {batch['input_ids'].shape}, Batch['labels'] shape: {batch['labels'].shape}")
-            input_ids = batch["input_ids"]
-            attention_mask = batch["attention_mask"]
-            labels = batch["labels"]
+        if isinstance(batch, (list, tuple)) and len(batch) >= 2:
+            inputs, labels = batch[:2]
+            task_ids = batch[2] if len(batch) > 2 else None
+        elif isinstance(batch, dict):
+            inputs = batch.get("input_ids")
+            labels = batch.get("labels")
             task_ids = batch.get("task_ids")
-        elif isinstance(batch, (list, tuple)) and len(batch) == 3:
-            logger.debug("Processing list/tuple batch with 3 elements")
-            input_ids, labels, task_ids = batch
-            attention_mask = None
-        elif isinstance(batch, (list, tuple)) and len(batch) == 4:
-            logger.debug("Processing list/tuple batch with 4 elements")
-            input_ids, attention_mask, labels, task_ids = batch
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
-        # Ensure tensors are float32
-        input_ids = input_ids.to(torch.float32)
-        if attention_mask is not None:
-            attention_mask = attention_mask.to(torch.float32)
-        if isinstance(labels, torch.Tensor):
-            labels = labels.long()
-        
-        outputs = self(input_ids, attention_mask)
+        # Ensure inputs and labels are the correct type
+        inputs = inputs.float()
+        labels = labels.long()
+
+        outputs = self(inputs)
         loss = self.compute_loss(outputs, labels)
-        self.log("val_loss", loss)
+        
+        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.results_collector.update_val_metrics(self.current_epoch, {"loss": loss.item()})
-        self.logged_metrics["val_loss"] = loss.item()
+        
+        return loss
 
     def test_step(self, batch, batch_idx):
         """
