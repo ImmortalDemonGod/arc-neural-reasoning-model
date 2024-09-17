@@ -228,8 +228,10 @@ class ARCTrainer(pl.LightningModule):
         successful_tasks = sum(1 for result in self.test_step_outputs if result['test_accuracy'] == 1.0)
         task_success_rate = successful_tasks / total_tasks if total_tasks > 0 else 0.0
 
+        # Calculate average test loss and accuracy
+        avg_test_loss = test_loss.item()
+        avg_test_accuracy = test_accuracy.item()
         # Instead of logging, store these values in the results collector
-        self.results_collector.set_test_results({
             "avg_loss": avg_test_loss,
             "avg_accuracy": avg_test_accuracy,
             "task_success_rate": task_success_rate
