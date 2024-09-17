@@ -87,85 +87,89 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
             logger.warning(f"Compilation failed with error: {e}. Falling back to eager execution.")
             compiled_model = model
 
-    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
-    total_time = 0.0
-    total_grids = 0
+    try:
+        dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=ARCDataset.collate_fn)
+        total_time = 0.0
+        total_grids = 0
 
-    for i, batch in enumerate(dataloader):
-        if i >= num_batches:
-            break
-        print(f"Processing batch {i+1}/{num_batches}")
+        for i, batch in enumerate(dataloader):
+            if i >= num_batches:
+                break
+            print(f"Processing batch {i+1}/{num_batches}")
 
-        logger.debug(f"Batch content before unpacking: {batch}")
-        if len(batch) != 3:
-            raise ValueError(f"Unexpected batch format. Expected 3 items, got {len(batch)}")
-        inputs, outputs, task_ids = batch
+            logger.debug(f"Batch content before unpacking: {batch}")
+            if len(batch) != 3:
+                raise ValueError(f"Unexpected batch format. Expected 3 items, got {len(batch)}")
+            inputs, outputs, task_ids = batch
 
-        print(f"Inputs type: {type(inputs)}")
-        if hasattr(inputs, 'shape'):
-            print(f"Inputs shape: {inputs.shape}")
-        else:
-            print("Inputs shape: N/A")
-        print(f"Outputs type: {type(outputs)}, shape: {outputs.shape if torch.is_tensor(outputs) else 'N/A'}")
-        print(f"Task IDs: {task_ids}")
+            print(f"Inputs type: {type(inputs)}")
+            if hasattr(inputs, 'shape'):
+                print(f"Inputs shape: {inputs.shape}")
+            else:
+                print("Inputs shape: N/A")
+            print(f"Outputs type: {type(outputs)}, shape: {outputs.shape if torch.is_tensor(outputs) else 'N/A'}")
+            print(f"Task IDs: {task_ids}")
 
-        if inputs is None or not isinstance(inputs, torch.Tensor):
-            raise ValueError(f"Expected inputs to be a torch.Tensor, got {type(inputs)}")
+            if inputs is None or not isinstance(inputs, torch.Tensor):
+                raise ValueError(f"Expected inputs to be a torch.Tensor, got {type(inputs)}")
 
-        if inputs.numel() == 0:
-            raise ValueError("Inputs tensor is empty")
-        print(f"Inputs shape: {inputs.shape}, Outputs shape: {outputs.shape}, Task IDs: {task_ids}")
-        
-        if inputs.dim() == 2:
-            # If inputs is 2D (batch_size, sequence_length), reshape it to 4D
-            height = width = int(inputs.size(1)**0.5)
-            inputs = inputs.view(inputs.size(0), 1, height, width)
-        elif inputs.dim() == 3:
-            # If inputs is 3D (batch_size, height, width), add a channel dimension
-            inputs = inputs.unsqueeze(1)
-        elif inputs.dim() != 4:
-            raise ValueError(f"Unexpected input dimensions: {inputs.dim()}. Expected 2, 3, or 4 dimensions.")
-        
-        attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
-        inputs, attention_mask = inputs.to(device), attention_mask.to(device)
+            if inputs.numel() == 0:
+                raise ValueError("Inputs tensor is empty")
+            print(f"Inputs shape: {inputs.shape}, Outputs shape: {outputs.shape}, Task IDs: {task_ids}")
+            
+            if inputs.dim() == 2:
+                # If inputs is 2D (batch_size, sequence_length), reshape it to 4D
+                height = width = int(inputs.size(1)**0.5)
+                inputs = inputs.view(inputs.size(0), 1, height, width)
+            elif inputs.dim() == 3:
+                # If inputs is 3D (batch_size, height, width), add a channel dimension
+                inputs = inputs.unsqueeze(1)
+            elif inputs.dim() != 4:
+                raise ValueError(f"Unexpected input dimensions: {inputs.dim()}. Expected 2, 3, or 4 dimensions.")
+            
+            attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32)
+            inputs, attention_mask = inputs.to(device), attention_mask.to(device)
 
-        # Log system load and system state before processing the batch
-        cpu_percent = psutil.cpu_percent(interval=None)
-        memory_info = psutil.virtual_memory()
-        cpu_usages.append(cpu_percent)
-        memory_usages.append(memory_info.percent)
-        if device.type == 'cuda':
-            gpu_utilization = torch.cuda.utilization(device.index)
-            gpu_usages.append(gpu_utilization)
-            logger.info(f"Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%, GPU Utilization: {gpu_utilization}%")
-        else:
-            logger.info(f"Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%")
+            # Log system load and system state before processing the batch
+            cpu_percent = psutil.cpu_percent(interval=None)
+            memory_info = psutil.virtual_memory()
+            cpu_usages.append(cpu_percent)
+            memory_usages.append(memory_info.percent)
+            if device.type == 'cuda':
+                gpu_utilization = torch.cuda.utilization(device.index)
+                gpu_usages.append(gpu_utilization)
+                logger.info(f"Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%, GPU Utilization: {gpu_utilization}%")
+            else:
+                logger.info(f"Batch {i+1}: CPU Usage: {cpu_percent}%, Memory Usage: {memory_info.percent}%")
 
-            # Measure the time taken to process the batch
-            start_time = time.time()
+                # Measure the time taken to process the batch
+                start_time = time.time()
 
-            if torch.cuda.is_available():
-                torch.cuda.synchronize()
+                if torch.cuda.is_available():
+                    torch.cuda.synchronize()
 
-            with torch.no_grad():
-                if device.type == 'cuda':
-                    with autocast(device_type=device.type, dtype=torch.float16):
+                with torch.no_grad():
+                    if device.type == 'cuda':
+                        with autocast(device_type=device.type, dtype=torch.float16):
+                            compiled_model(inputs, attention_mask)
+                    else:
                         compiled_model(inputs, attention_mask)
-                else:
-                    compiled_model(inputs, attention_mask)
 
-            if torch.cuda.is_available():
-                torch.cuda.synchronize()
+                if torch.cuda.is_available():
+                    torch.cuda.synchronize()
 
-            end_time = time.time()
+                end_time = time.time()
 
-            batch_time = end_time - start_time
-            print(f"Batch time: {batch_time}")
-            if batch_time <= 0:
-                print(f"WARNING: Invalid batch time: {batch_time}. Skipping this batch.")
-                continue
-            total_time += batch_time
-            total_grids += len(inputs)
+                batch_time = end_time - start_time
+                print(f"Batch time: {batch_time}")
+                if batch_time <= 0:
+                    print(f"WARNING: Invalid batch time: {batch_time}. Skipping this batch.")
+                    continue
+                total_time += batch_time
+                total_grids += len(inputs)
+    except Exception as e:
+        logger.error(f"An error occurred during benchmarking: {e}")
+        raise
 
     print(f"Benchmark completed. Total time: {total_time}, Total grids: {total_grids}")
     # Calculate average and standard deviation for the runs
