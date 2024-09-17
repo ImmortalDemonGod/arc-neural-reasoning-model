@@ -158,8 +158,8 @@ class ARCTrainer(pl.LightningModule):
             self.log(f'{task_id}_test_accuracy', accuracy[i] if accuracy.dim() > 0 else accuracy)
             self.log(f'{task_id}_test_diff_accuracy', diff_accuracy[i] if isinstance(diff_accuracy, torch.Tensor) and diff_accuracy.dim() > 0 else diff_accuracy)
 
-        logger.debug(f"Batch {batch_index} - Task IDs: {task_ids}")
-        logger.debug(f"Batch {batch_index} - Loss: {loss.item()}, Accuracy: {accuracy.item()}")
+        logger.debug(f"Batch {batch_idx} - Task IDs: {task_ids}")
+        logger.debug(f"Batch {batch_idx} - Loss: {loss.item()}, Accuracy: {accuracy.item()}")
 
         result = {
             'loss': loss,
