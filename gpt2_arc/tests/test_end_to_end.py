@@ -115,8 +115,12 @@ def test_end_to_end():
         # Evaluate model before training to get initial accuracy
         logger.info("Evaluating model before training")
         initial_val_results = pl_trainer.test(trainer, verbose=False)
-        initial_accuracy = initial_val_results[0]['test_accuracy']
-        initial_loss = initial_val_results[0]['test_loss']
+        initial_accuracy = initial_val_results[0].get('test_accuracy', None)
+        initial_loss = initial_val_results[0].get('test_loss', None)
+
+        if initial_accuracy is None or initial_loss is None:
+            logger.error("Initial validation results do not contain 'test_accuracy' or 'test_loss'")
+            raise KeyError("Initial validation results missing 'test_accuracy' or 'test_loss'")
         logger.info(f"Initial validation accuracy: {initial_accuracy}, Initial loss: {initial_loss}")
         print(f"Initial validation accuracy: {initial_accuracy}, Initial loss: {initial_loss}")
         logger.debug("Starting model training")
