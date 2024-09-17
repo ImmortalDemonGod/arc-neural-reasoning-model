@@ -99,7 +99,7 @@ def test_benchmark_model_mps(mock_model, mock_dataset, mock_dataloader):
     assert isinstance(avg_grids, (float, int))
 
 def test_benchmark_model_error_handling(mock_model, mock_dataset):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid device type"):
         benchmark_model(mock_model, mock_dataset, device_type='invalid_device')
 
 # Tests for main function
@@ -224,6 +224,10 @@ def test_benchmark_model_out_of_memory(mock_model, mock_dataset, mock_dataloader
         benchmark_model(mock_model, mock_dataset, device_type='cuda')
 
 # Precision tests
+
+@pytest.fixture
+def mock_torch():
+    return MagicMock()
 
 @pytest.mark.parametrize("precision", ['highest', 'high', 'medium'])
 def test_benchmark_model_precision(mock_model, mock_dataset, mock_torch, precision):
