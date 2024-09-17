@@ -40,9 +40,8 @@ def mock_dataloader():
 
 @pytest.fixture
 def mock_torch():
-    with patch('benchmark.torch') as mock_torch:
-        mock_torch.device.return_value = torch.device('cpu')
-        mock_torch.ones.return_value = torch.ones(32, 900)
+    with patch('benchmark.torch', wraps=torch) as mock_torch:
+        # Mock specific functions if necessary
         mock_torch.cuda.is_available.return_value = False
         mock_torch.backends.mps.is_available.return_value = False
         yield mock_torch
