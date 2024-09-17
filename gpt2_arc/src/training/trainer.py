@@ -186,16 +186,16 @@ class ARCTrainer(pl.LightningModule):
 
         # Collect metrics in a dictionary
         metrics = {
-            'test_loss': loss,
-            'test_accuracy': accuracy,
-            'test_diff_accuracy': diff_accuracy
+            'test_loss': loss.item() if isinstance(loss, torch.Tensor) else loss,
+            'test_accuracy': accuracy.item() if isinstance(accuracy, torch.Tensor) else accuracy,
+            'test_diff_accuracy': diff_accuracy.item() if isinstance(diff_accuracy, torch.Tensor) else diff_accuracy
         }
 
-        # Return metrics instead of logging
+        # Return metrics
         return {
-            'test_loss': loss.item(),
-            'test_accuracy': accuracy.item(),
-            'test_diff_accuracy': diff_accuracy.item(),
+            'test_loss': metrics['test_loss'],
+            'test_accuracy': metrics['test_accuracy'],
+            'test_diff_accuracy': metrics['test_diff_accuracy'],
             'task_ids': task_ids,
         }
 
