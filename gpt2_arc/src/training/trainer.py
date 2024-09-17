@@ -175,18 +175,30 @@ class ARCTrainer(pl.LightningModule):
         accuracy = (predictions == outputs).float().mean()
         diff_accuracy, _, _ = differential_pixel_accuracy(inputs, outputs, predictions)
 
-        # Log overall metrics
-        # Ensure logging is done in supported contexts
-        if self.trainer and self.trainer.testing:
-            self.log('test_loss', loss)
-            self.log('test_accuracy', accuracy)
-            self.log('test_diff_accuracy', diff_accuracy)
+        # Collect metrics in a dictionary
+        metrics = {
+            'test_loss': loss,
+            'test_accuracy': accuracy,
+            'test_diff_accuracy': diff_accuracy
+        }
+
+        # Log metrics safely
+        try:
+            self.log_dict(metrics)
+        except Exception as e:
+            logger.warning(f"Failed to log metrics: {e}")
 
         # Log task-specific metrics
         for i, task_id in enumerate(task_ids):
-            self.log(f'{task_id}_test_loss', loss[i] if loss.dim() > 0 else loss)
-            self.log(f'{task_id}_test_accuracy', accuracy[i] if accuracy.dim() > 0 else accuracy)
-            self.log(f'{task_id}_test_diff_accuracy', diff_accuracy[i] if isinstance(diff_accuracy, torch.Tensor) and diff_accuracy.dim() > 0 else diff_accuracy)
+            task_metrics = {
+                f'{task_id}_test_loss': loss[i] if loss.dim() > 0 else loss,
+                f'{task_id}_test_accuracy': accuracy[i] if accuracy.dim() > 0 else accuracy,
+                f'{task_id}_test_diff_accuracy': diff_accuracy[i] if isinstance(diff_accuracy, torch.Tensor) and diff_accuracy.dim() > 0 else diff_accuracy
+            }
+            try:
+                self.log_dict(task_metrics)
+            except Exception as e:
+                logger.warning(f"Failed to log task metrics for {task_id}: {e}")
 
         logger.debug(f"Batch {batch_idx} - Task IDs: {task_ids}")
         logger.debug(f"Batch {batch_idx} - Loss: {loss.item()}, Accuracy: {accuracy.item()}")
@@ -243,11 +255,14 @@ class ARCTrainer(pl.LightningModule):
         total_tasks = len(all_task_ids)
         successful_tasks = sum(1 for result in self.test_outputs if result['accuracy'] == 1.0)
         task_success_rate = successful_tasks / total_tasks if total_tasks > 0 else 0.0
-        self.log('task_success_rate', task_success_rate)
+        # Instead of logging, store these values in the results collector
+        self.results_collector.set_test_results({
+            "avg_loss": avg_test_loss,
+            "avg_accuracy": avg_test_accuracy,
+            "task_success_rate": task_success_rate
+        })
 
-        print(f"Debug: Total tasks: {total_tasks}")
-        print(f"Debug: Successful tasks: {successful_tasks}")
-        print(f"Debug: Task success rate: {task_success_rate}")
+        logger.info(f"Test Results - Avg Loss: {avg_test_loss:.4f}, Avg Accuracy: {avg_test_accuracy:.4f}, Task Success Rate: {task_success_rate:.4f}")
 
         for task_id, loss, accuracy in zip(all_task_ids, all_losses, all_accuracies):
             self.test_results.append({
