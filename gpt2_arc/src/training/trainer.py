@@ -182,44 +182,28 @@ class ARCTrainer(pl.LightningModule):
             'test_diff_accuracy': diff_accuracy
         }
 
+        # Collect metrics in a dictionary
+        metrics = {
+            'test_loss': loss,
+            'test_accuracy': accuracy,
+            'test_diff_accuracy': diff_accuracy
+        }
+
         # Log metrics safely
         try:
             self.log_dict(metrics)
         except Exception as e:
             logger.warning(f"Failed to log metrics: {e}")
 
-        # Log task-specific metrics
-        for i, task_id in enumerate(task_ids):
-            task_metrics = {
-                f'{task_id}_test_loss': loss[i] if loss.dim() > 0 else loss,
-                f'{task_id}_test_accuracy': accuracy[i] if accuracy.dim() > 0 else accuracy,
-                f'{task_id}_test_diff_accuracy': diff_accuracy[i] if isinstance(diff_accuracy, torch.Tensor) and diff_accuracy.dim() > 0 else diff_accuracy
-            }
-            try:
-                self.log_dict(task_metrics)
-            except Exception as e:
-                logger.warning(f"Failed to log task metrics for {task_id}: {e}")
-
-        logger.debug(f"Batch {batch_idx} - Task IDs: {task_ids}")
-        logger.debug(f"Batch {batch_idx} - Loss: {loss.item()}, Accuracy: {accuracy.item()}")
-
+        # Store result for later processing
         result = {
-            'loss': loss,
-            'accuracy': accuracy,
+            'loss': loss.item(),
+            'accuracy': accuracy.item(),
             'task_ids': task_ids,
-            'test_loss': loss  # Add test_loss to the result
+            'test_loss': loss.item()
         }
+        self.test_outputs.append(result)
 
-        self.results_collector.add_task_specific_result(task_id, {
-            "loss": loss.item(),
-            "accuracy": accuracy.item(),
-            "diff_accuracy": diff_accuracy
-        })
-        self.test_outputs.append(result)  # Store the result
-
-        # Calculate task success for TSR
-        task_success = (accuracy == 1.0).float()
-        self.log(f'{task_id}_task_success', task_success)
         return result
 
     def on_test_epoch_end(self):
@@ -255,6 +239,9 @@ class ARCTrainer(pl.LightningModule):
         total_tasks = len(all_task_ids)
         successful_tasks = sum(1 for result in self.test_outputs if result['accuracy'] == 1.0)
         task_success_rate = successful_tasks / total_tasks if total_tasks > 0 else 0.0
+        avg_test_loss = sum(all_losses) / len(all_losses) if all_losses else 0
+        avg_test_accuracy = sum(all_accuracies) / len(all_accuracies) if all_accuracies else 0
+
         # Instead of logging, store these values in the results collector
         self.results_collector.set_test_results({
             "avg_loss": avg_test_loss,
@@ -263,28 +250,6 @@ class ARCTrainer(pl.LightningModule):
         })
 
         logger.info(f"Test Results - Avg Loss: {avg_test_loss:.4f}, Avg Accuracy: {avg_test_accuracy:.4f}, Task Success Rate: {task_success_rate:.4f}")
-
-        for task_id, loss, accuracy in zip(all_task_ids, all_losses, all_accuracies):
-            self.test_results.append({
-                'task_id': task_id,
-                'test_loss': loss,
-                'test_accuracy': accuracy
-            })
-
-        print(f"Debug: Test results: {self.test_results}")
-
-        avg_test_loss = sum(all_losses) / len(all_losses) if all_losses else 0
-        avg_test_accuracy = sum(all_accuracies) / len(all_accuracies) if all_accuracies else 0
-
-        print(f"Debug: Average test loss: {avg_test_loss}")
-        print(f"Debug: Average test accuracy: {avg_test_accuracy}")
-
-        self.results_collector.set_test_results({
-            "avg_loss": avg_test_loss,
-            "avg_accuracy": avg_test_accuracy
-        })
-
-        print("Debug: Finished on_test_epoch_end")
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
