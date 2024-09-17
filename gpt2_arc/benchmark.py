@@ -39,6 +39,9 @@ BASELINES = {
 def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, device_type='cpu', precision='medium', model_checkpoint=None):
     print(f"Starting benchmark_model with parameters: batch_size={batch_size}, num_batches={num_batches}, device_type={device_type}, precision={precision}, model_checkpoint={model_checkpoint}")
 
+    if device_type not in ['cpu', 'cuda', 'mps']:
+        raise ValueError("Invalid device type")
+
     if len(dataset) == 0:
         raise ValueError("Dataset is empty")
 
