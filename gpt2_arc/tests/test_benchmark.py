@@ -207,13 +207,12 @@ def test_benchmark_model_with_correct_data(mock_model, mock_dataset, mock_datalo
         assert avg_grids > 0, "avg_grids should be positive"
 
 def test_benchmark_model_model_error(mock_model, mock_dataset, mock_dataloader):
+    # Mock the model to raise a RuntimeError during execution
     mock_model.side_effect = RuntimeError("Model execution failed")
-
-    with patch('benchmark.DataLoader', return_value=mock_dataloader):
+    
+    with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
         with pytest.raises(RuntimeError, match="Model execution failed"):
-            # Ensure the model is called to trigger the side effect
-            for _ in mock_dataloader:
-                benchmark_model(mock_model, mock_dataset, num_batches=1)
+            benchmark_model(mock_model, mock_dataset)
 
 #skip
 @pytest.mark.skip(reason="I dont want to crash my computer")
