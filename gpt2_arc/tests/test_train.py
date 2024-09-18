@@ -367,7 +367,10 @@ def test_valid_learning_rates(mock_args, learning_rate):
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
         "gpt2_arc.src.training.train.pl.Trainer"
-    ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer:
+    ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch(
+        "torch.utils.data.DataLoader"
+    ) as mock_dataloader:
+        mock_dataloader.side_effect = lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})
         try:
             # Set up the ARCTrainer mock instance
             mock_trainer_instance = mock_ARCTrainer.return_value
