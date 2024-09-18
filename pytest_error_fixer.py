@@ -74,10 +74,10 @@ class PytestErrorFixer:
 
     def get_commit_sha(self) -> str:
         try:
-        for attempt in range(self.max_retries):
-            temperature = self.initial_temperature + (attempt * self.temperature_increment)
-            logging.info(f"Attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
-            return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.project_dir).strip().decode('utf-8')
+            for attempt in range(self.max_retries):
+                temperature = self.initial_temperature + (attempt * self.temperature_increment)
+                logging.info(f"Attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
+                return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.project_dir).strip().decode('utf-8')
         except subprocess.CalledProcessError:
             logging.warning("Failed to get commit SHA. Is this a git repository?")
             return "N/A"
