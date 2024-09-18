@@ -281,7 +281,7 @@ class PytestErrorFixer:
             print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
 
             try:
-                response = self.coder.run(prompt, temperature=temperature)
+                response = self.coder.run(prompt)
                 logging.info("AI model suggested changes. Applying changes...")
             
                 # Parse the Aider response for search/replace statements
