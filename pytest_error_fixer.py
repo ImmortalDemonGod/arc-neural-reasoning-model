@@ -248,7 +248,21 @@ class PytestErrorFixer:
         
         # Run the test again to check if it's fixed
         result = subprocess.run(cmd, capture_output=True, text=True)
-        return "PASSED" in result.stdout
+        
+        if "PASSED" in result.stdout:
+            self.log_progress("fixed", error, test_file)
+            return True
+        else:
+            # If the test still fails, revert the commit
+            try:
+                commit_sha = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode('utf-8')
+                logging.info(f"Reverting commit {commit_sha} due to failed test")
+                subprocess.run(["git", "revert", "--no-edit", commit_sha], check=True)
+                self.log_progress("reverted", error, test_file)
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Error during revert: {e}")
+                self.log_progress("revert_failed", error, test_file)
+            return False
 
     def debug_fix_single_error(self, error, file_path):
         print(f"DEBUG: Starting debug_fix_single_error for {error['function']} in {file_path}")
