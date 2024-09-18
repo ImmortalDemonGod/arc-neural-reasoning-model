@@ -309,6 +309,14 @@ class PytestErrorFixer:
         logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
         return False
 
+    def get_git_diff(self) -> str:
+        """Retrieve the current git diff."""
+        try:
+            return subprocess.check_output(["git", "diff"], cwd=self.project_dir).decode('utf-8')
+        except subprocess.CalledProcessError:
+            logging.warning("Failed to get git diff. Is this a git repository?")
+            return "N/A"
+
     def revert_changes(self):
         try:
             subprocess.run(["git", "reset", "--hard"], cwd=self.project_dir, check=True)
