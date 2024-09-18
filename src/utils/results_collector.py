@@ -14,6 +14,7 @@ class ResultsCollector:
             "validation": {},
             "test": {}
         }
+        print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
 
     def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
         """Update training metrics for a given epoch."""
