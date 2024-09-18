@@ -228,37 +228,38 @@ class PytestErrorFixer:
 
         # Load all errors from the error log
         all_errors = self.load_errors()
+        print("Loaded errors:", all_errors)
 
-        # Process each error
-        for file_path, error_list in all_errors.items():
-            for error in error_list:
-                print(f"Processing error: {error} in {file_path}")
-                relevant_files = self.predict_relevant_files(error)
-                print(f"Relevant files predicted: {relevant_files}")
-                self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
+        # # Process each error
+        # for file_path, error_list in all_errors.items():
+        #     for error in error_list:
+        #         print(f"Processing error: {error} in {file_path}")
+        #         relevant_files = self.predict_relevant_files(error)
+        #         print(f"Relevant files predicted: {relevant_files}")
+        #         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
 
-                for attempt in range(self.max_retries):
-                    if self.fix_error(error['test_file'], error):
-                        print(f"Fixed: {file_path} - {error}")
-                        self.log_progress("fixed", error, file_path)
-                        print(f"Successfully fixed: {file_path} - {error}")
-                        break
-                    else:
-                        print(f"Retry {attempt + 1} failed for: {file_path} - {error}")
-                else:
-                    print(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error}")
-                    self.log_progress("failed", error, file_path)
+        #         for attempt in range(self.max_retries):
+        #             if self.fix_error(error['test_file'], error):
+        #                 print(f"Fixed: {file_path} - {error}")
+        #                 self.log_progress("fixed", error, file_path)
+        #                 print(f"Successfully fixed: {file_path} - {error}")
+        #                 break
+        #             else:
+        #                 print(f"Retry {attempt + 1} failed for: {file_path} - {error}")
+        #         else:
+        #             print(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error}")
+        #             self.log_progress("failed", error, file_path)
 
-        # Run the full test suite again to verify all fixes
-        print("Re-running full test suite to verify fixes...")
-        test_files = self.discover_test_files()
-        for test_file in test_files:
-            stdout, stderr = self.run_individual_test(test_file)
-            print(f"Final test results for {test_file}:")
-            print(stdout)
-            print(stderr)
+        # # Run the full test suite again to verify all fixes
+        # print("Re-running full test suite to verify fixes...")
+        # test_files = self.discover_test_files()
+        # for test_file in test_files:
+        #     stdout, stderr = self.run_individual_test(test_file)
+        #     print(f"Final test results for {test_file}:")
+        #     print(stdout)
+        #     print(stderr)
 
-        print("All tests completed.")
+        print("Parsing and error logging completed.")
 
 
 
