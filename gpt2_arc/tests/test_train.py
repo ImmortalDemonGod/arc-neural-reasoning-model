@@ -237,7 +237,8 @@ def test_batch_size_extremes(mock_args, batch_size):
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer"
-    ) as mock_trainer:
+    ) as mock_trainer, patch("torch.utils.data.DataLoader") as mock_dataloader:
+        mock_dataloader.return_value = MagicMock(num_workers=0)
         main(mock_args)
 
         mock_trainer.assert_called_with(
