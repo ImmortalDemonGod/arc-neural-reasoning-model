@@ -376,7 +376,7 @@ class PytestErrorFixer:
             previous_attempt_prompt = (
                 f"\n\nPrevious fix attempt failed. This is attempt {attempt + 1}.\n"
                 f"Changes made in the previous attempt:\n{changes}\n"
-                "Please analyze why the previous fix didn't work and suggest a different approach."
+                "Please analyze why the previous fix didn't work and suggest a different approach. Collect more data if needed with debug statements or add additional relevant files."
             )
 
         full_prompt = f"{error_prompt}\n\n{analysis_prompt}\n\nTest Output:\n{stdout}\n\nTest Error Output:\n{stderr}{previous_attempt_prompt}"
