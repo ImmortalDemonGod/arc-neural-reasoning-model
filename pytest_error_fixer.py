@@ -210,6 +210,7 @@ class PytestErrorFixer:
         return "PASSED" in result.stdout
 
     def main(self):
+        """
         print("Starting main process...")
         test_files = self.discover_test_files()
         print(f"Discovered {len(test_files)} test files.")
@@ -225,6 +226,8 @@ class PytestErrorFixer:
                 print(f"No errors found in {test_file}")
 
         print("All test files processed.")
+        """
+
 
         # Load all errors from the error log
         all_errors = self.load_errors()
@@ -237,7 +240,7 @@ class PytestErrorFixer:
                 relevant_files = self.predict_relevant_files(error)
                 print(f"Relevant files predicted: {relevant_files}")
                 self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
-
+"""
                 for attempt in range(self.max_retries):
                     if self.fix_error(error['test_file'], error):
                         print(f"Fixed: {file_path} - {error}")
@@ -260,6 +263,9 @@ class PytestErrorFixer:
             print(stderr)
 
         print("Error fixing and verification completed.")
+"""
+
+
 
 
 
