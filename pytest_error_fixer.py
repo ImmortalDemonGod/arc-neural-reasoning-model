@@ -426,22 +426,27 @@ class PytestErrorFixer:
 
     def main(self):
         logging.info("Starting main process...")
-        test_files = self.discover_test_files()
-        logging.info(f"Discovered {len(test_files)} test files.")
+        # Check if the error log already exists
+        if os.path.exists(self.error_log):
+            logging.info("Error log found. Loading errors from log...")
+            all_errors = self.load_errors()
+        else:
+            logging.info("No error log found. Running tests to generate error log...")
+            test_files = self.discover_test_files()
+            logging.info(f"Discovered {len(test_files)} test files.")
 
-        for test_file in test_files:
-            logging.info(f"Running test file: {test_file}")
-            stdout, stderr = self.run_test(test_file)
-            errors = self.parse_errors(stdout + stderr, test_file)
-            if errors:
-                logging.info(f"Errors found in {test_file}. Saving to log...")
-                self.save_errors(errors)
-            else:
-                logging.info(f"No errors found in {test_file}")
+            for test_file in test_files:
+                logging.info(f"Running test file: {test_file}")
+                stdout, stderr = self.run_test(test_file)
+                errors = self.parse_errors(stdout + stderr, test_file)
+                if errors:
+                    logging.info(f"Errors found in {test_file}. Saving to log...")
+                    self.save_errors(errors)
+                else:
+                    logging.info(f"No errors found in {test_file}")
 
-        logging.info("All test files processed.")
-
-        all_errors = self.load_errors()
+            logging.info("All test files processed.")
+            all_errors = self.load_errors()
         logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
 
         for file_path, error_list in all_errors.items():
