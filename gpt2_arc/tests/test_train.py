@@ -305,6 +305,7 @@ def test_gpu_not_available(mock_args):
         "gpt2_arc.src.training.train.ARCDataset"
     ), patch("gpt2_arc.src.training.train.GPT2ARC"), patch(
         "gpt2_arc.src.training.train.ARCTrainer"
+        "gpt2_arc.src.training.train.ARCTrainer"
     ), patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
          patch("gpt2_arc.src.utils.results_collector.ResultsCollector.get_summary") as mock_get_summary:
 
