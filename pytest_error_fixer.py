@@ -447,6 +447,14 @@ class PytestErrorFixer:
         for file_path, error_list in all_errors.items():
             for error in error_list:
                 logging.info(f"Processing error: {error} in {file_path}")
+                # Extract relevant files for logging
+                error_dict = {file_path: [error]}
+                relevant_files = self.extract_file_paths_from_errors(error_dict)
+                all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
+                
+                # Get the git diff for logging
+                git_diff = self.get_git_diff()
+                
                 fixed = self.fix_error(error, file_path)
                 if fixed:
                     self.log_progress("fixed", error, file_path, all_relevant_files, git_diff, self.temperature)
