@@ -52,7 +52,13 @@ class PytestErrorFixer:
                 "gpt2_arc/src/utils/experiment_tracker.py",
                 "gpt2_arc/src/models/gpt2.py",
                 "gpt2_arc/src/config.py",
-                # Add more relevant files as needed
+                ],
+                "gpt2_arc/tests/test_differential_pixel_accuracy.py": [
+                    "gpt2_arc/src/utils/helpers.py",
+                    "gpt2_arc/src/models/gpt2.py",
+                    "gpt2_arc/src/config.py",
+                    "gpt2_arc/src/data/arc_dataset.py",
+                    # Add more relevant files as needed
             ],
         }
 
