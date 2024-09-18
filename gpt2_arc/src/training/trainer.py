@@ -45,6 +45,7 @@ class ARCTrainer(pl.LightningModule):
             task_ids = batch.get("task_ids")
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
+            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
         # Ensure inputs and labels are the correct type
         inputs = inputs.float()
