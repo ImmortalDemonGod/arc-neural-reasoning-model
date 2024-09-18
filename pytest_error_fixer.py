@@ -60,17 +60,69 @@ class PytestErrorFixer:
         return result.stdout, result.stderr
 
     def parse_errors(self, output):
-        error_pattern = r"(gpt2_arc/.*\.py)::([\w_]+)\s+(.*?)\n(.*?)(?=\n\n(?:={20,}|_{20,})|$)"
-        errors = re.findall(error_pattern, output, re.DOTALL)
+        # Extract the 'FAILURES' section from the log
+        failures_match = re.search(r"={10,} FAILURES ={10,}\n(.*?)(?=\n=|$)", output, re.DOTALL)
+        if failures_match:
+            failures_section = failures_match.group(1)
+        else:
+            return {}
+
+        # Split the failures_section into individual failures
+        failure_blocks = re.split(r"\n_{10,} .*? _{10,}\n", failures_section)
+        failure_names = re.findall(r"_{10,} (.*?) _{10,}\n", failures_section)
+
         parsed_errors = defaultdict(list)
-        for file, function, error_type, error_details in errors:
-            parsed_errors[file].append({
-                "function": function,
-                "error_type": error_type.strip(),
-                "error_details": error_details.strip()
-            })
+
+        # Skip the first empty block if it exists
+        if failure_blocks and not failure_blocks[0].strip():
+            failure_blocks = failure_blocks[1:]
+
+        for name, block in zip(failure_names, failure_blocks):
+            failure_info = self.parse_failure_block(block)
+            if failure_info:
+                file_path = failure_info['file_path']
+                parsed_errors[file_path].append({
+                    'function': failure_info['function'],
+                    'error_type': failure_info['error_type'],
+                    'error_details': failure_info['error_details'],
+                    'line_number': failure_info['line_number'],
+                    'code_snippet': failure_info['code_snippet']
+                })
+
         print("Parsed errors:", dict(parsed_errors))
         return parsed_errors
+
+    def parse_failure_block(self, block):
+        lines = block.strip().split('\n')
+        # First line should be file path with line number and function
+        file_line_func_match = re.match(r'(.*?):(\d+): in (.*)', lines[0])
+        if not file_line_func_match:
+            return None
+        file_path = file_line_func_match.group(1)
+        line_number = file_line_func_match.group(2)
+        function = file_line_func_match.group(3)
+        # The rest of the lines are code snippet and error messages
+        code_snippet = []
+        error_messages = []
+        i = 1
+        while i < len(lines):
+            line = lines[i]
+            if line.startswith('E   '):
+                # Start collecting error messages
+                error_messages.append(line[1:].strip())  # Remove one leading space
+            else:
+                code_snippet.append(line)
+            i += 1
+        error_message = '\n'.join(error_messages)
+        error_type = error_message.split(':')[0] if error_message else ''
+        return {
+            'file_path': file_path,
+            'line_number': line_number,
+            'function': function,
+            'code_snippet': '\n'.join(code_snippet),
+            'error_type': error_type.strip(),
+            'error_details': error_message.strip()
+        }
 
     def save_errors(self, errors):
         # Save parsed errors in a JSON log for scalability
