@@ -260,67 +260,84 @@ class PytestErrorFixer:
         relevant_files = self.extract_file_paths_from_errors(error_dict)
         all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
 
-        print(f"DEBUG: All relevant files before filtering: {all_relevant_files}")
-
-        # Ensure all paths are absolute and exist
-        all_relevant_files = [
-            path for path in all_relevant_files 
-            if os.path.isabs(path) and os.path.exists(path)
-        ]
-
-        print(f"DEBUG: All relevant files after filtering: {all_relevant_files}")
+        print(f"DEBUG: All relevant files: {all_relevant_files}")
 
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
         for attempt in range(self.max_retries):
-            # Skip temperature logic
-            stdout, stderr = self.run_test(error['test_file'], error['function'])
+            temperature = self.initial_temperature + (attempt * self.temperature_increment)
+            logging.info(f"Attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
 
+            # Get the initial git status
+            initial_git_status = self.get_git_status()
+
+            stdout, stderr = self.run_test(error['test_file'], error['function'])
             git_diff = self.get_git_diff() if attempt > 0 else ""
             prompt = self.construct_prompt(error, stdout, stderr, git_diff, attempt)
             
-            print(f"DEBUG: Attempt {attempt + 1}")
+            print(f"DEBUG: Attempt {attempt + 1} - Temperature: {temperature}")
             print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
 
             try:
-                # Run without setting temperature
-                self.coder.run(prompt)
+                self.coder.run(prompt, temperature=temperature)
                 logging.info("AI model suggested changes. Applying changes...")
                 
-                # Get the git diff after changes
-                git_diff = self.get_git_diff()
+                # Get the git diff after Aider's changes
+                new_git_diff = self.get_git_diff(initial_git_status)
+                print(f"DEBUG: Changes made by Aider:\n{new_git_diff}")
                 
-                new_git_diff = self.get_git_diff()
+                # Re-run the test
                 stdout, stderr = self.run_test(error['test_file'], error['function'])
 
                 print(f"DEBUG: Test output after fix attempt:\n{stdout[:500]}...")  # Print first 500 characters of stdout
 
                 if "PASSED" in stdout:
                     logging.info(f"Fixed: {file_path} - {error['function']} on attempt {attempt + 1}")
-                    self.log_progress("fixed", error, file_path, all_relevant_files, new_git_diff, 0)  # Log with fixed temperature
+                    self.log_progress("fixed", error, file_path, all_relevant_files, new_git_diff, temperature)
                     return True
                 else:
                     logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
-                    self.log_progress("failed", error, file_path, all_relevant_files, new_git_diff, 0)  # Log with fixed temperature
-
+                    self.log_progress("failed", error, file_path, all_relevant_files, new_git_diff, temperature)
+                    
+                    # Revert changes if the fix failed
+                    self.revert_changes()
             except Exception as e:
                 logging.error(f"Error while applying changes: {str(e)}")
                 print(f"DEBUG: Exception occurred: {str(e)}")
+                self.revert_changes()
 
         logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
         return False
 
-    def get_git_diff(self) -> str:
-        """Retrieve the current git diff."""
+    def get_git_status(self) -> str:
+        """Get the current git status."""
         try:
-            return subprocess.check_output(["git", "diff"], cwd=self.project_dir).decode('utf-8')
+            return subprocess.check_output(["git", "status", "--porcelain"], cwd=self.project_dir).decode('utf-8')
+        except subprocess.CalledProcessError:
+            logging.warning("Failed to get git status. Is this a git repository?")
+            return ""
+
+    def get_git_diff(self, initial_status: str = "") -> str:
+        """Get the git diff since the initial status."""
+        try:
+            current_status = self.get_git_status()
+            changed_files = [line.split()[-1] for line in current_status.splitlines() 
+                             if line not in initial_status]
+            
+            if not changed_files:
+                return "No changes detected"
+            
+            diff_output = subprocess.check_output(["git", "diff", "--"] + changed_files, 
+                                                  cwd=self.project_dir).decode('utf-8')
+            return diff_output if diff_output else "Changes staged but not in diff"
         except subprocess.CalledProcessError:
             logging.warning("Failed to get git diff. Is this a git repository?")
-            return "N/A"
+            return "Failed to get git diff"
 
     def revert_changes(self):
         try:
             subprocess.run(["git", "reset", "--hard"], cwd=self.project_dir, check=True)
+            subprocess.run(["git", "clean", "-fd"], cwd=self.project_dir, check=True)
             logging.info("Changes reverted successfully.")
         except subprocess.CalledProcessError:
             logging.error("Failed to revert changes. Manual intervention may be required.")
