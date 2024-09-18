@@ -78,7 +78,7 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(inputs)
         loss = self.compute_loss(outputs, labels)
         
-        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val_loss", loss.item(), on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.results_collector.update_val_metrics(self.current_epoch, {"loss": loss.item()})
         
         return loss
