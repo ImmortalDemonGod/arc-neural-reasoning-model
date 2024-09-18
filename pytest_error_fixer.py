@@ -60,10 +60,17 @@ class PytestErrorFixer:
         return result.stdout, result.stderr
 
     def parse_errors(self, output):
-        error_pattern = r"(gpt2_arc/.*\.py)::\w+\s+(.*)"
-        errors = re.findall(error_pattern, output)
-        print("Parsed errors:", errors)
-        return defaultdict(list, errors)
+        error_pattern = r"(gpt2_arc/.*\.py)::([\w_]+)\s+(.*?)\n(.*?)(?=\n\n|$)"
+        errors = re.findall(error_pattern, output, re.DOTALL)
+        parsed_errors = defaultdict(list)
+        for file, function, error_type, error_details in errors:
+            parsed_errors[file].append({
+                "function": function,
+                "error_type": error_type.strip(),
+                "error_details": error_details.strip()
+            })
+        print("Parsed errors:", dict(parsed_errors))
+        return parsed_errors
 
     def save_errors(self, errors):
         # Save parsed errors in a JSON log for scalability
@@ -121,7 +128,6 @@ class PytestErrorFixer:
         print("Errors parsed. Saving to log...")
         self.save_errors(errors)
         print("Errors saved.")
-"""
         # Process each error
         for test_file, error_list in errors.items():
             for error in error_list:
@@ -149,7 +155,6 @@ class PytestErrorFixer:
         print("Final test results:")
         print(final_stdout)
         print(final_stderr)
-"""
 
 
 
