@@ -65,12 +65,6 @@ class PytestErrorFixer:
             json.dump(log, f, indent=4)
 
         print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
-        print(f"DEBUG: Git diff logged: {git_diff[:100]}...")  # Print first 100 characters of git diff
-        try:
-            return subprocess.check_output(["git", "diff"], cwd=self.project_dir).decode('utf-8')
-        except subprocess.CalledProcessError:
-            logging.warning("Failed to get git diff. Is this a git repository?")
-            return "N/A"
 
     def get_commit_sha(self) -> str:
         try:
