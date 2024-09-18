@@ -41,7 +41,14 @@ class PytestErrorFixer:
             "--cov-report=xml",
             "gpt2_arc/"
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        # for now will will just us this test_cmd to test the code : pytest gpt2_arc/tests/test_end_to_end.py -v --tb=short
+        test_cmd = [
+            "pytest",
+            "gpt2_arc/tests/test_end_to_end.py",
+            "-v",
+            "--tb=short"
+        ]
+        result = subprocess.run(test_cmd, capture_output=True, text=True)
         return result.stdout, result.stderr
 
     def parse_errors(self, output):
@@ -89,7 +96,7 @@ class PytestErrorFixer:
         stdout, stderr = self.run_full_test()
         errors = self.parse_errors(stdout + stderr)
         self.save_errors(errors)
-
+"""
         # Process each error
         for test_file, error_list in errors.items():
             for error in error_list:
@@ -112,6 +119,8 @@ class PytestErrorFixer:
         print("Final test results:")
         print(final_stdout)
         print(final_stderr)
+"""
+
 
 
 if __name__ == "__main__":
