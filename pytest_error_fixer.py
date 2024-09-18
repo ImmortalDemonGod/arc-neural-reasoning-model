@@ -55,11 +55,14 @@ class PytestErrorFixer:
         result = subprocess.run(test_cmd, capture_output=True, text=True)
         print("Test suite completed.")
         print("Parsing errors from test output...")
+        print("Test stdout:", result.stdout)
+        print("Test stderr:", result.stderr)
         return result.stdout, result.stderr
 
     def parse_errors(self, output):
         error_pattern = r"(gpt2_arc/.*\.py)::\w+\s+(.*)"
         errors = re.findall(error_pattern, output)
+        print("Parsed errors:", errors)
         return defaultdict(list, errors)
 
     def save_errors(self, errors):
@@ -72,7 +75,9 @@ class PytestErrorFixer:
         # Load errors from JSON log
         print("Loading errors from log...")
         with open(self.error_log, 'r') as f:
-            return json.load(f)
+            errors = json.load(f)
+            print("Loaded errors:", errors)
+            return errors
 
     def predict_relevant_files(self, error):
         print(f"Predicting relevant files for error: {error}")
@@ -80,6 +85,7 @@ class PytestErrorFixer:
         response = self.coder.run(prompt)
         # Extract relevant files from aider's prediction
         files = re.findall(r"gpt2_arc/.*\.py", response)
+        print("Predicted relevant files:", files)
         return files
 
     def fix_error(self, test_file, error):
@@ -102,6 +108,8 @@ class PytestErrorFixer:
             print(f"Error fixed in {test_file}: {error}")
         else:
             print(f"Error not fixed in {test_file}: {error}")
+        print("Fix result stdout:", result.stdout)
+        print("Fix result stderr:", result.stderr)
         return "PASSED" in result.stdout
 
     def main(self):
