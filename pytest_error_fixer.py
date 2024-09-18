@@ -129,7 +129,8 @@ class PytestErrorFixer:
         self.save_errors(errors)
         print("Errors saved.")
         # Process each error
-        for test_file, error_list in errors.items():
+        """
+                for test_file, error_list in errors.items():
             for error in error_list:
                 print(f"Processing error: {error} in {test_file}")
                 relevant_files = self.predict_relevant_files(error)
@@ -155,6 +156,8 @@ class PytestErrorFixer:
         print("Final test results:")
         print(final_stdout)
         print(final_stderr)
+
+        """
 
 
 
