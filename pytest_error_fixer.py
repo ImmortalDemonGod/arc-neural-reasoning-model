@@ -35,31 +35,26 @@ class PytestErrorFixer:
             f.seek(0)
             json.dump(log, f, indent=4)
 
-    def run_full_test(self):
+    def discover_test_files(self):
+        test_files = []
+        for root, dirs, files in os.walk(self.project_dir):
+            for file in files:
+                if file.startswith("test_") and file.endswith(".py"):
+                    test_files.append(os.path.join(root, file))
+        return test_files
+
+    def run_individual_test(self, test_file):
         cmd = [
             "pytest",
-            "--cov=gpt2_arc",
-            "--cov-report=term-missing",
-            "--cov-report=html",
-            "--cov-report=xml",
-            "gpt2_arc/"
-        ]
-        # for now will will just us this test_cmd to test the code : pytest gpt2_arc/tests/test_end_to_end.py -v --tb=short
-        test_cmd = [
-            "pytest",
-            "gpt2_arc/tests/test_end_to_end.py",
             "-v",
-            "--tb=short"
+            "--tb=short",
+            "--log-cli-level=DEBUG",
+            test_file
         ]
-        print("Running full test suite...")
-        result = subprocess.run(test_cmd, capture_output=True, text=True)
-        print("Test suite completed.")
-        print("Parsing errors from test output...")
-        print("Test stdout:", result.stdout)
-        print("Test stderr:", result.stderr)
+        result = subprocess.run(cmd, capture_output=True, text=True)
         return result.stdout, result.stderr
 
-    def parse_errors(self, output):
+    def parse_errors(self, output, test_file):
         # Extract the 'FAILURES' section from the log
         failures_match = re.search(r"={10,} FAILURES ={10,}\n(.*?)(?=\n=|$)", output, re.DOTALL)
         if failures_match:
@@ -87,7 +82,8 @@ class PytestErrorFixer:
                     'line_number': failure_info['line_number'],
                     'code_snippet': failure_info['code_snippet'],
                     'captured_output': failure_info.get('captured_output', ''),
-                    'captured_log': failure_info.get('captured_log', '')
+                    'captured_log': failure_info.get('captured_log', ''),
+                    'test_file': test_file
                 })
 
         print("Parsed errors:", dict(parsed_errors))
@@ -153,11 +149,24 @@ class PytestErrorFixer:
             'captured_log': captured_log
         }
 
-    def save_errors(self, errors):
-        # Save parsed errors in a JSON log for scalability
-        print("Saving errors to log...")
+    def save_errors(self, new_errors):
+        if os.path.exists(self.error_log):
+            with open(self.error_log, 'r') as f:
+                existing_errors = json.load(f)
+        else:
+            existing_errors = {}
+
+        # Merge new errors with existing errors, avoiding duplicates
+        for file_path, errors in new_errors.items():
+            if file_path not in existing_errors:
+                existing_errors[file_path] = errors
+            else:
+                for error in errors:
+                    if error not in existing_errors[file_path]:
+                        existing_errors[file_path].append(error)
+
         with open(self.error_log, 'w') as f:
-            json.dump(errors, f, indent=4)
+            json.dump(existing_errors, f, indent=4)
 
     def load_errors(self):
         # Load errors from JSON log
@@ -201,44 +210,55 @@ class PytestErrorFixer:
         return "PASSED" in result.stdout
 
     def main(self):
-        # Run full test suite and parse errors
         print("Starting main process...")
-        stdout, stderr = self.run_full_test()
-        print("Initial test run completed.")
-        errors = self.parse_errors(stdout + stderr)
-        print("Errors parsed. Saving to log...")
-        self.save_errors(errors)
-        print("Errors saved.")
+        test_files = self.discover_test_files()
+        print(f"Discovered {len(test_files)} test files.")
+
+        for test_file in test_files:
+            print(f"Running test file: {test_file}")
+            stdout, stderr = self.run_individual_test(test_file)
+            errors = self.parse_errors(stdout + stderr, test_file)
+            if errors:
+                print(f"Errors found in {test_file}. Saving to log...")
+                self.save_errors(errors)
+            else:
+                print(f"No errors found in {test_file}")
+
+        print("All test files processed.")
+
+        # Load all errors from the error log
+        all_errors = self.load_errors()
+
         # Process each error
-        """
-                for test_file, error_list in errors.items():
+        for file_path, error_list in all_errors.items():
             for error in error_list:
-                print(f"Processing error: {error} in {test_file}")
+                print(f"Processing error: {error} in {file_path}")
                 relevant_files = self.predict_relevant_files(error)
                 print(f"Relevant files predicted: {relevant_files}")
                 self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
 
                 for attempt in range(self.max_retries):
-                    if self.fix_error(test_file, error):
-                        print(f"Fixed: {test_file} - {error}")
-                        self.log_progress("fixed", error, test_file)
-                        print(f"Successfully fixed: {test_file} - {error}")
+                    if self.fix_error(error['test_file'], error):
+                        print(f"Fixed: {file_path} - {error}")
+                        self.log_progress("fixed", error, file_path)
+                        print(f"Successfully fixed: {file_path} - {error}")
                         break
                     else:
-                        print(f"Retry {attempt + 1} failed for: {test_file} - {error}")
+                        print(f"Retry {attempt + 1} failed for: {file_path} - {error}")
                 else:
-                    print(f"Failed to fix after {self.max_retries} attempts: {test_file} - {error}")
-                    self.log_progress("failed", error, test_file)
+                    print(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error}")
+                    self.log_progress("failed", error, file_path)
 
         # Run the full test suite again to verify all fixes
         print("Re-running full test suite to verify fixes...")
-        final_stdout, final_stderr = self.run_full_test()
-        print("Final test suite run completed.")
-        print("Final test results:")
-        print(final_stdout)
-        print(final_stderr)
+        test_files = self.discover_test_files()
+        for test_file in test_files:
+            stdout, stderr = self.run_individual_test(test_file)
+            print(f"Final test results for {test_file}:")
+            print(stdout)
+            print(stderr)
 
-        """
+        print("All tests completed.")
 
 
 
