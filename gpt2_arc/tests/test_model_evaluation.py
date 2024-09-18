@@ -278,12 +278,9 @@ def test_checkpoint_contains_model_config():
         checkpoint = torch.load(checkpoint_path)
         # Log the keys in the checkpoint
         logger.debug(f"Checkpoint keys: {checkpoint.keys()}")
-    except FileNotFoundError as e:
-        logger.error(f"FileNotFoundError: {str(e)}")
-        pytest.fail(f"FileNotFoundError: {str(e)}")
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        pytest.fail(f"Unexpected error: {str(e)}")
+        logger.error(f"Failed to load checkpoint: {str(e)}")
+        pytest.fail(f"Failed to load checkpoint: {str(e)}")
 
     # Check for model configuration
     assert 'config' in checkpoint, "Model configuration not found in checkpoint."
