@@ -273,17 +273,18 @@ class PytestErrorFixer:
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
         for attempt in range(self.max_retries):
-            temperature = self.initial_temperature + (attempt * self.temperature_increment)
+            # Skip temperature logic
             stdout, stderr = self.run_test(error['test_file'], error['function'])
 
             git_diff = self.get_git_diff() if attempt > 0 else ""
             prompt = self.construct_prompt(error, stdout, stderr, git_diff, attempt)
             
-            print(f"DEBUG: Attempt {attempt + 1} - Temperature: {temperature}")
+            print(f"DEBUG: Attempt {attempt + 1}")
             print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
 
             try:
-                self.coder.run(prompt, temperature=temperature)
+                # Run without setting temperature
+                self.coder.run(prompt)
                 logging.info("AI model suggested changes. Applying changes...")
                 
                 # Get the git diff after changes
@@ -296,11 +297,11 @@ class PytestErrorFixer:
 
                 if "PASSED" in stdout:
                     logging.info(f"Fixed: {file_path} - {error['function']} on attempt {attempt + 1}")
-                    self.log_progress("fixed", error, file_path, all_relevant_files, new_git_diff, temperature)
+                    self.log_progress("fixed", error, file_path, all_relevant_files, new_git_diff, 0)  # Log with fixed temperature
                     return True
                 else:
                     logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
-                    self.log_progress("failed", error, file_path, all_relevant_files, new_git_diff, temperature)
+                    self.log_progress("failed", error, file_path, all_relevant_files, new_git_diff, 0)  # Log with fixed temperature
 
             except Exception as e:
                 logging.error(f"Error while applying changes: {str(e)}")
