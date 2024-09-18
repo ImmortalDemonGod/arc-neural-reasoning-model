@@ -70,7 +70,12 @@ class ARCTrainer(pl.LightningModule):
             labels = batch.get("labels")
             task_ids = batch.get("task_ids")
         else:
+            logger.error(f"Unexpected batch format: {type(batch)}. Content: {batch}")
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
+
+        if inputs is None or labels is None:
+            logger.error(f"Missing inputs or labels in batch. Inputs: {inputs}, Labels: {labels}")
+            raise ValueError("Batch must contain inputs and labels.")
 
         # Ensure inputs and labels are the correct type
         inputs = inputs.float()

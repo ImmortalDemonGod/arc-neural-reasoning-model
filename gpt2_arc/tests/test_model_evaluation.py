@@ -193,12 +193,11 @@ def test_validation_step_with_incorrect_batch_format(trainer):
     # Create a batch with an incorrect format (e.g., a list)
     incorrect_batch = [
         torch.randint(0, 10, (2, 900)),  # Random input data
-        torch.ones((2, 900))             # Random attention mask
         # Labels are missing
     ]
 
     logger.debug(f"Testing with incorrect batch format: {type(incorrect_batch)}")
-    with pytest.raises(ValueError, match="Unexpected batch format: <class 'list'>. Content:"):
+    with pytest.raises(ValueError, match="Batch must contain inputs and labels."):
         trainer.validation_step(incorrect_batch, 0)
 
 def test_model_loading_from_checkpoint(mocker):
