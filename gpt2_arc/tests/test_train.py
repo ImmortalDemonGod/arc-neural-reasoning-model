@@ -262,7 +262,8 @@ def test_learning_rate_extremes(mock_args, learning_rate):
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer"
-    ):
+    ), patch("torch.utils.data.DataLoader") as mock_dataloader:
+        mock_dataloader.return_value = MagicMock(num_workers=0)
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
 
