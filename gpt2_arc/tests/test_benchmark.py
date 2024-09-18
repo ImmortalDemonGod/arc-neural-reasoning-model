@@ -208,7 +208,7 @@ def test_benchmark_model_with_correct_data(mock_model, mock_dataset, mock_datalo
 
 def test_benchmark_model_model_error(mock_model, mock_dataset, mock_dataloader):
     # Mock the model to raise a RuntimeError during execution
-    mock_model.side_effect = RuntimeError("Model execution failed")
+    mock_model.__call__.side_effect = RuntimeError("Model execution failed")
     
     with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
         with pytest.raises(RuntimeError, match="Model execution failed"):
