@@ -199,11 +199,12 @@ def test_evaluation_process_with_arckit_data():
     # Log the evaluation results
     logger.debug(f"Evaluation results: {evaluation_results}")
     for result in evaluation_results:
-        task_id = result.get('task_id', 'unknown')
-        if task_id == 'unknown':
-            logger.error(f"Missing task_id in result: {result}")
+        task_ids = result.get('task_ids', [])
+        if not task_ids:
+            logger.error(f"Missing task_ids in result: {result}")
         else:
-            logger.info(f"Task {task_id}: Loss={result['test_loss']}, Accuracy={result['test_accuracy']}")
+            for task_id in task_ids:
+                logger.info(f"Task {task_id}: Loss={result['test_loss']}, Accuracy={result['test_accuracy']}")
 
     # Check for duplicate metrics
     unique_task_ids = set(result['task_id'] for result in evaluation_results)
