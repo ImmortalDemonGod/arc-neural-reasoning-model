@@ -119,6 +119,7 @@ def test_end_to_end():
         initial_accuracy = initial_val_results[0].get('test_accuracy', None)
         initial_loss = initial_val_results[0].get('test_loss', None)
 
+        print(f"Initial validation results: {initial_val_results}")
         if initial_accuracy is None or initial_loss is None:
             logger.error("Initial validation results do not contain 'test_accuracy' or 'test_loss'")
             raise KeyError("Initial validation results missing 'test_accuracy' or 'test_loss'")
@@ -221,6 +222,8 @@ def test_evaluation_process_with_arckit_data():
             for result in evaluation_results:
                 if result['task_id'] == task_id:
                     print(result)
+    print(f"Unique task IDs: {unique_task_ids}")
+    print(f"Evaluation results: {evaluation_results}")
     assert len(unique_task_ids) > 0, "No tasks were evaluated"
 
     logger.debug("Completed evaluation process test with arckit data")
