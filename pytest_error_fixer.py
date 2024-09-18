@@ -18,9 +18,10 @@ load_dotenv()  # This loads the variables from .env
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class PytestErrorFixer:
-    def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", temperature=0.7):
-        self.temperature = temperature
-        logging.info(f"Initializing PytestErrorFixer with project directory: {project_dir}")
+    def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", initial_temperature=0.4, temperature_increment=0.1):
+        self.initial_temperature = initial_temperature
+        self.temperature_increment = temperature_increment
+        print(f"DEBUG: Initialized PytestErrorFixer with initial_temperature={initial_temperature}, temperature_increment={temperature_increment}, max_retries={max_retries}")
         self.project_dir = project_dir
         self.max_retries = max_retries
         api_key = os.getenv("OPENAI_API_KEY")
@@ -59,17 +60,12 @@ class PytestErrorFixer:
 
         with open(self.progress_log, 'r+') as f:
             log = json.load(f)
-            log.append({
-                "error": error,
-                "file": test_file,
-                "status": status,
-                "commit_sha": commit_sha,
-                "timestamp": timestamp
-            })
+            log.append(log_entry)
             f.seek(0)
             json.dump(log, f, indent=4)
 
-    def get_git_diff(self) -> str:
+        print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
+        print(f"DEBUG: Git diff logged: {git_diff[:100]}...")  # Print first 100 characters of git diff
         try:
             return subprocess.check_output(["git", "diff"], cwd=self.project_dir).decode('utf-8')
         except subprocess.CalledProcessError:
@@ -78,7 +74,9 @@ class PytestErrorFixer:
 
     def get_commit_sha(self) -> str:
         try:
-            print(f"DEBUG: Using temperature {self.temperature} for AI model")
+        for attempt in range(self.max_retries):
+            temperature = self.initial_temperature + (attempt * self.temperature_increment)
+            logging.info(f"Attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
             return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.project_dir).strip().decode('utf-8')
         except subprocess.CalledProcessError:
             logging.warning("Failed to get commit SHA. Is this a git repository?")
@@ -276,34 +274,38 @@ class PytestErrorFixer:
 
         stdout, stderr = self.run_test(error['test_file'], error['function'])
 
-        prompt = self.construct_prompt(error, stdout, stderr)
+        git_diff = self.get_git_diff() if attempt > 0 else ""
+        prompt = self.construct_prompt(error, stdout, stderr, git_diff, attempt)
         
-        print(f"DEBUG: Prompt for AI model:\n{prompt}")
+        print(f"DEBUG: Attempt {attempt + 1} - Temperature: {temperature}")
+        print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
 
         try:
-            self.coder.run(prompt)
+            self.coder.run(prompt, temperature=temperature)
             logging.info("AI model suggested changes. Applying changes...")
             
             # Get the git diff after changes
             git_diff = self.get_git_diff()
             
-            # Re-run the test
+            new_git_diff = self.get_git_diff()
             stdout, stderr = self.run_test(error['test_file'], error['function'])
 
+            print(f"DEBUG: Test output after fix attempt:\n{stdout[:500]}...")  # Print first 500 characters of stdout
+
             if "PASSED" in stdout:
-                logging.info(f"Fixed: {file_path} - {error['function']}")
-                self.log_progress("fixed", error, file_path, all_relevant_files, git_diff, self.temperature)
+                logging.info(f"Fixed: {file_path} - {error['function']} on attempt {attempt + 1}")
+                self.log_progress("fixed", error, file_path, all_relevant_files, new_git_diff, temperature)
                 return True
             else:
-                logging.info(f"Failed to fix: {file_path} - {error['function']}")
-                self.log_progress("failed", error, file_path, all_relevant_files, git_diff, self.temperature)
-                
-                # Revert changes if the fix failed
-                self.revert_changes()
-                return False
+                logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
+                self.log_progress("failed", error, file_path, all_relevant_files, new_git_diff, temperature)
+
+        logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
+        return False
         except Exception as e:
             logging.error(f"Error while applying changes: {str(e)}")
-            return False
+            print(f"DEBUG: Exception occurred: {str(e)}")
+            continue
 
     def revert_changes(self):
         try:
@@ -313,7 +315,7 @@ class PytestErrorFixer:
             logging.error("Failed to revert changes. Manual intervention may be required.")
 
 
-    def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str) -> str:
+    def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, git_diff: str, attempt: int) -> str:
         error_prompt = (
             f"Fix the following pytest error:\n\n"
             f"Test File: {error['test_file']}\n"
@@ -333,7 +335,19 @@ class PytestErrorFixer:
             "4. Execution: Implement the plan and verify the fix.\n"
         )
 
-        return f"{error_prompt}\n\n{analysis_prompt}\n\nTest Output:\n{stdout}\n\nTest Error Output:\n{stderr}"
+        previous_attempt_prompt = ""
+        if attempt > 0:
+            previous_attempt_prompt = (
+                f"\n\nPrevious fix attempt failed. This is attempt {attempt + 1}.\n"
+                f"Changes made in the previous attempt:\n{git_diff}\n"
+                "Please analyze why the previous fix didn't work and suggest a different approach."
+            )
+
+        full_prompt = f"{error_prompt}\n\n{analysis_prompt}\n\nTest Output:\n{stdout}\n\nTest Error Output:\n{stderr}{previous_attempt_prompt}"
+    
+        print(f"DEBUG: Constructed prompt for attempt {attempt + 1}:\n{full_prompt[:500]}...")  # Print first 500 characters of prompt
+    
+        return full_prompt
 
     def debug_fix_single_error(self, error, file_path):
         print(f"DEBUG: Starting debug_fix_single_error for {error['function']} in {file_path}")
@@ -426,56 +440,57 @@ class PytestErrorFixer:
 
     def main(self):
         logging.info("Starting main process...")
-        # Check if the error log already exists
-        if os.path.exists(self.error_log):
-            logging.info("Error log found. Loading errors from log...")
-            all_errors = self.load_errors()
+    test_files = self.discover_test_files()
+    logging.info(f"Discovered {len(test_files)} test files.")
+
+    for test_file in test_files:
+        logging.info(f"Running test file: {test_file}")
+        stdout, stderr = self.run_test(test_file)
+        errors = self.parse_errors(stdout + stderr, test_file)
+        if errors:
+            logging.info(f"Errors found in {test_file}. Saving to log...")
+            self.save_errors(errors)
         else:
-            logging.info("No error log found. Running tests to generate error log...")
-            test_files = self.discover_test_files()
-            logging.info(f"Discovered {len(test_files)} test files.")
+            logging.info(f"No errors found in {test_file}")
 
-            for test_file in test_files:
-                logging.info(f"Running test file: {test_file}")
-                stdout, stderr = self.run_test(test_file)
-                errors = self.parse_errors(stdout + stderr, test_file)
-                if errors:
-                    logging.info(f"Errors found in {test_file}. Saving to log...")
-                    self.save_errors(errors)
-                else:
-                    logging.info(f"No errors found in {test_file}")
+    logging.info("All test files processed.")
 
-            logging.info("All test files processed.")
-            all_errors = self.load_errors()
-        logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
+    all_errors = self.load_errors()
+    logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
 
-        for file_path, error_list in all_errors.items():
-            for error in error_list:
-                logging.info(f"Processing error: {error} in {file_path}")
-                # Extract relevant files for logging
-                error_dict = {file_path: [error]}
-                relevant_files = self.extract_file_paths_from_errors(error_dict)
-                all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
-                
-                # Get the git diff for logging
-                git_diff = self.get_git_diff()
-                
-                fixed = self.fix_error(error, file_path)
-                if fixed:
-                    self.log_progress("fixed", error, file_path, all_relevant_files, git_diff, self.temperature)
-                else:
-                    self.log_progress("failed", error, file_path, all_relevant_files, git_diff, self.temperature)
+    fixed_errors = []
+    failed_errors = []
 
-        logging.info("Error fixing completed.")
+    for file_path, error_list in all_errors.items():
+        for error in error_list:
+            logging.info(f"Processing error: {error} in {file_path}")
+            if self.fix_error(error, file_path):
+                fixed_errors.append(f"{file_path} - {error['function']}")
+            else:
+                failed_errors.append(f"{file_path} - {error['function']}")
 
-        logging.info("Re-running full test suite to verify fixes...")
-        for test_file in self.discover_test_files():
-            stdout, stderr = self.run_test(test_file)
-            logging.info(f"Final test results for {test_file}:")
-            logging.info(stdout)
-            logging.info(stderr)
+    logging.info("Error fixing completed.")
 
-        logging.info("Error fixing and verification completed.")
+    if fixed_errors:
+        logging.info("Fixed errors:")
+        for error in fixed_errors:
+            logging.info(f"- {error}")
+
+    if failed_errors:
+        logging.warning("Failed to fix errors:")
+        for error in failed_errors:
+            logging.warning(f"- {error}")
+
+    logging.info("Re-running full test suite to verify fixes...")
+    for test_file in self.discover_test_files():
+        stdout, stderr = self.run_test(test_file)
+        logging.info(f"Final test results for {test_file}:")
+        logging.info(stdout)
+        logging.info(stderr)
+
+    logging.info("Error fixing and verification completed.")
+    
+    print("DEBUG: Main process completed. Check the logs for detailed information.")
 
 
 
@@ -485,9 +500,17 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Run PytestErrorFixer")
     parser.add_argument("project_dir", help="Path to the project directory")
-    parser.add_argument("--temperature", type=float, default=0.7, 
-                        help="Temperature setting for the AI model (default: 0.7)")
+    parser.add_argument("--initial-temperature", type=float, default=0.4, help="Initial temperature setting for the AI model (default: 0.4)")
+    parser.add_argument("--temperature-increment", type=float, default=0.1, help="Temperature increment for each retry (default: 0.1)")
+    parser.add_argument("--max-retries", type=int, default=3, help="Maximum number of fix attempts per error (default: 3)")
     args = parser.parse_args()
 
-    fixer = PytestErrorFixer(args.project_dir, temperature=args.temperature)
+    print(f"DEBUG: Starting PytestErrorFixer with arguments: {args}")
+
+    fixer = PytestErrorFixer(
+        args.project_dir,
+        initial_temperature=args.initial_temperature,
+        temperature_increment=args.temperature_increment,
+        max_retries=args.max_retries
+    )
     fixer.main()
