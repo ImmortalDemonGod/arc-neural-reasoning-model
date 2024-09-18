@@ -326,11 +326,44 @@ class PytestErrorFixer:
         print("\nDEBUG: Initial test error output:")
         print(result.stderr)
 
-        # Prompt aider to suggest a fix based on test output
-        prompt = f"Fix this pytest error:\n\n{result.stdout}\n\n{result.stderr}"
-        print("DEBUG: Sending prompt to AI model")
+        # Construct a structured prompt using parsed error details
+        error_prompt_template = (
+            "Fix the following pytest error:\n\n"
+            "Test File: {test_file}\n"
+            "Function: {function}\n"
+            "Error Type: {error_type}\n"
+            "Error Details: {error_details}\n"
+            "Code Snippet:\n{code_snippet}\n"
+            "Captured Output:\n{captured_output}\n"
+            "Captured Log:\n{captured_log}\n"
+        )
+        
+        error_prompt = error_prompt_template.format(
+            test_file=file_path,
+            function=error['function'],
+            error_type=error['error_type'],
+            error_details=error['error_details'],
+            code_snippet=error['code_snippet'],
+            captured_output=error.get('captured_output', ''),
+            captured_log=error.get('captured_log', '')
+        )
+        
+        # Analysis framework prompt
+        analysis_prompt = (
+            "Please analyze the error using the Analysis, Framework, Plan, Execution System:\n"
+            "1. Analysis: Provide a detailed understanding of the error context.\n"
+            "2. Framework: Develop a framework for addressing the error.\n"
+            "3. Plan: Outline a specific plan to fix the error.\n"
+            "4. Execution: Implement the plan and verify the fix.\n"
+        )
+        
+        # Combine the error details with the analysis framework
+        combined_prompt = f"{error_prompt}\n\n{analysis_prompt}"
+        
+        # Send the structured prompt to aider
+        print("DEBUG: Sending structured prompt to AI model")
         try:
-            debug_coder.run(prompt)  # This will apply the changes to the files
+            debug_coder.run(combined_prompt)
             print("DEBUG: AI model suggested changes. Applying changes...")
         except Exception as e:
             print(f"DEBUG: Error while applying changes: {str(e)}")
