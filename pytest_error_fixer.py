@@ -59,7 +59,8 @@ class PytestErrorFixer:
             json.dump(log, f, indent=4)
 
     def get_commit_sha(self) -> str:
-        print(f"DEBUG: Using temperature {self.temperature} for AI model")
+        try:
+            print(f"DEBUG: Using temperature {self.temperature} for AI model")
             return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.project_dir).strip().decode('utf-8')
         except subprocess.CalledProcessError:
             logging.warning("Failed to get commit SHA. Is this a git repository?")
