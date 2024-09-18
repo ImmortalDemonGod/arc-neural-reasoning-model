@@ -248,7 +248,7 @@ class PytestErrorFixer:
                 print(f"Processing error: {error} in {file_path}")
                 relevant_files = self.predict_relevant_files(error)
                 print(f"Relevant files predicted: {relevant_files}")
-                self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
+                #self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
 """
                 for attempt in range(self.max_retries):
                     if self.fix_error(error['test_file'], error):
