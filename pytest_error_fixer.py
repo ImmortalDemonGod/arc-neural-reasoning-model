@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 import json
 from aider.coders import Coder
+from aider.coders import AskCoder
 from aider.models import Model
 from aider.io import InputOutput
 from dotenv import load_dotenv
@@ -64,7 +65,7 @@ class PytestErrorFixer:
             for file in files:
                 if file.startswith("test_") and file.endswith(".py"):
                     test_files.append(os.path.join(root, file))
-        return test_files[0]
+        return test_files
 
     def run_individual_test(self, test_file):
         cmd = [
@@ -376,9 +377,35 @@ class PytestErrorFixer:
                 print(result.stderr)
                 
                 # Prompt aider to suggest a fix based on test output
-                prompt = f"Fix this pytest error:\n\n{result.stdout}\n\n{result.stderr}"
+                fix_prompt = f"Analyze the errors please follow the Analysis, Framework, Plan, Execution System as described make sure to have critques. Let's now fix this pytest error:\n\n{result.stdout}\n\n{result.stderr}"
+                analysis_prompt = """just to re-iterate before the next one. Learn This. 
+your primary job is to utilize the Analysis, Framework, Plan, Execution System. It consist of performing: 
+Analysis: 
+^IYour job is to build a detailed, descriptive, rational/probabilistic, verbose understanding and comprehension of both the content of the supplied reques
+t and the actual needs of the plan/execution through a written pleonastic, long-winded, and semi-scholarly Document. Each Section within this analysis doc
+ument shall also have a independent critique addendum which is inherently prolix and palaverous. After completing the Document, you shall do an additional
+ cruitique addendum to critique the whole. after this you shall as if you should critique your critique, or if you should proceed with updating the docume
+nt with the knowledge of the critique. after you have updated the document, you shall ask if you should proceed with the creation of the framework for the
+ plan. 
+Framework: 
+^IYour job is to build a detailed vivid and detailed Framework to be able to create the Plan. Each Section within this analysis document shall also have a
+n independent critique addendum which is inherently prolix and palaverous. After completing the Document, you shall do an additional cruitique addendum to
+ critique the whole. after this you shall as if you should critique your critique, or if you should proceed with updating the document with the knowledge 
+of the critique. after you have updated the document, you shall ask if you should proceed with the creation of the plan 
+Plan: 
+^IYour Job is to build an illustrative, explicit, specific, detailed Plan. word choice should be very nuanced to convey the most information possible. Eac
+h Section within this analysis document shall also have an independent critique addendum which is inherently prolix and palaverous. After completing the D
+ocument, you shall do an additional cruitique addendum to critique the whole. after this you shall as if you should critique your critique, or if you shou
+ld proceed with updating the document with the knowledge of the critique. after you have updated the document, you shall ask if you should proceed with th
+e Execution 
+ 
+Please cre4ate an understanding of this to a intensive detailed specific clear degree, and update your memory. I know you are here to assist     
+with code analysis and improvements this is the framework that will maximize your ability for that task"""
+                combined_prompt = f"{fix_prompt}\n\n{analysis_prompt}"
+                print("Sending prompt to AI model...")
+                print(f"Word count: {len(combined_prompt.split())}")
                 try:
-                    self.coder.run(prompt)  # This will apply the changes to the files
+                    self.coder.run(combined_prompt)  # This will apply the changes to the files
                     print("AI model suggested changes. Applying changes...")
                 except Exception as e:
                     print(f"Error while applying changes: {str(e)}")
