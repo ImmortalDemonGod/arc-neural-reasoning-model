@@ -237,6 +237,8 @@ def test_batch_size_extremes(mock_args, batch_size):
     mock_args.use_gpu = False
     with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
+    ), patch(
+        "gpt2_arc.src.training.train.ARCTrainer"
     ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer"
     ) as mock_trainer, patch("torch.utils.data.DataLoader") as mock_dataloader:
