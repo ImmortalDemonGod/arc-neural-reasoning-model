@@ -413,8 +413,13 @@ class ARCDataset(Dataset):
             print(f"DEBUG: Processing item {idx}")
             print(f"DEBUG: Item type: {type(item)}")
             print(f"DEBUG: Item content: {item}")
-        
-            if 'train' in item and 'test' in item:
+
+            if isinstance(item, Task):
+                processed_item = {
+                    "train": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.train],
+                    "test": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.test]
+                }
+            elif 'train' in item and 'test' in item:
                 processed_item = {
                     "train": [{"input": np.array(sample[0]), "output": np.array(sample[1])} for sample in item['train']],
                     "test": [{"input": np.array(sample[0]), "output": np.array(sample[1])} for sample in item['test']]
