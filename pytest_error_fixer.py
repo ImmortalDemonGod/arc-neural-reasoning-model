@@ -210,7 +210,6 @@ class PytestErrorFixer:
         return "PASSED" in result.stdout
 
     def main(self):
-"""
         print("Starting main process...")
         test_files = self.discover_test_files()
         print(f"Discovered {len(test_files)} test files.")
@@ -226,7 +225,6 @@ class PytestErrorFixer:
                 print(f"No errors found in {test_file}")
 
         print("All test files processed.")
-"""
 
         # Load all errors from the error log
         all_errors = self.load_errors()
