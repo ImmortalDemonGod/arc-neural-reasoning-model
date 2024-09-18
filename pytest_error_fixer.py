@@ -279,7 +279,7 @@ class PytestErrorFixer:
             print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
 
             try:
-                self.coder.run(prompt, temperature=temperature)
+                self.coder.run(prompt)
                 logging.info("AI model suggested changes. Applying changes...")
                 
                 # Get the git diff after Aider's changes
