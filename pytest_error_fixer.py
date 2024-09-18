@@ -45,14 +45,14 @@ class PytestErrorFixer:
             "gpt2_arc/"
         ]
         # for now will will just us this test_cmd to test the code : pytest gpt2_arc/tests/test_end_to_end.py -v --tb=short
-        test_cmd = [
-            "pytest",
-            "gpt2_arc/tests/test_end_to_end.py",
-            "-v",
-            "--tb=short"
-        ]
+        # test_cmd = [
+        #     "pytest",
+        #     "gpt2_arc/tests/test_end_to_end.py",
+        #     "-v",
+        #     "--tb=short"
+        # ]
         print("Running full test suite...")
-        result = subprocess.run(test_cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True)
         print("Test suite completed.")
         print("Parsing errors from test output...")
         print("Test stdout:", result.stdout)
