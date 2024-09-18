@@ -254,7 +254,6 @@ class PytestErrorFixer:
         all_relevant_files = list(set(path for paths in error_file_paths.values() for path in paths))
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
-"""
         # Process each error
         for file_path, error_list in all_errors.items():
             for error in error_list:
@@ -264,12 +263,30 @@ class PytestErrorFixer:
                 cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{error['test_file']}::{error['function']}"]
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 
+                # Debug: Print test output
+                print("\nTest output:")
+                print(result.stdout)
+                print("\nTest error output:")
+                print(result.stderr)
+                
                 # Prompt aider to suggest a fix based on test output
                 prompt = f"Fix this pytest error:\n\n{result.stdout}\n\n{result.stderr}"
-                self.coder.run(prompt)  # This will apply the changes to the files
+                try:
+                    self.coder.run(prompt)  # This will apply the changes to the files
+                    print("AI model suggested changes. Applying changes...")
+                except Exception as e:
+                    print(f"Error while applying changes: {str(e)}")
                 
                 # Run the test again to check if it's fixed
+                print("\nRe-running test to check if error is fixed...")
                 result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                # Debug: Print re-run test output
+                print("\nRe-run test output:")
+                print(result.stdout)
+                print("\nRe-run test error output:")
+                print(result.stderr)
+                
                 if "PASSED" in result.stdout:
                     print(f"Fixed: {file_path} - {error}")
                     self.log_progress("fixed", error, file_path)
@@ -289,7 +306,6 @@ class PytestErrorFixer:
             print(stderr)
 
         print("Error fixing and verification completed.")
-"""
 
 
 
