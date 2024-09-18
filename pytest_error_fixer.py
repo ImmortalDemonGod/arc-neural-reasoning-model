@@ -15,7 +15,7 @@ class PytestErrorFixer:
         logging.info(f"Initializing PytestErrorFixer with project directory: {project_dir}")
         self.project_dir = project_dir
         self.max_retries = max_retries
-        self.model = Model("gpt-4-turbo")
+        self.model = Model("gpt-4o-2024-08-06")
         self.io = InputOutput(yes=True)
         self.coder = Coder.create(main_model=self.model, io=self.io)
         self.progress_log = progress_log
@@ -224,7 +224,7 @@ class PytestErrorFixer:
         return "PASSED" in result.stdout
 
     def main(self):
-        """
+
         print("Starting main process...")
         test_files = self.discover_test_files()
         print(f"Discovered {len(test_files)} test files.")
@@ -240,7 +240,7 @@ class PytestErrorFixer:
                 print(f"No errors found in {test_file}")
 
         print("All test files processed.")
-        """
+
         # Load all errors from the error log
         all_errors = self.load_errors()
         print("Loaded errors:", all_errors)
