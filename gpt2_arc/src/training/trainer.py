@@ -62,20 +62,22 @@ class ARCTrainer(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         logger.debug(f"Validation step - Batch type: {type(batch)}, length: {len(batch)}")
         
-        if isinstance(batch, (list, tuple)) and len(batch) >= 2:
+        if isinstance(batch, (list, tuple)):
+            if len(batch) < 2:
+                logger.error(f"Missing inputs or labels in batch. Inputs: {batch[0] if len(batch) > 0 else None}, Labels: {batch[1] if len(batch) > 1 else None}")
+                raise ValueError("Batch must contain inputs and labels.")
             inputs, labels = batch[:2]
             task_ids = batch[2] if len(batch) > 2 else None
         elif isinstance(batch, dict):
             inputs = batch.get("input_ids")
             labels = batch.get("labels")
             task_ids = batch.get("task_ids")
+            if inputs is None or labels is None:
+                logger.error(f"Missing inputs or labels in batch. Inputs: {inputs}, Labels: {labels}")
+                raise ValueError("Batch must contain inputs and labels.")
         else:
             logger.error(f"Unexpected batch format: {type(batch)}. Content: {batch}")
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
-
-        if inputs is None or labels is None:
-            logger.error(f"Missing inputs or labels in batch. Inputs: {inputs}, Labels: {labels}")
-            raise ValueError("Batch must contain inputs and labels.")
 
         # Ensure inputs and labels are the correct type
         inputs = inputs.float()
