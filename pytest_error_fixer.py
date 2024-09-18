@@ -267,6 +267,7 @@ class PytestErrorFixer:
 
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
+        all_changes = []
         for attempt in range(self.max_retries):
             temperature = self.initial_temperature + (attempt * self.temperature_increment)
             logging.info(f"Attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
@@ -275,7 +276,8 @@ class PytestErrorFixer:
             initial_git_status = self.get_git_status()
 
             stdout, stderr = self.run_test(error['test_file'], error['function'])
-            prompt = self.construct_prompt(error, stdout, stderr, "", attempt)
+            accumulated_changes = "\n".join(all_changes)
+            prompt = self.construct_prompt(error, stdout, stderr, accumulated_changes, attempt)
         
             print(f"DEBUG: Attempt {attempt + 1} - Temperature: {temperature}")
             print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
@@ -286,6 +288,7 @@ class PytestErrorFixer:
             
                 # Parse the Aider response for search/replace statements
                 changes = self.parse_aider_response(response)
+                all_changes.append(changes)
                 print(f"DEBUG: Changes made by Aider:\n{changes}")
             
                 # Re-run the test
