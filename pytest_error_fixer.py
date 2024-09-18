@@ -449,9 +449,9 @@ class PytestErrorFixer:
                 logging.info(f"Processing error: {error} in {file_path}")
                 fixed = self.fix_error(error, file_path)
                 if fixed:
-                    self.log_progress("fixed", error, file_path)
+                    self.log_progress("fixed", error, file_path, all_relevant_files, git_diff, self.temperature)
                 else:
-                    self.log_progress("failed", error, file_path)
+                    self.log_progress("failed", error, file_path, all_relevant_files, git_diff, self.temperature)
 
         logging.info("Error fixing completed.")
 
