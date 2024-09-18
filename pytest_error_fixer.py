@@ -201,13 +201,18 @@ class PytestErrorFixer:
         return error_file_paths
 
     def fix_error(self, test_file, error):
-        relevant_files = self.predict_relevant_files(error)
+        # Extract relevant files for this specific error
+        error_dict = {test_file: [error]}
+        relevant_files = self.extract_file_paths_from_errors(error_dict)
+        
+        # Flatten the list of relevant files
+        all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
         
         # Create a new Coder instance with the relevant files
-        self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
+        self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
         
         # Run the test to get the error output
-        cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{test_file}::{error.split()[0]}"]
+        cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{test_file}::{error['function']}"]
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         # Prompt aider to suggest a fix based on test output
