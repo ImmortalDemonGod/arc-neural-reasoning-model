@@ -66,6 +66,15 @@ class PytestErrorFixer:
 
         print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
 
+    def get_git_status(self) -> str:
+        """Retrieve the current git status."""
+        try:
+            status = subprocess.check_output(["git", "status", "--porcelain"], cwd=self.project_dir).decode('utf-8')
+            return status
+        except subprocess.CalledProcessError:
+            logging.warning("Failed to get git status. Is this a git repository?")
+            return ""
+
     def get_commit_sha(self) -> str:
         try:
             for attempt in range(self.max_retries):
