@@ -18,7 +18,8 @@ load_dotenv()  # This loads the variables from .env
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class PytestErrorFixer:
-    def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json"):
+    def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", temperature=0.7):
+        self.temperature = temperature
         logging.info(f"Initializing PytestErrorFixer with project directory: {project_dir}")
         self.project_dir = project_dir
         self.max_retries = max_retries
@@ -58,7 +59,7 @@ class PytestErrorFixer:
             json.dump(log, f, indent=4)
 
     def get_commit_sha(self) -> str:
-        try:
+        print(f"DEBUG: Using temperature {self.temperature} for AI model")
             return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.project_dir).strip().decode('utf-8')
         except subprocess.CalledProcessError:
             logging.warning("Failed to get commit SHA. Is this a git repository?")
@@ -261,7 +262,7 @@ class PytestErrorFixer:
         print(f"DEBUG: Prompt for AI model:\n{prompt}")
 
         try:
-            self.coder.run(prompt)
+            self.coder.run(prompt, temperature=self.temperature)
             logging.info("AI model suggested changes. Applying changes...")
         except Exception as e:
             logging.error(f"Error while applying changes: {str(e)}")
@@ -437,7 +438,9 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Run PytestErrorFixer")
     parser.add_argument("project_dir", help="Path to the project directory")
+    parser.add_argument("--temperature", type=float, default=0.7, 
+                        help="Temperature setting for the AI model (default: 0.7)")
     args = parser.parse_args()
 
-    fixer = PytestErrorFixer(args.project_dir)
+    fixer = PytestErrorFixer(args.project_dir, temperature=args.temperature)
     fixer.main()
