@@ -178,10 +178,15 @@ class PytestErrorFixer:
 
     def predict_relevant_files(self, error):
         print(f"Predicting relevant files for error: {error}")
-        prompt = f"Which files are most likely involved in fixing this pytest error: {error}"
+        prompt = f"/ask Which files are most likely involved in fixing this pytest error? Please list only the file names, one per line. Error: {error}"
         response = self.coder.run(prompt)
-        # Extract relevant files from aider's prediction
-        files = re.findall(r"gpt2_arc/.*\.py", response)
+        
+        # Extract file names from the response
+        files = [line.strip() for line in response.split('\n') if line.strip().endswith('.py')]
+        
+        # Ensure all files start with 'gpt2_arc/'
+        files = ['gpt2_arc/' + f if not f.startswith('gpt2_arc/') else f for f in files]
+        
         print("Predicted relevant files:", files)
         return files
 
