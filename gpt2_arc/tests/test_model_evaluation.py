@@ -207,16 +207,12 @@ def test_model_loading_from_checkpoint(mocker):
     checkpoint_path = "checkpoints/arc_model-epoch=00-val_loss=0.73.ckpt"
     logger.debug(f"Attempting to load checkpoint from: {checkpoint_path}")
     
+    if not os.path.exists(checkpoint_path):
+        pytest.skip(f"Checkpoint file not found: {checkpoint_path}")
+
     try:
-        if not os.path.exists(checkpoint_path):
-            pytest.skip(f"Checkpoint file not found: {checkpoint_path}")
-    
-        try:
-            checkpoint = torch.load(checkpoint_path)
-            logger.debug(f"Checkpoint loaded successfully. Keys: {checkpoint.keys()}")
-        except Exception as e:
-            logger.error(f"Failed to load checkpoint: {str(e)}")
-            pytest.fail(f"Failed to load checkpoint: {str(e)}")
+        checkpoint = torch.load(checkpoint_path)
+        logger.debug(f"Checkpoint loaded successfully. Keys: {checkpoint.keys()}")
     except Exception as e:
         logger.error(f"Failed to load checkpoint: {str(e)}")
         pytest.fail(f"Failed to load checkpoint: {str(e)}")
