@@ -19,6 +19,7 @@ class ResultsCollector:
             "validation": {},
             "test": {}
         }
+        print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
         self.metrics = {}
         self.task_specific_results = {}
         self.environment = self._get_environment_info()
@@ -39,7 +40,9 @@ class ResultsCollector:
         if not isinstance(self.results["train"], dict):
             raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
         print(f"DEBUG: Before setting default, self.results['train'] is of type {type(self.results['train'])}")
+        print(f"DEBUG: Before setting default, self.results['train'] is of type {type(self.results['train'])}")
         self.results["train"].setdefault(epoch, {})
+        print(f"DEBUG: After setting default, self.results['train'] is of type {type(self.results['train'])}")
         print(f"DEBUG: After setting default, self.results['train'] is of type {type(self.results['train'])}")
         self.results["train"][epoch].update(metrics)
 
