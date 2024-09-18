@@ -16,7 +16,6 @@ class ResultsCollector:
         self.config = asdict(config)
         self.results = {
             "train": {},
-            "train": {},
             "validation": {},
             "test": {}
         }
