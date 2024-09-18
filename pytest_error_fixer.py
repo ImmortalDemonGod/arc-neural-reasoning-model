@@ -242,13 +242,14 @@ class PytestErrorFixer:
         print("Loaded errors:", all_errors)
 
         # Process each error
-        for file_path, error_list in all_errors.items():
-            if error_list:  # Check if there are any errors
-                error = error_list[0]  # Use only the first error for testing
-                print(f"Processing error: {error} in {file_path}")
-                relevant_files = self.predict_relevant_files(error)
-                print(f"Relevant files predicted: {relevant_files}")
-                #self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
+        # Process only the first error from the list for testing purposes
+        file_path, error_list = next(iter(all_errors.items()))
+        if error_list:  # Check if there are any errors
+            error = error_list[0]  # Use only the first error for testing
+            print(f"Processing error: {error} in {file_path}")
+            relevant_files = self.predict_relevant_files(error)
+            print(f"Relevant files predicted: {relevant_files}")
+            #self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
 """
                 for attempt in range(self.max_retries):
                     if self.fix_error(error['test_file'], error):
