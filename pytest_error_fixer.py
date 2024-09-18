@@ -17,7 +17,7 @@ class PytestErrorFixer:
         self.max_retries = max_retries
         self.model = Model("gpt-4o")
         self.io = InputOutput(yes=True)
-        self.coder = Coder.create(main_model=self.model, io=self.io)
+        self.coder = None  # Initialize coder as None
         self.progress_log = progress_log
         self.error_log = "error_log.json"
         self.init_progress_log()
@@ -182,8 +182,7 @@ class PytestErrorFixer:
     def predict_relevant_files(self, error):
         logging.info(f"Predicting relevant files for error: {error}")
         prompt = f"/ask Which files are most likely involved in fixing this pytest error? Please list only the file names, one per line. Error: {error}"
-        response = self.coder.run(prompt)
-        
+        response = self.coder.send_message(prompt)  # Hypothetical method for asking questions
         # Extract file names from the response
         files = [line.strip() for line in response.split('\n') if line.strip().endswith('.py')]
         logging.debug("RAW: relevant files: %s", files)
@@ -194,27 +193,21 @@ class PytestErrorFixer:
         return files
 
     def fix_error(self, test_file, error):
-        cmd = [
-            "pytest",
-            "-v",
-            "--tb=short",
-            "--log-cli-level=DEBUG",
-            f"{test_file}::{error.split()[0]}"
-        ]
+        relevant_files = self.predict_relevant_files(error)
+        
+        # Create a new Coder instance with the relevant files
+        self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
+        
+        # Run the test to get the error output
+        cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{test_file}::{error.split()[0]}"]
         result = subprocess.run(cmd, capture_output=True, text=True)
-
+        
         # Prompt aider to suggest a fix based on test output
         prompt = f"Fix this pytest error:\n\n{result.stdout}\n\n{result.stderr}"
-        self.coder.run(prompt)
-
+        self.coder.run(prompt)  # This will apply the changes to the files
+        
         # Run the test again to check if it's fixed
         result = subprocess.run(cmd, capture_output=True, text=True)
-        if "PASSED" in result.stdout:
-            logging.info(f"Error fixed in {test_file}: {error}")
-        else:
-            logging.warning(f"Error not fixed in {test_file}: {error}")
-        logging.debug("Fix result stdout: %s", result.stdout)
-        logging.debug("Fix result stderr: %s", result.stderr)
         return "PASSED" in result.stdout
 
     def main(self):
