@@ -214,7 +214,10 @@ def test_benchmark_model_model_error(mock_model, mock_dataset, mock_dataloader):
         with patch.object(mock_model, 'forward', side_effect=RuntimeError("Model execution failed")):
             with pytest.raises(RuntimeError, match="Model execution failed"):
                 print("DEBUG: Invoking benchmark_model")
+                # Ensure the forward method is called
+                mock_model.forward.assert_not_called()
                 benchmark_model(mock_model, mock_dataset, device_type='cpu')
+                mock_model.forward.assert_called()
 
 #skip
 @pytest.mark.skip(reason="I dont want to crash my computer")
