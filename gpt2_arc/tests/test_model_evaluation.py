@@ -266,8 +266,8 @@ def test_model_loading_from_checkpoint(mocker):
     logger.debug("Completed test_model_loading_from_checkpoint")
 
 
-def test_checkpoint_contains_model_config():                                                                                      
-    checkpoint_path = "checkpoints/arc_model-epoch=00-val_loss=0.73.ckpt"                                                         
+def test_checkpoint_contains_model_config():
+    checkpoint_path = "checkpoints/arc_model-epoch=00-val_loss=0.73.ckpt"
     logger.debug(f"Checking for checkpoint file at: {checkpoint_path}")
 
     if not os.path.isfile(checkpoint_path):
