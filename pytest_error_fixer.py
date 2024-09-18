@@ -3,7 +3,7 @@ import logging
 import re
 from collections import defaultdict
 import json
-from aider.coders import Coder, AskCoder
+from aider.coders import Coder
 from aider.models import Model
 from aider.io import InputOutput
 import os
@@ -180,20 +180,18 @@ class PytestErrorFixer:
             logging.debug("Loaded errors: %s", errors)
             return errors
 
-    def predict_relevant_files(self, error):
-        logging.info(f"Predicting relevant files for error: {error}")
-        prompt = f"Which files are most likely involved in fixing this pytest error? Please list only the file names, one per line. Error: {error}"
-        
-        response = self.ask_coder.run(prompt)
-        
-        # Extract file names from the response
-        files = [line.strip() for line in response.split('\n') if line.strip().endswith('.py')]
-        
-        # Ensure all files start with 'gpt2_arc/'
-        files = ['gpt2_arc/' + f if not f.startswith('gpt2_arc/') else f for f in files]
-        
-        logging.info("Predicted relevant files: %s", files)
-        return files
+    def extract_file_paths_from_errors(self, errors):
+        file_paths = set()
+        for file_path, error_list in errors.items():
+            file_paths.add(file_path)
+            for error in error_list:
+                if 'file_path' in error:
+                    file_paths.add(error['file_path'])
+                if 'code_snippet' in error:
+                    # Extract file paths from code snippets
+                    snippet_paths = re.findall(r'gpt2_arc/[^\s:]+\.py', error['code_snippet'])
+                    file_paths.update(snippet_paths)
+        return list(file_paths)
 
     def fix_error(self, test_file, error):
         relevant_files = self.predict_relevant_files(error)
@@ -214,50 +212,40 @@ class PytestErrorFixer:
         return "PASSED" in result.stdout
 
     def main(self):
-        """
-        print("Starting main process...")
-        test_files = self.discover_test_files()
-        print(f"Discovered {len(test_files)} test files.")
-
-        for test_file in test_files:
-            print(f"Running test file: {test_file}")
-            stdout, stderr = self.run_individual_test(test_file)
-            errors = self.parse_errors(stdout + stderr, test_file)
-            if errors:
-                print(f"Errors found in {test_file}. Saving to log...")
-                self.save_errors(errors)
-            else:
-                print(f"No errors found in {test_file}")
-
-        print("All test files processed.")
-        """
-
-
         # Load all errors from the error log
         all_errors = self.load_errors()
         print("Loaded errors:", all_errors)
 
+        # Extract file paths from errors
+        relevant_files = self.extract_file_paths_from_errors(all_errors)
+        print(f"Relevant files extracted: {relevant_files}")
+
+        # Create a new Coder instance with the relevant files
+        self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
+
         # Process each error
-        # Process only the first error from the list for testing purposes
-        file_path, error_list = next(iter(all_errors.items()))
-        if error_list:  # Check if there are any errors
-            error = error_list[0]  # Use only the first error for testing
-            print(f"Processing error: {error} in {file_path}")
-            relevant_files = self.predict_relevant_files(error)
-            print(f"Relevant files predicted: {relevant_files}")
-            #self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
-"""
-                for attempt in range(self.max_retries):
-                    if self.fix_error(error['test_file'], error):
-                        print(f"Fixed: {file_path} - {error}")
-                        self.log_progress("fixed", error, file_path)
-                        print(f"Successfully fixed: {file_path} - {error}")
-                        break
-                    else:
-                        print(f"Retry {attempt + 1} failed for: {file_path} - {error}")
+        for file_path, error_list in all_errors.items():
+            for error in error_list:
+                print(f"Processing error: {error} in {file_path}")
+                
+                # Run the test to get the error output
+                cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{error['test_file']}::{error['function']}"]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                # Prompt aider to suggest a fix based on test output
+                prompt = f"Fix this pytest error:\n\n{result.stdout}\n\n{result.stderr}"
+                self.coder.run(prompt)  # This will apply the changes to the files
+                
+                # Run the test again to check if it's fixed
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if "PASSED" in result.stdout:
+                    print(f"Fixed: {file_path} - {error}")
+                    self.log_progress("fixed", error, file_path)
                 else:
-                    print(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error}")
+                    print(f"Failed to fix: {file_path} - {error}")
                     self.log_progress("failed", error, file_path)
+
+        print("Error fixing completed.")
 
         # Run the full test suite again to verify all fixes
         print("Re-running full test suite to verify fixes...")
@@ -269,7 +257,6 @@ class PytestErrorFixer:
             print(stderr)
 
         print("Error fixing and verification completed.")
-"""
 
 
 
