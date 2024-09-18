@@ -451,22 +451,26 @@ class PytestErrorFixer:
 
     def main(self):
         logging.info("Starting main process...")
-        test_files = self.discover_test_files()
-        logging.info(f"Discovered {len(test_files)} test files.")
-
-        for test_file in test_files:
-            logging.info(f"Running test file: {test_file}")
-            stdout, stderr = self.run_test(test_file)
-            errors = self.parse_errors(stdout + stderr, test_file)
-            if errors:
-                logging.info(f"Errors found in {test_file}. Saving to log...")
-                self.save_errors(errors)
-            else:
-                logging.info(f"No errors found in {test_file}")
-
-        logging.info("All test files processed.")
-
+        # Load existing errors from the log
         all_errors = self.load_errors()
+        if all_errors:
+            logging.info("Existing errors found in error log. Skipping test execution.")
+        else:
+            test_files = self.discover_test_files()
+            logging.info(f"Discovered {len(test_files)} test files.")
+
+            for test_file in test_files:
+                logging.info(f"Running test file: {test_file}")
+                stdout, stderr = self.run_test(test_file)
+                errors = self.parse_errors(stdout + stderr, test_file)
+                if errors:
+                    logging.info(f"Errors found in {test_file}. Saving to log...")
+                    self.save_errors(errors)
+                else:
+                    logging.info(f"No errors found in {test_file}")
+
+            # Reload errors after running tests
+            all_errors = self.load_errors()
         logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
 
         fixed_errors = []
