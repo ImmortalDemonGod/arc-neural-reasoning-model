@@ -1,3 +1,7 @@
+import uuid
+import time
+from dataclasses import asdict
+
 class ResultsCollector:
     def __init__(self, config):
         """Initialize the ResultsCollector with a given configuration."""
