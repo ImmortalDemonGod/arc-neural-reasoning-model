@@ -35,7 +35,8 @@ class ResultsCollector:
         }
 
     def _log_results_type(self, context: str):
-        """Update training metrics for a specific epoch."""
+        """Log the type of self.results['train'] for debugging."""
+        print(f"DEBUG: {context} - self.results['train'] is of type {type(self.results['train'])}")
     def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
         print(f"DEBUG: {context} - self.results['train'] is of type {type(self.results['train'])}")
         """Update training metrics for a specific epoch."""
