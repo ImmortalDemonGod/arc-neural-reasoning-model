@@ -43,13 +43,17 @@ class PytestErrorFixer:
         # Get the latest commit SHA
         commit_sha = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode('utf-8')
 
+        # Get the current timestamp
+        timestamp = subprocess.check_output(["date", "+%Y-%m-%d %H:%M:%S"]).strip().decode('utf-8')
+
         with open(self.progress_log, 'r+') as f:
             log = json.load(f)
             log.append({
                 "error": error,
                 "file": test_file,
                 "status": status,
-                "commit_sha": commit_sha  # Include the commit SHA
+                "commit_sha": commit_sha,  # Include the commit SHA
+                "timestamp": timestamp  # Include the timestamp
             })
             f.seek(0)
             json.dump(log, f, indent=4)
