@@ -212,7 +212,7 @@ def test_benchmark_model_model_error(mock_model, mock_dataset, mock_dataloader):
     
     with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
         with pytest.raises(RuntimeError, match="Model execution failed"):
-            benchmark_model(mock_model, mock_dataset)
+            benchmark_model(mock_model, mock_dataset, device_type='cpu')
 
 #skip
 @pytest.mark.skip(reason="I dont want to crash my computer")
