@@ -154,5 +154,5 @@ class PytestErrorFixer:
 
 
 if __name__ == "__main__":
-    fixer = PytestErrorFixer("gpt2_arc")
+    fixer = PytestErrorFixer("/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc")
     fixer.main()
