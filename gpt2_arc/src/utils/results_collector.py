@@ -39,7 +39,9 @@ class ResultsCollector:
             self.results["train"] = {}
         if not isinstance(self.results["train"], dict):
             raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
+        print(f"DEBUG: Before setting default, self.results['train'] is of type {type(self.results['train'])}")
         self.results["train"].setdefault(epoch, {})
+        print(f"DEBUG: After setting default, self.results['train'] is of type {type(self.results['train'])}")
         self.results["train"][epoch].update(metrics)
 
     def update_val_metrics(self, epoch: int, metrics: Dict[str, float]):
