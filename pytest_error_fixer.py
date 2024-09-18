@@ -351,7 +351,7 @@ class PytestErrorFixer:
             logging.error("Failed to revert changes. Manual intervention may be required.")
 
 
-    def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, git_diff: str, attempt: int) -> str:
+    def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, changes: str, attempt: int) -> str:
         error_prompt = (
             f"Fix the following pytest error:\n\n"
             f"Test File: {error['test_file']}\n"
@@ -375,7 +375,7 @@ class PytestErrorFixer:
         if attempt > 0:
             previous_attempt_prompt = (
                 f"\n\nPrevious fix attempt failed. This is attempt {attempt + 1}.\n"
-                f"Changes made in the previous attempt:\n{git_diff}\n"
+                f"Changes made in the previous attempt:\n{changes}\n"
                 "Please analyze why the previous fix didn't work and suggest a different approach."
             )
 
