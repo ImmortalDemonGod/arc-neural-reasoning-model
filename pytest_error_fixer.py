@@ -18,7 +18,6 @@ class PytestErrorFixer:
         self.model = Model("gpt-4-turbo")
         self.io = InputOutput(yes=True)
         self.coder = Coder.create(main_model=self.model, io=self.io)
-        self.ask_coder = AskCoder.create(main_model=self.model, io=self.io)
         self.progress_log = progress_log
         self.error_log = "error_log.json"
         self.init_progress_log()
