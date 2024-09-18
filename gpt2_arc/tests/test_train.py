@@ -402,7 +402,9 @@ def test_end_to_end_training(mock_args, tmp_path):
          patch("gpt2_arc.src.training.train.GPT2ARC"), \
          patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, \
          patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
-         patch("gpt2_arc.src.training.train.ModelCheckpoint") as mock_checkpoint:
+         patch("gpt2_arc.src.training.train.ModelCheckpoint") as mock_checkpoint, \
+         patch("torch.utils.data.DataLoader") as mock_dataloader:
+        mock_dataloader.return_value = MagicMock(num_workers=0)
         
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
