@@ -42,7 +42,7 @@ class PytestErrorFixer:
             with open(self.progress_log, 'w') as f:
                 json.dump([], f)
 
-    def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], git_diff: str, temperature: float):
+    def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float):
         logging.info(f"Logging progress: {status} for error in {test_file}")
         commit_sha = self.get_commit_sha()
         timestamp = self.get_current_timestamp()
@@ -54,7 +54,7 @@ class PytestErrorFixer:
             "commit_sha": commit_sha,
             "timestamp": timestamp,
             "files_used": files_used,
-            "git_diff": git_diff,
+            "changes": changes,
             "temperature": temperature
         }
 
@@ -272,20 +272,19 @@ class PytestErrorFixer:
             initial_git_status = self.get_git_status()
 
             stdout, stderr = self.run_test(error['test_file'], error['function'])
-            git_diff = self.get_git_diff() if attempt > 0 else ""
-            prompt = self.construct_prompt(error, stdout, stderr, git_diff, attempt)
-            
+            prompt = self.construct_prompt(error, stdout, stderr, "", attempt)
+        
             print(f"DEBUG: Attempt {attempt + 1} - Temperature: {temperature}")
             print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
 
             try:
-                response = self.coder.run(prompt)
+                response = self.coder.run(prompt, temperature=temperature)
                 logging.info("AI model suggested changes. Applying changes...")
-                
-                # Get the git diff after Aider's changes
-                new_git_diff = self.get_git_diff(initial_git_status)
-                print(f"DEBUG: Changes made by Aider:\n{new_git_diff}")
-                
+            
+                # Parse the Aider response for search/replace statements
+                changes = self.parse_aider_response(response)
+                print(f"DEBUG: Changes made by Aider:\n{changes}")
+            
                 # Re-run the test
                 stdout, stderr = self.run_test(error['test_file'], error['function'])
 
@@ -293,12 +292,12 @@ class PytestErrorFixer:
 
                 if "PASSED" in stdout:
                     logging.info(f"Fixed: {file_path} - {error['function']} on attempt {attempt + 1}")
-                    self.log_progress("fixed", error, file_path, all_relevant_files, new_git_diff, temperature)
+                    self.log_progress("fixed", error, file_path, all_relevant_files, changes, temperature)
                     return True
                 else:
                     logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
-                    self.log_progress("failed", error, file_path, all_relevant_files, new_git_diff, temperature)
-                    
+                    self.log_progress("failed", error, file_path, all_relevant_files, changes, temperature)
+                
                     # Revert changes if the fix failed
                     self.revert_changes()
             except Exception as e:
@@ -309,30 +308,33 @@ class PytestErrorFixer:
         logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
         return False
 
-    def get_git_status(self) -> str:
-        """Get the current git status."""
-        try:
-            return subprocess.check_output(["git", "status", "--porcelain"], cwd=self.project_dir).decode('utf-8')
-        except subprocess.CalledProcessError:
-            logging.warning("Failed to get git status. Is this a git repository?")
-            return ""
+    def parse_aider_response(self, response: str) -> str:
+        """Parse the Aider response to extract search/replace statements."""
+        changes = []
+        lines = response.split('\n')
+        in_search_replace = False
+        current_change = {"file": "", "search": "", "replace": ""}
 
-    def get_git_diff(self, initial_status: str = "") -> str:
-        """Get the git diff since the initial status."""
-        try:
-            current_status = self.get_git_status()
-            changed_files = [line.split()[-1] for line in current_status.splitlines() 
-                             if line not in initial_status]
-            
-            if not changed_files:
-                return "No changes detected"
-            
-            diff_output = subprocess.check_output(["git", "diff", "--"] + changed_files, 
-                                                  cwd=self.project_dir).decode('utf-8')
-            return diff_output if diff_output else "Changes staged but not in diff"
-        except subprocess.CalledProcessError:
-            logging.warning("Failed to get git diff. Is this a git repository?")
-            return "Failed to get git diff"
+        for line in lines:
+            if line.strip().endswith(".py"):
+                current_change["file"] = line.strip()
+            elif line.strip() == "<<<<<<< SEARCH":
+                in_search_replace = True
+                current_change["search"] = ""
+            elif line.strip() == "=======":
+                current_change["replace"] = ""
+            elif line.strip() == ">>>>>>> REPLACE":
+                in_search_replace = False
+                changes.append(current_change.copy())
+                current_change = {"file": "", "search": "", "replace": ""}
+            elif in_search_replace:
+                if current_change["replace"] == "":
+                    current_change["search"] += line + "\n"
+                else:
+                    current_change["replace"] += line + "\n"
+
+        return json.dumps(changes, indent=2)
+
 
     def revert_changes(self):
         try:
