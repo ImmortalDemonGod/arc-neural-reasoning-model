@@ -3,12 +3,12 @@ import logging
 import re
 from collections import defaultdict
 import json
+import os
+from typing import List, Dict, Any
 from aider.coders import Coder
-from aider.coders import AskCoder
 from aider.models import Model
 from aider.io import InputOutput
 from dotenv import load_dotenv
-import os
 
 load_dotenv()  # This loads the variables from .env
 
@@ -19,12 +19,11 @@ class PytestErrorFixer:
         logging.info(f"Initializing PytestErrorFixer with project directory: {project_dir}")
         self.project_dir = project_dir
         self.max_retries = max_retries
-        # Get the API key from the environment
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY not found in environment variables")
         
-        self.model = Model("gpt-4o-2024-08-06")
+        self.model = Model("gpt-4-0314")
         self.io = InputOutput(yes=True)
         self.coder = Coder.create(main_model=self.model, io=self.io)
         self.progress_log = progress_log
@@ -38,14 +37,10 @@ class PytestErrorFixer:
             with open(self.progress_log, 'w') as f:
                 json.dump([], f)
 
-    def log_progress(self, status, error, test_file):
-        # Log the progress of fixing an error
+    def log_progress(self, status: str, error: Dict[str, Any], test_file: str):
         logging.info(f"Logging progress: {status} for error in {test_file}")
-        # Get the latest commit SHA
-        commit_sha = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode('utf-8')
-
-        # Get the current timestamp
-        timestamp = subprocess.check_output(["date", "+%Y-%m-%d %H:%M:%S"]).strip().decode('utf-8')
+        commit_sha = self.get_commit_sha()
+        timestamp = self.get_current_timestamp()
 
         with open(self.progress_log, 'r+') as f:
             log = json.load(f)
@@ -53,11 +48,21 @@ class PytestErrorFixer:
                 "error": error,
                 "file": test_file,
                 "status": status,
-                "commit_sha": commit_sha,  # Include the commit SHA
-                "timestamp": timestamp  # Include the timestamp
+                "commit_sha": commit_sha,
+                "timestamp": timestamp
             })
             f.seek(0)
             json.dump(log, f, indent=4)
+
+    def get_commit_sha(self) -> str:
+        try:
+            return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.project_dir).strip().decode('utf-8')
+        except subprocess.CalledProcessError:
+            logging.warning("Failed to get commit SHA. Is this a git repository?")
+            return "N/A"
+
+    def get_current_timestamp(self) -> str:
+        return subprocess.check_output(["date", "+%Y-%m-%d %H:%M:%S"]).strip().decode('utf-8')
 
     def discover_test_files(self):
         test_files = []
@@ -67,15 +72,14 @@ class PytestErrorFixer:
                     test_files.append(os.path.join(root, file))
         return test_files
 
-    def run_individual_test(self, test_file):
-        cmd = [
-            "pytest",
-            "-v",
-            "--tb=short",
-            "--log-cli-level=DEBUG",
-            test_file
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+    def run_test(self, test_file: str, function: str = None) -> tuple:
+        cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG"]
+        if function:
+            cmd.append(f"{test_file}::{function}")
+        else:
+            cmd.append(test_file)
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=self.project_dir)
         return result.stdout, result.stderr
 
     def parse_errors(self, output, test_file):
@@ -227,44 +231,47 @@ class PytestErrorFixer:
         
         return error_file_paths
 
-    def fix_error(self, test_file, error):
-        # Extract relevant files for this specific error
-        error_dict = {test_file: [error]}
+    def fix_error(self, error: Dict[str, Any], file_path: str) -> bool:
+        logging.info(f"Attempting to fix error in {file_path}: {error['function']}")
+
+        error_dict = {file_path: [error]}
         relevant_files = self.extract_file_paths_from_errors(error_dict)
-        
-        # Flatten the list of relevant files
         all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
-        
-        # Create a new Coder instance with the relevant files
+
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
+
+        stdout, stderr = self.run_test(error['test_file'], error['function'])
+
+        prompt = self.construct_prompt(error, stdout, stderr)
         
-        # Run the test to get the error output
-        cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{test_file}::{error['function']}"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        
-        # Construct a structured prompt using parsed error details
-        error_prompt_template = (
-            "Fix the following pytest error:\n\n"
-            "Test File: {test_file}\n"
-            "Function: {function}\n"
-            "Error Type: {error_type}\n"
-            "Error Details: {error_details}\n"
-            "Code Snippet:\n{code_snippet}\n"
-            "Captured Output:\n{captured_output}\n"
-            "Captured Log:\n{captured_log}\n"
+        try:
+            self.coder.run(prompt)
+            logging.info("AI model suggested changes. Applying changes...")
+        except Exception as e:
+            logging.error(f"Error while applying changes: {str(e)}")
+            return False
+
+        stdout, stderr = self.run_test(error['test_file'], error['function'])
+
+        if "PASSED" in stdout:
+            logging.info(f"Fixed: {file_path} - {error['function']}")
+            return True
+        else:
+            logging.info(f"Failed to fix: {file_path} - {error['function']}")
+            return False
+
+    def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str) -> str:
+        error_prompt = (
+            f"Fix the following pytest error:\n\n"
+            f"Test File: {error['test_file']}\n"
+            f"Function: {error['function']}\n"
+            f"Error Type: {error['error_type']}\n"
+            f"Error Details: {error['error_details']}\n"
+            f"Code Snippet:\n{error['code_snippet']}\n"
+            f"Captured Output:\n{error.get('captured_output', '')}\n"
+            f"Captured Log:\n{error.get('captured_log', '')}\n"
         )
-        
-        error_prompt = error_prompt_template.format(
-            test_file=test_file,
-            function=error['function'],
-            error_type=error['error_type'],
-            error_details=error['error_details'],
-            code_snippet=error['code_snippet'],
-            captured_output=error.get('captured_output', ''),
-            captured_log=error.get('captured_log', '')
-        )
-        
-        # Analysis framework prompt
+
         analysis_prompt = (
             "Please analyze the error using the Analysis, Framework, Plan, Execution System:\n"
             "1. Analysis: Provide a detailed understanding of the error context.\n"
@@ -272,30 +279,8 @@ class PytestErrorFixer:
             "3. Plan: Outline a specific plan to fix the error.\n"
             "4. Execution: Implement the plan and verify the fix.\n"
         )
-        
-        # Combine the error details with the analysis framework
-        combined_prompt = f"{error_prompt}\n\n{analysis_prompt}"
-        
-        # Send the structured prompt to aider
-        self.coder.run(combined_prompt)
-        
-        # Run the test again to check if it's fixed
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        
-        if "PASSED" in result.stdout:
-            self.log_progress("fixed", error, test_file)
-            return True
-        else:
-            # If the test still fails, revert the commit
-            try:
-                commit_sha = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode('utf-8')
-                logging.info(f"Reverting commit {commit_sha} due to failed test")
-                subprocess.run(["git", "revert", "--no-edit", commit_sha], check=True)
-                self.log_progress("reverted", error, test_file)
-            except subprocess.CalledProcessError as e:
-                logging.error(f"Error during revert: {e}")
-                self.log_progress("revert_failed", error, test_file)
-            return False
+
+        return f"{error_prompt}\n\n{analysis_prompt}\n\nTest Output:\n{stdout}\n\nTest Error Output:\n{stderr}"
 
     def debug_fix_single_error(self, error, file_path):
         print(f"DEBUG: Starting debug_fix_single_error for {error['function']} in {file_path}")
@@ -386,144 +371,55 @@ class PytestErrorFixer:
             print(f"DEBUG: Failed to fix: {file_path} - {error['function']}")
             return False
 
-    def debug_main(self):
-        print("DEBUG: Starting debug_main process...")
-
-        # Load all errors from the error log
-        all_errors = self.load_errors()
-        print("DEBUG: Loaded errors:", json.dumps(all_errors, indent=2))
-
-        # Process only the first error for debugging
-        for file_path, error_list in all_errors.items():
-            if error_list:  # Check if there are any errors
-                error = error_list[0]  # Use only the first error for debugging
-                print(f"DEBUG: Processing error: {error} in {file_path}")
-                fixed = self.debug_fix_single_error(error, file_path)
-                if fixed:
-                    print(f"DEBUG: Successfully fixed error in {file_path}")
-                else:
-                    print(f"DEBUG: Failed to fix error in {file_path}")
-                break  # Only process the first error, then stop
-
-        print("DEBUG: Error fixing debug completed.")
-
-        print("Starting main process...")
+    def main(self):
+        logging.info("Starting main process...")
         test_files = self.discover_test_files()
-        print(f"Discovered {len(test_files)} test files.")
+        logging.info(f"Discovered {len(test_files)} test files.")
 
         for test_file in test_files:
-            print(f"Running test file: {test_file}")
-            stdout, stderr = self.run_individual_test(test_file)
+            logging.info(f"Running test file: {test_file}")
+            stdout, stderr = self.run_test(test_file)
             errors = self.parse_errors(stdout + stderr, test_file)
             if errors:
-                print(f"Errors found in {test_file}. Saving to log...")
+                logging.info(f"Errors found in {test_file}. Saving to log...")
                 self.save_errors(errors)
             else:
-                print(f"No errors found in {test_file}")
+                logging.info(f"No errors found in {test_file}")
 
-        print("All test files processed.")
+        logging.info("All test files processed.")
 
-        # Load all errors from the error log
         all_errors = self.load_errors()
-        print("Loaded errors:", all_errors)
+        logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
 
-        # Process each error
         for file_path, error_list in all_errors.items():
             for error in error_list:
-                print(f"Processing error: {error} in {file_path}")
-                
-                # Extract relevant files for this specific error
-                error_dict = {file_path: [error]}
-                relevant_files = self.extract_file_paths_from_errors(error_dict)
-                
-                # Flatten the list of relevant files
-                all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
-                
-                print("Relevant files for this error:")
-                for path in all_relevant_files:
-                    print(f"  - {path}")
-                
-                # Create a new Coder instance with the relevant files for this error
-                self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
-                
-                # Run the test to get the error output
-                cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{error['test_file']}::{error['function']}"]
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                
-                # Debug: Print test output
-                print("\nTest output:")
-                print(result.stdout)
-                print("\nTest error output:")
-                print(result.stderr)
-                
-                # Prompt aider to suggest a fix based on test output
-                fix_prompt = f"Analyze the errors please follow the Analysis, Framework, Plan, Execution System as described make sure to have critques. Let's now fix this pytest error:\n\n{result.stdout}\n\n{result.stderr}"
-                analysis_prompt = """just to re-iterate before the next one. Learn This. 
-your primary job is to utilize the Analysis, Framework, Plan, Execution System. It consist of performing: 
-Analysis: 
-^IYour job is to build a detailed, descriptive, rational/probabilistic, verbose understanding and comprehension of both the content of the supplied reques
-t and the actual needs of the plan/execution through a written pleonastic, long-winded, and semi-scholarly Document. Each Section within this analysis doc
-ument shall also have a independent critique addendum which is inherently prolix and palaverous. After completing the Document, you shall do an additional
- cruitique addendum to critique the whole. after this you shall as if you should critique your critique, or if you should proceed with updating the docume
-nt with the knowledge of the critique. after you have updated the document, you shall ask if you should proceed with the creation of the framework for the
- plan. 
-Framework: 
-^IYour job is to build a detailed vivid and detailed Framework to be able to create the Plan. Each Section within this analysis document shall also have a
-n independent critique addendum which is inherently prolix and palaverous. After completing the Document, you shall do an additional cruitique addendum to
- critique the whole. after this you shall as if you should critique your critique, or if you should proceed with updating the document with the knowledge 
-of the critique. after you have updated the document, you shall ask if you should proceed with the creation of the plan 
-Plan: 
-^IYour Job is to build an illustrative, explicit, specific, detailed Plan. word choice should be very nuanced to convey the most information possible. Eac
-h Section within this analysis document shall also have an independent critique addendum which is inherently prolix and palaverous. After completing the D
-ocument, you shall do an additional cruitique addendum to critique the whole. after this you shall as if you should critique your critique, or if you shou
-ld proceed with updating the document with the knowledge of the critique. after you have updated the document, you shall ask if you should proceed with th
-e Execution 
- 
-Please cre4ate an understanding of this to a intensive detailed specific clear degree, and update your memory. I know you are here to assist     
-with code analysis and improvements this is the framework that will maximize your ability for that task"""
-                combined_prompt = f"{fix_prompt}\n\n{analysis_prompt}"
-                print("Sending prompt to AI model...")
-                print(f"Word count: {len(combined_prompt.split())}")
-                try:
-                    self.coder.run(combined_prompt)  # This will apply the changes to the files
-                    print("AI model suggested changes. Applying changes...")
-                except Exception as e:
-                    print(f"Error while applying changes: {str(e)}")
-                
-                # Run the test again to check if it's fixed
-                print("\nRe-running test to check if error is fixed...")
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                
-                # Debug: Print re-run test output
-                print("\nRe-run test output:")
-                print(result.stdout)
-                print("\nRe-run test error output:")
-                print(result.stderr)
-                
-                if "PASSED" in result.stdout:
-                    print(f"Fixed: {file_path} - {error}")
+                logging.info(f"Processing error: {error} in {file_path}")
+                fixed = self.fix_error(error, file_path)
+                if fixed:
                     self.log_progress("fixed", error, file_path)
                 else:
-                    print(f"Failed to fix: {file_path} - {error}")
                     self.log_progress("failed", error, file_path)
 
-        print("Error fixing completed.")
+        logging.info("Error fixing completed.")
 
-        # Run the full test suite again to verify all fixes
-        print("Re-running full test suite to verify fixes...")
-        test_files = self.discover_test_files()
-        for test_file in test_files:
-            stdout, stderr = self.run_individual_test(test_file)
-            print(f"Final test results for {test_file}:")
-            print(stdout)
-            print(stderr)
+        logging.info("Re-running full test suite to verify fixes...")
+        for test_file in self.discover_test_files():
+            stdout, stderr = self.run_test(test_file)
+            logging.info(f"Final test results for {test_file}:")
+            logging.info(stdout)
+            logging.info(stderr)
 
-        print("Error fixing and verification completed.")
+        logging.info("Error fixing and verification completed.")
 
 
 
 
 
 if __name__ == "__main__":
-    fixer = PytestErrorFixer("/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc")
-    fixer.debug_main()  # Use the new debug_main method instead of main
+    import argparse
+    parser = argparse.ArgumentParser(description="Run PytestErrorFixer")
+    parser.add_argument("project_dir", help="Path to the project directory")
+    args = parser.parse_args()
+
+    fixer = PytestErrorFixer(args.project_dir)
+    fixer.main()
