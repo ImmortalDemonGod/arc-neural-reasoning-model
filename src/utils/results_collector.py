@@ -10,9 +10,9 @@ class ResultsCollector:
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         self.config = asdict(config)
         self.results = {
-            "train": dict(),
-            "validation": dict(),
-            "test": dict()
+            "train": {},
+            "validation": {},
+            "test": {}
         }
         print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
 
