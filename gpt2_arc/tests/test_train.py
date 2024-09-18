@@ -522,10 +522,11 @@ def test_validation_step_with_correct_batch_format(trainer):
         torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
     )
 
-    # Run the validation step and check if it completes without errors
-    trainer.validation_step(batch, 0)
+    # Use a PyTorch Lightning Trainer to manage the ARCTrainer
+    pl_trainer = pl.Trainer(fast_dev_run=True)
+    pl_trainer.validate(trainer, val_dataloaders=[batch])
 
-    # Additionally, you can assert that the 'val_loss' is logged
+    # Check if 'val_loss' is logged
     assert "val_loss" in trainer.logged_metrics
 
 @pytest.mark.parametrize("batch_format", ["tuple", "dict"])
