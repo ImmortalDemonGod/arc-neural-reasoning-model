@@ -281,7 +281,7 @@ class PytestErrorFixer:
         print(f"DEBUG: Prompt for AI model:\n{prompt}")
 
         try:
-            self.coder.run(prompt, temperature=self.temperature)
+            self.coder.run(prompt)
             logging.info("AI model suggested changes. Applying changes...")
             
             # Get the git diff after changes
