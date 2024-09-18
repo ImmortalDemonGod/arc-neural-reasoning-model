@@ -315,26 +315,29 @@ class PytestErrorFixer:
         """Parse the Aider response to extract search/replace statements."""
         changes = []
         lines = response.split('\n')
-        in_search_replace = False
+        in_search = False
+        in_replace = False
         current_change = {"file": "", "search": "", "replace": ""}
 
         for line in lines:
             if line.strip().endswith(".py"):
                 current_change["file"] = line.strip()
             elif line.strip() == "<<<<<<< SEARCH":
-                in_search_replace = True
+                in_search = True
+                in_replace = False
                 current_change["search"] = ""
             elif line.strip() == "=======":
+                in_search = False
+                in_replace = True
                 current_change["replace"] = ""
             elif line.strip() == ">>>>>>> REPLACE":
-                in_search_replace = False
+                in_replace = False
                 changes.append(current_change.copy())
                 current_change = {"file": "", "search": "", "replace": ""}
-            elif in_search_replace:
-                if current_change["replace"] == "":
-                    current_change["search"] += line + "\n"
-                else:
-                    current_change["replace"] += line + "\n"
+            elif in_search:
+                current_change["search"] += line + "\n"
+            elif in_replace:
+                current_change["replace"] += line + "\n"
 
         return json.dumps(changes, indent=2)
 
