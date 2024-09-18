@@ -146,7 +146,7 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
-    ), patch("torch.utils.data.DataLoader") as mock_dataloader:
+    ), patch("torch.utils.data.DataLoader", side_effect=lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})):
         mock_dataloader.return_value = MagicMock()
         mock_dataloader.return_value.num_workers = 0
         # Set up the ARCTrainer mock instance
