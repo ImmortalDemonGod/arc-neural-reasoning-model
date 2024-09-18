@@ -207,8 +207,8 @@ def test_evaluation_process_with_arckit_data():
                 logger.info(f"Task {task_id}: Loss={result['test_loss']}, Accuracy={result['test_accuracy']}")
 
     # Check for duplicate metrics
-    unique_task_ids = set(result['task_id'] for result in evaluation_results)
-    print("All task IDs:", [result['task_id'] for result in evaluation_results])
+    unique_task_ids = set(task_id for result in evaluation_results for task_id in result.get('task_ids', []))
+    print("All task IDs:", [task_id for result in evaluation_results for task_id in result.get('task_ids', [])])
     print("Unique task IDs:", unique_task_ids)
     print(f"Number of evaluation results: {len(evaluation_results)}")
     print(f"Number of unique task IDs: {len(unique_task_ids)}")
