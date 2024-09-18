@@ -300,12 +300,13 @@ class PytestErrorFixer:
                 logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
                 self.log_progress("failed", error, file_path, all_relevant_files, new_git_diff, temperature)
 
-        logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
-        return False
         except Exception as e:
             logging.error(f"Error while applying changes: {str(e)}")
             print(f"DEBUG: Exception occurred: {str(e)}")
             continue
+
+        logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
+        return False
 
     def revert_changes(self):
         try:
