@@ -242,9 +242,42 @@ class PytestErrorFixer:
         cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{test_file}::{error['function']}"]
         result = subprocess.run(cmd, capture_output=True, text=True)
         
-        # Prompt aider to suggest a fix based on test output
-        prompt = f"Fix this pytest error:\n\n{result.stdout}\n\n{result.stderr}"
-        self.coder.run(prompt)  # This will apply the changes to the files
+        # Construct a structured prompt using parsed error details
+        error_prompt_template = (
+            "Fix the following pytest error:\n\n"
+            "Test File: {test_file}\n"
+            "Function: {function}\n"
+            "Error Type: {error_type}\n"
+            "Error Details: {error_details}\n"
+            "Code Snippet:\n{code_snippet}\n"
+            "Captured Output:\n{captured_output}\n"
+            "Captured Log:\n{captured_log}\n"
+        )
+        
+        error_prompt = error_prompt_template.format(
+            test_file=test_file,
+            function=error['function'],
+            error_type=error['error_type'],
+            error_details=error['error_details'],
+            code_snippet=error['code_snippet'],
+            captured_output=error.get('captured_output', ''),
+            captured_log=error.get('captured_log', '')
+        )
+        
+        # Analysis framework prompt
+        analysis_prompt = (
+            "Please analyze the error using the Analysis, Framework, Plan, Execution System:\n"
+            "1. Analysis: Provide a detailed understanding of the error context.\n"
+            "2. Framework: Develop a framework for addressing the error.\n"
+            "3. Plan: Outline a specific plan to fix the error.\n"
+            "4. Execution: Implement the plan and verify the fix.\n"
+        )
+        
+        # Combine the error details with the analysis framework
+        combined_prompt = f"{error_prompt}\n\n{analysis_prompt}"
+        
+        # Send the structured prompt to aider
+        self.coder.run(combined_prompt)
         
         # Run the test again to check if it's fixed
         result = subprocess.run(cmd, capture_output=True, text=True)
