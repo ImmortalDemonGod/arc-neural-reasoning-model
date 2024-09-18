@@ -347,7 +347,8 @@ def test_valid_batch_sizes(mock_args, batch_size):
         "final_val_loss": 0.2,
         "test_accuracy": 0.95,
         "config": {"model": {}, "training": {}}
-    }), patch("torch.utils.data.DataLoader", side_effect=lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})):
+    }), patch("torch.utils.data.DataLoader") as mock_dataloader:
+        mock_dataloader.return_value = MagicMock(num_workers=0)
         main(mock_args)  # Should not raise an exception
 
 
