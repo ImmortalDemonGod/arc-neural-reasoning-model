@@ -36,7 +36,6 @@ class PytestErrorFixer:
             json.dump(log, f, indent=4)
 
     def run_full_test(self):
-        print(f"Attempting to fix error in {test_file}: {error}")
         cmd = [
             "pytest",
             "--cov=gpt2_arc",
