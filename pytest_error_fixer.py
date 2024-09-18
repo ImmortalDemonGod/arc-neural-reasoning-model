@@ -47,7 +47,13 @@ class PytestErrorFixer:
                 "gpt2_arc/src/training/train.py",
                 "gpt2_arc/src/training/trainer.py"
             ],
-            # Add more test files and their relevant files as needed
+            "gpt2_arc/tests/test_arc_dataset.py": [
+                "gpt2_arc/src/data/arc_dataset.py",
+                "gpt2_arc/src/utils/experiment_tracker.py",
+                "gpt2_arc/src/models/gpt2.py",
+                "gpt2_arc/src/config.py",
+                # Add more relevant files as needed
+            ],
         }
 
     def init_progress_log(self):
