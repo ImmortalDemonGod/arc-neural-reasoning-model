@@ -4,6 +4,9 @@ import re
 from collections import defaultdict
 import json
 import os
+import os
+import logging
+import re
 from typing import List, Dict, Any
 from aider.coders import Coder
 from aider.models import Model
@@ -215,20 +218,21 @@ class PytestErrorFixer:
         for file_path, error_list in errors.items():
             for error in error_list:
                 relevant_paths = set()
-                relevant_paths.add(file_path)  # The test file itself
+                absolute_file_path = os.path.abspath(file_path)
+                relevant_paths.add(absolute_file_path)
                 
                 # Extract paths from error details and code snippet
                 paths = re.findall(r'gpt2_arc/[^\s:]+\.py', error['error_details'] + error['code_snippet'])
-                relevant_paths.update(paths)
+                absolute_paths = [os.path.abspath(os.path.join(self.project_dir, p)) for p in paths]
+                relevant_paths.update(absolute_paths)
                 
-                # Add the test file if it's not already included
                 if 'test_file' in error:
-                    relevant_paths.add(error['test_file'])
+                    relevant_paths.add(os.path.abspath(error['test_file']))
                 
-                # Create a unique key for this error
                 error_key = f"{error['function']} - {error['error_type']}"
                 error_file_paths[error_key] = list(relevant_paths)
-        
+            
+            print(f"DEBUG: Extracted file paths for {file_path}: {error_file_paths}")
         return error_file_paths
 
     def fix_error(self, error: Dict[str, Any], file_path: str) -> bool:
@@ -238,12 +242,24 @@ class PytestErrorFixer:
         relevant_files = self.extract_file_paths_from_errors(error_dict)
         all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
 
+        print(f"DEBUG: All relevant files before filtering: {all_relevant_files}")
+
+        # Ensure all paths are absolute and exist
+        all_relevant_files = [
+            path for path in all_relevant_files 
+            if os.path.isabs(path) and os.path.exists(path)
+        ]
+
+        print(f"DEBUG: All relevant files after filtering: {all_relevant_files}")
+
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
         stdout, stderr = self.run_test(error['test_file'], error['function'])
 
         prompt = self.construct_prompt(error, stdout, stderr)
         
+        print(f"DEBUG: Prompt for AI model:\n{prompt}")
+
         try:
             self.coder.run(prompt)
             logging.info("AI model suggested changes. Applying changes...")
@@ -252,6 +268,8 @@ class PytestErrorFixer:
             return False
 
         stdout, stderr = self.run_test(error['test_file'], error['function'])
+
+        print(f"DEBUG: Test output after fix attempt:\nStdout: {stdout}\nStderr: {stderr}")
 
         if "PASSED" in stdout:
             logging.info(f"Fixed: {file_path} - {error['function']}")
