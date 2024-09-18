@@ -67,17 +67,16 @@ class PytestErrorFixer:
         else:
             return {}
 
-        # Split the failures_section into individual failures
-        failure_blocks = re.split(r"\n_{10,} .*? _{10,}\n", failures_section)
-        failure_names = re.findall(r"_{10,} (.*?) _{10,}\n", failures_section)
+        # Use regex to find all failure blocks along with their test names
+        failure_matches = re.findall(
+            r"_{10,}\s+(.*?)\s+_{10,}\n(.*?)(?=\n_{10,}|\Z)",
+            failures_section,
+            re.DOTALL
+        )
 
         parsed_errors = defaultdict(list)
 
-        # Skip the first empty block if it exists
-        if failure_blocks and not failure_blocks[0].strip():
-            failure_blocks = failure_blocks[1:]
-
-        for name, block in zip(failure_names, failure_blocks):
+        for test_name, block in failure_matches:
             failure_info = self.parse_failure_block(block)
             if failure_info:
                 file_path = failure_info['file_path']
@@ -86,27 +85,45 @@ class PytestErrorFixer:
                     'error_type': failure_info['error_type'],
                     'error_details': failure_info['error_details'],
                     'line_number': failure_info['line_number'],
-                    'code_snippet': failure_info['code_snippet']
+                    'code_snippet': failure_info['code_snippet'],
+                    'captured_output': failure_info.get('captured_output', ''),
+                    'captured_log': failure_info.get('captured_log', '')
                 })
 
         print("Parsed errors:", dict(parsed_errors))
         return parsed_errors
 
     def parse_failure_block(self, block):
-        lines = block.strip().split('\n')
+        # Split the block into sections based on captured outputs/logs
+        sections = re.split(r"(-{10,}.*?-{10,})\n", block)
+        content_sections = []
+        i = 0
+        while i < len(sections):
+            if not sections[i].startswith('-----'):
+                content_sections.append(sections[i])
+            i += 1
+
+        main_content = content_sections[0].strip().split('\n')
+        # Skip empty lines at the start
+        while main_content and not main_content[0].strip():
+            main_content = main_content[1:]
+        if not main_content:
+            return None
+
         # First line should be file path with line number and function
-        file_line_func_match = re.match(r'(.*?):(\d+): in (.*)', lines[0])
+        file_line_func_match = re.match(r'(.*?):(\d+): in (.*)', main_content[0])
         if not file_line_func_match:
             return None
         file_path = file_line_func_match.group(1)
         line_number = file_line_func_match.group(2)
         function = file_line_func_match.group(3)
+
         # The rest of the lines are code snippet and error messages
         code_snippet = []
         error_messages = []
         i = 1
-        while i < len(lines):
-            line = lines[i]
+        while i < len(main_content):
+            line = main_content[i]
             if line.startswith('E   '):
                 # Start collecting error messages
                 error_messages.append(line[1:].strip())  # Remove one leading space
@@ -115,13 +132,25 @@ class PytestErrorFixer:
             i += 1
         error_message = '\n'.join(error_messages)
         error_type = error_message.split(':')[0] if error_message else ''
+
+        # Collect captured outputs/logs if available
+        captured_output = ''
+        captured_log = ''
+        for idx, section in enumerate(sections):
+            if 'Captured stdout call' in section:
+                captured_output = sections[idx + 1].strip()
+            if 'Captured log call' in section:
+                captured_log = sections[idx + 1].strip()
+
         return {
             'file_path': file_path,
             'line_number': line_number,
             'function': function,
             'code_snippet': '\n'.join(code_snippet),
             'error_type': error_type.strip(),
-            'error_details': error_message.strip()
+            'error_details': error_message.strip(),
+            'captured_output': captured_output,
+            'captured_log': captured_log
         }
 
     def save_errors(self, errors):
