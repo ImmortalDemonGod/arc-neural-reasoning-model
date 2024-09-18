@@ -1,4 +1,5 @@
 import subprocess
+import logging
 import re
 from collections import defaultdict
 import json
@@ -7,9 +8,11 @@ from aider.models import Model
 from aider.io import InputOutput
 import os
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 class PytestErrorFixer:
     def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json"):
-        print(f"Initializing PytestErrorFixer with project directory: {project_dir}")
+        logging.info(f"Initializing PytestErrorFixer with project directory: {project_dir}")
         self.project_dir = project_dir
         self.max_retries = max_retries
         self.model = Model("gpt-4o")
@@ -21,14 +24,14 @@ class PytestErrorFixer:
 
     def init_progress_log(self):
         # Initialize the progress log file if it doesn't exist
-        print("Initializing progress log...")
+        logging.info("Initializing progress log...")
         if not os.path.exists(self.progress_log):
             with open(self.progress_log, 'w') as f:
                 json.dump([], f)
 
     def log_progress(self, status, error, test_file):
         # Log the progress of fixing an error
-        print(f"Logging progress: {status} for error in {test_file}")
+        logging.info(f"Logging progress: {status} for error in {test_file}")
         with open(self.progress_log, 'r+') as f:
             log = json.load(f)
             log.append({"error": error, "file": test_file, "status": status})
@@ -170,24 +173,24 @@ class PytestErrorFixer:
 
     def load_errors(self):
         # Load errors from JSON log
-        print("Loading errors from log...")
+        logging.info("Loading errors from log...")
         with open(self.error_log, 'r') as f:
             errors = json.load(f)
-            print("Loaded errors:", errors)
+            logging.debug("Loaded errors: %s", errors)
             return errors
 
     def predict_relevant_files(self, error):
-        print(f"Predicting relevant files for error: {error}")
+        logging.info(f"Predicting relevant files for error: {error}")
         prompt = f"/ask Which files are most likely involved in fixing this pytest error? Please list only the file names, one per line. Error: {error}"
         response = self.coder.run(prompt)
         
         # Extract file names from the response
         files = [line.strip() for line in response.split('\n') if line.strip().endswith('.py')]
-        print("RAW: relevant files:", files)
+        logging.debug("RAW: relevant files: %s", files)
         # Ensure all files start with 'gpt2_arc/'
         files = ['gpt2_arc/' + f if not f.startswith('gpt2_arc/') else f for f in files]
         
-        print("Predicted relevant files:", files)
+        logging.info("Predicted relevant files: %s", files)
         return files
 
     def fix_error(self, test_file, error):
@@ -207,11 +210,11 @@ class PytestErrorFixer:
         # Run the test again to check if it's fixed
         result = subprocess.run(cmd, capture_output=True, text=True)
         if "PASSED" in result.stdout:
-            print(f"Error fixed in {test_file}: {error}")
+            logging.info(f"Error fixed in {test_file}: {error}")
         else:
-            print(f"Error not fixed in {test_file}: {error}")
-        print("Fix result stdout:", result.stdout)
-        print("Fix result stderr:", result.stderr)
+            logging.warning(f"Error not fixed in {test_file}: {error}")
+        logging.debug("Fix result stdout: %s", result.stdout)
+        logging.debug("Fix result stderr: %s", result.stderr)
         return "PASSED" in result.stdout
 
     def main(self):
