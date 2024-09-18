@@ -174,10 +174,16 @@ class PytestErrorFixer:
     def load_errors(self):
         # Load errors from JSON log
         logging.info("Loading errors from log...")
-        with open(self.error_log, 'r') as f:
-            errors = json.load(f)
-            logging.debug("Loaded errors: %s", errors)
-            return errors
+        if os.path.exists(self.error_log):
+            with open(self.error_log, 'r') as f:
+                errors = json.load(f)
+                logging.debug("Loaded errors: %s", errors)
+                return errors
+        else:
+            logging.info("Error log not found. Creating a new one.")
+            with open(self.error_log, 'w') as f:
+                json.dump({}, f)
+            return {}
 
     def extract_file_paths_from_errors(self, errors):
         error_file_paths = {}
