@@ -44,7 +44,7 @@ class PytestErrorFixer:
             for file in files:
                 if file.startswith("test_") and file.endswith(".py"):
                     test_files.append(os.path.join(root, file))
-        return test_files
+        return test_files[0]
 
     def run_individual_test(self, test_file):
         cmd = [
