@@ -245,24 +245,24 @@ class PytestErrorFixer:
         all_errors = self.load_errors()
         print("Loaded errors:", all_errors)
 
-        # Extract file paths from errors
-        error_file_paths = self.extract_file_paths_from_errors(all_errors)
-        
-        # Print the results
-        for error_key, paths in error_file_paths.items():
-            print(f"\nError: {error_key}")
-            print("Relevant files:")
-            for path in paths:
-                print(f"  - {path}")
-
-        # Create a new Coder instance with all relevant files
-        all_relevant_files = list(set(path for paths in error_file_paths.values() for path in paths))
-        self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
-
         # Process each error
         for file_path, error_list in all_errors.items():
             for error in error_list:
                 print(f"Processing error: {error} in {file_path}")
+                
+                # Extract relevant files for this specific error
+                error_dict = {file_path: [error]}
+                relevant_files = self.extract_file_paths_from_errors(error_dict)
+                
+                # Flatten the list of relevant files
+                all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
+                
+                print("Relevant files for this error:")
+                for path in all_relevant_files:
+                    print(f"  - {path}")
+                
+                # Create a new Coder instance with the relevant files for this error
+                self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
                 
                 # Run the test to get the error output
                 cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{error['test_file']}::{error['function']}"]
