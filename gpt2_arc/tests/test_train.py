@@ -338,7 +338,7 @@ def test_valid_batch_sizes(mock_args, batch_size):
     mock_args.batch_size = batch_size
     with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
-    ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
+    ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer"
     ), patch("gpt2_arc.src.training.train.ResultsCollector.get_summary", return_value={
         "experiment_id": "test_id",
