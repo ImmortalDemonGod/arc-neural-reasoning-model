@@ -223,7 +223,82 @@ class PytestErrorFixer:
         result = subprocess.run(cmd, capture_output=True, text=True)
         return "PASSED" in result.stdout
 
-    def main(self):
+    def debug_fix_single_error(self, error, file_path):
+        print(f"DEBUG: Starting debug_fix_single_error for {error['function']} in {file_path}")
+
+        # Extract relevant files for this specific error
+        error_dict = {file_path: [error]}
+        relevant_files = self.extract_file_paths_from_errors(error_dict)
+
+        # Flatten the list of relevant files
+        all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
+
+        print("DEBUG: Relevant files for this error:")
+        for path in all_relevant_files:
+            print(f"  - {path}")
+
+        # Create a new Coder instance with the relevant files for this error
+        print("DEBUG: Creating new Coder instance")
+        debug_coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
+
+        # Run the test to get the error output
+        cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{error['test_file']}::{error['function']}"]
+        print(f"DEBUG: Running command: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        # Debug: Print test output
+        print("\nDEBUG: Initial test output:")
+        print(result.stdout)
+        print("\nDEBUG: Initial test error output:")
+        print(result.stderr)
+
+        # Prompt aider to suggest a fix based on test output
+        prompt = f"Fix this pytest error:\n\n{result.stdout}\n\n{result.stderr}"
+        print("DEBUG: Sending prompt to AI model")
+        try:
+            debug_coder.run(prompt)  # This will apply the changes to the files
+            print("DEBUG: AI model suggested changes. Applying changes...")
+        except Exception as e:
+            print(f"DEBUG: Error while applying changes: {str(e)}")
+            return False
+
+        # Run the test again to check if it's fixed
+        print("\nDEBUG: Re-running test to check if error is fixed...")
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        # Debug: Print re-run test output
+        print("\nDEBUG: Re-run test output:")
+        print(result.stdout)
+        print("\nDEBUG: Re-run test error output:")
+        print(result.stderr)
+
+        if "PASSED" in result.stdout:
+            print(f"DEBUG: Fixed: {file_path} - {error['function']}")
+            return True
+        else:
+            print(f"DEBUG: Failed to fix: {file_path} - {error['function']}")
+            return False
+
+    def debug_main(self):
+        print("DEBUG: Starting debug_main process...")
+
+        # Load all errors from the error log
+        all_errors = self.load_errors()
+        print("DEBUG: Loaded errors:", json.dumps(all_errors, indent=2))
+
+        # Process only the first error for debugging
+        for file_path, error_list in all_errors.items():
+            if error_list:  # Check if there are any errors
+                error = error_list[0]  # Use only the first error for debugging
+                print(f"DEBUG: Processing error: {error} in {file_path}")
+                fixed = self.debug_fix_single_error(error, file_path)
+                if fixed:
+                    print(f"DEBUG: Successfully fixed error in {file_path}")
+                else:
+                    print(f"DEBUG: Failed to fix error in {file_path}")
+                break  # Only process the first error, then stop
+
+        print("DEBUG: Error fixing debug completed.")
 
         print("Starting main process...")
         test_files = self.discover_test_files()
@@ -318,4 +393,4 @@ class PytestErrorFixer:
 
 if __name__ == "__main__":
     fixer = PytestErrorFixer("/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc")
-    fixer.main()
+    fixer.debug_main()  # Use the new debug_main method instead of main
