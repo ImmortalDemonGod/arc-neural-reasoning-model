@@ -443,7 +443,8 @@ def test_tensorboard_logging(mock_args, tmp_path):
          patch("gpt2_arc.src.training.train.GPT2ARC"), \
          patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, \
          patch("gpt2_arc.src.training.train.pl.Trainer"), \
-         patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger:
+         patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, \
+         patch("torch.utils.data.DataLoader") as mock_dataloader:
 
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
@@ -462,10 +463,8 @@ def test_tensorboard_logging(mock_args, tmp_path):
         # Assign the mock ResultsCollector to the trainer instance
         mock_trainer_instance.results_collector = mock_results_collector
 
-        # Set num_workers to 0 to avoid multiprocessing
-        with patch("torch.utils.data.DataLoader") as mock_dataloader:
-            mock_dataloader.side_effect = lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})
-            main(mock_args)
+        mock_dataloader.side_effect = lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})
+        main(mock_args)
 
         mock_logger.assert_called_once_with("tb_logs", name="arc_model")
 
