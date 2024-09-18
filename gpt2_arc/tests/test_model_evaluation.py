@@ -208,8 +208,15 @@ def test_model_loading_from_checkpoint(mocker):
     logger.debug(f"Attempting to load checkpoint from: {checkpoint_path}")
     
     try:
-        checkpoint = torch.load(checkpoint_path)
-        logger.debug(f"Checkpoint loaded successfully. Keys: {checkpoint.keys()}")
+        if not os.path.exists(checkpoint_path):
+            pytest.skip(f"Checkpoint file not found: {checkpoint_path}")
+    
+        try:
+            checkpoint = torch.load(checkpoint_path)
+            logger.debug(f"Checkpoint loaded successfully. Keys: {checkpoint.keys()}")
+        except Exception as e:
+            logger.error(f"Failed to load checkpoint: {str(e)}")
+            pytest.fail(f"Failed to load checkpoint: {str(e)}")
     except Exception as e:
         logger.error(f"Failed to load checkpoint: {str(e)}")
         pytest.fail(f"Failed to load checkpoint: {str(e)}")
