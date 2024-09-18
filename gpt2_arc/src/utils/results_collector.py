@@ -16,6 +16,7 @@ class ResultsCollector:
         self.config = asdict(config)
         self.results = {
             "train": {},
+            "train": {},
             "validation": {},
             "test": {}
         }
@@ -36,6 +37,8 @@ class ResultsCollector:
         """Update training metrics for a specific epoch."""
         if "train" not in self.results:
             self.results["train"] = {}
+        if not isinstance(self.results["train"], dict):
+            raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
         self.results["train"].setdefault(epoch, {})
         self.results["train"][epoch].update(metrics)
 
