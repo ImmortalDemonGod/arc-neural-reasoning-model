@@ -216,7 +216,7 @@ def test_benchmark_model_model_error(mock_model, mock_dataset, mock_dataloader):
                 print("DEBUG: Invoking benchmark_model")
                 benchmark_model(mock_model, mock_dataset, device_type='cpu')
             # Ensure the forward method is called
-            mock_model.forward.assert_called()
+            assert mock_model.forward.call_count > 0, "DEBUG: forward method was not called"
 
 #skip
 @pytest.mark.skip(reason="I dont want to crash my computer")
