@@ -180,17 +180,25 @@ class PytestErrorFixer:
             return errors
 
     def extract_file_paths_from_errors(self, errors):
-        file_paths = set()
+        error_file_paths = {}
         for file_path, error_list in errors.items():
-            file_paths.add(file_path)
             for error in error_list:
-                if 'file_path' in error:
-                    file_paths.add(error['file_path'])
-                if 'code_snippet' in error:
-                    # Extract file paths from code snippets
-                    snippet_paths = re.findall(r'gpt2_arc/[^\s:]+\.py', error['code_snippet'])
-                    file_paths.update(snippet_paths)
-        return list(file_paths)
+                relevant_paths = set()
+                relevant_paths.add(file_path)  # The test file itself
+                
+                # Extract paths from error details and code snippet
+                paths = re.findall(r'gpt2_arc/[^\s:]+\.py', error['error_details'] + error['code_snippet'])
+                relevant_paths.update(paths)
+                
+                # Add the test file if it's not already included
+                if 'test_file' in error:
+                    relevant_paths.add(error['test_file'])
+                
+                # Create a unique key for this error
+                error_key = f"{error['function']} - {error['error_type']}"
+                error_file_paths[error_key] = list(relevant_paths)
+        
+        return error_file_paths
 
     def fix_error(self, test_file, error):
         relevant_files = self.predict_relevant_files(error)
@@ -233,11 +241,18 @@ class PytestErrorFixer:
         print("Loaded errors:", all_errors)
 
         # Extract file paths from errors
-        relevant_files = self.extract_file_paths_from_errors(all_errors)
-        print(f"Relevant files extracted: {relevant_files}")
+        error_file_paths = self.extract_file_paths_from_errors(all_errors)
+        
+        # Print the results
+        for error_key, paths in error_file_paths.items():
+            print(f"\nError: {error_key}")
+            print("Relevant files:")
+            for path in paths:
+                print(f"  - {path}")
 
-        # Create a new Coder instance with the relevant files
-        #self.coder = Coder.create(main_model=self.model, io=self.io, fnames=relevant_files)
+        # Create a new Coder instance with all relevant files
+        all_relevant_files = list(set(path for paths in error_file_paths.values() for path in paths))
+        self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
 """
         # Process each error
