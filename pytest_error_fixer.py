@@ -272,38 +272,39 @@ class PytestErrorFixer:
 
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
-        stdout, stderr = self.run_test(error['test_file'], error['function'])
-
-        git_diff = self.get_git_diff() if attempt > 0 else ""
-        prompt = self.construct_prompt(error, stdout, stderr, git_diff, attempt)
-        
-        print(f"DEBUG: Attempt {attempt + 1} - Temperature: {temperature}")
-        print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
-
-        try:
-            self.coder.run(prompt, temperature=temperature)
-            logging.info("AI model suggested changes. Applying changes...")
-            
-            # Get the git diff after changes
-            git_diff = self.get_git_diff()
-            
-            new_git_diff = self.get_git_diff()
+        for attempt in range(self.max_retries):
+            temperature = self.initial_temperature + (attempt * self.temperature_increment)
             stdout, stderr = self.run_test(error['test_file'], error['function'])
 
-            print(f"DEBUG: Test output after fix attempt:\n{stdout[:500]}...")  # Print first 500 characters of stdout
+            git_diff = self.get_git_diff() if attempt > 0 else ""
+            prompt = self.construct_prompt(error, stdout, stderr, git_diff, attempt)
+            
+            print(f"DEBUG: Attempt {attempt + 1} - Temperature: {temperature}")
+            print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
 
-            if "PASSED" in stdout:
-                logging.info(f"Fixed: {file_path} - {error['function']} on attempt {attempt + 1}")
-                self.log_progress("fixed", error, file_path, all_relevant_files, new_git_diff, temperature)
-                return True
-            else:
-                logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
-                self.log_progress("failed", error, file_path, all_relevant_files, new_git_diff, temperature)
+            try:
+                self.coder.run(prompt, temperature=temperature)
+                logging.info("AI model suggested changes. Applying changes...")
+                
+                # Get the git diff after changes
+                git_diff = self.get_git_diff()
+                
+                new_git_diff = self.get_git_diff()
+                stdout, stderr = self.run_test(error['test_file'], error['function'])
 
-        except Exception as e:
-            logging.error(f"Error while applying changes: {str(e)}")
-            print(f"DEBUG: Exception occurred: {str(e)}")
-            continue
+                print(f"DEBUG: Test output after fix attempt:\n{stdout[:500]}...")  # Print first 500 characters of stdout
+
+                if "PASSED" in stdout:
+                    logging.info(f"Fixed: {file_path} - {error['function']} on attempt {attempt + 1}")
+                    self.log_progress("fixed", error, file_path, all_relevant_files, new_git_diff, temperature)
+                    return True
+                else:
+                    logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
+                    self.log_progress("failed", error, file_path, all_relevant_files, new_git_diff, temperature)
+
+            except Exception as e:
+                logging.error(f"Error while applying changes: {str(e)}")
+                print(f"DEBUG: Exception occurred: {str(e)}")
 
         logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
         return False
@@ -441,57 +442,57 @@ class PytestErrorFixer:
 
     def main(self):
         logging.info("Starting main process...")
-    test_files = self.discover_test_files()
-    logging.info(f"Discovered {len(test_files)} test files.")
+        test_files = self.discover_test_files()
+        logging.info(f"Discovered {len(test_files)} test files.")
 
-    for test_file in test_files:
-        logging.info(f"Running test file: {test_file}")
-        stdout, stderr = self.run_test(test_file)
-        errors = self.parse_errors(stdout + stderr, test_file)
-        if errors:
-            logging.info(f"Errors found in {test_file}. Saving to log...")
-            self.save_errors(errors)
-        else:
-            logging.info(f"No errors found in {test_file}")
-
-    logging.info("All test files processed.")
-
-    all_errors = self.load_errors()
-    logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
-
-    fixed_errors = []
-    failed_errors = []
-
-    for file_path, error_list in all_errors.items():
-        for error in error_list:
-            logging.info(f"Processing error: {error} in {file_path}")
-            if self.fix_error(error, file_path):
-                fixed_errors.append(f"{file_path} - {error['function']}")
+        for test_file in test_files:
+            logging.info(f"Running test file: {test_file}")
+            stdout, stderr = self.run_test(test_file)
+            errors = self.parse_errors(stdout + stderr, test_file)
+            if errors:
+                logging.info(f"Errors found in {test_file}. Saving to log...")
+                self.save_errors(errors)
             else:
-                failed_errors.append(f"{file_path} - {error['function']}")
+                logging.info(f"No errors found in {test_file}")
 
-    logging.info("Error fixing completed.")
+        logging.info("All test files processed.")
 
-    if fixed_errors:
-        logging.info("Fixed errors:")
-        for error in fixed_errors:
-            logging.info(f"- {error}")
+        all_errors = self.load_errors()
+        logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
 
-    if failed_errors:
-        logging.warning("Failed to fix errors:")
-        for error in failed_errors:
-            logging.warning(f"- {error}")
+        fixed_errors = []
+        failed_errors = []
 
-    logging.info("Re-running full test suite to verify fixes...")
-    for test_file in self.discover_test_files():
-        stdout, stderr = self.run_test(test_file)
-        logging.info(f"Final test results for {test_file}:")
-        logging.info(stdout)
-        logging.info(stderr)
+        for file_path, error_list in all_errors.items():
+            for error in error_list:
+                logging.info(f"Processing error: {error} in {file_path}")
+                if self.fix_error(error, file_path):
+                    fixed_errors.append(f"{file_path} - {error['function']}")
+                else:
+                    failed_errors.append(f"{file_path} - {error['function']}")
 
-    logging.info("Error fixing and verification completed.")
-    
-    print("DEBUG: Main process completed. Check the logs for detailed information.")
+        logging.info("Error fixing completed.")
+
+        if fixed_errors:
+            logging.info("Fixed errors:")
+            for error in fixed_errors:
+                logging.info(f"- {error}")
+
+        if failed_errors:
+            logging.warning("Failed to fix errors:")
+            for error in failed_errors:
+                logging.warning(f"- {error}")
+
+        logging.info("Re-running full test suite to verify fixes...")
+        for test_file in self.discover_test_files():
+            stdout, stderr = self.run_test(test_file)
+            logging.info(f"Final test results for {test_file}:")
+            logging.info(stdout)
+            logging.info(stderr)
+
+        logging.info("Error fixing and verification completed.")
+        
+        print("DEBUG: Main process completed. Check the logs for detailed information.")
 
 
 
