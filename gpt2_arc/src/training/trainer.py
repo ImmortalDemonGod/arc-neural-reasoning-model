@@ -149,13 +149,19 @@ class ARCTrainer(pl.LightningModule):
         }
 
         # Return metrics
-        return {
+        self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
+        result = {
             'test_loss': metrics['test_loss'],
             'test_accuracy': metrics['test_accuracy'],
             'test_diff_accuracy': metrics['test_diff_accuracy'],
             'task_ids': task_ids,
         }
 
+        self.test_results.append(result)
+        
     def on_validation_epoch_end(self):
         # Compute average validation loss
         val_loss = self.trainer.callback_metrics.get('val_loss')
