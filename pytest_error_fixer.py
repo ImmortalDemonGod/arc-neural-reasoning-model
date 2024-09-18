@@ -60,7 +60,7 @@ class PytestErrorFixer:
         return result.stdout, result.stderr
 
     def parse_errors(self, output):
-        error_pattern = r"(gpt2_arc/.*\.py)::([\w_]+)\s+(.*?)\n(.*?)(?=\n\n|$)"
+        error_pattern = r"(gpt2_arc/.*\.py)::([\w_]+)\s+(.*?)\n(.*?)(?=\n\n(?:={20,}|_{20,})|$)"
         errors = re.findall(error_pattern, output, re.DOTALL)
         parsed_errors = defaultdict(list)
         for file, function, error_type, error_details in errors:
