@@ -41,10 +41,21 @@ class PytestErrorFixer:
             with open(self.progress_log, 'w') as f:
                 json.dump([], f)
 
-    def log_progress(self, status: str, error: Dict[str, Any], test_file: str):
+    def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], git_diff: str, temperature: float):
         logging.info(f"Logging progress: {status} for error in {test_file}")
         commit_sha = self.get_commit_sha()
         timestamp = self.get_current_timestamp()
+
+        log_entry = {
+            "error": error,
+            "file": test_file,
+            "status": status,
+            "commit_sha": commit_sha,
+            "timestamp": timestamp,
+            "files_used": files_used,
+            "git_diff": git_diff,
+            "temperature": temperature
+        }
 
         with open(self.progress_log, 'r+') as f:
             log = json.load(f)
@@ -57,6 +68,13 @@ class PytestErrorFixer:
             })
             f.seek(0)
             json.dump(log, f, indent=4)
+
+    def get_git_diff(self) -> str:
+        try:
+            return subprocess.check_output(["git", "diff"], cwd=self.project_dir).decode('utf-8')
+        except subprocess.CalledProcessError:
+            logging.warning("Failed to get git diff. Is this a git repository?")
+            return "N/A"
 
     def get_commit_sha(self) -> str:
         try:
@@ -265,9 +283,34 @@ class PytestErrorFixer:
         try:
             self.coder.run(prompt, temperature=self.temperature)
             logging.info("AI model suggested changes. Applying changes...")
+            
+            # Get the git diff after changes
+            git_diff = self.get_git_diff()
+            
+            # Re-run the test
+            stdout, stderr = self.run_test(error['test_file'], error['function'])
+
+            if "PASSED" in stdout:
+                logging.info(f"Fixed: {file_path} - {error['function']}")
+                self.log_progress("fixed", error, file_path, all_relevant_files, git_diff, self.temperature)
+                return True
+            else:
+                logging.info(f"Failed to fix: {file_path} - {error['function']}")
+                self.log_progress("failed", error, file_path, all_relevant_files, git_diff, self.temperature)
+                
+                # Revert changes if the fix failed
+                self.revert_changes()
+                return False
         except Exception as e:
             logging.error(f"Error while applying changes: {str(e)}")
             return False
+
+    def revert_changes(self):
+        try:
+            subprocess.run(["git", "reset", "--hard"], cwd=self.project_dir, check=True)
+            logging.info("Changes reverted successfully.")
+        except subprocess.CalledProcessError:
+            logging.error("Failed to revert changes. Manual intervention may be required.")
 
         stdout, stderr = self.run_test(error['test_file'], error['function'])
 
