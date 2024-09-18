@@ -181,7 +181,7 @@ def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger"), patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
-    ), patch("torch.utils.data.DataLoader") as mock_dataloader:
+    ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch("torch.utils.data.DataLoader") as mock_dataloader:
         mock_dataloader.side_effect = lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
