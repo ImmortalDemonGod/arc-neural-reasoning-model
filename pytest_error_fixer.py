@@ -183,7 +183,7 @@ class PytestErrorFixer:
         
         # Extract file names from the response
         files = [line.strip() for line in response.split('\n') if line.strip().endswith('.py')]
-        
+        print("RAW: relevant files:", files)
         # Ensure all files start with 'gpt2_arc/'
         files = ['gpt2_arc/' + f if not f.startswith('gpt2_arc/') else f for f in files]
         
