@@ -290,26 +290,3 @@ def test_checkpoint_contains_model_config():
     model_config = checkpoint['config']
     logger.debug(f"Model configuration found in checkpoint: {model_config}")
     print("Model configuration found in checkpoint:", model_config)
-    checkpoint_path = "checkpoints/arc_model-epoch=00-val_loss=0.73.ckpt"
-    logger.debug(f"Checking for checkpoint file at: {checkpoint_path}")
-
-    if not os.path.isfile(checkpoint_path):
-        logger.warning(f"Checkpoint file not found: {checkpoint_path}")
-        pytest.skip(f"Checkpoint file not found: {checkpoint_path}")
-
-    try:
-        checkpoint = torch.load(checkpoint_path)
-        # Log the keys in the checkpoint
-        logger.debug(f"Checkpoint keys: {checkpoint.keys()}")
-    except FileNotFoundError as e:
-        logger.error(f"FileNotFoundError: {str(e)}")
-        pytest.fail(f"FileNotFoundError: {str(e)}")
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        pytest.fail(f"Unexpected error: {str(e)}")
-
-    # Check for model configuration
-    assert 'config' in checkpoint, "Model configuration not found in checkpoint."
-    model_config = checkpoint['config']
-    logger.debug(f"Model configuration found in checkpoint: {model_config}")
-    print("Model configuration found in checkpoint:", model_config)
