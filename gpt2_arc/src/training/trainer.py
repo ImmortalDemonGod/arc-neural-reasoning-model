@@ -161,6 +161,7 @@ class ARCTrainer(pl.LightningModule):
         }
 
         self.test_results.append(result)
+        return result
         
     def on_validation_epoch_end(self):
         # Compute average validation loss
