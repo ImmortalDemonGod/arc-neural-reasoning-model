@@ -530,7 +530,7 @@ def test_validation_step_with_correct_batch_format(trainer):
 
     # Use a PyTorch Lightning Trainer to manage the ARCTrainer
     pl_trainer = pl.Trainer(fast_dev_run=True)
-    pl_trainer.validate(trainer, val_dataloaders=[batch])
+    pl_trainer.validate(trainer, dataloaders=[batch])
 
     # Check if 'val_loss' is logged
     assert "val_loss" in trainer.logged_metrics
