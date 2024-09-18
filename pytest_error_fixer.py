@@ -154,5 +154,5 @@ class PytestErrorFixer:
 
 
 if __name__ == "__main__":
-    fixer = PytestErrorFixer("path/to/your/project")
+    fixer = PytestErrorFixer("gpt2_arc")
     fixer.main()
