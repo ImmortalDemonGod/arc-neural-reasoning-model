@@ -35,6 +35,21 @@ class PytestErrorFixer:
         self.error_log = "error_log.json"
         self.init_progress_log()
 
+        # Define a mapping of test files to their relevant files
+        self.relevant_files_mapping = {
+            "gpt2_arc/tests/test_benchmark.py": [
+                "gpt2_arc/benchmark.py",
+                "gpt2_arc/src/models/gpt2.py",
+                "gpt2_arc/src/config.py",
+                "gpt2_arc/src/data/arc_dataset.py",
+                "gpt2_arc/src/utils/experiment_tracker.py",
+                "gpt2_arc/src/utils/results_collector.py",
+                "gpt2_arc/src/training/train.py",
+                "gpt2_arc/src/training/trainer.py"
+            ],
+            # Add more test files and their relevant files as needed
+        }
+
     def init_progress_log(self):
         # Initialize the progress log file if it doesn't exist
         logging.info("Initializing progress log...")
@@ -263,7 +278,9 @@ class PytestErrorFixer:
         relevant_files = self.extract_file_paths_from_errors(error_dict)
         all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
 
-        # Add the debug tips file for the specific test file
+        # Add predefined relevant files for the specific test file
+        test_file_relevant_files = self.relevant_files_mapping.get(error['test_file'], [])
+        all_relevant_files.extend(test_file_relevant_files)
         test_file_name = os.path.basename(error['test_file'])
         debug_tips_file = os.path.join(self.project_dir, "debug tips", f"{test_file_name.replace('.py', '.md')}")
         if os.path.exists(debug_tips_file):
