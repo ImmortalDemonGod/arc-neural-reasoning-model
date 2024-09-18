@@ -18,5 +18,6 @@ class ResultsCollector:
     def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
         """Update training metrics for a given epoch."""
         if not isinstance(self.results["train"], dict):
+            print(f"DEBUG: self.results['train'] is of type {type(self.results['train'])} before setdefault")
             raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
         self.results["train"].setdefault(epoch, {})
