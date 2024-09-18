@@ -243,7 +243,8 @@ class PytestErrorFixer:
 
         # Process each error
         for file_path, error_list in all_errors.items():
-            for error in error_list:
+            if error_list:  # Check if there are any errors
+                error = error_list[0]  # Use only the first error for testing
                 print(f"Processing error: {error} in {file_path}")
                 relevant_files = self.predict_relevant_files(error)
                 print(f"Relevant files predicted: {relevant_files}")
