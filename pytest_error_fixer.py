@@ -23,7 +23,7 @@ class PytestErrorFixer:
         if not api_key:
             raise ValueError("OPENAI_API_KEY not found in environment variables")
         
-        self.model = Model("gpt-4o-2024-08-06", api_key=api_key)
+        self.model = Model("gpt-4o-2024-08-06")
         self.io = InputOutput(yes=True)
         self.coder = Coder.create(main_model=self.model, io=self.io)
         self.progress_log = progress_log
