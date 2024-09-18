@@ -3,7 +3,7 @@ import logging
 import re
 from collections import defaultdict
 import json
-from aider.coders import Coder
+from aider.coders import Coder, AskCoder
 from aider.models import Model
 from aider.io import InputOutput
 import os
@@ -15,9 +15,10 @@ class PytestErrorFixer:
         logging.info(f"Initializing PytestErrorFixer with project directory: {project_dir}")
         self.project_dir = project_dir
         self.max_retries = max_retries
-        self.model = Model("gpt-4o")
+        self.model = Model("gpt-4-turbo")
         self.io = InputOutput(yes=True)
-        self.coder = None  # Initialize coder as None
+        self.coder = Coder.create(main_model=self.model, io=self.io)
+        self.ask_coder = AskCoder.create(main_model=self.model, io=self.io)
         self.progress_log = progress_log
         self.error_log = "error_log.json"
         self.init_progress_log()
@@ -181,11 +182,13 @@ class PytestErrorFixer:
 
     def predict_relevant_files(self, error):
         logging.info(f"Predicting relevant files for error: {error}")
-        prompt = f"/ask Which files are most likely involved in fixing this pytest error? Please list only the file names, one per line. Error: {error}"
-        response = self.coder.send_message(prompt)  # Hypothetical method for asking questions
+        prompt = f"Which files are most likely involved in fixing this pytest error? Please list only the file names, one per line. Error: {error}"
+        
+        response = self.ask_coder.run(prompt)
+        
         # Extract file names from the response
         files = [line.strip() for line in response.split('\n') if line.strip().endswith('.py')]
-        logging.debug("RAW: relevant files: %s", files)
+        
         # Ensure all files start with 'gpt2_arc/'
         files = ['gpt2_arc/' + f if not f.startswith('gpt2_arc/') else f for f in files]
         
