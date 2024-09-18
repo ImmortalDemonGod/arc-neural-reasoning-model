@@ -1,5 +1,6 @@
 import uuid
 import time
+from typing import Dict
 from dataclasses import asdict
 
 class ResultsCollector:
