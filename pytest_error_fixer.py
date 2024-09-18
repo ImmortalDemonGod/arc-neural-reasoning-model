@@ -40,9 +40,17 @@ class PytestErrorFixer:
     def log_progress(self, status, error, test_file):
         # Log the progress of fixing an error
         logging.info(f"Logging progress: {status} for error in {test_file}")
+        # Get the latest commit SHA
+        commit_sha = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode('utf-8')
+
         with open(self.progress_log, 'r+') as f:
             log = json.load(f)
-            log.append({"error": error, "file": test_file, "status": status})
+            log.append({
+                "error": error,
+                "file": test_file,
+                "status": status,
+                "commit_sha": commit_sha  # Include the commit SHA
+            })
             f.seek(0)
             json.dump(log, f, indent=4)
 
