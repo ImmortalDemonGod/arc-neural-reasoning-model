@@ -6,7 +6,10 @@ import json
 from aider.coders import Coder
 from aider.models import Model
 from aider.io import InputOutput
+from dotenv import load_dotenv
 import os
+
+load_dotenv()  # This loads the variables from .env
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -15,7 +18,12 @@ class PytestErrorFixer:
         logging.info(f"Initializing PytestErrorFixer with project directory: {project_dir}")
         self.project_dir = project_dir
         self.max_retries = max_retries
-        self.model = Model("gpt-4o-2024-08-06")
+        # Get the API key from the environment
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY not found in environment variables")
+        
+        self.model = Model("gpt-4o-2024-08-06", api_key=api_key)
         self.io = InputOutput(yes=True)
         self.coder = Coder.create(main_model=self.model, io=self.io)
         self.progress_log = progress_log
