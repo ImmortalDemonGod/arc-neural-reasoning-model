@@ -211,9 +211,10 @@ def test_benchmark_model_model_error(mock_model, mock_dataset, mock_dataloader):
     mock_model.forward = MagicMock(side_effect=RuntimeError("Model execution failed"))
     
     with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
-        with pytest.raises(RuntimeError, match="Model execution failed"):
-            print("DEBUG: Invoking benchmark_model")
-            benchmark_model(mock_model, mock_dataset, device_type='cpu')
+        with patch.object(mock_model, 'forward', side_effect=RuntimeError("Model execution failed")):
+            with pytest.raises(RuntimeError, match="Model execution failed"):
+                print("DEBUG: Invoking benchmark_model")
+                benchmark_model(mock_model, mock_dataset, device_type='cpu')
 
 #skip
 @pytest.mark.skip(reason="I dont want to crash my computer")
