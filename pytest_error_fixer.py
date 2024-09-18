@@ -312,16 +312,6 @@ class PytestErrorFixer:
         except subprocess.CalledProcessError:
             logging.error("Failed to revert changes. Manual intervention may be required.")
 
-        stdout, stderr = self.run_test(error['test_file'], error['function'])
-
-        print(f"DEBUG: Test output after fix attempt:\nStdout: {stdout}\nStderr: {stderr}")
-
-        if "PASSED" in stdout:
-            logging.info(f"Fixed: {file_path} - {error['function']}")
-            return True
-        else:
-            logging.info(f"Failed to fix: {file_path} - {error['function']}")
-            return False
 
     def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str) -> str:
         error_prompt = (
