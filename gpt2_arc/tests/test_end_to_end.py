@@ -215,12 +215,12 @@ def test_evaluation_process_with_arckit_data():
 
     if len(unique_task_ids) != len(evaluation_results):
         print("Warning: Number of unique task IDs doesn't match number of evaluation results")
-        duplicate_tasks = [task_id for task_id in unique_task_ids if [result['task_id'] for result in evaluation_results].count(task_id) > 1]
+        duplicate_tasks = [task_id for task_id in unique_task_ids if sum(task_id in result.get('task_ids', []) for result in evaluation_results) > 1]
         print(f"Duplicate task IDs: {duplicate_tasks}")
         for task_id in duplicate_tasks:
             print(f"Results for task {task_id}:")
             for result in evaluation_results:
-                if result['task_id'] == task_id:
+                if task_id in result.get('task_ids', []):
                     print(result)
     print(f"Unique task IDs: {unique_task_ids}")
     print(f"Evaluation results: {evaluation_results}")
