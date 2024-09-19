@@ -604,6 +604,8 @@ class PytestErrorFixer:
             print("DEBUG: AI model suggested changes. Applying changes...")
         except Exception as e:
             print(f"DEBUG: Error while applying changes: {str(e)}")
+            # Optionally log the failed attempt
+            self.log_progress("failed", error, file_path, all_relevant_files, "No changes", 0.0)
             return False
 
         # Run the test again to check if it's fixed
@@ -618,6 +620,8 @@ class PytestErrorFixer:
 
         if "PASSED" in result.stdout:
             print(f"DEBUG: Fixed: {file_path} - {error['function']}")
+            # Log the successful fix
+            self.log_progress("fixed", error, file_path, all_relevant_files, "Changes applied", 0.0)
             return True
         else:
             print(f"DEBUG: Failed to fix: {file_path} - {error['function']}")
