@@ -376,7 +376,15 @@ class PytestErrorFixer:
             print(f"DEBUG: Debug tips file not found: {debug_tips_file}")
 
         # Calculate the total number of characters in all relevant file paths
-        total_chars = sum(len(path) for path in all_relevant_files)
+        total_chars = 0
+        for path in all_relevant_files:
+            try:
+                with open(path, 'r') as file:
+                    total_chars += len(file.read())
+            except FileNotFoundError:
+                logging.warning(f"File not found: {path}")
+            except Exception as e:
+                logging.error(f"Error reading file {path}: {str(e)}")
         print(f"DEBUG: Total characters in relevant file paths: {total_chars}")
 
         print(f"DEBUG: All relevant files before logging: {all_relevant_files}")
