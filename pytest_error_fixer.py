@@ -361,6 +361,9 @@ class PytestErrorFixer:
         relevant_files = self.extract_file_paths_from_errors(error_dict)
         all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
 
+        # Print the relevant files being used
+        print(f"DEBUG: Relevant files: {all_relevant_files}")
+
         # Add predefined relevant files for the specific test file
         test_file_relevant_files = self.relevant_files_mapping.get(error['test_file'], [])
         all_relevant_files.extend(test_file_relevant_files)
@@ -380,6 +383,9 @@ class PytestErrorFixer:
 
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
+        # Print the model and IO configuration
+        print(f"DEBUG: Model: {self.model}, IO: {self.io}")
+
         all_changes = []
         for attempt in range(self.max_retries):
             temperature = self.initial_temperature + (attempt * self.temperature_increment)
@@ -392,6 +398,9 @@ class PytestErrorFixer:
             accumulated_changes = "\n".join(all_changes)
             prompt = self.construct_prompt(error, stdout, stderr, accumulated_changes, attempt)
         
+            # Print the total characters in the prompt
+            print(f"DEBUG: Total characters in prompt: {len(prompt)}")
+
             print(f"DEBUG: Attempt {attempt + 1} - Temperature: {temperature}")
             print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
 
