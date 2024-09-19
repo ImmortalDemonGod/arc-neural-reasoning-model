@@ -388,7 +388,7 @@ def test_valid_learning_rates(mock_args, learning_rate):
 
     with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
         "gpt2_arc.src.training.train.GPT2ARC"
-    ), patch("gpt2_arc.src.training.train.ARCTrainer"), patch(
+    ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer"
     ) as mock_trainer, patch(
         "torch.utils.data.DataLoader"
