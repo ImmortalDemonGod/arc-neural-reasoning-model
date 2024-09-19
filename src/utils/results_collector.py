@@ -17,7 +17,7 @@ class ResultsCollector:
 
     def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
         """Update training metrics for the current epoch."""
-        print(f"DEBUG: Updating training metrics for epoch {epoch} - self.results['train'] is of type {type(self.results['train'])}")
+        print(f"DEBUG: Updating training metrics for epoch {epoch} - metrics: {metrics} - self.results['train'] is of type {type(self.results['train'])}")
         self.results['train'][epoch] = metrics
 
     def _get_environment_info(self) -> Dict[str, str]:
