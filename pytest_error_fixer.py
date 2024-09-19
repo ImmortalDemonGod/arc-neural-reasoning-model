@@ -37,7 +37,13 @@ class PytestErrorFixer:
 
         # Define a mapping of test files to their relevant files
         self.relevant_files_mapping = {
-            "gpt2_arc/tests/test_benchmark.py": [
+            "gpt2_arc/tests/test_gpt2.py": [
+                "gpt2_arc/src/models/gpt2.py",
+                "gpt2_arc/src/config.py",
+                "gpt2_arc/src/utils/experiment_tracker.py",
+                "gpt2_arc/src/utils/results_collector.py",
+                "gpt2_arc/src/data/arc_dataset.py"
+            ],
                 "gpt2_arc/benchmark.py",
                 "gpt2_arc/src/models/gpt2.py",
                 "gpt2_arc/src/config.py",
