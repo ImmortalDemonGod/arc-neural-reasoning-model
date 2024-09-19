@@ -372,6 +372,10 @@ class PytestErrorFixer:
         else:
             print(f"DEBUG: Debug tips file not found: {debug_tips_file}")
 
+        # Calculate the total number of characters in all relevant file paths
+        total_chars = sum(len(path) for path in all_relevant_files)
+        print(f"DEBUG: Total characters in relevant file paths: {total_chars}")
+
         print(f"DEBUG: All relevant files before logging: {all_relevant_files}")
 
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
