@@ -243,7 +243,7 @@ def test_benchmark_model_precision(mock_model, mock_dataset, mock_torch, precisi
         mock_dataloader.__iter__.return_value = iter([
             (
                 torch.randn(1, 1, 30, 30),  # inputs
-                torch.randint(0, 10, (1, 30, 30)),  # outputs
+                torch.randint(0, 10, (1, 1, 30, 30)),  # outputs
                 "task_1"  # task_id
             )
         ])
