@@ -807,7 +807,7 @@ class PytestErrorFixer:
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to switch back to master branch: {str(e)}")
         
-        print("DEBUG: Main process completed. Check the logs for detaile
+        print("DEBUG: Main process completed. Check the logs for details.")
 
 
 
