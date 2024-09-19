@@ -430,7 +430,7 @@ class PytestErrorFixer:
 
             stdout, stderr = self.run_test(error['test_file'], error['function'])
             accumulated_changes = "\n".join(all_changes)
-            prompt = self.construct_prompt(error, stdout, stderr, accumulated_changes, attempt)
+            prompt = await self.construct_prompt(error, stdout, stderr, accumulated_changes, attempt)
         
             # Print the total characters in the prompt
             print(f"DEBUG: Total characters in prompt: {len(prompt)}")
