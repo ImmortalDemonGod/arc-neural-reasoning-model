@@ -467,18 +467,18 @@ class PytestErrorFixer:
                 logging.error(f"Error while applying changes: {str(e)}")
                 print(f"DEBUG: Exception occurred: {str(e)}")
 
-    # Commit changes regardless of test result
-    subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
-    commit_message = f"Attempted fix: {error['function']} in {file_path}"
-    print(f"DEBUG: Committing with message: {commit_message}")
-    subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
+            # Commit changes regardless of test result
+            subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
+            commit_message = f"Attempted fix: {error['function']} in {file_path}"
+            print(f"DEBUG: Committing with message: {commit_message}")
+            subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
 
-    print(f"DEBUG: Switching back to {self.branch_name}")
-    subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
-    print(f"DEBUG: Finished fix attempt on branch {branch_name}")
+            print(f"DEBUG: Switching back to {self.branch_name}")
+            subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
+            print(f"DEBUG: Finished fix attempt on branch {branch_name}")
 
-    # Return all necessary information for later evaluation
-    return branch_name, "\n".join(all_changes), final_stdout, final_stderr
+            # Return all necessary information for later evaluation
+            return branch_name, "\n".join(all_changes), stdout, stderr
 
     def parse_aider_response(self, response: str) -> str:
         """Parse the Aider response to extract search/replace statements."""
