@@ -35,7 +35,7 @@ def trainer(model, sample_data):
     trainer = ARCTrainer(model, train_dataset, val_dataset, config)
     trainer.logged_metrics = {}
     trainer.config.training.log_level = "INFO"  # Add this line
-    trainer.log = lambda name, value: trainer.logged_metrics.update({name: value})
+    trainer.log = lambda name, value, on_step=None, on_epoch=None, prog_bar=None, logger=None: trainer.logged_metrics.update({name: value})
     return trainer
 
 
