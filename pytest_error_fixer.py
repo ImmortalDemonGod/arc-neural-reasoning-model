@@ -107,6 +107,16 @@ class PytestErrorFixer:
                 "gpt2_arc/src/training/trainer.py",
                 "gpt2_arc/src/evaluate.py",
                 "gpt2_arc/benchmark.py"
+            ],
+            "test_model_evaluation.py": [
+                "src/models/gpt2.py",
+                "src/config.py",
+                "src/training/trainer.py",
+                "src/utils/helpers.py",
+                "src/data/arc_dataset.py",
+                "checkpoints/arc_model-epoch=00-val_loss=0.73.ckpt",
+                "src/utils/experiment_tracker.py",
+                "src/utils/results_collector.py"
             ]
         }
 
