@@ -399,7 +399,21 @@ class PytestErrorFixer:
                 changes = self.parse_aider_response(response)
                 all_changes.append(changes)
                 print(f"DEBUG: Changes made by Aider:\n{changes}")
-            
+
+                # Check if no changes were made
+                if not changes:
+                    print("DEBUG: No changes detected. Prompting AI to execute its plan with search and replace statements.")
+                    # Construct a new prompt to explicitly ask for search and replace statements
+                    execute_plan_prompt = (
+                        f"{prompt}\n\n"
+                        "The previous attempt did not result in any code changes. "
+                        "Please execute your plan and provide specific search and replace statements to fix the error."
+                    )
+                    response = self.coder.run(execute_plan_prompt)
+                    changes = self.parse_aider_response(response)
+                    all_changes.append(changes)
+                    print(f"DEBUG: Changes made by Aider after explicit prompt:\n{changes}")
+
                 # Re-run the test
                 stdout, stderr = self.run_test(error['test_file'], error['function'])
 
@@ -414,7 +428,7 @@ class PytestErrorFixer:
                 else:
                     logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
                     self.log_progress("failed", error, file_path, all_relevant_files, changes, temperature)
-                
+
                     # Revert changes if the fix failed
                     self.revert_changes()
             except Exception as e:
