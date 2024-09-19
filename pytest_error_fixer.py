@@ -33,6 +33,8 @@ class PytestErrorFixer:
         self.coder = Coder.create(main_model=self.model, io=self.io)
         self.progress_log = progress_log
         self.error_log = "error_log.json"
+        self.branch_name = "pytest-aider-automation"
+        self.ensure_branch()
         self.init_progress_log()
 
         # Define a mapping of test files to their relevant files
@@ -118,7 +120,21 @@ class PytestErrorFixer:
             with open(self.progress_log, 'w') as f:
                 json.dump([], f)
 
-    def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float):
+    def ensure_branch(self):
+        """Ensure that the branch exists and switch to it."""
+        try:
+            # Check if the branch exists
+            branches = subprocess.check_output(["git", "branch"], cwd=self.project_dir).decode('utf-8')
+            if self.branch_name not in branches:
+                # Create the branch if it doesn't exist
+                subprocess.run(["git", "checkout", "-b", self.branch_name], cwd=self.project_dir, check=True)
+            else:
+                # Switch to the branch
+                subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
+            logging.info(f"Switched to branch: {self.branch_name}")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Failed to switch to branch {self.branch_name}: {str(e)}")
+            raise
         logging.info(f"Logging progress: {status} for error in {test_file}")
         commit_sha = self.get_commit_sha()
         timestamp = self.get_current_timestamp()
@@ -619,6 +635,13 @@ class PytestErrorFixer:
             logging.info(stderr)
 
         logging.info("Error fixing and verification completed.")
+        
+        # Switch back to master branch after completion
+        try:
+            subprocess.run(["git", "checkout", "master"], cwd=self.project_dir, check=True)
+            logging.info("Switched back to master branch.")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Failed to switch back to master branch: {str(e)}")
         
         print("DEBUG: Main process completed. Check the logs for detailed information.")
 
