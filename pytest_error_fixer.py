@@ -104,6 +104,13 @@ class PytestErrorFixer:
                 "src/data/arc_dataset.py",
                 "src/utils/experiment_tracker.py",
                 "src/utils/results_collector.py"
+            ],
+            "test_integration_experiment.py": [
+                "gpt2_arc/src/data/arc_dataset.py",
+                "gpt2_arc/src/models/gpt2.py",
+                "gpt2_arc/src/training/trainer.py",
+                "gpt2_arc/src/config.py",
+                "gpt2_arc/src/utils/results_collector.py"
             ]
         }
 
