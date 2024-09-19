@@ -814,11 +814,15 @@ class PytestErrorFixer:
 
 
 async def main():
-    fixer = PytestErrorFixer(args.project_dir, ...)
-    # ... (rest of your main logic) ...
+    fixer = PytestErrorFixer(
+        args.project_dir,
+        initial_temperature=args.initial_temperature,
+        temperature_increment=args.temperature_increment,
+        max_retries=args.max_retries
+    )
+    await fixer.main()
 
 if __name__ == "__main__":
-    asyncio.run(main())
     import argparse
     parser = argparse.ArgumentParser(description="Run PytestErrorFixer")
     parser.add_argument("project_dir", help="Path to the project directory")
@@ -830,13 +834,7 @@ if __name__ == "__main__":
 
     print(f"DEBUG: Starting PytestErrorFixer with arguments: {args}")
 
-    fixer = PytestErrorFixer(
-        args.project_dir,
-        initial_temperature=args.initial_temperature,
-        temperature_increment=args.temperature_increment,
-        max_retries=args.max_retries
-    )
-    fixer.main()
+    asyncio.run(main())
     async def summarize_test_output(self, stdout: str, stderr: str) -> str:
         print(f"DEBUG: Entering summarize_test_output")
         print(f"DEBUG: stdout length: {len(stdout)}, stderr length: {len(stderr)}")
