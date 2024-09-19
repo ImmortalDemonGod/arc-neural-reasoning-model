@@ -95,7 +95,18 @@ class PytestErrorFixer:
                 "gpt2_arc/src/utils/results_collector.py",
                 "gpt2_arc/src/config.py",
                 "gpt2_arc/src/utils/experiment_tracker.py"
-            ]
+            ],
+            "test_pytest_error_fixer.py": [
+                "pytest_error_fixer.py",
+                "gpt2_arc/src/config.py",
+                "gpt2_arc/src/utils/experiment_tracker.py",
+                "gpt2_arc/src/utils/results_collector.py",
+                "gpt2_arc/src/data/arc_dataset.py",
+                "gpt2_arc/src/models/gpt2.py",
+                "gpt2_arc/src/training/train.py",
+                "gpt2_arc/src/training/trainer.py",
+                "gpt2_arc/src/evaluate.py",
+                "gpt2_arc/benchmark.py"
         }
 
     def init_progress_log(self):
