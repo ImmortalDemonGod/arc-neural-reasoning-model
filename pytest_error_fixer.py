@@ -1,3 +1,4 @@
+import asyncio
 import subprocess
 import logging
 import re
@@ -36,6 +37,7 @@ class PytestErrorFixer:
         self.error_log = "error_log.json"
         self.branch_name = "pytest-aider-automation"
         self.ensure_branch()
+        self.raptor_wrapper = Raptor_RAG_Wrapper()
         self.init_progress_log()
 
         # Define a mapping of test files to their relevant files
@@ -161,7 +163,25 @@ class PytestErrorFixer:
             json.dump(log, f, indent=4)
 
         print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
-    def get_git_status(self) -> str:
+    async def summarize_test_output(self, stdout: str, stderr: str) -> str:
+        print(f"DEBUG: Entering summarize_test_output")
+        print(f"DEBUG: stdout length: {len(stdout)}, stderr length: {len(stderr)}")
+        
+        full_output = stdout + "\n" + stderr
+        print(f"DEBUG: Combined output length: {len(full_output)}")
+        
+        try:
+            print("DEBUG: Attempting to summarize with RAPTOR")
+            summary = await asyncio.to_thread(
+                self.raptor_wrapper.answer_question,
+                f"Summarize the following pytest output, focusing on error messages, line numbers, and brief context. Limit the summary to about 200 words:\n\n{full_output}"
+            )
+            print(f"DEBUG: RAPTOR summary length: {len(summary)}")
+            return f"Test Output Summary:\n{summary}"
+        except Exception as e:
+            print(f"DEBUG: Error in summarize_test_output: {str(e)}")
+            logging.error(f"Error summarizing test output: {str(e)}")
+            return f"Test Output Summary: Error occurred while summarizing - {str(e)}"
         """Retrieve the current git status."""
         try:
             status = subprocess.check_output(["git", "status", "--porcelain"], cwd=self.project_dir).decode('utf-8')
@@ -351,7 +371,7 @@ class PytestErrorFixer:
             print(f"DEBUG: Extracted file paths for {file_path}: {error_file_paths}")
         return error_file_paths
 
-    def fix_error(self, error: Dict[str, Any], file_path: str) -> Tuple[bool, str]:
+    async def fix_error(self, error: Dict[str, Any], file_path: str) -> bool:
         print(f"DEBUG: Starting fix_error for {error['function']} in {file_path}")
         subprocess.run(["git", "stash"], cwd=self.project_dir, check=True)
         branch_name = f"fix-{error['function']}-{uuid.uuid4().hex[:8]}"
@@ -511,7 +531,17 @@ class PytestErrorFixer:
         return json.dumps(changes, indent=2)
 
 
-    def revert_changes(self):
+    def truncate_to_token_limit(self, text: str, max_tokens: int = 9500) -> str:
+        print(f"DEBUG: Entering truncate_to_token_limit")
+        print(f"DEBUG: Input text length: {len(text)}")
+        # Simple approximation: assume 1 token ≈ 4 characters
+        max_chars = max_tokens * 4
+        if len(text) > max_chars:
+            truncated = text[:max_chars] + "..."
+            print(f"DEBUG: Text truncated. New length: {len(truncated)}")
+            return truncated
+        print("DEBUG: Text not truncated")
+        return text
         try:
             subprocess.run(["git", "reset", "--hard"], cwd=self.project_dir, check=True)
             subprocess.run(["git", "clean", "-fd"], cwd=self.project_dir, check=True)
@@ -521,7 +551,51 @@ class PytestErrorFixer:
             logging.error("Failed to revert changes. Manual intervention may be required.")
 
 
-    def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, changes: str, attempt: int) -> str:
+    async def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, changes: str, attempt: int) -> str:
+        print(f"DEBUG: Entering construct_prompt for attempt {attempt}")
+        
+        error_prompt = (
+            f"Fix pytest error in {error['test_file']} - {error['function']}:\n"
+            f"Type: {error['error_type']}\n"
+            f"Details: {error['error_details'][:200]}...\n"
+            f"Code: {error['code_snippet'][:200]}...\n"
+        )
+        print(f"DEBUG: Error prompt length: {len(error_prompt)}")
+
+        analysis_prompt = (
+            "Analyze and fix using:\n"
+            "1. Analysis: Understand error context.\n"
+            "2. Framework: Develop fix approach.\n"
+            "3. Plan: Outline specific fix.\n"
+            "4. Execution: Implement and verify.\n"
+        )
+        print(f"DEBUG: Analysis prompt length: {len(analysis_prompt)}")
+
+        test_summary = await self.summarize_test_output(stdout, stderr)
+        print(f"DEBUG: Test summary length: {len(test_summary)}")
+
+        relevant_files_summary = await self.summarize_relevant_files(error['test_file'])
+        print(f"DEBUG: Relevant files summary length: {len(relevant_files_summary)}")
+
+        previous_attempt_prompt = ""
+        if attempt > 0:
+            previous_attempt_prompt = (
+                f"\nAttempt {attempt + 1}. Previous changes:\n{changes[:200]}...\n"
+                "Analyze previous failure and suggest new approach."
+            )
+        print(f"DEBUG: Previous attempt prompt length: {len(previous_attempt_prompt)}")
+
+        full_prompt = (
+            f"{error_prompt}\n{analysis_prompt}\n"
+            f"Relevant Files Summary:\n{relevant_files_summary}\n"
+            f"Test Summary:\n{test_summary}\n"
+            f"{previous_attempt_prompt}"
+        )
+        print(f"DEBUG: Full prompt length before truncation: {len(full_prompt)}")
+
+        truncated_prompt = self.truncate_to_token_limit(full_prompt)
+        print(f"DEBUG: Truncated prompt length: {len(truncated_prompt)}")
+        return truncated_prompt
         error_prompt = (
             f"Fix the following pytest error:\n\n"
             f"Test File: {error['test_file']}\n"
@@ -738,7 +812,12 @@ class PytestErrorFixer:
 
 
 
+async def main():
+    fixer = PytestErrorFixer(args.project_dir, ...)
+    # ... (rest of your main logic) ...
+
 if __name__ == "__main__":
+    asyncio.run(main())
     import argparse
     parser = argparse.ArgumentParser(description="Run PytestErrorFixer")
     parser.add_argument("project_dir", help="Path to the project directory")
