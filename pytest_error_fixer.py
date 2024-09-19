@@ -159,6 +159,7 @@ class PytestErrorFixer:
             json.dump(log, f, indent=4)
 
         print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
+    def get_git_status(self) -> str:
         """Retrieve the current git status."""
         try:
             status = subprocess.check_output(["git", "status", "--porcelain"], cwd=self.project_dir).decode('utf-8')
