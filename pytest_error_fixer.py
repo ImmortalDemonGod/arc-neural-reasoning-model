@@ -653,10 +653,16 @@ class PytestErrorFixer:
         for file_path, error_list in all_errors.items():
             for error in error_list:
                 logging.info(f"Processing error: {error} in {file_path}")
-                if self.fix_error(error, file_path):
-                    fixed_errors.append(f"{file_path} - {error['function']}")
+                if args.debug_single_error:
+                    if self.debug_fix_single_error(error, file_path):
+                        fixed_errors.append(f"{file_path} - {error['function']}")
+                    else:
+                        failed_errors.append(f"{file_path} - {error['function']}")
                 else:
-                    failed_errors.append(f"{file_path} - {error['function']}")
+                    if self.fix_error(error, file_path):
+                        fixed_errors.append(f"{file_path} - {error['function']}")
+                    else:
+                        failed_errors.append(f"{file_path} - {error['function']}")
 
         logging.info("Error fixing completed.")
 
@@ -699,6 +705,7 @@ if __name__ == "__main__":
     parser.add_argument("--initial-temperature", type=float, default=0.4, help="Initial temperature setting for the AI model (default: 0.4)")
     parser.add_argument("--temperature-increment", type=float, default=0.1, help="Temperature increment for each retry (default: 0.1)")
     parser.add_argument("--max-retries", type=int, default=3, help="Maximum number of fix attempts per error (default: 3)")
+    parser.add_argument("--debug-single-error", action="store_true", help="Use debug_fix_single_error instead of fix_error")
     args = parser.parse_args()
 
     print(f"DEBUG: Starting PytestErrorFixer with arguments: {args}")
