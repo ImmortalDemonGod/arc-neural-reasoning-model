@@ -17,7 +17,6 @@ class ResultsCollector:
 
     def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
         """Update training metrics for the current epoch."""
-        # Removed context usage
         print(f"DEBUG: Updating training metrics for epoch {epoch} - self.results['train'] is of type {type(self.results['train'])}")
         self.results['train'][epoch] = metrics
 
@@ -25,9 +24,9 @@ class ResultsCollector:
         # Implementation for getting environment info
         pass
 
-    def _log_results_type(self, context: str):
+    def _log_results_type(self):
         """Log the type of self.results['train'] for debugging."""
-        print(f"DEBUG: {context} - self.results['train'] is of type {type(self.results['train'])}")
+        print(f"DEBUG: self.results['train'] is of type {type(self.results['train'])}")
 
     def update_validation_metrics(self, epoch: int, metrics: Dict[str, float]):
         """Update validation metrics for the current epoch."""
