@@ -1,7 +1,7 @@
 import uuid
 import time
-from typing import Dict
 from dataclasses import asdict
+from typing import Dict
 
 class ResultsCollector:
     def __init__(self, config):
@@ -10,70 +10,37 @@ class ResultsCollector:
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         self.config = asdict(config)
         self.results = {
-            "train": dict(),
-            "validation": dict(),
-            "test": dict()
+            "train": {},
+            "validation": {},
+            "test": {}
         }
-        print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
-        # Add a check to ensure it's a dict
-        if not isinstance(self.results["train"], dict):
-            raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
 
     def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
-        """Update training metrics for a given epoch."""
-        print(f"DEBUG: Before updating, self.results['train'] is of type {type(self.results['train'])}")
-        if not isinstance(self.results["train"], dict):
-            print(f"DEBUG: self.results['train'] is of type {type(self.results['train'])} before setdefault")
-            raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
-        self.results["train"].setdefault(epoch, {})
-        print(f"DEBUG: After updating, self.results['train'] is of type {type(self.results['train'])}")
+        """Update training metrics for the current epoch."""
+        # Removed context usage
+        print(f"DEBUG: Updating training metrics for epoch {epoch} - self.results['train'] is of type {type(self.results['train'])}")
+        self.results['train'][epoch] = metrics
 
-    def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
-        """Update training metrics for a given epoch."""
-        print(f"DEBUG: Before updating, self.results['train'] is of type {type(self.results['train'])}")
-        if not isinstance(self.results["train"], dict):
-            print(f"DEBUG: self.results['train'] is of type {type(self.results['train'])} before setdefault")
-            raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
-        self.results["train"].setdefault(epoch, {})
-        print(f"DEBUG: After updating, self.results['train'] is of type {type(self.results['train'])}")
+    def _get_environment_info(self) -> Dict[str, str]:
+        # Implementation for getting environment info
+        pass
 
-    def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
-        """Update training metrics for a given epoch."""
-        print(f"DEBUG: Before updating, self.results['train'] is of type {type(self.results['train'])}")
-        if not isinstance(self.results["train"], dict):
-            print(f"DEBUG: self.results['train'] is of type {type(self.results['train'])} before setdefault")
-            raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
-        self.results["train"].setdefault(epoch, {})
-        print(f"DEBUG: After updating, self.results['train'] is of type {type(self.results['train'])}")
+    def _log_results_type(self, context: str):
+        """Log the type of self.results['train'] for debugging."""
+        print(f"DEBUG: {context} - self.results['train'] is of type {type(self.results['train'])}")
 
-    def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
-        """Update training metrics for a given epoch."""
-        print(f"DEBUG: Before updating, self.results['train'] is of type {type(self.results['train'])}")
-        if not isinstance(self.results["train"], dict):
-            print(f"DEBUG: self.results['train'] is of type {type(self.results['train'])} before setdefault")
-            raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
-        self.results["train"].setdefault(epoch, {})
-        print(f"DEBUG: After updating, self.results['train'] is of type {type(self.results['train'])}")
+    def update_validation_metrics(self, epoch: int, metrics: Dict[str, float]):
+        """Update validation metrics for the current epoch."""
+        self.results['validation'][epoch] = metrics
 
-    def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
-        """Update training metrics for a given epoch."""
-        print(f"DEBUG: Before updating, self.results['train'] is of type {type(self.results['train'])}")
-        if not isinstance(self.results["train"], dict):
-            raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
-        self.results["train"].setdefault(epoch, {})
-        print(f"DEBUG: After updating, self.results['train'] is of type {type(self.results['train'])}")
+    def _ensure_directory_exists(self, directory: str):
+        # Implementation for ensuring directory exists
+        pass
 
-    def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
-        """Update training metrics for a given epoch."""
-        print(f"DEBUG: Before updating, self.results['train'] is of type {type(self.results['train'])}")
-        if not isinstance(self.results["train"], dict):
-            raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
-        self.results["train"].setdefault(epoch, {})
-        print(f"DEBUG: After updating, self.results['train'] is of type {type(self.results['train'])}")
+    def _make_serializable(self, obj):
+        # Implementation for making an object serializable
+        pass
 
-    def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
-        """Update training metrics for a given epoch."""
-        if not isinstance(self.results["train"], dict):
-            print(f"DEBUG: self.results['train'] is of type {type(self.results['train'])} before setdefault")
-            raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
-        self.results["train"].setdefault(epoch, {})
+    def _serialize_config(self, config):
+        # Implementation for serializing config
+        pass
