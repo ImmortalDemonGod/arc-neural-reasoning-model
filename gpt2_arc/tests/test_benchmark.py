@@ -12,7 +12,9 @@ from src.models.gpt2 import GPT2ARC
 
 @pytest.fixture
 def mock_model():
-    return MagicMock(spec=GPT2ARC)
+    model = MagicMock(spec=GPT2ARC)
+    model.forward = MagicMock()  # Ensure forward is a mock
+    return model
 
 @pytest.fixture
 def mock_dataset():
@@ -211,13 +213,12 @@ def test_benchmark_model_model_error(mock_model, mock_dataset, mock_dataloader):
     mock_model.forward = MagicMock(side_effect=RuntimeError("Model execution failed"))
     
     with patch('gpt2_arc.benchmark.DataLoader', return_value=mock_dataloader):
-        with patch.object(mock_model, 'forward', side_effect=RuntimeError("Model execution failed")):
-            with pytest.raises(RuntimeError, match="Model execution failed"):
-                print("DEBUG: Invoking benchmark_model")
-                benchmark_model(mock_model, mock_dataset, device_type='cpu')
-            # Ensure the forward method is called
-            assert mock_model.forward.call_count > 0, "DEBUG: forward method was not called"
-            print(f"DEBUG: forward method call count: {mock_model.forward.call_count}")
+        with pytest.raises(RuntimeError, match="Model execution failed"):
+            print("DEBUG: Invoking benchmark_model")
+            benchmark_model(mock_model, mock_dataset, device_type='cpu')
+        # Ensure the forward method is called
+        assert mock_model.forward.call_count > 0, "DEBUG: forward method was not called"
+        print(f"DEBUG: forward method call count: {mock_model.forward.call_count}")
 
 #skip
 @pytest.mark.skip(reason="I dont want to crash my computer")
