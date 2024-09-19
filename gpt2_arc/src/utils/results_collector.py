@@ -55,7 +55,7 @@ class ResultsCollector:
     def update_val_metrics(self, epoch: int, metrics: Dict[str, float]):
         """Update validation metrics for a specific epoch."""
         if "validation" not in self.results:
-            self.results["validation"] = []
+            self.results["validation"] = {}
         self.results["validation"][epoch] = metrics
 
     def set_test_results(self, metrics: Dict[str, float]):

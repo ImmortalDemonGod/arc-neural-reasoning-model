@@ -31,7 +31,6 @@ class ARCTrainer(pl.LightningModule):
         self.best_val_loss = float('inf')
         self.best_epoch = 0
         self.results_collector = ResultsCollector(config)
-        self.results_collector.results["train"] = []  # Initialize train results as a list
 
     def training_step(self, batch, batch_idx):
         logger.debug(f"Training step - Batch type: {type(batch)}, length: {len(batch)}")
@@ -54,7 +53,8 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(inputs)
         loss = self.compute_loss(outputs, labels)
         
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        if hasattr(self, 'log'):
+            self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.results_collector.update_train_metrics(self.current_epoch, {"loss": loss.item()})
         
         return loss
@@ -86,7 +86,8 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(inputs)
         loss = self.compute_loss(outputs, labels)
         
-        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        if hasattr(self, 'log'):
+            self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.logged_metrics["val_loss"] = loss.item()
         self.results_collector.update_val_metrics(self.current_epoch, {"loss": loss.item()})
         
@@ -158,7 +159,8 @@ class ARCTrainer(pl.LightningModule):
         }
 
         # Return metrics
-        self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        if hasattr(self, 'log'):
+            self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.log("test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.log("test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
