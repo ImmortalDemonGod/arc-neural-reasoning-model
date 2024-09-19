@@ -1,4 +1,5 @@
 import asyncio
+import asyncio
 import subprocess
 import logging
 import re
@@ -729,7 +730,7 @@ class PytestErrorFixer:
             print(f"DEBUG: Failed to fix: {file_path} - {error['function']}")
             return False
 
-    def main(self):
+    async def main(self):
         logging.info("Starting main process...")
         # Load existing errors from the log
         all_errors = self.load_errors()
@@ -764,9 +765,9 @@ class PytestErrorFixer:
                 logging.info(f"Processing error: {error} in {file_path}")
                 
                 if args.debug_single_error:
-                    branch, changes, stdout, stderr = self.debug_fix_single_error(error, file_path)
+                    branch, changes, stdout, stderr = await self.debug_fix_single_error(error, file_path)
                 else:
-                    branch, changes, stdout, stderr = self.fix_error(error, file_path)
+                    branch, changes, stdout, stderr = await self.fix_error(error, file_path)
                 
                 fix_attempts.append({
                     "file_path": file_path,
@@ -806,7 +807,7 @@ class PytestErrorFixer:
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to switch back to master branch: {str(e)}")
         
-        print("DEBUG: Main process completed. Check the logs for detailed information.")
+        print("DEBUG: Main process completed. Check the logs for detaile
 
 
 
@@ -836,3 +837,33 @@ if __name__ == "__main__":
         max_retries=args.max_retries
     )
     fixer.main()
+    async def summarize_test_output(self, stdout: str, stderr: str) -> str:
+        print(f"DEBUG: Entering summarize_test_output")
+        print(f"DEBUG: stdout length: {len(stdout)}, stderr length: {len(stderr)}")
+        
+        full_output = stdout + "\n" + stderr
+        print(f"DEBUG: Combined output length: {len(full_output)}")
+        
+        try:
+            print("DEBUG: Attempting to summarize with RAPTOR")
+            summary = await asyncio.to_thread(
+                self.raptor_wrapper.answer_question,
+                f"Summarize the following pytest output, focusing on error messages, line numbers, and brief context. Limit the summary to about 200 words:\n\n{full_output}"
+            )
+            print(f"DEBUG: RAPTOR summary length: {len(summary)}")
+            return f"Test Output Summary:\n{summary}"
+        except Exception as e:
+            print(f"DEBUG: Error in summarize_test_output: {str(e)}")
+            logging.error(f"Error summarizing test output: {str(e)}")
+            return f"Test Output Summary: Error occurred while summarizing - {str(e)}"
+    def truncate_to_token_limit(self, text: str, max_tokens: int = 9500) -> str:
+        print(f"DEBUG: Entering truncate_to_token_limit")
+        print(f"DEBUG: Input text length: {len(text)}")
+        # Simple approximation: assume 1 token ≈ 4 characters
+        max_chars = max_tokens * 4
+        if len(text) > max_chars:
+            truncated = text[:max_chars] + "..."
+            print(f"DEBUG: Text truncated. New length: {len(truncated)}")
+            return truncated
+        print("DEBUG: Text not truncated")
+        return text
