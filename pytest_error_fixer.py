@@ -8,7 +8,7 @@ import uuid
 import os
 import logging
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from aider.coders import Coder
 from aider.models import Model
 from aider.io import InputOutput
