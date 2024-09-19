@@ -135,28 +135,6 @@ class PytestErrorFixer:
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to switch to branch {self.branch_name}: {str(e)}")
             raise
-        logging.info(f"Logging progress: {status} for error in {test_file}")
-        commit_sha = self.get_commit_sha()
-        timestamp = self.get_current_timestamp()
-
-        log_entry = {
-            "error": error,
-            "file": test_file,
-            "status": status,
-            "commit_sha": commit_sha,
-            "timestamp": timestamp,
-            "files_used": files_used,
-            "changes": changes,
-            "temperature": temperature
-        }
-
-        with open(self.progress_log, 'r+') as f:
-            log = json.load(f)
-            log.append(log_entry)
-            f.seek(0)
-            json.dump(log, f, indent=4)
-
-        print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
 
     def get_git_status(self) -> str:
         """Retrieve the current git status."""
