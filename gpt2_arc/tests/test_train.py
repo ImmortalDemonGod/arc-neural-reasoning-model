@@ -184,7 +184,7 @@ def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger"), patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
     ), patch("torch.utils.data.DataLoader") as mock_dataloader:
-        # Directly return a mock DataLoader instance
+        # Prevent recursion by returning a mock DataLoader instance
         mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
 
         # Set up the ARCTrainer mock instance
