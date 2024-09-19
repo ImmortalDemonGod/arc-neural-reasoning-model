@@ -171,6 +171,12 @@ class ARCTrainer(pl.LightningModule):
             'task_ids': task_ids,
         }
 
+        # Log task-specific metrics
+        for task_id in task_ids:
+            self.log(f"{task_id}_test_loss", metrics['test_loss'], on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{task_id}_test_accuracy", metrics['test_accuracy'], on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{task_id}_test_diff_accuracy", metrics['test_diff_accuracy'], on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
         self.test_results.append(result)
         return result
         
