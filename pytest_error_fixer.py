@@ -108,6 +108,7 @@ class PytestErrorFixer:
                 "gpt2_arc/src/evaluate.py",
                 "gpt2_arc/benchmark.py"
             ]
+        }
 
     def init_progress_log(self):
         # Initialize the progress log file if it doesn't exist
