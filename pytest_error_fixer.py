@@ -377,19 +377,19 @@ class PytestErrorFixer:
 
         # Calculate the total number of characters in all relevant file paths
         total_chars = 0
-for path in all_relevant_files:
-    try:
-        with open(path, 'r') as file:
-            content = file.read()
-            file_chars = len(content)
-            total_chars += file_chars
-            print(f"DEBUG: Characters in {path}: {file_chars}")
-    except FileNotFoundError:
-        logging.warning(f"File not found: {path}")
-    except Exception as e:
-        logging.error(f"Error reading file {path}: {str(e)}")
-        print(f"DEBUG: Total characters in relevant file paths: {total_chars}")
+        for path in all_relevant_files:
+            try:
+                with open(path, 'r') as file:
+                    content = file.read()
+                    file_chars = len(content)
+                    total_chars += file_chars
+                    print(f"DEBUG: Characters in {path}: {file_chars}")
+            except FileNotFoundError:
+                logging.warning(f"File not found: {path}")
+            except Exception as e:
+                logging.error(f"Error reading file {path}: {str(e)}")
 
+        print(f"DEBUG: Total characters in relevant file paths: {total_chars}")
         print(f"DEBUG: All relevant files before logging: {all_relevant_files}")
 
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
