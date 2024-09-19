@@ -148,7 +148,8 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
         "gpt2_arc.src.training.train.ModelCheckpoint"
     ), patch("torch.utils.data.DataLoader") as mock_dataloader:
         # Directly return a mock DataLoader instance
-        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+        from torch.utils.data import DataLoader
+        mock_dataloader.return_value = MagicMock(spec=DataLoader)
 
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value

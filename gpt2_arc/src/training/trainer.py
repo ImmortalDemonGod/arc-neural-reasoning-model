@@ -59,7 +59,7 @@ class ARCTrainer(pl.LightningModule):
         
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, dataloader_idx=0):
         logger.debug(f"Validation step - Batch type: {type(batch)}, length: {len(batch)}")
         
         if isinstance(batch, (list, tuple)):
