@@ -351,9 +351,11 @@ class PytestErrorFixer:
             print(f"DEBUG: Extracted file paths for {file_path}: {error_file_paths}")
         return error_file_paths
 
-    def fix_error(self, error: Dict[str, Any], file_path: str) -> bool:
+    def fix_error(self, error: Dict[str, Any], file_path: str) -> Tuple[bool, str]:
+        print(f"DEBUG: Starting fix_error for {error['function']} in {file_path}")
         subprocess.run(["git", "stash"], cwd=self.project_dir, check=True)
         branch_name = f"fix-{error['function']}-{uuid.uuid4().hex[:8]}"
+        print(f"DEBUG: Creating branch: {branch_name}")
         subprocess.run(["git", "checkout", "-b", branch_name], cwd=self.project_dir, check=True)
         logging.info(f"Attempting to fix error in {file_path}: {error['function']}")
 
@@ -448,7 +450,15 @@ class PytestErrorFixer:
                     subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
                     subprocess.run(["git", "commit", "-m", f"Fix: {error['function']} in {file_path}"], cwd=self.project_dir, check=True)
                     self.log_progress("fixed", error, file_path, all_relevant_files, changes, temperature)
-                    return True
+                    print(f"DEBUG: Potential fix found for {error['function']}")
+                    logging.info(f"Potential fix found: {file_path} - {error['function']} on attempt {attempt + 1}")
+                    subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
+                    commit_message = f"Potential fix: {error['function']} in {file_path}"
+                    print(f"DEBUG: Committing with message: {commit_message}")
+                    subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
+                    self.log_progress("potential_fix", error, file_path, all_relevant_files, changes, temperature)
+                    print(f"DEBUG: Returning True, {branch_name}")
+                    return True, branch_name
                 else:
                     logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
                     self.log_progress("failed", error, file_path, all_relevant_files, changes, temperature)
@@ -468,7 +478,10 @@ class PytestErrorFixer:
                 else:
                     logging.warning(f"Branch {branch_name} not found. Skipping deletion.")
         logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
-        return False
+        print(f"DEBUG: Switching back to {self.branch_name}")
+        subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
+        print(f"DEBUG: Returning False, {branch_name}")
+        return False, branch_name
 
     def parse_aider_response(self, response: str) -> str:
         """Parse the Aider response to extract search/replace statements."""
@@ -669,34 +682,48 @@ class PytestErrorFixer:
             all_errors = self.load_errors()
         logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
 
-        fixed_errors = []
-        failed_errors = []
+        potential_fixes = []
+        failed_attempts = []
+        all_branches = []
 
         for file_path, error_list in all_errors.items():
             for error in error_list:
                 logging.info(f"Processing error: {error} in {file_path}")
+                print(f"DEBUG: Processing error: {error['function']} in {file_path}")
+                logging.info(f"Processing error: {error} in {file_path}")
                 if args.debug_single_error:
-                    if self.debug_fix_single_error(error, file_path):
-                        fixed_errors.append(f"{file_path} - {error['function']}")
-                    else:
-                        failed_errors.append(f"{file_path} - {error['function']}")
+                    success, branch = self.debug_fix_single_error(error, file_path)
                 else:
-                    if self.fix_error(error, file_path):
-                        fixed_errors.append(f"{file_path} - {error['function']}")
-                    else:
-                        failed_errors.append(f"{file_path} - {error['function']}")
+                    success, branch = self.fix_error(error, file_path)
+                
+                print(f"DEBUG: Fix attempt result - success: {success}, branch: {branch}")
+                all_branches.append(branch)
+                if success:
+                    potential_fixes.append(f"{file_path} - {error['function']} (branch: {branch})")
+                else:
+                    failed_attempts.append(f"{file_path} - {error['function']} (branch: {branch})")
 
         logging.info("Error fixing completed.")
 
-        if fixed_errors:
-            logging.info("Fixed errors:")
-            for error in fixed_errors:
-                logging.info(f"- {error}")
+        print("DEBUG: All fix attempts completed")
+        logging.info("Error fixing attempts completed.")
 
-        if failed_errors:
-            logging.warning("Failed to fix errors:")
-            for error in failed_errors:
-                logging.warning(f"- {error}")
+        if potential_fixes:
+            print("DEBUG: Listing potential fixes")
+            logging.info("Potential fixes (requires manual review):")
+            for fix in potential_fixes:
+                logging.info(f"- {fix}")
+
+        if failed_attempts:
+            print("DEBUG: Listing failed attempts")
+            logging.warning("Failed fix attempts:")
+            for attempt in failed_attempts:
+                logging.warning(f"- {attempt}")
+
+        print("DEBUG: Listing all created branches")
+        logging.info("All created branches:")
+        for branch in all_branches:
+            logging.info(f"- {branch}")
 
         logging.info("Re-running full test suite to verify fixes...")
         for test_file in self.discover_test_files():
