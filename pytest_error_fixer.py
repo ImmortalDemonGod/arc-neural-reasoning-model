@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 import json
 import os
+import uuid
 import os
 import logging
 import re
