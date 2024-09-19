@@ -200,8 +200,8 @@ def test_arctrainer_test_step_with_task_ids(trainer):
     result = trainer.test_step(batch, 0)
     
     # Check if the result contains the expected keys
-    assert 'loss' in result
-    assert 'accuracy' in result
+    assert 'test_loss' in result
+    assert 'test_accuracy' in result
     assert 'task_ids' in result
     
     # Check if 'test_loss', 'test_accuracy', 'test_diff_accuracy' are logged
