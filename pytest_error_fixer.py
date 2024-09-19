@@ -540,6 +540,13 @@ for path in all_relevant_files:
             )
 
         full_prompt = f"{error_prompt}\n\n{analysis_prompt}\n\nTest Output:\n{stdout}\n\nTest Error Output:\n{stderr}{previous_attempt_prompt}"
+        # Print character breakdown
+        print(f"DEBUG: Characters in error_prompt: {len(error_prompt)}")
+        print(f"DEBUG: Characters in analysis_prompt: {len(analysis_prompt)}")
+        print(f"DEBUG: Characters in previous_attempt_prompt: {len(previous_attempt_prompt)}")
+        print(f"DEBUG: Characters in stdout: {len(stdout)}")
+        print(f"DEBUG: Characters in stderr: {len(stderr)}")
+        print(f"DEBUG: Total characters in full_prompt: {len(full_prompt)}")
     
         print(f"DEBUG: Constructed prompt for attempt {attempt + 1}:\n{full_prompt[:500]}...")  # Print first 500 characters of prompt
     
