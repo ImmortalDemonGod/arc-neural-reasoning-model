@@ -146,8 +146,10 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
-    ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch("torch.utils.data.DataLoader") as mock_dataloader:
-        mock_dataloader.side_effect = lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})
+    ), patch("torch.utils.data.DataLoader") as mock_dataloader:
+        # Directly return a mock DataLoader instance
+        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
 
@@ -181,8 +183,10 @@ def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger"), patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
-    ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch("torch.utils.data.DataLoader") as mock_dataloader:
-        mock_dataloader.side_effect = lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})
+    ), patch("torch.utils.data.DataLoader") as mock_dataloader:
+        # Directly return a mock DataLoader instance
+        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
 
@@ -252,7 +256,9 @@ def test_batch_size_extremes(mock_args, batch_size):
     ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer"
     ) as mock_trainer, patch("torch.utils.data.DataLoader") as mock_dataloader:
-        mock_dataloader.return_value = MagicMock(num_workers=0)
+        # Directly return a mock DataLoader instance
+        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+
         main(mock_args)
 
         mock_trainer.assert_called_with(
@@ -277,7 +283,9 @@ def test_learning_rate_extremes(mock_args, learning_rate):
     ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer"
     ), patch("torch.utils.data.DataLoader") as mock_dataloader:
-        mock_dataloader.return_value = MagicMock(num_workers=0)
+        # Directly return a mock DataLoader instance
+        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
 
@@ -361,7 +369,9 @@ def test_valid_batch_sizes(mock_args, batch_size):
         "test_accuracy": 0.95,
         "config": {"model": {}, "training": {}}
     }), patch("torch.utils.data.DataLoader") as mock_dataloader:
-        mock_dataloader.return_value = MagicMock(num_workers=0)
+        # Directly return a mock DataLoader instance
+        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+
         main(mock_args)  # Should not raise an exception
 
 
@@ -383,7 +393,9 @@ def test_valid_learning_rates(mock_args, learning_rate):
     ) as mock_trainer, patch(
         "torch.utils.data.DataLoader"
     ) as mock_dataloader:
-        mock_dataloader.side_effect = lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})
+        # Directly return a mock DataLoader instance
+        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+
         try:
             # Set up the ARCTrainer mock instance
             mock_trainer_instance = mock_ARCTrainer.return_value
@@ -423,8 +435,9 @@ def test_end_to_end_training(mock_args, tmp_path):
          patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
          patch("gpt2_arc.src.training.train.ModelCheckpoint") as mock_checkpoint, \
          patch("torch.utils.data.DataLoader") as mock_dataloader:
-        mock_dataloader.return_value = MagicMock(num_workers=0)
-        
+        # Directly return a mock DataLoader instance
+        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
 
@@ -458,7 +471,8 @@ def test_tensorboard_logging(mock_args, tmp_path):
          patch("gpt2_arc.src.training.train.pl.Trainer"), \
          patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, \
          patch("torch.utils.data.DataLoader") as mock_dataloader:
-        mock_dataloader.side_effect = lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})
+        # Directly return a mock DataLoader instance
+        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
 
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
@@ -477,7 +491,6 @@ def test_tensorboard_logging(mock_args, tmp_path):
         # Assign the mock ResultsCollector to the trainer instance
         mock_trainer_instance.results_collector = mock_results_collector
 
-        mock_dataloader.side_effect = lambda *args, **kwargs: torch.utils.data.DataLoader(*args, **{**kwargs, "num_workers": 0})
         main(mock_args)
 
         mock_logger.assert_called_once_with("tb_logs", name="arc_model")
