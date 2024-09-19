@@ -95,6 +95,7 @@ class PytestErrorFixer:
                 "gpt2_arc/src/utils/results_collector.py",
                 "gpt2_arc/src/config.py",
                 "gpt2_arc/src/utils/experiment_tracker.py"
+            ]
         }
 
     def init_progress_log(self):
