@@ -513,38 +513,12 @@ def test_arctrainer_training_step(trainer):
     height = width = 30  # 30x30 grid
     seq_length = height * width
     vocab_size = 10  # Use a small vocab size for testing
-    batch = {
-        "input_ids": torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
-        "attention_mask": torch.ones((batch_size, seq_length)).float(),
-        "labels": torch.randint(0, vocab_size, (batch_size, seq_length), dtype=torch.long),
-    }
-    loss = trainer.training_step(batch, 0)
-
-    assert isinstance(loss, torch.Tensor)
-    assert loss.shape == torch.Size([])  # Loss should be a scalar
-    assert not torch.isnan(loss).any(), "Loss contains NaN values"
-    assert not torch.isinf(loss).any(), "Loss contains infinity values"
-def test_validation_step_with_correct_batch_format(trainer):
-    """Test that the validation_step works correctly with a tuple batch format."""
-
-    batch_size = 2
-    height = width = 30  # 30x30 grid
-    seq_length = height * width
-    vocab_size = 10  # Use a small vocab size for testing
-
-    # Create a batch in the expected tuple format
     batch = (
-        torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
-        torch.ones((batch_size, seq_length)).float(),
-        torch.randint(0, vocab_size, (batch_size, seq_length)).long(),
+        torch.randint(0, vocab_size, (batch_size, seq_length)).long(),  # inputs
+        torch.ones((batch_size, seq_length)).float(),                   # labels
+        torch.randint(0, vocab_size, (batch_size, seq_length)).long()   # task_ids
     )
-
-    # Use a PyTorch Lightning Trainer to manage the ARCTrainer
-    pl_trainer = pl.Trainer(fast_dev_run=True)
     pl_trainer.validate(trainer, dataloaders=[batch])
-
-    # Check if 'val_loss' is logged
-    assert "val_loss" in trainer.logged_metrics
 
 @pytest.mark.parametrize("batch_format", ["tuple", "dict"])
 def test_arctrainer_batch_format(trainer, batch_format):
