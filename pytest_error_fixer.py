@@ -351,6 +351,9 @@ class PytestErrorFixer:
         return error_file_paths
 
     def fix_error(self, error: Dict[str, Any], file_path: str) -> bool:
+        subprocess.run(["git", "stash"], cwd=self.project_dir, check=True)
+        branch_name = f"fix-{error['function']}-{uuid.uuid4().hex[:8]}"
+        subprocess.run(["git", "checkout", "-b", branch_name], cwd=self.project_dir, check=True)
         logging.info(f"Attempting to fix error in {file_path}: {error['function']}")
 
         error_dict = {file_path: [error]}
@@ -403,6 +406,8 @@ class PytestErrorFixer:
 
                 if "PASSED" in stdout:
                     logging.info(f"Fixed: {file_path} - {error['function']} on attempt {attempt + 1}")
+                    subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
+                    subprocess.run(["git", "commit", "-m", f"Fix: {error['function']} in {file_path}"], cwd=self.project_dir, check=True)
                     self.log_progress("fixed", error, file_path, all_relevant_files, changes, temperature)
                     return True
                 else:
@@ -416,6 +421,9 @@ class PytestErrorFixer:
                 print(f"DEBUG: Exception occurred: {str(e)}")
                 self.revert_changes()
 
+        finally:
+            subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
+            subprocess.run(["git", "branch", "-D", branch_name], cwd=self.project_dir, check=True)
         logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
         return False
 
@@ -454,6 +462,7 @@ class PytestErrorFixer:
         try:
             subprocess.run(["git", "reset", "--hard"], cwd=self.project_dir, check=True)
             subprocess.run(["git", "clean", "-fd"], cwd=self.project_dir, check=True)
+            subprocess.run(["git", "checkout", "."], cwd=self.project_dir, check=True)
             logging.info("Changes reverted successfully.")
         except subprocess.CalledProcessError:
             logging.error("Failed to revert changes. Manual intervention may be required.")
