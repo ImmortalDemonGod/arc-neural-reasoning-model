@@ -138,6 +138,7 @@ class PytestErrorFixer:
 
     def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float):
         logging.info(f"Logging progress: {status} for error in {test_file}")
+        print(f"DEBUG: Files used in log_progress: {files_used}")
         commit_sha = self.get_commit_sha()
         timestamp = self.get_current_timestamp()
 
@@ -367,7 +368,7 @@ class PytestErrorFixer:
         else:
             print(f"DEBUG: Debug tips file not found: {debug_tips_file}")
 
-        print(f"DEBUG: All relevant files: {all_relevant_files}")
+        print(f"DEBUG: All relevant files before logging: {all_relevant_files}")
 
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
