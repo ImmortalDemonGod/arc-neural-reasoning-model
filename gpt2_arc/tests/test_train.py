@@ -142,11 +142,12 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
         "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
     ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
         "gpt2_arc.src.training.train.ARCTrainer"
+    ), patch(
     ) as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
-    ), patch("torch.utils.data.DataLoader", new_callable=MagicMock) as mock_dataloader:
+    ), patch("torch.utils.data.DataLoader") as mock_dataloader:
         mock_dataloader.return_value = MagicMock()
 
         # Set up the ARCTrainer mock instance
@@ -172,7 +173,9 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
         mock_logger.assert_called_once_with("tb_logs", name="arc_model")
 
 
-def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
+def test_fit_call(mock_args, mock_dataset, model):
+    mock_pl_trainer = MagicMock()
+    mock_pl_trainer.fit = MagicMock()
     print("Entering test_fit_call")
     with patch(
         "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
@@ -518,6 +521,8 @@ def test_arctrainer_training_step(trainer):
         torch.ones((batch_size, seq_length)).float(),                   # labels
         torch.randint(0, vocab_size, (batch_size, seq_length)).long()   # task_ids
     )
+    pl_trainer = MagicMock()
+    pl_trainer.validate = MagicMock()
     pl_trainer.validate(trainer, dataloaders=[batch])
 
 @pytest.mark.parametrize("batch_format", ["tuple", "dict"])
