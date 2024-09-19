@@ -421,8 +421,8 @@ class ARCDataset(Dataset):
                 }
             elif 'train' in item and 'test' in item:
                 processed_item = {
-                    "train": [{"input": np.array(sample[0]), "output": np.array(sample[1])} for sample in item['train']],
-                    "test": [{"input": np.array(sample[0]), "output": np.array(sample[1])} for sample in item['test']]
+                    "train": [{"input": np.array(sample["input"]), "output": np.array(sample["output"])} for sample in item['train']],
+                    "test": [{"input": np.array(sample["input"]), "output": np.array(sample["output"])} for sample in item['test']]
                 }
             elif 'input' in item and 'output' in item:
                 processed_item = {
