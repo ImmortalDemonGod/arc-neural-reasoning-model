@@ -136,7 +136,29 @@ class PytestErrorFixer:
             logging.error(f"Failed to switch to branch {self.branch_name}: {str(e)}")
             raise
 
-    def get_git_status(self) -> str:
+    def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float):
+        logging.info(f"Logging progress: {status} for error in {test_file}")
+        commit_sha = self.get_commit_sha()
+        timestamp = self.get_current_timestamp()
+
+        log_entry = {
+            "error": error,
+            "file": test_file,
+            "status": status,
+            "commit_sha": commit_sha,
+            "timestamp": timestamp,
+            "files_used": files_used,
+            "changes": changes,
+            "temperature": temperature
+        }
+
+        with open(self.progress_log, 'r+') as f:
+            log = json.load(f)
+            log.append(log_entry)
+            f.seek(0)
+            json.dump(log, f, indent=4)
+
+        print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
         """Retrieve the current git status."""
         try:
             status = subprocess.check_output(["git", "status", "--porcelain"], cwd=self.project_dir).decode('utf-8')
