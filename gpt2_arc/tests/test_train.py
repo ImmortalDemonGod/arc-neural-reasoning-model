@@ -146,10 +146,8 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
-    ), patch("torch.utils.data.DataLoader") as mock_dataloader:
-        # Directly return a mock DataLoader instance
-        from torch.utils.data import DataLoader
-        mock_dataloader.return_value = MagicMock(spec=DataLoader)
+    ), patch("torch.utils.data.DataLoader", new_callable=MagicMock) as mock_dataloader:
+        mock_dataloader.return_value = MagicMock()
 
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
@@ -184,9 +182,8 @@ def test_fit_call(mock_args, mock_dataset, model, mock_pl_trainer):
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger"), patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
-    ), patch("torch.utils.data.DataLoader") as mock_dataloader:
-        # Prevent recursion by returning a mock DataLoader instance
-        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+    ), patch("torch.utils.data.DataLoader", new_callable=MagicMock) as mock_dataloader:
+        mock_dataloader.return_value = MagicMock()
 
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
