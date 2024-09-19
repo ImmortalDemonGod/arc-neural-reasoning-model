@@ -470,13 +470,9 @@ class PytestErrorFixer:
                 print(f"DEBUG: Exception occurred: {str(e)}")
                 self.revert_changes()
             finally:
+                print(f"DEBUG: Switching back to {self.branch_name}")
                 subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
-                # Check if the branch exists before attempting to delete it
-                branches = subprocess.check_output(["git", "branch"], cwd=self.project_dir).decode('utf-8')
-                if branch_name in branches:
-                    subprocess.run(["git", "branch", "-D", branch_name], cwd=self.project_dir, check=True)
-                else:
-                    logging.warning(f"Branch {branch_name} not found. Skipping deletion.")
+                print(f"DEBUG: Finished fix attempt on branch {branch_name}")
         logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
         print(f"DEBUG: Switching back to {self.branch_name}")
         subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
