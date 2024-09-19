@@ -420,10 +420,9 @@ class PytestErrorFixer:
                 logging.error(f"Error while applying changes: {str(e)}")
                 print(f"DEBUG: Exception occurred: {str(e)}")
                 self.revert_changes()
-
-        finally:
-            subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
-            subprocess.run(["git", "branch", "-D", branch_name], cwd=self.project_dir, check=True)
+            finally:
+                subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
+                subprocess.run(["git", "branch", "-D", branch_name], cwd=self.project_dir, check=True)
         logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
         return False
 
