@@ -11,7 +11,7 @@ def delete_branch(branch):
 
 def main():
     branches = get_branches()
-    pattern = re.compile(r'^\s*fix-test_.*-[0-9a-f]{8}$')
+    pattern = re.compile(r'^\s*fix-.*-[0-9a-f]{8}$')
     
     for branch in branches:
         if pattern.match(branch.strip()):
