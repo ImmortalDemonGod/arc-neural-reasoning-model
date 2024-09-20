@@ -1050,7 +1050,12 @@ class PytestErrorFixer:
 
 async def main(self):
     print("DEBUG: Starting main process")
-    # Load existing errors from the log
+    # Delete the existing error log if it exists
+    if os.path.exists(self.error_log):
+        os.remove(self.error_log)
+        print(f"DEBUG: Deleted existing error log: {self.error_log}")
+    
+    # Load existing errors from the log (which will now be empty)
     all_errors = self.load_errors()
     if all_errors:
         logging.info("Existing errors found in error log. Skipping test execution.")
@@ -1112,7 +1117,8 @@ async def main(self):
         for fix in failed_fixes:
             report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
     
-    print("DEBUG: Fix report generated in fix_report.txt")
+    # Replace the existing fix report generation with the new method
+    self.generate_fix_report(successful_fixes, failed_fixes)
 
     logging.info("Error fixing and verification completed.")
     
@@ -1168,3 +1174,20 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"ERROR: Failed to read file {file_path}: {str(e)}")
 
+def generate_fix_report(self, successful_fixes, failed_fixes):
+    timestamp = self.get_current_timestamp()
+    report_filename = "fix_report.txt"
+    
+    print(f"DEBUG: Generating fix report with timestamp {timestamp}")
+    
+    with open(report_filename, 'a') as report:
+        report.write(f"\n\n--- Fix Report: {timestamp} ---\n")
+        report.write("Successful Fixes:\n")
+        for fix in successful_fixes:
+            report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+        
+        report.write("\nFailed Fixes:\n")
+        for fix in failed_fixes:
+            report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+    
+    print(f"DEBUG: Fix report appended to {report_filename}")
