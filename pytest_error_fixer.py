@@ -191,6 +191,16 @@ class PytestErrorFixer:
             logging.warning("Failed to get git status. Is this a git repository?")
             return ""
 
+    def get_git_status(self) -> str:
+        """Retrieve the current git status."""
+        try:
+            status = subprocess.check_output(["git", "status", "--porcelain"], cwd=self.project_dir).decode('utf-8')
+            print(f"DEBUG: Git status retrieved: {status[:100]}...")  # Print first 100 characters
+            return status
+        except subprocess.CalledProcessError:
+            logging.warning("Failed to get git status. Is this a git repository?")
+            return ""
+
     def get_commit_sha(self) -> str:
         try:
             for attempt in range(self.max_retries):
@@ -372,7 +382,7 @@ class PytestErrorFixer:
             print(f"DEBUG: Extracted file paths for {file_path}: {error_file_paths}")
         return error_file_paths
 
-    async def fix_error(self, error: Dict[str, Any], file_path: str) -> bool:
+    async def fix_error(self, error: Dict[str, Any], file_path: str) -> Tuple[str, str, str, str]:
         print(f"DEBUG: Starting fix_error for {error['function']} in {file_path}")
         subprocess.run(["git", "stash"], cwd=self.project_dir, check=True)
         branch_name = f"fix-{error['function']}-{uuid.uuid4().hex[:8]}"
@@ -479,7 +489,7 @@ class PytestErrorFixer:
                     subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
                     self.log_progress("potential_fix", error, file_path, all_relevant_files, changes, temperature)
                     print(f"DEBUG: Returning True, {branch_name}")
-                    return True, branch_name
+                    return branch_name, "\n".join(all_changes), stdout, stderr
                 else:
                     logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
                     self.log_progress("failed", error, file_path, all_relevant_files, changes, temperature)
@@ -488,18 +498,18 @@ class PytestErrorFixer:
                 logging.error(f"Error while applying changes: {str(e)}")
                 print(f"DEBUG: Exception occurred: {str(e)}")
 
-            # Commit changes regardless of test result
-            subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
-            commit_message = f"Attempted fix: {error['function']} in {file_path}"
-            print(f"DEBUG: Committing with message: {commit_message}")
-            subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
+        # Commit changes regardless of test result
+        subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
+        commit_message = f"Attempted fix: {error['function']} in {file_path}"
+        print(f"DEBUG: Committing with message: {commit_message}")
+        subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
 
-            print(f"DEBUG: Switching back to {self.branch_name}")
-            subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
-            print(f"DEBUG: Finished fix attempt on branch {branch_name}")
+        print(f"DEBUG: Switching back to {self.branch_name}")
+        subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
+        print(f"DEBUG: Finished fix attempt on branch {branch_name}")
 
-            # Return all necessary information for later evaluation
-            return branch_name, "\n".join(all_changes), stdout, stderr
+        # Return all necessary information for later evaluation
+        return branch_name, "\n".join(all_changes), stdout, stderr
 
     def parse_aider_response(self, response: str) -> str:
         """Parse the Aider response to extract search/replace statements."""
@@ -597,45 +607,6 @@ class PytestErrorFixer:
         truncated_prompt = self.truncate_to_token_limit(full_prompt)
         print(f"DEBUG: Truncated prompt length: {len(truncated_prompt)}")
         return truncated_prompt
-        error_prompt = (
-            f"Fix the following pytest error:\n\n"
-            f"Test File: {error['test_file']}\n"
-            f"Function: {error['function']}\n"
-            f"Error Type: {error['error_type']}\n"
-            f"Error Details: {error['error_details']}\n"
-            f"Code Snippet:\n{error['code_snippet']}\n"
-            f"Captured Output:\n{error.get('captured_output', '')}\n"
-            f"Captured Log:\n{error.get('captured_log', '')}\n"
-        )
-
-        analysis_prompt = (
-            "Please analyze the error using the Analysis, Framework, Plan, Execution System:\n"
-            "1. Analysis: Provide a detailed understanding of the error context.\n"
-            "2. Framework: Develop a framework for addressing the error.\n"
-            "3. Plan: Outline a specific plan to fix the error.\n"
-            "4. Execution: Implement the plan and verify the fix.\n"
-        )
-
-        previous_attempt_prompt = ""
-        if attempt > 0:
-            previous_attempt_prompt = (
-                f"\n\nPrevious fix attempt failed. This is attempt {attempt + 1}.\n"
-                f"Changes made in the previous attempt:\n{changes}\n"
-                "Please analyze why the previous fix didn't work and suggest a different approach. Collect more data if needed with debug statements or add additional relevant files."
-            )
-
-        full_prompt = f"{error_prompt}\n\n{analysis_prompt}\n\nTest Output:\n{stdout}\n\nTest Error Output:\n{stderr}{previous_attempt_prompt}"
-        # Print character breakdown
-        print(f"DEBUG: Characters in error_prompt: {len(error_prompt)}")
-        print(f"DEBUG: Characters in analysis_prompt: {len(analysis_prompt)}")
-        print(f"DEBUG: Characters in previous_attempt_prompt: {len(previous_attempt_prompt)}")
-        print(f"DEBUG: Characters in stdout: {len(stdout)}")
-        print(f"DEBUG: Characters in stderr: {len(stderr)}")
-        print(f"DEBUG: Total characters in full_prompt: {len(full_prompt)}")
-    
-        print(f"DEBUG: Constructed prompt for attempt {attempt + 1}:\n{full_prompt[:500]}...")  # Print first 500 characters of prompt
-    
-        return full_prompt
 
     def debug_fix_single_error(self, error, file_path):
         print(f"DEBUG: Starting debug_fix_single_error for {error['function']} in {file_path}")
@@ -854,8 +825,9 @@ if __name__ == "__main__":
             print(f"DEBUG: Error in summarize_test_output: {str(e)}")
             logging.error(f"Error summarizing test output: {str(e)}")
             return f"Test Output Summary: Error occurred while summarizing - {str(e)}"
-    def truncate_to_token_limit(self, text: str, max_tokens: int = 9500) -> str:
-        print(f"DEBUG: Entering truncate_to_token_limit")
+
+    def trunc_to_token_limit(self, text: str, max_tokens: int = 9500) -> str:
+        print(f"DEBUG: Entering trunc_to_token_limit")
         print(f"DEBUG: Input text length: {len(text)}")
         # Simple approximation: assume 1 token ≈ 4 characters
         max_chars = max_tokens * 4
