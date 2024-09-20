@@ -15,7 +15,7 @@ count_recent_failures() {
 # Check if fix_report.txt exists; if not, run the script to create it
 if [ ! -f fix_report.txt ]; then
     echo "fix_report.txt not found. Generating initial fix report..."
-    python pytest_error_fixer.py --verbose --debug --max-retries 6 "$PROJECT_PATH" >> test.txt 2>&1
+    python pytest_error_fixer.py --verbose --debug --max-retries 1 "$PROJECT_PATH" >> test.txt 2>&1
 fi
 
 # Get the initial failure count
