@@ -6,7 +6,7 @@ from collections import defaultdict
 import json
 import os
 import uuid
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from aider.coders import Coder
 from aider.models import Model
 from aider.io import InputOutput
