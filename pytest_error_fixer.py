@@ -131,7 +131,7 @@ class PytestErrorFixer:
                 if os.path.exists(full_path):
                     with open(full_path, 'r') as file:
                         content = file.read()
-                        self.raptor_wrapper.add_document(file_path, content)
+                        self.raptor_wrapper.add_documents(content)
         print("DEBUG: Initialized Raptor_RAG_Wrapper with relevant files")
 
     def ensure_branch(self):
