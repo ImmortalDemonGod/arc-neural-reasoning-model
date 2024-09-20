@@ -251,41 +251,41 @@ class PytestErrorFixer:
             logging.error(f"Failed to switch to branch {self.branch_name}: {str(e)}")
             raise
 
-def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float):
-    logging.info(f"Logging progress: {status} for error in {test_file}")
-    print(f"DEBUG: Logging progress - status: {status}, test_file: {test_file}")
-    
-    commit_sha = self.get_commit_sha()
-    timestamp = self.get_current_timestamp()
+    def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float):
+        logging.info(f"Logging progress: {status} for error in {test_file}")
+        print(f"DEBUG: Logging progress - status: {status}, test_file: {test_file}")
+        
+        commit_sha = self.get_commit_sha()
+        timestamp = self.get_current_timestamp()
 
-    log_entry = {
-        "error": error,
-        "file": test_file,
-        "status": status,
-        "commit_sha": commit_sha,
-        "timestamp": timestamp,
-        "files_used": files_used,
-        "changes": changes,
-        "temperature": temperature
-    }
+        log_entry = {
+            "error": error,
+            "file": test_file,
+            "status": status,
+            "commit_sha": commit_sha,
+            "timestamp": timestamp,
+            "files_used": files_used,
+            "changes": changes,
+            "temperature": temperature
+        }
 
-    try:
-        with open(self.progress_log, 'r+') as f:
-            try:
-                log = json.load(f)
-            except json.JSONDecodeError:
-                print("DEBUG: Progress log is empty or invalid. Initializing new log.")
-                log = []
-            
-            log.append(log_entry)
-            f.seek(0)
-            json.dump(log, f, indent=4)
-            f.truncate()
-        print(f"DEBUG: Successfully logged progress to {self.progress_log}")
-    except Exception as e:
-        print(f"ERROR: Failed to log progress: {str(e)}")
+        try:
+            with open(self.progress_log, 'r+') as f:
+                try:
+                    log = json.load(f)
+                except json.JSONDecodeError:
+                    print("DEBUG: Progress log is empty or invalid. Initializing new log.")
+                    log = []
+                
+                log.append(log_entry)
+                f.seek(0)
+                json.dump(log, f, indent=4)
+                f.truncate()
+            print(f"DEBUG: Successfully logged progress to {self.progress_log}")
+        except Exception as e:
+            print(f"ERROR: Failed to log progress: {str(e)}")
 
-    print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
+        print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
 
 
     def get_git_status(self) -> str:
@@ -637,11 +637,8 @@ def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files
 
                     # Log the additional AI response
                     self.log_progress("ai_response_additional", error, file_path, all_relevant_files, changes, temperature)
-
-                # Print git diff and file contents before re-running the test
-                self.print_git_diff()
-                for file in all_relevant_files:
-                    self.print_file_contents(file)
+                
+                # Apply the changes
 
                 stdout, stderr = self.run_test(error['test_file'], error['function'])
                 print(f"DEBUG: Test output after fix attempt:\n{stdout[:500]}...")
@@ -975,7 +972,16 @@ def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files
             return truncated
         print("DEBUG: Text not truncated")
         return text
-
+    
+    
+    def display_progress_log(self):
+        print("DEBUG: Displaying contents of progress log")
+        try:
+            with open(self.progress_log, 'r') as f:
+                log = json.load(f)
+                print(json.dumps(log, indent=2))
+        except Exception as e:
+            print(f"ERROR: Failed to read progress log: {str(e)}")
 
 async def main(self):
     print("DEBUG: Starting main process")
@@ -1092,11 +1098,4 @@ if __name__ == "__main__":
                 print(f"DEBUG: Contents of {file_path} (first 500 chars):\n{content[:500]}...")
             except Exception as e:
                 print(f"ERROR: Failed to read file {file_path}: {str(e)}")
-def display_progress_log(self):
-    print("DEBUG: Displaying contents of progress log")
-    try:
-        with open(self.progress_log, 'r') as f:
-            log = json.load(f)
-            print(json.dumps(log, indent=2))
-    except Exception as e:
-        print(f"ERROR: Failed to read progress log: {str(e)}")
+
