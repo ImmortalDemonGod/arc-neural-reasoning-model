@@ -128,13 +128,13 @@ class PytestErrorFixer:
                 "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/experiment_tracker.py"
             ],
             "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_model_evaluation.py": [
-                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/src/models/gpt2.py",
-                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/src/config.py",
-                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/src/training/trainer.py",
-                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/src/utils/helpers.py",
-                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/src/data/arc_dataset.py",
-                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/src/utils/experiment_tracker.py",
-                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/src/utils/results_collector.py"
+                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/models/gpt2.py",
+                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py",
+                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/training/trainer.py",
+                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/helpers.py",
+                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py",
+                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/experiment_tracker.py",
+                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/results_collector.py"
             ],
             "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/test_integration_experiment.py": [
                 "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py",
