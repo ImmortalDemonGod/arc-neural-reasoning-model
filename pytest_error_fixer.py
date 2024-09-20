@@ -48,6 +48,12 @@ class PytestErrorFixer:
                 "gpt2_arc/src/config.py",
                 "gpt2_arc/benchmark.py"
             ],
+            "gpt2_arc/tests/test_benchmark.py": [
+                "gpt2_arc/src/utils/helpers.py",
+                "gpt2_arc/src/models/gpt2.py",
+                "gpt2_arc/src/config.py",
+                "gpt2_arc/benchmark.py"
+            ],
             "gpt2_arc/tests/test_gpt2.py": [
                 "gpt2_arc/src/models/gpt2.py",
                 "gpt2_arc/src/config.py",
@@ -590,6 +596,7 @@ class PytestErrorFixer:
 
         relevant_files_summary = await self.summarize_relevant_files(error['test_file'])
         print(f"DEBUG: Relevant files summary length: {len(relevant_files_summary)}")
+        print(f"DEBUG: Relevant files summary content:\n{relevant_files_summary}")
         print(f"DEBUG: Relevant files summary content:\n{relevant_files_summary}")
 
         previous_attempt_prompt = ""
