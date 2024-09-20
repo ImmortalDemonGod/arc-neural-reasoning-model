@@ -50,11 +50,11 @@ class PytestErrorFixer:
         self.branch_name = "pytest-aider-automation"
         self.ensure_branch()
         self.raptor_wrapper = Raptor_RAG_Wrapper()
-        if args.verbose:
+        if args and args.verbose:
             print(f"DEBUG: Initialized PytestErrorFixer with Raptor_RAG_Wrapper")
         self.init_progress_log()
         
-        if args.verbose:
+        if args and args.verbose:
             print("DEBUG: PytestErrorFixer initialization completed")
 
         # Define the relevant_files_mapping attribute
@@ -151,7 +151,7 @@ class PytestErrorFixer:
         Returns:
         - bool: True if the fix was successful, False otherwise.
         """
-        if args.verbose:
+        if args and args.verbose:
             print(f"DEBUG: Verifying fix on branch {branch_name} for {function} in {test_file}")
         try:
             subprocess.run(["git", "checkout", branch_name], cwd=self.project_dir, check=True)
@@ -162,7 +162,7 @@ class PytestErrorFixer:
             return False
 
         stdout, stderr = self.run_test(test_file, function)
-        if args.verbose:
+        if args and args.verbose:
             print(f"DEBUG: Test output:\n{stdout[:500]}...")  # Print first 500 characters
             print(f"DEBUG: Test error output:\n{stderr[:500]}...")  # Print first 500 characters
 
@@ -996,7 +996,7 @@ class PytestErrorFixer:
             for error in error_list:
                 print(f"DEBUG: Processing error: {error['function']} in {file_path}")
                 
-                if args.debug_single_error:
+                if args and args.debug_single_error:
                     branch, ai_responses, stdout, stderr = await self.debug_fix_single_error(error, file_path)
                 else:
                     branch, ai_responses, stdout, stderr = await self.fix_error(error, file_path)
