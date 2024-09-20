@@ -415,7 +415,7 @@ class PytestErrorFixer:
 
         all_relevant_files = self.get_relevant_files(error['test_file'])
 
-        debug_tips_file = os.path.join(self.project_dir, "debug tips", f"{test_file_name.replace('.py', '.md')}")
+        debug_tips_file = os.path.join(self.project_dir, "debug tips", f"{os.path.basename(error['test_file']).replace('.py', '.md')}")
         if os.path.exists(debug_tips_file):
             all_relevant_files.append(debug_tips_file)
             logging.debug(f"Added debug tips file: {debug_tips_file}")
