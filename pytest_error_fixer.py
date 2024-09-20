@@ -251,41 +251,41 @@ class PytestErrorFixer:
             logging.error(f"Failed to switch to branch {self.branch_name}: {str(e)}")
             raise
 
-    def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float):
-        """
-        Log the progress of fixing an error, including status and changes made.
+def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float):
+    logging.info(f"Logging progress: {status} for error in {test_file}")
+    print(f"DEBUG: Logging progress - status: {status}, test_file: {test_file}")
+    
+    commit_sha = self.get_commit_sha()
+    timestamp = self.get_current_timestamp()
 
-        Parameters:
-        - status (str): The status of the fix attempt (e.g., "fixed", "failed").
-        - error (Dict[str, Any]): The error details.
-        - test_file (str): The path to the test file.
-        - files_used (List[str]): List of files used in the fix attempt.
-        - changes (str): Description of changes made.
-        - temperature (float): The temperature setting used in the attempt.
-        """
-        logging.info(f"Logging progress: {status} for error in {test_file}")
-        print(f"DEBUG: Files used in log_progress: {files_used}")
-        commit_sha = self.get_commit_sha()
-        timestamp = self.get_current_timestamp()
+    log_entry = {
+        "error": error,
+        "file": test_file,
+        "status": status,
+        "commit_sha": commit_sha,
+        "timestamp": timestamp,
+        "files_used": files_used,
+        "changes": changes,
+        "temperature": temperature
+    }
 
-        log_entry = {
-            "error": error,
-            "file": test_file,
-            "status": status,
-            "commit_sha": commit_sha,
-            "timestamp": timestamp,
-            "files_used": files_used,
-            "changes": changes,
-            "temperature": temperature
-        }
-
+    try:
         with open(self.progress_log, 'r+') as f:
-            log = json.load(f)
+            try:
+                log = json.load(f)
+            except json.JSONDecodeError:
+                print("DEBUG: Progress log is empty or invalid. Initializing new log.")
+                log = []
+            
             log.append(log_entry)
             f.seek(0)
             json.dump(log, f, indent=4)
+            f.truncate()
+        print(f"DEBUG: Successfully logged progress to {self.progress_log}")
+    except Exception as e:
+        print(f"ERROR: Failed to log progress: {str(e)}")
 
-        print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
+    print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
 
 
     def get_git_status(self) -> str:
@@ -964,75 +964,78 @@ class PytestErrorFixer:
         return text
 
 
-    async def main(self):
-        """Main process to load errors, attempt fixes, and generate a report."""
-        logging.info("Starting main process...")
-        # Load existing errors from the log
+async def main(self):
+    print("DEBUG: Starting main process")
+    # Load existing errors from the log
+    all_errors = self.load_errors()
+    if all_errors:
+        logging.info("Existing errors found in error log. Skipping test execution.")
+    else:
+        test_files = self.discover_test_files()
+        logging.info(f"Discovered {len(test_files)} test files.")
+
+        for test_file in test_files:
+            logging.info(f"Running test file: {test_file}")
+            stdout, stderr = self.run_test(test_file)
+            errors = self.parse_errors(stdout + stderr, test_file)
+            if errors:
+                logging.info(f"Errors found in {test_file}. Saving to log...")
+                self.save_errors(errors)
+            else:
+                logging.info(f"No errors found in {test_file}")
+
+        # Reload errors after running tests
         all_errors = self.load_errors()
-        if all_errors:
-            logging.info("Existing errors found in error log. Skipping test execution.")
-        else:
-            test_files = self.discover_test_files()
-            logging.info(f"Discovered {len(test_files)} test files.")
+    logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
 
-            for test_file in test_files:
-                logging.info(f"Running test file: {test_file}")
-                stdout, stderr = self.run_test(test_file)
-                errors = self.parse_errors(stdout + stderr, test_file)
-                if errors:
-                    logging.info(f"Errors found in {test_file}. Saving to log...")
-                    self.save_errors(errors)
-                else:
-                    logging.info(f"No errors found in {test_file}")
+    successful_fixes = []
+    failed_fixes = []
 
-            # Reload errors after running tests
-            all_errors = self.load_errors()
-        logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
-
-        successful_fixes = []
-        failed_fixes = []
-
-        for file_path, error_list in all_errors.items():
-            for error in error_list:
-                print(f"DEBUG: Processing error: {error['function']} in {file_path}")
-                
-                if args and args.debug_single_error:
-                    branch, ai_responses, stdout, stderr = await self.debug_fix_single_error(error, file_path)
-                else:
-                    branch, ai_responses, stdout, stderr = await self.fix_error(error, file_path)
-                
-                # Verify the fix
-                if self.verify_fix(branch, error['test_file'], error['function']):
-                    successful_fixes.append((file_path, error['function'], branch))
-                    print(f"DEBUG: Fix successful for {error['function']} in {file_path}")
-                    print(f"DEBUG: Completed processing error: {error['function']} in {file_path}")
-                    print(f"DEBUG: Branch: {branch}, stdout length: {len(stdout)}, stderr length: {len(stderr)}")
-                else:
-                    failed_fixes.append((file_path, error['function'], branch))
-                    print(f"DEBUG: Fix failed for {error['function']} in {file_path}")
-
-        print("DEBUG: Generating fix report")
-        with open("fix_report.txt", "w") as report:
-            report.write("Successful Fixes:\n")
-            for fix in successful_fixes:
-                report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+    for file_path, error_list in all_errors.items():
+        for error in error_list:
+            print(f"DEBUG: Processing error: {error['function']} in {file_path}")
             
-            report.write("\nFailed Fixes:\n")
-            for fix in failed_fixes:
-                report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
-        
-        print("DEBUG: Fix report generated in fix_report.txt")
+            if args and args.debug_single_error:
+                branch, ai_responses, stdout, stderr = await self.debug_fix_single_error(error, file_path)
+            else:
+                branch, ai_responses, stdout, stderr = await self.fix_error(error, file_path)
+            
+            # Verify the fix
+            if self.verify_fix(branch, error['test_file'], error['function']):
+                successful_fixes.append((file_path, error['function'], branch))
+                print(f"DEBUG: Fix successful for {error['function']} in {file_path}")
+                print(f"DEBUG: Completed processing error: {error['function']} in {file_path}")
+                print(f"DEBUG: Branch: {branch}, stdout length: {len(stdout)}, stderr length: {len(stderr)}")
+            else:
+                failed_fixes.append((file_path, error['function'], branch))
+                print(f"DEBUG: Fix failed for {error['function']} in {file_path}")
 
-        logging.info("Error fixing and verification completed.")
+    print("DEBUG: All errors processed")
+    print("DEBUG: Displaying final progress log")
+    self.display_progress_log()
+
+    print("DEBUG: Generating fix report")
+    with open("fix_report.txt", "w") as report:
+        report.write("Successful Fixes:\n")
+        for fix in successful_fixes:
+            report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
         
-        # Switch back to master branch after completion
-        try:
-            subprocess.run(["git", "checkout", "master"], cwd=self.project_dir, check=True)
-            logging.info("Switched back to master branch.")
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Failed to switch back to master branch: {str(e)}")
-        
-        print("DEBUG: Main process completed. Check the logs for details.")
+        report.write("\nFailed Fixes:\n")
+        for fix in failed_fixes:
+            report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+    
+    print("DEBUG: Fix report generated in fix_report.txt")
+
+    logging.info("Error fixing and verification completed.")
+    
+    # Switch back to master branch after completion
+    try:
+        subprocess.run(["git", "checkout", "master"], cwd=self.project_dir, check=True)
+        logging.info("Switched back to master branch.")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to switch back to master branch: {str(e)}")
+    
+    print("DEBUG: Main process completed. Check the logs for details.")
 
 
 async def main():
@@ -1076,3 +1079,11 @@ if __name__ == "__main__":
                 print(f"DEBUG: Contents of {file_path} (first 500 chars):\n{content[:500]}...")
             except Exception as e:
                 print(f"ERROR: Failed to read file {file_path}: {str(e)}")
+def display_progress_log(self):
+    print("DEBUG: Displaying contents of progress log")
+    try:
+        with open(self.progress_log, 'r') as f:
+            log = json.load(f)
+            print(json.dumps(log, indent=2))
+    except Exception as e:
+        print(f"ERROR: Failed to read progress log: {str(e)}")
