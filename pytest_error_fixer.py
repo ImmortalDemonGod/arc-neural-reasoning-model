@@ -527,6 +527,36 @@ class PytestErrorFixer:
         return json.dumps(changes, indent=2)
 
 
+    async def summarize_relevant_files(self, test_file: str) -> str:
+        print(f"DEBUG: Entering summarize_relevant_files for {test_file}")
+        relevant_files = self.relevant_files_mapping.get(test_file, [])
+        print(f"DEBUG: Relevant files: {relevant_files}")
+        summaries = []
+
+        for file in relevant_files:
+            try:
+                full_path = os.path.join(self.project_dir, file)
+                print(f"DEBUG: Attempting to summarize file: {full_path}")
+                if os.path.exists(full_path):
+                    with open(full_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    print(f"DEBUG: File content length: {len(content)}")
+                    summary = await asyncio.to_thread(
+                        self.raptor_wrapper.answer_question,
+                        f"Provide a brief summary of this file's contents and purpose. File: {file}\n\nContent:\n{content}"
+                    )
+                    summaries.append(f"{file}:\n{summary}")
+                else:
+                    print(f"DEBUG: File not found: {full_path}")
+                    summaries.append(f"{file}: File not found")
+            except Exception as e:
+                print(f"DEBUG: Error summarizing {file}: {str(e)}")
+                summaries.append(f"{file}: Error summarizing - {str(e)}")
+
+        full_summary = "\n\n".join(summaries)
+        print(f"DEBUG: Full summary length: {len(full_summary)}")
+        return full_summary
+
     async def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, changes: str, attempt: int) -> str:
         print(f"DEBUG: Entering construct_prompt for attempt {attempt}")
         
