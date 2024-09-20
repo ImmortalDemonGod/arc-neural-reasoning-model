@@ -314,7 +314,7 @@ class PytestErrorFixer:
             "files_used": files_used,
             "changes": changes,
             "temperature": temperature,
-            "ai_response": ai_response[:1000]  # Truncate AI response to first 1000 characters
+            "ai_response": ai_response
         }
 
         try:
