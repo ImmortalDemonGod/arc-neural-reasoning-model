@@ -1084,88 +1084,88 @@ class PytestErrorFixer:
             print(f"ERROR: Failed to read file {file_path}: {str(e)}")
 
 
-async def run_error_fixing_process(self):
-    print("DEBUG: Starting error fixing process")
-    # Delete the existing error log if it exists
-    if os.path.exists(self.error_log):
-        os.remove(self.error_log)
-        print(f"DEBUG: Deleted existing error log: {self.error_log}")
-    
-    # Load existing errors from the log (which will now be empty)
-    all_errors = self.load_errors()
-    if all_errors:
-        logging.info("Existing errors found in error log. Skipping test execution.")
-    else:
-        test_files = self.discover_test_files()
-        logging.info(f"Discovered {len(test_files)} test files.")
-
-        for test_file in test_files:
-            logging.info(f"Running test file: {test_file}")
-            stdout, stderr = self.run_test(test_file)
-            errors = self.parse_errors(stdout + stderr, test_file)
-            if errors:
-                logging.info(f"Errors found in {test_file}. Saving to log...")
-                self.save_errors(errors)
-            else:
-                logging.info(f"No errors found in {test_file}")
-
-        # Reload errors after running tests
-        all_errors = self.load_errors()
-    logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
-
-    successful_fixes = []
-    failed_fixes = []
-
-    print(f"DEBUG: Starting to process {len(all_errors)} files with errors")
-
-    for file_path, error_list in all_errors.items():
-        print(f"DEBUG: Processing file: {file_path} with {len(error_list)} errors")
-        for error in error_list:
-            print(f"DEBUG: Processing error: {error['function']} in {file_path}")
-            
-            if args and args.debug_single_error:
-                branch, ai_responses, stdout, stderr = await self.debug_fix_single_error(error, file_path)
-            else:
-                branch, ai_responses, stdout, stderr = await self.fix_error(error, file_path)
-            
-            # Verify the fix
-            if self.verify_fix(branch, error['test_file'], error['function']):
-                successful_fixes.append((file_path, error['function'], branch))
-                print(f"DEBUG: Fix successful for {error['function']} in {file_path}")
-            else:
-                failed_fixes.append((file_path, error['function'], branch))
-                print(f"DEBUG: Fix failed for {error['function']} in {file_path}")
-            
-            print(f"DEBUG: Finished processing error: {error['function']} in {file_path}")
-            print(f"DEBUG: Branch: {branch}, stdout length: {len(stdout)}, stderr length: {len(stderr)}")
-
-    print("DEBUG: Finished processing all errors")
-    print("DEBUG: Displaying final progress log")
-    self.display_progress_log()
-
-    print("DEBUG: Generating fix report")
-    with open("fix_report.txt", "w") as report:
-        report.write("Successful Fixes:\n")
-        for fix in successful_fixes:
-            report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+    async def run_error_fixing_process(self):
+        print("DEBUG: Starting error fixing process")
+        # Delete the existing error log if it exists
+        if os.path.exists(self.error_log):
+            os.remove(self.error_log)
+            print(f"DEBUG: Deleted existing error log: {self.error_log}")
         
-        report.write("\nFailed Fixes:\n")
-        for fix in failed_fixes:
-            report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
-    
-    # Replace the existing fix report generation with the new method
-    self.generate_fix_report(successful_fixes, failed_fixes)
+        # Load existing errors from the log (which will now be empty)
+        all_errors = self.load_errors()
+        if all_errors:
+            logging.info("Existing errors found in error log. Skipping test execution.")
+        else:
+            test_files = self.discover_test_files()
+            logging.info(f"Discovered {len(test_files)} test files.")
 
-    logging.info("Error fixing and verification completed.")
-    
-    # Switch back to master branch after completion
-    try:
-        subprocess.run(["git", "checkout", "master"], cwd=self.project_dir, check=True)
-        logging.info("Switched back to master branch.")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to switch back to master branch: {str(e)}")
-    
-    print("DEBUG: Main process completed. Check the logs for details.")
+            for test_file in test_files:
+                logging.info(f"Running test file: {test_file}")
+                stdout, stderr = self.run_test(test_file)
+                errors = self.parse_errors(stdout + stderr, test_file)
+                if errors:
+                    logging.info(f"Errors found in {test_file}. Saving to log...")
+                    self.save_errors(errors)
+                else:
+                    logging.info(f"No errors found in {test_file}")
+
+            # Reload errors after running tests
+            all_errors = self.load_errors()
+        logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
+
+        successful_fixes = []
+        failed_fixes = []
+
+        print(f"DEBUG: Starting to process {len(all_errors)} files with errors")
+
+        for file_path, error_list in all_errors.items():
+            print(f"DEBUG: Processing file: {file_path} with {len(error_list)} errors")
+            for error in error_list:
+                print(f"DEBUG: Processing error: {error['function']} in {file_path}")
+                
+                if args and args.debug_single_error:
+                    branch, ai_responses, stdout, stderr = await self.debug_fix_single_error(error, file_path)
+                else:
+                    branch, ai_responses, stdout, stderr = await self.fix_error(error, file_path)
+                
+                # Verify the fix
+                if self.verify_fix(branch, error['test_file'], error['function']):
+                    successful_fixes.append((file_path, error['function'], branch))
+                    print(f"DEBUG: Fix successful for {error['function']} in {file_path}")
+                else:
+                    failed_fixes.append((file_path, error['function'], branch))
+                    print(f"DEBUG: Fix failed for {error['function']} in {file_path}")
+                
+                print(f"DEBUG: Finished processing error: {error['function']} in {file_path}")
+                print(f"DEBUG: Branch: {branch}, stdout length: {len(stdout)}, stderr length: {len(stderr)}")
+
+        print("DEBUG: Finished processing all errors")
+        print("DEBUG: Displaying final progress log")
+        self.display_progress_log()
+
+        print("DEBUG: Generating fix report")
+        with open("fix_report.txt", "w") as report:
+            report.write("Successful Fixes:\n")
+            for fix in successful_fixes:
+                report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+            
+            report.write("\nFailed Fixes:\n")
+            for fix in failed_fixes:
+                report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+        
+        # Replace the existing fix report generation with the new method
+        self.generate_fix_report(successful_fixes, failed_fixes)
+
+        logging.info("Error fixing and verification completed.")
+        
+        # Switch back to master branch after completion
+        try:
+            subprocess.run(["git", "checkout", "master"], cwd=self.project_dir, check=True)
+            logging.info("Switched back to master branch.")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Failed to switch back to master branch: {str(e)}")
+        
+        print("DEBUG: Main process completed. Check the logs for details.")
 
 
 async def main():
