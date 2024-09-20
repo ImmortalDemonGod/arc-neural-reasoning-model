@@ -39,7 +39,6 @@ class PytestErrorFixer:
         self.raptor_wrapper = Raptor_RAG_Wrapper()
         print(f"DEBUG: Initialized PytestErrorFixer with Raptor_RAG_Wrapper")
         self.init_progress_log()
-        self.initialize_raptor_wrapper()
 
         # Define the relevant_files_mapping attribute
         self.relevant_files_mapping = {
@@ -115,81 +114,7 @@ class PytestErrorFixer:
             ]
         }
 
-        # Define a mapping of test files to their relevant files
-        self.relevant_files_mapping = {
-            "gpt2_arc/tests/test_gpt2.py": [
-                "gpt2_arc/src/models/gpt2.py",
-                "gpt2_arc/src/config.py",
-                "gpt2_arc/src/utils/experiment_tracker.py",
-                "gpt2_arc/src/utils/results_collector.py",
-                "gpt2_arc/src/data/arc_dataset.py"
-            ],
-            "gpt2_arc/tests/test_end_to_end.py": [
-                "gpt2_arc/src/data/arc_dataset.py",
-                "gpt2_arc/src/models/gpt2.py",
-                "gpt2_arc/src/training/trainer.py",
-                "gpt2_arc/src/config.py",
-                "gpt2_arc/src/utils/experiment_tracker.py",
-                "gpt2_arc/src/utils/results_collector.py",
-                "gpt2_arc/src/evaluate.py",
-                "gpt2_arc/benchmark.py",
-                "gpt2_arc/train.py",
-                # Add more relevant files as needed
-            ],
-            "gpt2_arc/tests/test_arc_dataset.py": [
-                "gpt2_arc/src/data/arc_dataset.py",
-                "gpt2_arc/src/utils/experiment_tracker.py",
-                "gpt2_arc/src/models/gpt2.py",
-                "gpt2_arc/src/config.py",
-            ],
-            "gpt2_arc/tests/test_differential_pixel_accuracy.py": [
-                "gpt2_arc/src/utils/helpers.py",
-                "gpt2_arc/src/models/gpt2.py",
-                "gpt2_arc/src/config.py",
-                "gpt2_arc/src/data/arc_dataset.py",
-                # Add more relevant files as needed
-            ],
-            "gpt2_arc/tests/test_train.py": [
-                "gpt2_arc/src/training/train.py",
-                "gpt2_arc/src/training/trainer.py",
-                "gpt2_arc/src/models/gpt2.py",
-                "gpt2_arc/src/data/arc_dataset.py",
-                "gpt2_arc/src/config.py",
-                "gpt2_arc/src/utils/results_collector.py",
-                "gpt2_arc/src/utils/experiment_tracker.py",
-                "gpt2_arc/benchmark.py",
-                "gpt2_arc/src/evaluate.py"
-            ],
-            "gpt2_arc/tests/test_trainer.py": [
-                "gpt2_arc/src/config.py",
-                "gpt2_arc/src/data/arc_dataset.py",
-                "gpt2_arc/src/models/gpt2.py",
-                "gpt2_arc/src/training/trainer.py",
-                "gpt2_arc/src/utils/experiment_tracker.py",
-                "gpt2_arc/src/utils/results_collector.py"
-            ],
-            "gpt2_arc/tests/test_results_collector.py": [
-                "gpt2_arc/src/utils/results_collector.py",
-                "gpt2_arc/src/config.py",
-                "gpt2_arc/src/utils/experiment_tracker.py"
-            ],
-            "gpt2_arc/tests/test_model_evaluation.py": [
-                "src/models/gpt2.py",
-                "src/config.py",
-                "src/training/trainer.py",
-                "src/utils/helpers.py",
-                "src/data/arc_dataset.py",
-                "src/utils/experiment_tracker.py",
-                "src/utils/results_collector.py"
-            ],
-            "test_integration_experiment.py": [
-                "gpt2_arc/src/data/arc_dataset.py",
-                "gpt2_arc/src/models/gpt2.py",
-                "gpt2_arc/src/training/trainer.py",
-                "gpt2_arc/src/config.py",
-                "gpt2_arc/src/utils/results_collector.py"
-            ]
-        }
+        self.initialize_raptor_wrapper()
 
     def init_progress_log(self):
         # Initialize the progress log file if it doesn't exist
