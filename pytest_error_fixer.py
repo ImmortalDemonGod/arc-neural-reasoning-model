@@ -16,7 +16,7 @@ from raptor.raptor_rag import Raptor_RAG_Wrapper
 
 load_dotenv()  # This loads the variables from .env
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', filename='pytest_error_fixer.log', filemode='a')
 
 class PytestErrorFixer:
     def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", initial_temperature=0.4, temperature_increment=0.1):
@@ -362,7 +362,7 @@ class PytestErrorFixer:
         for file_path, error_list in errors.items():
             for error in error_list:
                 relevant_paths = set()
-                absolute_file_path = os.path.abspath(file_path)
+                absolute_file_path = os.path.abspath(os.path.join(self.project_dir, file_path))
                 relevant_paths.add(absolute_file_path)
                 
                 # Extract paths from error details and code snippet
@@ -371,19 +371,26 @@ class PytestErrorFixer:
                 relevant_paths.update(absolute_paths)
                 
                 if 'test_file' in error:
-                    relevant_paths.add(os.path.abspath(error['test_file']))
+                    relevant_paths.add(os.path.abspath(os.path.join(self.project_dir, error['test_file'])))
+                
+                # Add predefined relevant files for the specific test file
+                test_file_name = os.path.basename(error['test_file'])
+                if test_file_name in self.relevant_files_mapping:
+                    for rel_path in self.relevant_files_mapping[test_file_name]:
+                        abs_path = os.path.abspath(os.path.join(self.project_dir, rel_path))
+                        relevant_paths.add(abs_path)
                 
                 error_key = f"{error['function']} - {error['error_type']}"
                 error_file_paths[error_key] = list(relevant_paths)
             
-            print(f"DEBUG: Extracted file paths for {file_path}: {error_file_paths}")
+            logging.debug(f"Extracted file paths for {file_path}: {error_file_paths}")
         return error_file_paths
 
     async def fix_error(self, error: Dict[str, Any], file_path: str) -> Tuple[str, str, str, str]:
-        print(f"DEBUG: Starting fix_error for {error['function']} in {file_path}")
+        logging.debug(f"Starting fix_error for {error['function']} in {file_path}")
         subprocess.run(["git", "stash"], cwd=self.project_dir, check=True)
         branch_name = f"fix-{error['function']}-{uuid.uuid4().hex[:8]}"
-        print(f"DEBUG: Creating branch: {branch_name}")
+        logging.debug(f"Creating branch: {branch_name}")
         subprocess.run(["git", "checkout", "-b", branch_name], cwd=self.project_dir, check=True)
         logging.info(f"Attempting to fix error in {file_path}: {error['function']}")
 
@@ -391,19 +398,22 @@ class PytestErrorFixer:
         relevant_files = self.extract_file_paths_from_errors(error_dict)
         all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
 
-        # Print the relevant files being used
-        print(f"DEBUG: Relevant files: {all_relevant_files}")
-
         # Add predefined relevant files for the specific test file
-        test_file_relevant_files = self.relevant_files_mapping.get(error['test_file'], [])
-        all_relevant_files.extend(test_file_relevant_files)
         test_file_name = os.path.basename(error['test_file'])
+        if test_file_name in self.relevant_files_mapping:
+            for rel_path in self.relevant_files_mapping[test_file_name]:
+                abs_path = os.path.abspath(os.path.join(self.project_dir, rel_path))
+                all_relevant_files.append(abs_path)
+
         debug_tips_file = os.path.join(self.project_dir, "debug tips", f"{test_file_name.replace('.py', '.md')}")
         if os.path.exists(debug_tips_file):
             all_relevant_files.append(debug_tips_file)
-            print(f"DEBUG: Added debug tips file: {debug_tips_file}")
+            logging.debug(f"Added debug tips file: {debug_tips_file}")
         else:
-            print(f"DEBUG: Debug tips file not found: {debug_tips_file}")
+            logging.debug(f"Debug tips file not found: {debug_tips_file}")
+
+        logging.debug(f"Project directory: {self.project_dir}")
+        logging.debug(f"All relevant files: {all_relevant_files}")
 
         # Calculate the total number of characters in all relevant file paths
         total_chars = 0
