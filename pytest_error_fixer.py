@@ -12,7 +12,7 @@ from aider.coders import Coder
 from aider.models import Model
 from aider.io import InputOutput
 from dotenv import load_dotenv
-from raptor_rag import Raptor_RAG_Wrapper
+from raptor.raptor_rag import Raptor_RAG_Wrapper
 
 load_dotenv()  # This loads the variables from .env
 
