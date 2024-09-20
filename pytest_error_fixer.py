@@ -34,7 +34,7 @@ class PytestErrorFixer:
         """
         self.initial_temperature = initial_temperature
         self.temperature_increment = temperature_increment
-        if args.verbose:
+        if args and args.verbose:
             print(f"DEBUG: Initialized PytestErrorFixer with initial_temperature={initial_temperature}, temperature_increment={temperature_increment}, max_retries={max_retries}")
         self.project_dir = os.path.abspath(project_dir)
         self.max_retries = max_retries
