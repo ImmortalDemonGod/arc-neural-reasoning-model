@@ -986,6 +986,8 @@ class PytestErrorFixer:
         else:
             print(f"DEBUG: Failed to fix: {file_path} - {error['function']}")
             return False
+    
+    
     async def summarize_test_output(self, stdout: str, stderr: str) -> str:
         """
         Summarize the test output, focusing on errors and context.
@@ -1047,6 +1049,40 @@ class PytestErrorFixer:
                 print(json.dumps(log, indent=2))
         except Exception as e:
             print(f"ERROR: Failed to read progress log: {str(e)}")
+
+    def generate_fix_report(self, successful_fixes, failed_fixes):
+        timestamp = self.get_current_timestamp()
+        report_filename = "fix_report.txt"
+        
+        print(f"DEBUG: Generating fix report with timestamp {timestamp}")
+        
+        with open(report_filename, 'a') as report:
+            report.write(f"\n\n--- Fix Report: {timestamp} ---\n")
+            report.write("Successful Fixes:\n")
+            for fix in successful_fixes:
+                report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+            
+            report.write("\nFailed Fixes:\n")
+            for fix in failed_fixes:
+                report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+        
+        print(f"DEBUG: Fix report appended to {report_filename}")
+
+    def print_git_diff(self):
+        try:
+            diff = subprocess.check_output(["git", "diff"], cwd=self.project_dir).decode('utf-8')
+            print(f"DEBUG: Git diff:\n{diff[:500]}...")  # Print first 500 characters
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR: Failed to get git diff: {str(e)}")
+
+    def print_file_contents(self, file_path: str):
+        try:
+            with open(file_path, 'r') as f:
+                content = f.read()
+            print(f"DEBUG: Contents of {file_path} (first 500 chars):\n{content[:500]}...")
+        except Exception as e:
+            print(f"ERROR: Failed to read file {file_path}: {str(e)}")
+
 
 async def main(self):
     print("DEBUG: Starting main process")
@@ -1159,35 +1195,5 @@ if __name__ == "__main__":
         print(f"DEBUG: Starting PytestErrorFixer with arguments: {args}")
 
         asyncio.run(main())
-        def print_git_diff(self):
-            try:
-                diff = subprocess.check_output(["git", "diff"], cwd=self.project_dir).decode('utf-8')
-                print(f"DEBUG: Git diff:\n{diff[:500]}...")  # Print first 500 characters
-            except subprocess.CalledProcessError as e:
-                print(f"ERROR: Failed to get git diff: {str(e)}")
 
-        def print_file_contents(self, file_path: str):
-            try:
-                with open(file_path, 'r') as f:
-                    content = f.read()
-                print(f"DEBUG: Contents of {file_path} (first 500 chars):\n{content[:500]}...")
-            except Exception as e:
-                print(f"ERROR: Failed to read file {file_path}: {str(e)}")
 
-def generate_fix_report(self, successful_fixes, failed_fixes):
-    timestamp = self.get_current_timestamp()
-    report_filename = "fix_report.txt"
-    
-    print(f"DEBUG: Generating fix report with timestamp {timestamp}")
-    
-    with open(report_filename, 'a') as report:
-        report.write(f"\n\n--- Fix Report: {timestamp} ---\n")
-        report.write("Successful Fixes:\n")
-        for fix in successful_fixes:
-            report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
-        
-        report.write("\nFailed Fixes:\n")
-        for fix in failed_fixes:
-            report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
-    
-    print(f"DEBUG: Fix report appended to {report_filename}")
