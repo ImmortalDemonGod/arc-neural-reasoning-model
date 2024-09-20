@@ -294,9 +294,13 @@ class PytestErrorFixer:
             logging.error(f"Failed to switch to branch {self.branch_name}: {str(e)}")
             raise
 
-    def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float):
+    def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float, ai_response: str = ""):
+        print(f"DEBUG: Entering log_progress method")
+        print(f"DEBUG: Status: {status}, Test file: {test_file}, Temperature: {temperature}")
+        print(f"DEBUG: Files used: {files_used}")
+        print(f"DEBUG: AI response length: {len(ai_response)}")
+        
         logging.info(f"Logging progress: {status} for error in {test_file}")
-        print(f"DEBUG: Logging progress - status: {status}, test_file: {test_file}")
         
         commit_sha = self.get_commit_sha()
         timestamp = self.get_current_timestamp()
@@ -309,13 +313,16 @@ class PytestErrorFixer:
             "timestamp": timestamp,
             "files_used": files_used,
             "changes": changes,
-            "temperature": temperature
+            "temperature": temperature,
+            "ai_response": ai_response[:1000]  # Truncate AI response to first 1000 characters
         }
 
         try:
+            print(f"DEBUG: Attempting to open progress log: {self.progress_log}")
             with open(self.progress_log, 'r+') as f:
                 try:
                     log = json.load(f)
+                    print(f"DEBUG: Successfully loaded existing log. Current entries: {len(log)}")
                 except json.JSONDecodeError:
                     print("DEBUG: Progress log is empty or invalid. Initializing new log.")
                     log = []
@@ -327,8 +334,9 @@ class PytestErrorFixer:
             print(f"DEBUG: Successfully logged progress to {self.progress_log}")
         except Exception as e:
             print(f"ERROR: Failed to log progress: {str(e)}")
+            print(f"DEBUG: Attempted to log entry: {log_entry}")
 
-        print(f"DEBUG: Logged progress - status: {status}, test_file: {test_file}, temperature: {temperature}")
+        print(f"DEBUG: Exiting log_progress method")
 
 
     def get_git_status(self) -> str:
