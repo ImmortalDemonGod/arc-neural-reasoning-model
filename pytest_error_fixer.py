@@ -586,7 +586,6 @@ class PytestErrorFixer:
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
         print(f"DEBUG: Created new Coder instance with model: {self.model}")
 
-        all_ai_responses = []
         for attempt in range(self.max_retries):
             temperature = self.initial_temperature + (attempt * self.temperature_increment)
             logging.info(f"Attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
@@ -599,14 +598,13 @@ class PytestErrorFixer:
             print(f"DEBUG: Test output before fix attempt:\n{stdout[:500]}...")
             print(f"DEBUG: Test error output before fix attempt:\n{stderr[:500]}...")
 
-            prompt = await self.construct_prompt(error, stdout, stderr, "\n".join(all_ai_responses), attempt)
+            prompt = await self.construct_prompt(error, stdout, stderr, attempt)
             print(f"DEBUG: Constructed prompt (first 500 chars):\n{prompt[:500]}...")
 
             try:
                 response = self.coder.run(prompt)
                 print(f"DEBUG: AI model response received (first 500 chars):\n{response[:500]}...")
                 
-                all_ai_responses.append(response)
                 changes = self.parse_aider_response(response)
                 print(f"DEBUG: Parsed changes:\n{changes}")
 
@@ -619,10 +617,12 @@ class PytestErrorFixer:
                     )
                     response = self.coder.run(execute_plan_prompt)
                     changes = self.parse_aider_response(response)
-                    all_ai_responses.append(response)
                     print(f"DEBUG: Changes after explicit prompt:\n{changes}")
 
-                # Re-run the test
+                # Print git diff and file contents before re-running the test
+                self.print_git_diff()
+                for file in all_relevant_files:
+                    self.print_file_contents(file)
                 stdout, stderr = self.run_test(error['test_file'], error['function'])
                 print(f"DEBUG: Test output after fix attempt:\n{stdout[:500]}...")
                 print(f"DEBUG: Test error output after fix attempt:\n{stderr[:500]}...")
@@ -740,7 +740,7 @@ class PytestErrorFixer:
         print(f"DEBUG: Full summary length: {len(full_summary)}")
         return full_summary
 
-    async def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, ai_responses: str, attempt: int) -> str:
+    async def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, attempt: int) -> str:
         """
         Construct a prompt for the AI model to fix an error.
 
@@ -780,19 +780,18 @@ class PytestErrorFixer:
         print(f"DEBUG: Relevant files summary length: {len(relevant_files_summary)}")
         print(f"DEBUG: Relevant files summary content:\n{relevant_files_summary}")
 
-        previous_attempt_prompt = ""
-        if attempt > 0:
-            previous_attempt_prompt = (
-                f"\nAttempt {attempt + 1}. Previous AI responses:\n{ai_responses}\n"
-                "Analyze previous suggestions and their outcomes. Propose a new approach based on this analysis."
-            )
-        print(f"DEBUG: Previous attempt prompt length: {len(previous_attempt_prompt)}")
+        git_history_note = (
+            f"Note: This is attempt {attempt + 1}. Previous fix attempts (if any) "
+            "have been committed to the git history. Please analyze the current "
+            "state of the code and propose a new approach if necessary."
+        )
+        print(f"DEBUG: Git history note length: {len(git_history_note)}")
 
         full_prompt = (
             f"{error_prompt}\n{analysis_prompt}\n"
             f"Relevant Files Summary:\n{relevant_files_summary}\n"
             f"Test Summary:\n{test_summary}\n"
-            f"{previous_attempt_prompt}"
+            f"{git_history_note}"
         )
         print(f"DEBUG: Full prompt length before truncation: {len(full_prompt)}")
 
@@ -996,6 +995,8 @@ class PytestErrorFixer:
                 if self.verify_fix(branch, error['test_file'], error['function']):
                     successful_fixes.append((file_path, error['function'], branch))
                     print(f"DEBUG: Fix successful for {error['function']} in {file_path}")
+                    print(f"DEBUG: Completed processing error: {error['function']} in {file_path}")
+                    print(f"DEBUG: Branch: {branch}, stdout length: {len(stdout)}, stderr length: {len(stderr)}")
                 else:
                     failed_fixes.append((file_path, error['function'], branch))
                     print(f"DEBUG: Fix failed for {error['function']} in {file_path}")
@@ -1043,8 +1044,24 @@ if __name__ == "__main__":
     parser.add_argument("--max-retries", type=int, default=3, help="Maximum number of fix attempts per error (default: 3)")
     parser.add_argument("--debug-single-error", action="store_true", help="Use debug_fix_single_error instead of fix_error")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode with extra logging")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
 
+if args.verbose:
     print(f"DEBUG: Starting PytestErrorFixer with arguments: {args}")
 
     asyncio.run(main())
+    def print_git_diff(self):
+        try:
+            diff = subprocess.check_output(["git", "diff"], cwd=self.project_dir).decode('utf-8')
+            print(f"DEBUG: Git diff:\n{diff[:500]}...")  # Print first 500 characters
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR: Failed to get git diff: {str(e)}")
+
+    def print_file_contents(self, file_path: str):
+        try:
+            with open(file_path, 'r') as f:
+                content = f.read()
+            print(f"DEBUG: Contents of {file_path} (first 500 chars):\n{content[:500]}...")
+        except Exception as e:
+            print(f"ERROR: Failed to read file {file_path}: {str(e)}")
