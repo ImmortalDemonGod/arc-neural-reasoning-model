@@ -444,7 +444,7 @@ class PytestErrorFixer:
         # Print the model and IO configuration
         print(f"DEBUG: Model: {self.model}, IO: {self.io}")
 
-        all_changes = []
+        all_ai_responses = []
         for attempt in range(self.max_retries):
             temperature = self.initial_temperature + (attempt * self.temperature_increment)
             logging.info(f"Attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
@@ -453,8 +453,7 @@ class PytestErrorFixer:
             initial_git_status = self.get_git_status()
 
             stdout, stderr = self.run_test(error['test_file'], error['function'])
-            accumulated_changes = "\n".join(all_changes)
-            prompt = await self.construct_prompt(error, stdout, stderr, accumulated_changes, attempt)
+            prompt = await self.construct_prompt(error, stdout, stderr, "\n".join(all_ai_responses), attempt)
         
             # Print the total characters in the prompt
             print(f"DEBUG: Total characters in prompt: {len(prompt)}")
@@ -466,10 +465,10 @@ class PytestErrorFixer:
                 response = self.coder.run(prompt)
                 logging.info("AI model suggested changes. Applying changes...")
                 self.log_progress("ai_response", error, file_path, all_relevant_files, response, temperature)
+                all_ai_responses.append(response)  # Accumulate AI responses
             
                 # Parse the Aider response for search/replace statements
                 changes = self.parse_aider_response(response)
-                all_changes.append(changes)
                 print(f"DEBUG: Changes made by Aider:\n{changes}")
 
                 # Check if no changes were made
@@ -483,7 +482,7 @@ class PytestErrorFixer:
                     )
                     response = self.coder.run(execute_plan_prompt)
                     changes = self.parse_aider_response(response)
-                    all_changes.append(changes)
+                    all_ai_responses.append(response)
                     print(f"DEBUG: Changes made by Aider after explicit prompt:\n{changes}")
 
                 # Re-run the test
@@ -504,7 +503,7 @@ class PytestErrorFixer:
                     subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
                     self.log_progress("potential_fix", error, file_path, all_relevant_files, changes, temperature)
                     print(f"DEBUG: Returning True, {branch_name}")
-                    return branch_name, "\n".join(all_changes), stdout, stderr
+                    return branch_name, "\n".join(all_ai_responses), stdout, stderr
                 else:
                     logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
                     self.log_progress("failed", error, file_path, all_relevant_files, changes, temperature)
@@ -524,7 +523,7 @@ class PytestErrorFixer:
         print(f"DEBUG: Finished fix attempt on branch {branch_name}")
 
         # Return all necessary information for later evaluation
-        return branch_name, "\n".join(all_changes), stdout, stderr
+        return branch_name, "\n".join(all_ai_responses), stdout, stderr
 
     def parse_aider_response(self, response: str) -> str:
         """Parse the Aider response to extract search/replace statements."""
@@ -589,7 +588,7 @@ class PytestErrorFixer:
         print(f"DEBUG: Full summary length: {len(full_summary)}")
         return full_summary
 
-    async def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, changes: str, attempt: int) -> str:
+    async def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, ai_responses: str, attempt: int) -> str:
         print(f"DEBUG: Entering construct_prompt for attempt {attempt}")
         
         error_prompt = (
@@ -615,13 +614,12 @@ class PytestErrorFixer:
         relevant_files_summary = await self.summarize_relevant_files(error['test_file'])
         print(f"DEBUG: Relevant files summary length: {len(relevant_files_summary)}")
         print(f"DEBUG: Relevant files summary content:\n{relevant_files_summary}")
-        print(f"DEBUG: Relevant files summary content:\n{relevant_files_summary}")
 
         previous_attempt_prompt = ""
         if attempt > 0:
             previous_attempt_prompt = (
-                f"\nAttempt {attempt + 1}. Previous changes:\n{changes}...\n"
-                "Analyze previous failure and suggest new approach."
+                f"\nAttempt {attempt + 1}. Previous AI responses:\n{ai_responses}\n"
+                "Analyze previous suggestions and their outcomes. Propose a new approach based on this analysis."
             )
         print(f"DEBUG: Previous attempt prompt length: {len(previous_attempt_prompt)}")
 
@@ -792,20 +790,17 @@ class PytestErrorFixer:
             for error in error_list:
                 logging.info(f"Processing error: {error} in {file_path}")
                 print(f"DEBUG: Processing error: {error['function']} in {file_path}")
-                logging.info(f"Processing error: {error} in {file_path}")
-                print(f"DEBUG: Processing error: {error['function']} in {file_path}")
-                logging.info(f"Processing error: {error} in {file_path}")
                 
                 if args.debug_single_error:
-                    branch, changes, stdout, stderr = await self.debug_fix_single_error(error, file_path)
+                    branch, ai_responses, stdout, stderr = await self.debug_fix_single_error(error, file_path)
                 else:
-                    branch, changes, stdout, stderr = await self.fix_error(error, file_path)
+                    branch, ai_responses, stdout, stderr = await self.fix_error(error, file_path)
                 
                 fix_attempts.append({
                     "file_path": file_path,
                     "function": error['function'],
                     "branch": branch,
-                    "changes": changes,
+                    "ai_responses": ai_responses,
                     "stdout": stdout,
                     "stderr": stderr
                 })
@@ -819,7 +814,7 @@ class PytestErrorFixer:
         for attempt in fix_attempts:
             logging.info(f"Fix attempt for {attempt['file_path']} - {attempt['function']}:")
             logging.info(f"  Branch: {attempt['branch']}")
-            logging.info(f"  Changes: {attempt['changes'][:500]}...")  # Log first 500 characters of changes
+            logging.info(f"  AI Responses: {attempt['ai_responses'][:500]}...")  # Log first 500 characters of AI responses
             logging.info(f"  Stdout: {attempt['stdout'][:500]}...")  # Log first 500 characters of stdout
             logging.info(f"  Stderr: {attempt['stderr'][:500]}...")  # Log first 500 characters of stderr
 
