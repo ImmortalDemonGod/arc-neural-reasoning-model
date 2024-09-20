@@ -601,6 +601,9 @@ def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files
             logging.info(f"Attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
             print(f"DEBUG: Starting attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
 
+            # Log the start of the fix attempt
+            self.log_progress("attempt_start", error, file_path, all_relevant_files, f"Starting attempt {attempt + 1}", temperature)
+
             initial_git_status = self.get_git_status()
             print(f"DEBUG: Initial git status:\n{initial_git_status}")
 
@@ -618,6 +621,9 @@ def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files
                 changes = self.parse_aider_response(response)
                 print(f"DEBUG: Parsed changes:\n{changes}")
 
+                # Log the AI response
+                self.log_progress("ai_response", error, file_path, all_relevant_files, changes, temperature)
+
                 if not changes:
                     print("DEBUG: No changes detected. Prompting AI to execute its plan.")
                     execute_plan_prompt = (
@@ -629,10 +635,14 @@ def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files
                     changes = self.parse_aider_response(response)
                     print(f"DEBUG: Changes after explicit prompt:\n{changes}")
 
+                    # Log the additional AI response
+                    self.log_progress("ai_response_additional", error, file_path, all_relevant_files, changes, temperature)
+
                 # Print git diff and file contents before re-running the test
                 self.print_git_diff()
                 for file in all_relevant_files:
                     self.print_file_contents(file)
+
                 stdout, stderr = self.run_test(error['test_file'], error['function'])
                 print(f"DEBUG: Test output after fix attempt:\n{stdout[:500]}...")
                 print(f"DEBUG: Test error output after fix attempt:\n{stderr[:500]}...")
@@ -666,8 +676,11 @@ def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files
                 except subprocess.CalledProcessError as e:
                     print(f"ERROR: Failed to commit changes after exception: {str(e)}")
 
+                # Log the exception
+                self.log_progress("exception", error, file_path, all_relevant_files, str(e), temperature)
+
         print(f"DEBUG: All fix attempts completed for {error['function']} in {file_path}")
-        return branch_name, "", stdout, stderr
+        return branch_name, "\n".join(all_ai_responses), stdout, stderr
 
     def parse_aider_response(self, response: str) -> str:
         """
