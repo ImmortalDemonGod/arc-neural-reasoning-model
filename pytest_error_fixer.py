@@ -552,34 +552,14 @@ class PytestErrorFixer:
         return json.dumps(changes, indent=2)
 
 
-    def truncate_to_token_limit(self, text: str, max_tokens: int = 9500) -> str:
-        print(f"DEBUG: Entering truncate_to_token_limit")
-        print(f"DEBUG: Input text length: {len(text)}")
-        # Simple approximation: assume 1 token ≈ 4 characters
-        max_chars = max_tokens * 4
-        if len(text) > max_chars:
-            truncated = text[:max_chars] + "..."
-            print(f"DEBUG: Text truncated. New length: {len(truncated)}")
-            return truncated
-        print("DEBUG: Text not truncated")
-        return text
-        try:
-            subprocess.run(["git", "reset", "--hard"], cwd=self.project_dir, check=True)
-            subprocess.run(["git", "clean", "-fd"], cwd=self.project_dir, check=True)
-            subprocess.run(["git", "checkout", "."], cwd=self.project_dir, check=True)
-            logging.info("Changes reverted successfully.")
-        except subprocess.CalledProcessError:
-            logging.error("Failed to revert changes. Manual intervention may be required.")
-
-
     async def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, changes: str, attempt: int) -> str:
         print(f"DEBUG: Entering construct_prompt for attempt {attempt}")
         
         error_prompt = (
             f"Fix pytest error in {error['test_file']} - {error['function']}:\n"
             f"Type: {error['error_type']}\n"
-            f"Details: {error['error_details'][:200]}...\n"
-            f"Code: {error['code_snippet'][:200]}...\n"
+            f"Details: {error['error_details']}...\n"
+            f"Code: {error['code_snippet']}...\n"
         )
         print(f"DEBUG: Error prompt length: {len(error_prompt)}")
 
@@ -601,7 +581,7 @@ class PytestErrorFixer:
         previous_attempt_prompt = ""
         if attempt > 0:
             previous_attempt_prompt = (
-                f"\nAttempt {attempt + 1}. Previous changes:\n{changes[:200]}...\n"
+                f"\nAttempt {attempt + 1}. Previous changes:\n{changes}...\n"
                 "Analyze previous failure and suggest new approach."
             )
         print(f"DEBUG: Previous attempt prompt length: {len(previous_attempt_prompt)}")
