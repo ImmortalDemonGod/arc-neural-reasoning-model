@@ -448,6 +448,7 @@ class PytestErrorFixer:
             try:
                 response = self.coder.run(prompt)
                 logging.info("AI model suggested changes. Applying changes...")
+                self.log_progress("ai_response", error, file_path, all_relevant_files, response, temperature)
             
                 # Parse the Aider response for search/replace statements
                 changes = self.parse_aider_response(response)
