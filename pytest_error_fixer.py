@@ -7,14 +7,12 @@ from collections import defaultdict
 import json
 import os
 import uuid
-import os
-import logging
-import re
 from typing import List, Dict, Any, Tuple
 from aider.coders import Coder
 from aider.models import Model
 from aider.io import InputOutput
 from dotenv import load_dotenv
+from raptor_rag import Raptor_RAG_Wrapper
 
 load_dotenv()  # This loads the variables from .env
 
@@ -39,6 +37,7 @@ class PytestErrorFixer:
         self.branch_name = "pytest-aider-automation"
         self.ensure_branch()
         self.raptor_wrapper = Raptor_RAG_Wrapper()
+        print(f"DEBUG: Initialized PytestErrorFixer with Raptor_RAG_Wrapper")
         self.init_progress_log()
 
         # Define a mapping of test files to their relevant files
