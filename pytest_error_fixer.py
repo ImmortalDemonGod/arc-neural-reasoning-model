@@ -563,6 +563,7 @@ class PytestErrorFixer:
         - Tuple[str, str, str, str]: The branch name, AI responses, standard output, and error output.
         """
         logging.debug(f"Starting fix_error for {error['function']} in {file_path}")
+        all_ai_responses = []
         print(f"DEBUG: Starting fix_error for {error['function']} in {file_path}")
         
         subprocess.run(["git", "stash"], cwd=self.project_dir, check=True)
