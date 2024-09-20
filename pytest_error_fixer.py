@@ -89,7 +89,7 @@ class PytestErrorFixer:
                 "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/results_collector.py",
                 "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/evaluate.py",
                 "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/benchmark.py",
-                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/train.py"
+                "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/training/train.py"
             ],
             "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_arc_dataset.py": [
                 "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py",
