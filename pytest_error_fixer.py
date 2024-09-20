@@ -39,6 +39,7 @@ class PytestErrorFixer:
         self.raptor_wrapper = Raptor_RAG_Wrapper()
         print(f"DEBUG: Initialized PytestErrorFixer with Raptor_RAG_Wrapper")
         self.init_progress_log()
+        self.initialize_raptor_wrapper()
 
         # Define a mapping of test files to their relevant files
         self.relevant_files_mapping = {
@@ -122,6 +123,17 @@ class PytestErrorFixer:
         if not os.path.exists(self.progress_log):
             with open(self.progress_log, 'w') as f:
                 json.dump([], f)
+
+    def initialize_raptor_wrapper(self):
+        # Initialize the Raptor_RAG_Wrapper with relevant files
+        for test_file, relevant_files in self.relevant_files_mapping.items():
+            for file_path in relevant_files:
+                full_path = os.path.join(self.project_dir, file_path)
+                if os.path.exists(full_path):
+                    with open(full_path, 'r') as file:
+                        content = file.read()
+                        self.raptor_wrapper.add_document(file_path, content)
+        print("DEBUG: Initialized Raptor_RAG_Wrapper with relevant files")
 
     def ensure_branch(self):
         """Ensure that the branch exists and switch to it."""
