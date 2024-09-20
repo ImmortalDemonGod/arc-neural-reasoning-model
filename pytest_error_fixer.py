@@ -22,6 +22,13 @@ print("DEBUG: Imported all necessary modules")
 class PytestErrorFixer:
     def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", initial_temperature=0.4, temperature_increment=0.1, args=None):
         self.args = args
+        self.project_dir = os.path.abspath(project_dir)
+        self.max_retries = max_retries
+        self.progress_log = progress_log
+        self.initial_temperature = initial_temperature
+        self.temperature_increment = temperature_increment
+        if args and args.verbose:
+            print(f"DEBUG: Initialized PytestErrorFixer with initial_temperature={initial_temperature}, temperature_increment={temperature_increment}, max_retries={max_retries}")
 
     def check_test_results(self, stdout: str) -> Dict[str, Any]:
         print("DEBUG: Entering check_test_results method")
