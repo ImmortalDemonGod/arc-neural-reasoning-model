@@ -594,7 +594,7 @@ class PytestErrorFixer:
         )
         print(f"DEBUG: Full prompt length before truncation: {len(full_prompt)}")
 
-        truncated_prompt = self.truncate_to_token_limit(full_prompt)
+        truncated_prompt = self.trunc_to_token_limit(full_prompt)
         print(f"DEBUG: Truncated prompt length: {len(truncated_prompt)}")
         return truncated_prompt
 
