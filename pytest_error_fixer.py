@@ -1084,8 +1084,8 @@ class PytestErrorFixer:
             print(f"ERROR: Failed to read file {file_path}: {str(e)}")
 
 
-async def main(self):
-    print("DEBUG: Starting main process")
+async def run_error_fixing_process(self):
+    print("DEBUG: Starting error fixing process")
     # Delete the existing error log if it exists
     if os.path.exists(self.error_log):
         os.remove(self.error_log)
@@ -1177,7 +1177,7 @@ async def main():
         max_retries=args.max_retries,
         args=args
     )
-    await fixer.main()
+    await fixer.run_error_fixing_process()
 
 if __name__ == "__main__":
     import argparse
