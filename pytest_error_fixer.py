@@ -689,7 +689,7 @@ class PytestErrorFixer:
                 print(f"DEBUG: Parsed changes:\n{changes}")
 
                 # Log the AI response
-                self.log_progress("ai_response", error, file_path, all_relevant_files, changes, temperature)
+                self.log_progress("ai_response", error, file_path, all_relevant_files, changes, temperature, response)
 
                 if not changes:
                     print("DEBUG: No changes detected. Prompting AI to execute its plan.")
@@ -698,12 +698,15 @@ class PytestErrorFixer:
                         "The previous attempt did not result in any code changes. "
                         "Please execute your plan and provide specific search and replace statements to fix the error."
                     )
+                    print("DEBUG: Sending execute plan prompt to AI model")
                     response = self.coder.run(execute_plan_prompt)
+                    print(f"DEBUG: AI model response received for execute plan. Length: {len(response)}")
                     changes = self.parse_aider_response(response)
                     print(f"DEBUG: Changes after explicit prompt:\n{changes}")
 
                     # Log the additional AI response
-                    self.log_progress("ai_response_additional", error, file_path, all_relevant_files, changes, temperature)
+                    print("DEBUG: Logging additional AI response")
+                    self.log_progress("ai_response_additional", error, file_path, all_relevant_files, changes, temperature, response)
                 
                 # Apply the changes
 
