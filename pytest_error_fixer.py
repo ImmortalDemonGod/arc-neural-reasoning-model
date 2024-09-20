@@ -42,6 +42,12 @@ class PytestErrorFixer:
 
         # Define the relevant_files_mapping attribute
         self.relevant_files_mapping = {
+            "gpt2_arc/tests/test_benchmark.py": [
+                "gpt2_arc/src/utils/helpers.py",
+                "gpt2_arc/src/models/gpt2.py",
+                "gpt2_arc/src/config.py",
+                "gpt2_arc/benchmark.py"
+            ],
             "gpt2_arc/tests/test_gpt2.py": [
                 "gpt2_arc/src/models/gpt2.py",
                 "gpt2_arc/src/config.py",
@@ -529,6 +535,8 @@ class PytestErrorFixer:
 
     async def summarize_relevant_files(self, test_file: str) -> str:
         print(f"DEBUG: Entering summarize_relevant_files for {test_file}")
+        print(f"DEBUG: Test file path: {test_file}")
+        print(f"DEBUG: Relevant files mapping keys: {self.relevant_files_mapping.keys()}")
         relevant_files = self.relevant_files_mapping.get(test_file, [])
         print(f"DEBUG: Relevant files: {relevant_files}")
         summaries = []
@@ -543,7 +551,7 @@ class PytestErrorFixer:
                     print(f"DEBUG: File content length: {len(content)}")
                     summary = await asyncio.to_thread(
                         self.raptor_wrapper.answer_question,
-                        f"Provide a brief summary of this file's contents and purpose. File: {file}\n\nContent:\n{content}"
+                        f"Provide a brief summary of this file's contents and purpose. File: {file}\n\nContent:\n{content[:1000]}..."  # Limit to first 1000 characters
                     )
                     summaries.append(f"{file}:\n{summary}")
                 else:
@@ -582,6 +590,7 @@ class PytestErrorFixer:
 
         relevant_files_summary = await self.summarize_relevant_files(error['test_file'])
         print(f"DEBUG: Relevant files summary length: {len(relevant_files_summary)}")
+        print(f"DEBUG: Relevant files summary content:\n{relevant_files_summary}")
 
         previous_attempt_prompt = ""
         if attempt > 0:
