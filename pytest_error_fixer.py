@@ -429,77 +429,55 @@ class PytestErrorFixer:
 
     async def fix_error(self, error: Dict[str, Any], file_path: str) -> Tuple[str, str, str, str]:
         logging.debug(f"Starting fix_error for {error['function']} in {file_path}")
+        print(f"DEBUG: Starting fix_error for {error['function']} in {file_path}")
+        
         subprocess.run(["git", "stash"], cwd=self.project_dir, check=True)
         branch_name = f"fix-{error['function']}-{uuid.uuid4().hex[:8]}"
         logging.debug(f"Creating branch: {branch_name}")
-        subprocess.run(["git", "checkout", "-b", branch_name], cwd=self.project_dir, check=True)
+        print(f"DEBUG: Creating branch: {branch_name}")
+        
+        try:
+            subprocess.run(["git", "checkout", "-b", branch_name], cwd=self.project_dir, check=True)
+            print(f"DEBUG: Successfully created and switched to branch: {branch_name}")
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR: Failed to create or switch to branch {branch_name}: {str(e)}")
+            return branch_name, "", "", ""
+
         logging.info(f"Attempting to fix error in {file_path}: {error['function']}")
+        print(f"DEBUG: Attempting to fix error in {file_path}: {error['function']}")
 
         all_relevant_files = self.get_relevant_files(error['test_file'])
-
-        debug_tips_file = os.path.join(self.project_dir, "debug tips", f"{os.path.basename(error['test_file']).replace('.py', '.md')}")
-        if os.path.exists(debug_tips_file):
-            all_relevant_files.append(debug_tips_file)
-            logging.debug(f"Added debug tips file: {debug_tips_file}")
-        else:
-            logging.debug(f"Debug tips file not found: {debug_tips_file}")
-
-        logging.debug(f"Project directory: {self.project_dir}")
-        logging.debug(f"All relevant files: {all_relevant_files}")
-
-        # Calculate the total number of characters in all relevant file paths
-        total_chars = 0
-        for path in all_relevant_files:
-            try:
-                with open(path, 'r') as file:
-                    content = file.read()
-                    file_chars = len(content)
-                    total_chars += file_chars
-                    print(f"DEBUG: Characters in {path}: {file_chars}")
-            except FileNotFoundError:
-                logging.warning(f"File not found: {path}")
-            except Exception as e:
-                logging.error(f"Error reading file {path}: {str(e)}")
-
-        print(f"DEBUG: Total characters in relevant file paths: {total_chars}")
-        print(f"DEBUG: All relevant files before logging: {all_relevant_files}")
+        print(f"DEBUG: Relevant files: {all_relevant_files}")
 
         self.coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
-
-        # Print the model and IO configuration
-        print(f"DEBUG: Model: {self.model}, IO: {self.io}")
+        print(f"DEBUG: Created new Coder instance with model: {self.model}")
 
         all_ai_responses = []
         for attempt in range(self.max_retries):
             temperature = self.initial_temperature + (attempt * self.temperature_increment)
             logging.info(f"Attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
+            print(f"DEBUG: Starting attempt {attempt + 1}/{self.max_retries} with temperature {temperature:.2f}")
 
-            # Get the initial git status
             initial_git_status = self.get_git_status()
+            print(f"DEBUG: Initial git status:\n{initial_git_status}")
 
             stdout, stderr = self.run_test(error['test_file'], error['function'])
-            prompt = await self.construct_prompt(error, stdout, stderr, "\n".join(all_ai_responses), attempt)
-        
-            # Print the total characters in the prompt
-            print(f"DEBUG: Total characters in prompt: {len(prompt)}")
+            print(f"DEBUG: Test output before fix attempt:\n{stdout[:500]}...")
+            print(f"DEBUG: Test error output before fix attempt:\n{stderr[:500]}...")
 
-            print(f"DEBUG: Attempt {attempt + 1} - Temperature: {temperature}")
-            print(f"DEBUG: Prompt:\n{prompt[:500]}...")  # Print first 500 characters of prompt
+            prompt = await self.construct_prompt(error, stdout, stderr, "\n".join(all_ai_responses), attempt)
+            print(f"DEBUG: Constructed prompt (first 500 chars):\n{prompt[:500]}...")
 
             try:
                 response = self.coder.run(prompt)
-                logging.info("AI model suggested changes. Applying changes...")
-                self.log_progress("ai_response", error, file_path, all_relevant_files, response, temperature)
-                all_ai_responses.append(response)  # Accumulate AI responses
-            
-                # Parse the Aider response for search/replace statements
+                print(f"DEBUG: AI model response received (first 500 chars):\n{response[:500]}...")
+                
+                all_ai_responses.append(response)
                 changes = self.parse_aider_response(response)
-                print(f"DEBUG: Changes made by Aider:\n{changes}")
+                print(f"DEBUG: Parsed changes:\n{changes}")
 
-                # Check if no changes were made
                 if not changes:
-                    print("DEBUG: No changes detected. Prompting AI to execute its plan with search and replace statements.")
-                    # Construct a new prompt to explicitly ask for search and replace statements
+                    print("DEBUG: No changes detected. Prompting AI to execute its plan.")
                     execute_plan_prompt = (
                         f"{prompt}\n\n"
                         "The previous attempt did not result in any code changes. "
@@ -508,46 +486,43 @@ class PytestErrorFixer:
                     response = self.coder.run(execute_plan_prompt)
                     changes = self.parse_aider_response(response)
                     all_ai_responses.append(response)
-                    print(f"DEBUG: Changes made by Aider after explicit prompt:\n{changes}")
+                    print(f"DEBUG: Changes after explicit prompt:\n{changes}")
 
                 # Re-run the test
                 stdout, stderr = self.run_test(error['test_file'], error['function'])
+                print(f"DEBUG: Test output after fix attempt:\n{stdout[:500]}...")
+                print(f"DEBUG: Test error output after fix attempt:\n{stderr[:500]}...")
 
-                print(f"DEBUG: Test output after fix attempt:\n{stdout[:500]}...")  # Print first 500 characters of stdout
+                # Commit changes regardless of test result
+                try:
+                    subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
+                    commit_message = f"Fix attempt {attempt + 1} for {error['function']} in {file_path}"
+                    subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
+                    print(f"DEBUG: Committed changes for attempt {attempt + 1}")
+                except subprocess.CalledProcessError as e:
+                    print(f"ERROR: Failed to commit changes: {str(e)}")
 
                 if "PASSED" in stdout:
-                    logging.info(f"Fixed: {file_path} - {error['function']} on attempt {attempt + 1}")
-                    subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
-                    subprocess.run(["git", "commit", "-m", f"Fix: {error['function']} in {file_path}"], cwd=self.project_dir, check=True)
+                    print(f"DEBUG: Test passed for {error['function']} in {file_path}")
                     self.log_progress("fixed", error, file_path, all_relevant_files, changes, temperature)
-                    print(f"DEBUG: Potential fix found for {error['function']}")
-                    logging.info(f"Potential fix found: {file_path} - {error['function']} on attempt {attempt + 1}")
-                    subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
-                    commit_message = f"Potential fix: {error['function']} in {file_path}"
-                    print(f"DEBUG: Committing with message: {commit_message}")
-                    subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
-                    self.log_progress("potential_fix", error, file_path, all_relevant_files, changes, temperature)
-                    print(f"DEBUG: Returning True, {branch_name}")
                     return branch_name, "\n".join(all_ai_responses), stdout, stderr
                 else:
-                    logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
+                    print(f"DEBUG: Test still failing for {error['function']} in {file_path}")
                     self.log_progress("failed", error, file_path, all_relevant_files, changes, temperature)
 
             except Exception as e:
                 logging.error(f"Error while applying changes: {str(e)}")
                 print(f"DEBUG: Exception occurred: {str(e)}")
+                # Commit even if an exception occurred
+                try:
+                    subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
+                    commit_message = f"Failed fix attempt {attempt + 1} for {error['function']} in {file_path} (Exception occurred)"
+                    subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
+                    print(f"DEBUG: Committed changes for failed attempt {attempt + 1}")
+                except subprocess.CalledProcessError as e:
+                    print(f"ERROR: Failed to commit changes after exception: {str(e)}")
 
-        # Commit changes regardless of test result
-        subprocess.run(["git", "add", "."], cwd=self.project_dir, check=True)
-        commit_message = f"Attempted fix: {error['function']} in {file_path}"
-        print(f"DEBUG: Committing with message: {commit_message}")
-        subprocess.run(["git", "commit", "-m", commit_message], cwd=self.project_dir, check=True)
-
-        print(f"DEBUG: Switching back to {self.branch_name}")
-        subprocess.run(["git", "checkout", self.branch_name], cwd=self.project_dir, check=True)
-        print(f"DEBUG: Finished fix attempt on branch {branch_name}")
-
-        # Return all necessary information for later evaluation
+        print(f"DEBUG: All fix attempts completed for {error['function']} in {file_path}")
         return branch_name, "\n".join(all_ai_responses), stdout, stderr
 
     def parse_aider_response(self, response: str) -> str:
