@@ -20,7 +20,8 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 print("DEBUG: Imported all necessary modules")
 
 class PytestErrorFixer:
-    def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", initial_temperature=0.4, temperature_increment=0.1):
+    def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", initial_temperature=0.4, temperature_increment=0.1, args=None):
+        self.args = args
         """
         Initialize the PytestErrorFixer with configuration settings.
 
@@ -33,7 +34,8 @@ class PytestErrorFixer:
         """
         self.initial_temperature = initial_temperature
         self.temperature_increment = temperature_increment
-        print(f"DEBUG: Initialized PytestErrorFixer with initial_temperature={initial_temperature}, temperature_increment={temperature_increment}, max_retries={max_retries}")
+        if args.verbose:
+            print(f"DEBUG: Initialized PytestErrorFixer with initial_temperature={initial_temperature}, temperature_increment={temperature_increment}, max_retries={max_retries}")
         self.project_dir = os.path.abspath(project_dir)
         self.max_retries = max_retries
         api_key = os.getenv("OPENAI_API_KEY")
@@ -48,10 +50,12 @@ class PytestErrorFixer:
         self.branch_name = "pytest-aider-automation"
         self.ensure_branch()
         self.raptor_wrapper = Raptor_RAG_Wrapper()
-        print(f"DEBUG: Initialized PytestErrorFixer with Raptor_RAG_Wrapper")
+        if args.verbose:
+            print(f"DEBUG: Initialized PytestErrorFixer with Raptor_RAG_Wrapper")
         self.init_progress_log()
         
-        print("DEBUG: PytestErrorFixer initialization completed")
+        if args.verbose:
+            print("DEBUG: PytestErrorFixer initialization completed")
 
         # Define the relevant_files_mapping attribute
         self.relevant_files_mapping = {
@@ -147,23 +151,28 @@ class PytestErrorFixer:
         Returns:
         - bool: True if the fix was successful, False otherwise.
         """
-        print(f"DEBUG: Verifying fix on branch {branch_name} for {function} in {test_file}")
+        if args.verbose:
+            print(f"DEBUG: Verifying fix on branch {branch_name} for {function} in {test_file}")
         try:
             subprocess.run(["git", "checkout", branch_name], cwd=self.project_dir, check=True)
-            print(f"DEBUG: Switched to branch {branch_name}")
+            if args.verbose:
+                print(f"DEBUG: Switched to branch {branch_name}")
         except subprocess.CalledProcessError as e:
             print(f"ERROR: Failed to switch to branch {branch_name}: {str(e)}")
             return False
 
         stdout, stderr = self.run_test(test_file, function)
-        print(f"DEBUG: Test output:\n{stdout[:500]}...")  # Print first 500 characters
-        print(f"DEBUG: Test error output:\n{stderr[:500]}...")  # Print first 500 characters
+        if args.verbose:
+            print(f"DEBUG: Test output:\n{stdout[:500]}...")  # Print first 500 characters
+            print(f"DEBUG: Test error output:\n{stderr[:500]}...")  # Print first 500 characters
 
         if "PASSED" in stdout:
-            print(f"DEBUG: Fix verified successfully for {function} in {test_file}")
+            if args.verbose:
+                print(f"DEBUG: Fix verified successfully for {function} in {test_file}")
             return True
         else:
-            print(f"DEBUG: Fix verification failed for {function} in {test_file}")
+            if args.verbose:
+                print(f"DEBUG: Fix verification failed for {function} in {test_file}")
             return False
 
     def check_git_status(self):
@@ -658,7 +667,7 @@ class PytestErrorFixer:
                     print(f"ERROR: Failed to commit changes after exception: {str(e)}")
 
         print(f"DEBUG: All fix attempts completed for {error['function']} in {file_path}")
-        return branch_name, "\n".join(all_ai_responses), stdout, stderr
+        return branch_name, "", stdout, stderr
 
     def parse_aider_response(self, response: str) -> str:
         """
@@ -1033,6 +1042,7 @@ async def main():
         initial_temperature=args.initial_temperature,
         temperature_increment=args.temperature_increment,
         max_retries=args.max_retries
+        args=args
     )
     await fixer.main()
 
