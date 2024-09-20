@@ -25,7 +25,7 @@ class PytestErrorFixer:
         self.initial_temperature = initial_temperature
         self.temperature_increment = temperature_increment
         print(f"DEBUG: Initialized PytestErrorFixer with initial_temperature={initial_temperature}, temperature_increment={temperature_increment}, max_retries={max_retries}")
-        self.project_dir = project_dir
+        self.project_dir = os.path.abspath(project_dir)
         self.max_retries = max_retries
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -401,16 +401,7 @@ class PytestErrorFixer:
         subprocess.run(["git", "checkout", "-b", branch_name], cwd=self.project_dir, check=True)
         logging.info(f"Attempting to fix error in {file_path}: {error['function']}")
 
-        error_dict = {file_path: [error]}
-        relevant_files = self.extract_file_paths_from_errors(error_dict)
-        all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
-
-        # Add predefined relevant files for the specific test file
-        test_file_name = os.path.basename(error['test_file'])
-        if test_file_name in self.relevant_files_mapping:
-            for rel_path in self.relevant_files_mapping[test_file_name]:
-                abs_path = os.path.abspath(os.path.join(self.project_dir, rel_path))
-                all_relevant_files.append(abs_path)
+        all_relevant_files = self.get_relevant_files(error['test_file'])
 
         debug_tips_file = os.path.join(self.project_dir, "debug tips", f"{test_file_name.replace('.py', '.md')}")
         if os.path.exists(debug_tips_file):
