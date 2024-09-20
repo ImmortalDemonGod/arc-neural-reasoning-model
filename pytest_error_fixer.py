@@ -22,6 +22,36 @@ print("DEBUG: Imported all necessary modules")
 class PytestErrorFixer:
     def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", initial_temperature=0.4, temperature_increment=0.1, args=None):
         self.args = args
+
+    def check_test_results(self, stdout: str) -> Dict[str, Any]:
+        print("DEBUG: Entering check_test_results method")
+        print(f"DEBUG: stdout length: {len(stdout)}")
+        
+        # Look for the summary line
+        summary_match = re.search(r'=+ (\d+) passed, (\d+) failed, (\d+) warning.* in .*', stdout)
+        if summary_match:
+            passed = int(summary_match.group(1))
+            failed = int(summary_match.group(2))
+            warnings = int(summary_match.group(3))
+            
+            print(f"DEBUG: Found summary line. Passed: {passed}, Failed: {failed}, Warnings: {warnings}")
+            return {
+                "all_passed": failed == 0,
+                "passed": passed,
+                "failed": failed,
+                "warnings": warnings
+            }
+        else:
+            print("DEBUG: Couldn't find summary line, falling back to simple check")
+            # If we can't find the summary line, fall back to the previous method
+            passed = "PASSED" in stdout or "passed" in stdout.lower()
+            failed = "FAILED" in stdout or "failed" in stdout.lower()
+            return {
+                "all_passed": passed and not failed,
+                "passed": None,  # We don't know the exact number
+                "failed": None,
+                "warnings": None
+            }
         """
         Initialize the PytestErrorFixer with configuration settings.
 
@@ -166,7 +196,10 @@ class PytestErrorFixer:
             print(f"DEBUG: Test output:\n{stdout[:500]}...")  # Print first 500 characters
             print(f"DEBUG: Test error output:\n{stderr[:500]}...")  # Print first 500 characters
 
-        if "PASSED" in stdout:
+        test_results = self.check_test_results(stdout)
+        print(f"DEBUG: Verification test results: {test_results}")
+
+        if test_results["all_passed"]:
             if args.verbose:
                 print(f"DEBUG: Fix verified successfully for {function} in {test_file}")
             return True
@@ -374,11 +407,16 @@ class PytestErrorFixer:
         Returns:
         - Dict[str, List[Dict[str, Any]]]: A dictionary mapping file paths to lists of error details.
         """
+        print(f"DEBUG: Entering parse_errors method")
+        print(f"DEBUG: Output length: {len(output)}")
+
         # Extract the 'FAILURES' section from the log
         failures_match = re.search(r"={10,} FAILURES ={10,}\n(.*?)(?=\n=|$)", output, re.DOTALL)
         if failures_match:
             failures_section = failures_match.group(1)
+            print(f"DEBUG: Found FAILURES section. Length: {len(failures_section)}")
         else:
+            print("DEBUG: No FAILURES section found in output")
             return {}
 
         # Use regex to find all failure blocks along with their test names
@@ -405,7 +443,10 @@ class PytestErrorFixer:
                     'test_file': test_file
                 })
 
-        print("Parsed errors:", dict(parsed_errors))
+        print(f"DEBUG: Parsed {len(parsed_errors)} errors")
+        for file, errors in parsed_errors.items():
+            print(f"DEBUG: File {file} has {len(errors)} errors")
+
         return parsed_errors
 
     def parse_failure_block(self, block: str) -> Optional[Dict[str, Any]]:
@@ -418,6 +459,9 @@ class PytestErrorFixer:
         Returns:
         - Optional[Dict[str, Any]]: A dictionary with parsed failure details, or None if parsing fails.
         """
+        print(f"DEBUG: Entering parse_failure_block method")
+        print(f"DEBUG: Block length: {len(block)}")
+
         # Split the block into sections based on captured outputs/logs
         sections = re.split(r"(-{10,}.*?-{10,})\n", block)
         content_sections = []
@@ -442,6 +486,8 @@ class PytestErrorFixer:
         line_number = file_line_func_match.group(2)
         function = file_line_func_match.group(3)
 
+        print(f"DEBUG: Parsed file path: {file_path}, line number: {line_number}, function: {function}")
+
         # The rest of the lines are code snippet and error messages
         code_snippet = []
         error_messages = []
@@ -456,6 +502,9 @@ class PytestErrorFixer:
             i += 1
         error_message = '\n'.join(error_messages)
         error_type = error_message.split(':')[0] if error_message else ''
+
+        print(f"DEBUG: Parsed error type: {error_type}")
+        print(f"DEBUG: Error message length: {len(error_message)}")
 
         # Collect captured outputs/logs if available
         captured_output = ''
@@ -653,12 +702,18 @@ class PytestErrorFixer:
                 except subprocess.CalledProcessError as e:
                     print(f"ERROR: Failed to commit changes: {str(e)}")
 
-                if "PASSED" in stdout:
-                    print(f"DEBUG: Test passed for {error['function']} in {file_path}")
+                test_results = self.check_test_results(stdout)
+                print(f"DEBUG: Test results: {test_results}")
+
+                if test_results["all_passed"]:
+                    print(f"DEBUG: All tests passed for {error['function']} in {file_path}")
+                    print(f"DEBUG: Passed: {test_results['passed']}, Failed: {test_results['failed']}, Warnings: {test_results['warnings']}")
+                    print(f"DEBUG: Full test output:\n{stdout}")
                     self.log_progress("fixed", error, file_path, all_relevant_files, changes, temperature)
                     return branch_name, "\n".join(all_ai_responses), stdout, stderr
                 else:
-                    print(f"DEBUG: Test still failing for {error['function']} in {file_path}")
+                    print(f"DEBUG: Tests still failing for {error['function']} in {file_path}")
+                    print(f"DEBUG: Passed: {test_results['passed']}, Failed: {test_results['failed']}, Warnings: {test_results['warnings']}")
                     self.log_progress("failed", error, file_path, all_relevant_files, changes, temperature)
 
             except Exception as e:
@@ -1010,7 +1065,10 @@ async def main(self):
     successful_fixes = []
     failed_fixes = []
 
+    print(f"DEBUG: Starting to process {len(all_errors)} files with errors")
+
     for file_path, error_list in all_errors.items():
+        print(f"DEBUG: Processing file: {file_path} with {len(error_list)} errors")
         for error in error_list:
             print(f"DEBUG: Processing error: {error['function']} in {file_path}")
             
@@ -1023,13 +1081,14 @@ async def main(self):
             if self.verify_fix(branch, error['test_file'], error['function']):
                 successful_fixes.append((file_path, error['function'], branch))
                 print(f"DEBUG: Fix successful for {error['function']} in {file_path}")
-                print(f"DEBUG: Completed processing error: {error['function']} in {file_path}")
-                print(f"DEBUG: Branch: {branch}, stdout length: {len(stdout)}, stderr length: {len(stderr)}")
             else:
                 failed_fixes.append((file_path, error['function'], branch))
                 print(f"DEBUG: Fix failed for {error['function']} in {file_path}")
+            
+            print(f"DEBUG: Finished processing error: {error['function']} in {file_path}")
+            print(f"DEBUG: Branch: {branch}, stdout length: {len(stdout)}, stderr length: {len(stderr)}")
 
-    print("DEBUG: All errors processed")
+    print("DEBUG: Finished processing all errors")
     print("DEBUG: Displaying final progress log")
     self.display_progress_log()
 
