@@ -1041,7 +1041,7 @@ async def main():
         args.project_dir,
         initial_temperature=args.initial_temperature,
         temperature_increment=args.temperature_increment,
-        max_retries=args.max_retries
+        max_retries=args.max_retries,
         args=args
     )
     await fixer.main()
