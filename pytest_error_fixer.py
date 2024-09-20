@@ -1,5 +1,4 @@
 import asyncio
-import asyncio
 import subprocess
 import logging
 import re
@@ -125,6 +124,35 @@ class PytestErrorFixer:
         }
 
         self.initialize_raptor_wrapper()
+
+    def verify_fix(self, branch_name: str, test_file: str, function: str) -> bool:
+        print(f"DEBUG: Verifying fix on branch {branch_name} for {function} in {test_file}")
+        try:
+            subprocess.run(["git", "checkout", branch_name], cwd=self.project_dir, check=True)
+            print(f"DEBUG: Switched to branch {branch_name}")
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR: Failed to switch to branch {branch_name}: {str(e)}")
+            return False
+
+        stdout, stderr = self.run_test(test_file, function)
+        print(f"DEBUG: Test output:\n{stdout[:500]}...")  # Print first 500 characters
+        print(f"DEBUG: Test error output:\n{stderr[:500]}...")  # Print first 500 characters
+
+        if "PASSED" in stdout:
+            print(f"DEBUG: Fix verified successfully for {function} in {test_file}")
+            return True
+        else:
+            print(f"DEBUG: Fix verification failed for {function} in {test_file}")
+            return False
+
+    def check_git_status(self):
+        try:
+            status = subprocess.check_output(["git", "status", "--porcelain"], cwd=self.project_dir).decode('utf-8')
+            print(f"DEBUG: Git status:\n{status}")
+            return status
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR: Failed to get git status: {str(e)}")
+            return ""
 
     def get_relevant_files(self, test_file_path: str) -> List[str]:
         # Strip the base path to match the dictionary keys
@@ -781,11 +809,11 @@ class PytestErrorFixer:
             all_errors = self.load_errors()
         logging.info(f"Loaded errors: {json.dumps(all_errors, indent=2)}")
 
-        fix_attempts = []
+        successful_fixes = []
+        failed_fixes = []
 
         for file_path, error_list in all_errors.items():
             for error in error_list:
-                logging.info(f"Processing error: {error} in {file_path}")
                 print(f"DEBUG: Processing error: {error['function']} in {file_path}")
                 
                 if args.debug_single_error:
@@ -793,34 +821,25 @@ class PytestErrorFixer:
                 else:
                     branch, ai_responses, stdout, stderr = await self.fix_error(error, file_path)
                 
-                fix_attempts.append({
-                    "file_path": file_path,
-                    "function": error['function'],
-                    "branch": branch,
-                    "ai_responses": ai_responses,
-                    "stdout": stdout,
-                    "stderr": stderr
-                })
+                # Verify the fix
+                if self.verify_fix(branch, error['test_file'], error['function']):
+                    successful_fixes.append((file_path, error['function'], branch))
+                    print(f"DEBUG: Fix successful for {error['function']} in {file_path}")
+                else:
+                    failed_fixes.append((file_path, error['function'], branch))
+                    print(f"DEBUG: Fix failed for {error['function']} in {file_path}")
 
-        logging.info("Error fixing completed.")
-
-        print("DEBUG: All fix attempts completed")
-        logging.info("Error fixing attempts completed.")
-
-        # Log all fix attempts
-        for attempt in fix_attempts:
-            logging.info(f"Fix attempt for {attempt['file_path']} - {attempt['function']}:")
-            logging.info(f"  Branch: {attempt['branch']}")
-            logging.info(f"  AI Responses: {attempt['ai_responses'][:500]}...")  # Log first 500 characters of AI responses
-            logging.info(f"  Stdout: {attempt['stdout'][:500]}...")  # Log first 500 characters of stdout
-            logging.info(f"  Stderr: {attempt['stderr'][:500]}...")  # Log first 500 characters of stderr
-
-        logging.info("Re-running full test suite to verify fixes...")
-        for test_file in self.discover_test_files():
-            stdout, stderr = self.run_test(test_file)
-            logging.info(f"Final test results for {test_file}:")
-            logging.info(stdout)
-            logging.info(stderr)
+        print("DEBUG: Generating fix report")
+        with open("fix_report.txt", "w") as report:
+            report.write("Successful Fixes:\n")
+            for fix in successful_fixes:
+                report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+            
+            report.write("\nFailed Fixes:\n")
+            for fix in failed_fixes:
+                report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+        
+        print("DEBUG: Fix report generated in fix_report.txt")
 
         logging.info("Error fixing and verification completed.")
         
@@ -851,6 +870,7 @@ if __name__ == "__main__":
     parser.add_argument("--temperature-increment", type=float, default=0.1, help="Temperature increment for each retry (default: 0.1)")
     parser.add_argument("--max-retries", type=int, default=3, help="Maximum number of fix attempts per error (default: 3)")
     parser.add_argument("--debug-single-error", action="store_true", help="Use debug_fix_single_error instead of fix_error")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode with extra logging")
     args = parser.parse_args()
 
     print(f"DEBUG: Starting PytestErrorFixer with arguments: {args}")
