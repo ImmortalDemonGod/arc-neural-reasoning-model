@@ -21,6 +21,16 @@ print("DEBUG: Imported all necessary modules")
 
 class PytestErrorFixer:
     def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", initial_temperature=0.4, temperature_increment=0.1):
+        """
+        Initialize the PytestErrorFixer with configuration settings.
+
+        Parameters:
+        - project_dir (str): The path to the project directory.
+        - max_retries (int): Maximum number of retries for fixing an error.
+        - progress_log (str): Path to the progress log file.
+        - initial_temperature (float): Initial temperature setting for the AI model.
+        - temperature_increment (float): Increment for temperature on each retry.
+        """
         self.initial_temperature = initial_temperature
         self.temperature_increment = temperature_increment
         print(f"DEBUG: Initialized PytestErrorFixer with initial_temperature={initial_temperature}, temperature_increment={temperature_increment}, max_retries={max_retries}")
@@ -126,6 +136,17 @@ class PytestErrorFixer:
         self.initialize_raptor_wrapper()
 
     def verify_fix(self, branch_name: str, test_file: str, function: str) -> bool:
+        """
+        Verify if the fix for a specific test function in a test file was successful.
+
+        Parameters:
+        - branch_name (str): The name of the git branch to check.
+        - test_file (str): The path to the test file.
+        - function (str): The name of the test function.
+
+        Returns:
+        - bool: True if the fix was successful, False otherwise.
+        """
         print(f"DEBUG: Verifying fix on branch {branch_name} for {function} in {test_file}")
         try:
             subprocess.run(["git", "checkout", branch_name], cwd=self.project_dir, check=True)
@@ -146,6 +167,12 @@ class PytestErrorFixer:
             return False
 
     def check_git_status(self):
+        """
+        Check and return the current git status of the project directory.
+
+        Returns:
+        - str: The git status output.
+        """
         try:
             status = subprocess.check_output(["git", "status", "--porcelain"], cwd=self.project_dir).decode('utf-8')
             print(f"DEBUG: Git status:\n{status}")
@@ -155,6 +182,15 @@ class PytestErrorFixer:
             return ""
 
     def get_relevant_files(self, test_file_path: str) -> List[str]:
+        """
+        Retrieve a list of relevant files associated with a given test file.
+
+        Parameters:
+        - test_file_path (str): The path to the test file.
+
+        Returns:
+        - List[str]: A list of relevant file paths.
+        """
         # Strip the base path to match the dictionary keys
         relative_path = os.path.relpath(test_file_path, self.project_dir)
         
@@ -167,6 +203,7 @@ class PytestErrorFixer:
         return [os.path.join(self.project_dir, file) for file in relevant_files]
 
     def init_progress_log(self):
+        """Initialize the progress log file if it doesn't already exist."""
         # Initialize the progress log file if it doesn't exist
         logging.info("Initializing progress log...")
         if not os.path.exists(self.progress_log):
@@ -174,6 +211,7 @@ class PytestErrorFixer:
                 json.dump([], f)
 
     def initialize_raptor_wrapper(self):
+        """Initialize the Raptor_RAG_Wrapper with content from relevant files."""
         # Initialize the Raptor_RAG_Wrapper with relevant files
         for test_file, relevant_files in self.relevant_files_mapping.items():
             for file_path in relevant_files:
@@ -188,6 +226,7 @@ class PytestErrorFixer:
         print("DEBUG: Initialized Raptor_RAG_Wrapper with relevant files")
 
     def ensure_branch(self):
+        """Ensure that the specified git branch exists and switch to it."""
         """Ensure that the branch exists and switch to it."""
         try:
             # Check if the branch exists
@@ -204,6 +243,17 @@ class PytestErrorFixer:
             raise
 
     def log_progress(self, status: str, error: Dict[str, Any], test_file: str, files_used: List[str], changes: str, temperature: float):
+        """
+        Log the progress of fixing an error, including status and changes made.
+
+        Parameters:
+        - status (str): The status of the fix attempt (e.g., "fixed", "failed").
+        - error (Dict[str, Any]): The error details.
+        - test_file (str): The path to the test file.
+        - files_used (List[str]): List of files used in the fix attempt.
+        - changes (str): Description of changes made.
+        - temperature (float): The temperature setting used in the attempt.
+        """
         logging.info(f"Logging progress: {status} for error in {test_file}")
         print(f"DEBUG: Files used in log_progress: {files_used}")
         commit_sha = self.get_commit_sha()
@@ -230,6 +280,12 @@ class PytestErrorFixer:
 
 
     def get_git_status(self) -> str:
+        """
+        Retrieve the current git status.
+
+        Returns:
+        - str: The git status output.
+        """
         """Retrieve the current git status."""
         try:
             status = subprocess.check_output(["git", "status", "--porcelain"], cwd=self.project_dir).decode('utf-8')
@@ -240,6 +296,12 @@ class PytestErrorFixer:
             return ""
 
     def get_commit_sha(self) -> str:
+        """
+        Get the current commit SHA of the project directory.
+
+        Returns:
+        - str: The commit SHA.
+        """
         try:
             for attempt in range(self.max_retries):
                 temperature = self.initial_temperature + (attempt * self.temperature_increment)
@@ -250,9 +312,21 @@ class PytestErrorFixer:
             return "N/A"
 
     def get_current_timestamp(self) -> str:
+        """
+        Get the current timestamp in a specific format.
+
+        Returns:
+        - str: The current timestamp.
+        """
         return subprocess.check_output(["date", "+%Y-%m-%d %H:%M:%S"]).strip().decode('utf-8')
 
-    def discover_test_files(self):
+    def discover_test_files(self) -> List[str]:
+        """
+        Discover and return a list of test files in the project directory.
+
+        Returns:
+        - List[str]: A list of test file paths.
+        """
         test_files = []
         for root, dirs, files in os.walk(self.project_dir):
             for file in files:
@@ -260,7 +334,17 @@ class PytestErrorFixer:
                     test_files.append(os.path.join(root, file))
         return test_files
 
-    def run_test(self, test_file: str, function: str = None) -> tuple:
+    def run_test(self, test_file: str, function: str = None) -> Tuple[str, str]:
+        """
+        Run a specific test file or function and return the output and error.
+
+        Parameters:
+        - test_file (str): The path to the test file.
+        - function (str, optional): The specific test function to run.
+
+        Returns:
+        - Tuple[str, str]: The standard output and error output from the test run.
+        """
         cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG"]
         if function:
             cmd.append(f"{test_file}::{function}")
@@ -270,7 +354,17 @@ class PytestErrorFixer:
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=self.project_dir)
         return result.stdout, result.stderr
 
-    def parse_errors(self, output, test_file):
+    def parse_errors(self, output: str, test_file: str) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Parse errors from the test output and return them in a structured format.
+
+        Parameters:
+        - output (str): The combined standard output and error output from the test run.
+        - test_file (str): The path to the test file.
+
+        Returns:
+        - Dict[str, List[Dict[str, Any]]]: A dictionary mapping file paths to lists of error details.
+        """
         # Extract the 'FAILURES' section from the log
         failures_match = re.search(r"={10,} FAILURES ={10,}\n(.*?)(?=\n=|$)", output, re.DOTALL)
         if failures_match:
@@ -305,7 +399,16 @@ class PytestErrorFixer:
         print("Parsed errors:", dict(parsed_errors))
         return parsed_errors
 
-    def parse_failure_block(self, block):
+    def parse_failure_block(self, block: str) -> Optional[Dict[str, Any]]:
+        """
+        Parse a block of failure information from the test output.
+
+        Parameters:
+        - block (str): A block of text containing failure information.
+
+        Returns:
+        - Optional[Dict[str, Any]]: A dictionary with parsed failure details, or None if parsing fails.
+        """
         # Split the block into sections based on captured outputs/logs
         sections = re.split(r"(-{10,}.*?-{10,})\n", block)
         content_sections = []
@@ -365,7 +468,13 @@ class PytestErrorFixer:
             'captured_log': captured_log
         }
 
-    def save_errors(self, new_errors):
+    def save_errors(self, new_errors: Dict[str, List[Dict[str, Any]]]):
+        """
+        Save new errors to the error log, merging with existing errors.
+
+        Parameters:
+        - new_errors (Dict[str, List[Dict[str, Any]]]): New errors to save.
+        """
         if os.path.exists(self.error_log):
             with open(self.error_log, 'r') as f:
                 existing_errors = json.load(f)
@@ -384,7 +493,13 @@ class PytestErrorFixer:
         with open(self.error_log, 'w') as f:
             json.dump(existing_errors, f, indent=4)
 
-    def load_errors(self):
+    def load_errors(self) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Load errors from the error log file.
+
+        Returns:
+        - Dict[str, List[Dict[str, Any]]]: A dictionary of errors loaded from the log.
+        """
         # Load errors from JSON log
         logging.info("Loading errors from log...")
         if os.path.exists(self.error_log):
@@ -398,7 +513,16 @@ class PytestErrorFixer:
                 json.dump({}, f)
             return {}
 
-    def extract_file_paths_from_errors(self, errors):
+    def extract_file_paths_from_errors(self, errors: Dict[str, List[Dict[str, Any]]]) -> Dict[str, List[str]]:
+        """
+        Extract file paths from error details and return them.
+
+        Parameters:
+        - errors (Dict[str, List[Dict[str, Any]]]): A dictionary of errors.
+
+        Returns:
+        - Dict[str, List[str]]: A dictionary mapping error keys to lists of relevant file paths.
+        """
         error_file_paths = {}
         for file_path, error_list in errors.items():
             for error in error_list:
@@ -428,6 +552,16 @@ class PytestErrorFixer:
         return error_file_paths
 
     async def fix_error(self, error: Dict[str, Any], file_path: str) -> Tuple[str, str, str, str]:
+        """
+        Attempt to fix a specific error in a file and return the results.
+
+        Parameters:
+        - error (Dict[str, Any]): The error details.
+        - file_path (str): The path to the file containing the error.
+
+        Returns:
+        - Tuple[str, str, str, str]: The branch name, AI responses, standard output, and error output.
+        """
         logging.debug(f"Starting fix_error for {error['function']} in {file_path}")
         print(f"DEBUG: Starting fix_error for {error['function']} in {file_path}")
         
@@ -526,6 +660,15 @@ class PytestErrorFixer:
         return branch_name, "\n".join(all_ai_responses), stdout, stderr
 
     def parse_aider_response(self, response: str) -> str:
+        """
+        Parse the AI model's response to extract search/replace statements.
+
+        Parameters:
+        - response (str): The response from the AI model.
+
+        Returns:
+        - str: A JSON string representing the parsed changes.
+        """
         """Parse the Aider response to extract search/replace statements."""
         changes = []
         lines = response.split('\n')
@@ -557,6 +700,15 @@ class PytestErrorFixer:
 
 
     async def summarize_relevant_files(self, test_file: str) -> str:
+        """
+        Summarize the contents and purpose of relevant files for a test file.
+
+        Parameters:
+        - test_file (str): The path to the test file.
+
+        Returns:
+        - str: A summary of the relevant files.
+        """
         print(f"DEBUG: Entering summarize_relevant_files for {test_file}")
         print(f"DEBUG: Test file path: {test_file}")
         print(f"DEBUG: Relevant files mapping keys: {self.relevant_files_mapping.keys()}")
@@ -589,6 +741,19 @@ class PytestErrorFixer:
         return full_summary
 
     async def construct_prompt(self, error: Dict[str, Any], stdout: str, stderr: str, ai_responses: str, attempt: int) -> str:
+        """
+        Construct a prompt for the AI model to fix an error.
+
+        Parameters:
+        - error (Dict[str, Any]): The error details.
+        - stdout (str): The standard output from the test run.
+        - stderr (str): The error output from the test run.
+        - ai_responses (str): Previous AI responses.
+        - attempt (int): The current attempt number.
+
+        Returns:
+        - str: The constructed prompt.
+        """
         print(f"DEBUG: Entering construct_prompt for attempt {attempt}")
         
         error_prompt = (
@@ -635,7 +800,17 @@ class PytestErrorFixer:
         print(f"DEBUG: Truncated prompt length: {len(truncated_prompt)}")
         return truncated_prompt
 
-    def debug_fix_single_error(self, error, file_path):
+    def debug_fix_single_error(self, error: Dict[str, Any], file_path: str) -> bool:
+        """
+        Debug and attempt to fix a single error in a file.
+
+        Parameters:
+        - error (Dict[str, Any]): The error details.
+        - file_path (str): The path to the file containing the error.
+
+        Returns:
+        - bool: True if the error was fixed, False otherwise.
+        """
         print(f"DEBUG: Starting debug_fix_single_error for {error['function']} in {file_path}")
 
         # Extract relevant files for this specific error
@@ -728,6 +903,16 @@ class PytestErrorFixer:
             print(f"DEBUG: Failed to fix: {file_path} - {error['function']}")
             return False
     async def summarize_test_output(self, stdout: str, stderr: str) -> str:
+        """
+        Summarize the test output, focusing on errors and context.
+
+        Parameters:
+        - stdout (str): The standard output from the test run.
+        - stderr (str): The error output from the test run.
+
+        Returns:
+        - str: A summary of the test output.
+        """
         print(f"DEBUG: Entering summarize_test_output")
         print(f"DEBUG: stdout length: {len(stdout)}, stderr length: {len(stderr)}")
         
@@ -748,6 +933,16 @@ class PytestErrorFixer:
             return f"Test Output Summary: Error occurred while summarizing - {str(e)}"
 
     def trunc_to_token_limit(self, text: str, max_tokens: int = 9500) -> str:
+        """
+        Truncate text to fit within a specified token limit.
+
+        Parameters:
+        - text (str): The text to truncate.
+        - max_tokens (int): The maximum number of tokens allowed.
+
+        Returns:
+        - str: The truncated text.
+        """
         print(f"DEBUG: Entering trunc_to_token_limit")
         print(f"DEBUG: Input text length: {len(text)}")
         # Simple approximation: assume 1 token ≈ 4 characters
@@ -761,6 +956,7 @@ class PytestErrorFixer:
 
 
     async def main(self):
+        """Main process to load errors, attempt fixes, and generate a report."""
         logging.info("Starting main process...")
         # Load existing errors from the log
         all_errors = self.load_errors()
@@ -829,6 +1025,7 @@ class PytestErrorFixer:
 
 
 async def main():
+    """Initialize and run the PytestErrorFixer with command-line arguments."""
     fixer = PytestErrorFixer(
         args.project_dir,
         initial_temperature=args.initial_temperature,
