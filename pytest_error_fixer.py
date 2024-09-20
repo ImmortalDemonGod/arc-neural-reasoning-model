@@ -1059,12 +1059,18 @@ class PytestErrorFixer:
         with open(report_filename, 'a') as report:
             report.write(f"\n\n--- Fix Report: {timestamp} ---\n")
             report.write("Successful Fixes:\n")
-            for fix in successful_fixes:
-                report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
-            
+            if successful_fixes:
+                for fix in successful_fixes:
+                    report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+            else:
+                report.write("None\n")
+
             report.write("\nFailed Fixes:\n")
-            for fix in failed_fixes:
-                report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+            if failed_fixes:
+                for fix in failed_fixes:
+                    report.write(f"- {fix[1]} in {fix[0]} (Branch: {fix[2]})\n")
+            else:
+                report.write("None\n")
         
         print(f"DEBUG: Fix report appended to {report_filename}")
 
