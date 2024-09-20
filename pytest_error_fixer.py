@@ -18,6 +18,8 @@ load_dotenv()  # This loads the variables from .env
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', filename='pytest_error_fixer.log', filemode='a')
 
+print("DEBUG: Imported all necessary modules")
+
 class PytestErrorFixer:
     def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", initial_temperature=0.4, temperature_increment=0.1):
         self.initial_temperature = initial_temperature
@@ -39,6 +41,8 @@ class PytestErrorFixer:
         self.raptor_wrapper = Raptor_RAG_Wrapper()
         print(f"DEBUG: Initialized PytestErrorFixer with Raptor_RAG_Wrapper")
         self.init_progress_log()
+        
+        print("DEBUG: PytestErrorFixer initialization completed")
 
         # Define the relevant_files_mapping attribute
         self.relevant_files_mapping = {
@@ -144,6 +148,9 @@ class PytestErrorFixer:
                     with open(full_path, 'r') as file:
                         content = file.read()
                         self.raptor_wrapper.add_documents(content)
+                    print(f"DEBUG: Added content from {file_path} to Raptor_RAG_Wrapper")
+                else:
+                    print(f"DEBUG: File not found: {full_path}")
         print("DEBUG: Initialized Raptor_RAG_Wrapper with relevant files")
 
     def ensure_branch(self):
