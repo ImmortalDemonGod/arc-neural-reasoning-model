@@ -132,6 +132,18 @@ class PytestErrorFixer:
 
         self.initialize_raptor_wrapper()
 
+    def get_relevant_files(self, test_file_path: str) -> List[str]:
+        # Strip the base path to match the dictionary keys
+        relative_path = os.path.relpath(test_file_path, self.project_dir)
+        
+        # Replace backslashes with forward slashes for consistency
+        relative_path = relative_path.replace('\\', '/')
+        
+        relevant_files = self.relevant_files_mapping.get(relative_path, [])
+        
+        # Convert relative paths to absolute paths
+        return [os.path.join(self.project_dir, file) for file in relevant_files]
+
     def init_progress_log(self):
         # Initialize the progress log file if it doesn't exist
         logging.info("Initializing progress log...")
