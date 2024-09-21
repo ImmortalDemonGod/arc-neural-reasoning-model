@@ -4,6 +4,8 @@ import sys
 import os
 import torch
 import pytorch_lightning as pl
+import psutil
+import gc
 
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -19,19 +21,25 @@ import arckit
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def log_memory_usage():
+    process = psutil.Process(os.getpid())
+    memory_info = process.memory_info()
+    logger.info(f"Memory usage: {memory_info.rss / 1024 / 1024:.2f} MB")
+
 def objective(trial):
     logger.info(f"Starting trial {trial.number}")
+    log_memory_usage()
     
     # Suggest hyperparameters
     model_config = ModelConfig(
-        n_embd=trial.suggest_int("n_embd", 64, 256),
-        n_head=trial.suggest_int("n_head", 2, 8),
-        n_layer=trial.suggest_int("n_layer", 1, 6)
+        n_embd=trial.suggest_int("n_embd", 32, 128),
+        n_head=trial.suggest_int("n_head", 2, 4),
+        n_layer=trial.suggest_int("n_layer", 1, 3)
     )
     training_config = TrainingConfig(
-        batch_size=trial.suggest_int("batch_size", 16, 128),
+        batch_size=trial.suggest_int("batch_size", 16, 64),
         learning_rate=trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True),
-        max_epochs=trial.suggest_int("max_epochs", 5, 50)
+        max_epochs=trial.suggest_int("max_epochs", 5, 20)
     )
     config = Config(model=model_config, training=training_config)
     
@@ -55,21 +63,33 @@ def objective(trial):
             devices=1,
             logger=False,  # Disable logging to keep things simple
             enable_checkpointing=False,  # Disable checkpointing for simplicity
+            accumulate_grad_batches=4,  # Add gradient accumulation
         )
 
         # Train and evaluate
         logger.info(f"Starting training for trial {trial.number}")
+        log_memory_usage()
         trainer.fit(arc_trainer)
         
         # Test the model
+        log_memory_usage()
         test_results = trainer.test(arc_trainer)
         val_accuracy = test_results[0]['test_accuracy']  # Assuming test_accuracy is logged
 
         logger.info(f"Trial {trial.number} completed with validation accuracy: {val_accuracy}")
+        log_memory_usage()
+        
+        # Clean up to free memory
+        del trainer, arc_trainer, model
+        torch.cuda.empty_cache()
+        gc.collect()
+        log_memory_usage()
+        
         return val_accuracy
     
     except Exception as e:
         logger.error(f"Error in trial {trial.number}: {str(e)}")
+        log_memory_usage()
         raise optuna.exceptions.TrialPruned()
 
 def run_optimization(n_trials=100):
