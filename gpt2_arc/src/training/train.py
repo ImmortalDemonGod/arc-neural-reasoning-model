@@ -220,9 +220,9 @@ if __name__ == "__main__":
         pl_trainer.fit(trainer)
 
         # After training
-        for batch_idx, batch in enumerate(val_loader):
-            test_results = trainer.test_step(batch, batch_idx)
-        tracker.set_test_results(test_results)
+        test_results = pl_trainer.test(trainer, val_loader)
+        if test_results:
+            tracker.set_test_results(test_results[0])  # Assuming single dataloader
 
         tracker.set_final_metrics({
             "best_val_loss": trainer.results_collector.results.get("best_val_loss"),
