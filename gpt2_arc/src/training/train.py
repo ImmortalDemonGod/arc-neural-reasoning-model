@@ -56,6 +56,7 @@ def main(args):
             config=config,
             results_collector=results_collector
         )
+        trainer.log_hyperparameters()  # Add this line to log hyperparameters
 
     except Exception as e:
         print(f"Training interrupted: {e}")
