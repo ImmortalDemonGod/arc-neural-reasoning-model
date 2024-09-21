@@ -174,7 +174,7 @@ if __name__ == "__main__":
     parser.add_argument("--n-layer", type=int, default=12, help="Number of transformer layers")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size for training")
     parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
-    parser.add_argument("--max-epochs", type=int, default=10, help="Maximum number of epochs")
+    parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
     parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
     parser.add_argument("--no-logging", action="store_true", help="Disable logging")
     parser.add_argument("--no-checkpointing", action="store_true", help="Disable checkpointing")
