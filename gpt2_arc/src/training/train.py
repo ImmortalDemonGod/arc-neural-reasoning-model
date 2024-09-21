@@ -219,14 +219,21 @@ if __name__ == "__main__":
         # Train the model
         pl_trainer.fit(trainer)
 
-        # After training
+        # After training, run test
         test_results = pl_trainer.test(trainer, val_loader)
         if test_results:
-            tracker.set_test_results(test_results[0])  # Assuming single dataloader
+            avg_test_loss = test_results[0]['test_loss']
+            avg_test_accuracy = test_results[0]['test_accuracy']
+            tracker.set_test_results({
+                "test_loss": avg_test_loss,
+                "test_accuracy": avg_test_accuracy
+            })
 
         tracker.set_final_metrics({
             "best_val_loss": trainer.results_collector.results.get("best_val_loss"),
             "best_epoch": trainer.results_collector.results.get("best_epoch"),
+            "final_test_loss": avg_test_loss,
+            "final_test_accuracy": avg_test_accuracy
         })
 
         # If you're saving a checkpoint
