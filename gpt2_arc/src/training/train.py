@@ -84,8 +84,7 @@ def main(args):
             model=model,
             train_dataset=train_data,
             val_dataset=val_data,
-            config=config,
-            results_collector=results_collector
+            config=config
         )
         trainer.log_hyperparameters()
 
