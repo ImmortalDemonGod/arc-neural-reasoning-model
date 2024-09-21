@@ -114,7 +114,6 @@ def main(args):
             accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu',
             devices=1
         )
-        logger.debug(f"PyTorch Lightning Trainer config: {pl_trainer.state_dict()}")
 
         # Train the model
         logger.info("Starting model training")
