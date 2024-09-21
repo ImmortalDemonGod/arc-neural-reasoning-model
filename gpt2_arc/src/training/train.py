@@ -153,7 +153,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--fast_dev_run", type=int, default=0, help="Number of batches to run for debugging (0 for full run)"
+        "--fast_dev_run", type=int, default=1, help="Number of batches to run for debugging (0 for full run)"
     )
 
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
@@ -213,7 +213,7 @@ if __name__ == "__main__":
             enable_progress_bar=not args.no_progress_bar,
             fast_dev_run=args.fast_dev_run,
             gradient_clip_val=1.0,
-            accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu'
+            accelerator='cpu'
         )
 
         # Train the model
