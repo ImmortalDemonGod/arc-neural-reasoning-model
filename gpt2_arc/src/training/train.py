@@ -153,7 +153,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--fast_dev_run", type=int, default=1, help="Run a few batches for debugging purposes"
+        "--fast_dev_run", type=int, default=0, help="Number of batches to run for debugging (0 for full run)"
     )
 
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
