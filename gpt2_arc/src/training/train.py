@@ -179,7 +179,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-logging", action="store_true", help="Disable logging")
     parser.add_argument("--no-checkpointing", action="store_true", help="Disable checkpointing")
     parser.add_argument("--no-progress-bar", action="store_true", help="Disable progress bar")
-    parser.add_argument("--fast-dev-run", type=int, default=0, help="Number of batches for fast dev run (0 for full run)")
+    parser.add_argument("--fast-dev-run", action="store_true", help="Run a fast development test")
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
     parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
     parser.add_argument("--run-name", type=str, default="default_run", help="Name of the run for saving results")
