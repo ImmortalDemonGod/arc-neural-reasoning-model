@@ -30,7 +30,7 @@ def objective(trial):
     )
     training_config = TrainingConfig(
         batch_size=trial.suggest_int("batch_size", 16, 128),
-        learning_rate=trial.suggest_loguniform("learning_rate", 1e-5, 1e-2),
+        learning_rate=trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True),
         max_epochs=trial.suggest_int("max_epochs", 5, 50)
     )
     config = Config(model=model_config, training=training_config)
@@ -51,7 +51,8 @@ def objective(trial):
         # Set up PyTorch Lightning trainer
         trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
-            gpus=1 if torch.cuda.is_available() else None,
+            accelerator='gpu' if torch.cuda.is_available() else 'cpu',
+            devices=1,
             logger=False,  # Disable logging to keep things simple
             enable_checkpointing=False,  # Disable checkpointing for simplicity
         )
@@ -86,11 +87,14 @@ def run_optimization(n_trials=100):
     study.optimize(objective, n_trials=n_trials)
     
     logger.info("Optimization completed")
-    logger.info(f"Best trial: {study.best_trial.number}")
-    logger.info(f"Best value: {study.best_value}")
-    logger.info("Best hyperparameters:")
-    for key, value in study.best_params.items():
-        logger.info(f"  {key}: {value}")
+    if study.best_trial:
+        logger.info(f"Best trial: {study.best_trial.number}")
+        logger.info(f"Best value: {study.best_value}")
+        logger.info("Best hyperparameters:")
+        for key, value in study.best_params.items():
+            logger.info(f"  {key}: {value}")
+    else:
+        logger.warning("No successful trials found.")
 
 if __name__ == "__main__":
     run_optimization(n_trials=10)  # Start with a small number of trials for testing
