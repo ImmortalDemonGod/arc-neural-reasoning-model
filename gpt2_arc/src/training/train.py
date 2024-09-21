@@ -59,6 +59,8 @@ def main(args):
 
     except Exception as e:
         print(f"Training interrupted: {e}")
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"Attempted to save results to: {args.results_dir}")
         if 'tracker' in locals():
             tracker.log_metric("training_interrupted", 1)
             tracker.log_metric("error_message", str(e))
@@ -245,6 +247,8 @@ if __name__ == "__main__":
         os.makedirs(args.results_dir, exist_ok=True)
         results_path = os.path.join(args.results_dir, f"results_{args.run_name}.json")
         tracker.save_to_json(results_path)
+
+        print(f"Results saved to: {results_path}")
 
     except Exception as e:
         print(f"Training interrupted: {e}")
