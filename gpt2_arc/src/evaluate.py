@@ -71,7 +71,6 @@ def main(args):
     checkpoint = torch.load(args.model_checkpoint)
     # Directly load the state dictionary
     model.load_state_dict(checkpoint)
-    model.load_state_dict(state_dict)
     model.eval()  # Ensure the model is in evaluation mode
     logger.info("Model set to evaluation mode")
 
