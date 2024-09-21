@@ -11,8 +11,10 @@ def test_actual_checkpoint_loading():
     # Print the keys for debugging purposes
     print("Checkpoint keys:", checkpoint.keys())
     
-    # Check if 'state_dict' is in the checkpoint
-    assert 'state_dict' in checkpoint, "Checkpoint does not contain 'state_dict' key"
+    # Check if the checkpoint contains expected keys
+    expected_keys = ['conv1.weight', 'conv1.bias', 'blocks.0.attention.key.weight']
+    for key in expected_keys:
+        assert key in checkpoint, f"Checkpoint does not contain expected key: {key}"
 
 if __name__ == "__main__":
     pytest.main([__file__])
