@@ -243,8 +243,10 @@ if __name__ == "__main__":
         torch.save(trainer.model.state_dict(), checkpoint_path)
         tracker.set_checkpoint_path(checkpoint_path)
 
-        # Save results to JSON
+        # Create results directory if it doesn't exist
         os.makedirs(args.results_dir, exist_ok=True)
+
+        # Save results to JSON
         results_path = os.path.join(args.results_dir, f"results_{args.run_name}.json")
         tracker.save_to_json(results_path)
 
