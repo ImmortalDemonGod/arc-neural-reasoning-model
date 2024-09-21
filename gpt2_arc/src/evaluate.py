@@ -42,6 +42,11 @@ def evaluate(model, test_dataset, batch_size=32):
     return results[0]
 
 
+def load_config_from_json(json_path):
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+    return data['config']
+
 def main(args):
     # Load the test data using arckit
     _, test_set = arckit.load_data()
@@ -50,17 +55,15 @@ def main(args):
     # Load the checkpoint
     checkpoint = torch.load(args.model_checkpoint)
 
-    # Extract the model configuration from the checkpoint
-    if 'config' in checkpoint:
-        config_dict = checkpoint['config']
-        model_config = ModelConfig(
-            n_embd=config_dict['n_embd'],
-            n_head=config_dict['n_head'],
-            n_layer=config_dict['n_layer'],
-            dropout=config_dict['dropout']
-        )
-    else:
-        raise ValueError("Model configuration not found in checkpoint")
+    # Load the configuration from the JSON file
+    config_path = f"results/experiment_{args.model_checkpoint.split('_')[-1].replace('.pth', '.json')}"
+    config_dict = load_config_from_json(config_path)
+    model_config = ModelConfig(
+        n_embd=config_dict['model']['n_embd'],
+        n_head=config_dict['model']['n_head'],
+        n_layer=config_dict['model']['n_layer'],
+        dropout=config_dict['model']['dropout']
+    )
 
     # Initialize the model with the checkpoint configuration
     model = GPT2ARC(model_config)
