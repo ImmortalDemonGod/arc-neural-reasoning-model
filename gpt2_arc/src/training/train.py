@@ -23,12 +23,28 @@ from gpt2_arc.src.training.trainer import ARCTrainer
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 import os
-
+import optuna
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 def main(args):
+    # Load the best hyperparameters
+    study = optuna.load_study(study_name="gpt2_arc_optimization", storage="sqlite:///optuna_results.db")
+    best_params = study.best_params
+    
+    # Update configurations with best parameters
+    model_config = ModelConfig(
+        n_embd=best_params["n_embd"],
+        n_head=best_params["n_head"],
+        n_layer=best_params["n_layer"]
+    )
+    training_config = TrainingConfig(
+        batch_size=best_params["batch_size"],
+        learning_rate=best_params["learning_rate"],
+        max_epochs=best_params["max_epochs"]
+    )
+    config = Config(model=model_config, training=training_config)
     # Set logging level
     log_level = getattr(logging, args.log_level.upper(), logging.DEBUG)
     logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
