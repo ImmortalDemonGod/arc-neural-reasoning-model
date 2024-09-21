@@ -50,7 +50,7 @@ def main(args):
             training_config = TrainingConfig(
                 batch_size=best_params.get("batch_size", 32),
                 learning_rate=best_params.get("learning_rate", 1e-4),
-                max_epochs=best_params.get("max_epochs", 10)
+                max_epochs=args.max_epochs  # Always use the user-provided max_epochs
             )
         else:
             logger.info("Using provided or default hyperparameters")
