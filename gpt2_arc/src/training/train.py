@@ -72,6 +72,12 @@ def main(args):
         model = GPT2ARC(config=model_config)
         logger.debug(f"Model structure: {model}")
 
+        # Load the checkpoint if specified
+        if args.model_checkpoint:
+            logger.info(f"Loading model from checkpoint: {args.model_checkpoint}")
+            checkpoint = torch.load(args.model_checkpoint)
+            model.load_state_dict(checkpoint)
+
         # Initialize results collector
         results_collector = ResultsCollector(config)
 
@@ -178,6 +184,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-checkpointing", action="store_true", help="Disable checkpointing")
     parser.add_argument("--no-progress-bar", action="store_true", help="Disable progress bar")
     parser.add_argument("--fast-dev-run", action="store_true", help="Run a fast development test")
+    parser.add_argument("--model_checkpoint", type=str, help="Path to the model checkpoint to resume training")
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
     parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
     parser.add_argument("--run-name", type=str, default="default_run", help="Name of the run for saving results")
