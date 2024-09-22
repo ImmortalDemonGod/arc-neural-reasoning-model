@@ -1,4 +1,5 @@
 # gpt2_arc/src/optimize_hyperparameters.py
+import argparse  # Import argparse for command-line argument parsing
 import optuna
 import logging
 import sys
@@ -93,9 +94,8 @@ def objective(trial):
         log_memory_usage()
         raise optuna.exceptions.TrialPruned()
 
-def run_optimization(n_trials=100):
+def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db"):
     study_name = "gpt2_arc_optimization"
-    storage_name = "sqlite:///optuna_results.db"
     
     study = optuna.create_study(
         study_name=study_name,
@@ -118,4 +118,10 @@ def run_optimization(n_trials=100):
         logger.warning("No successful trials found.")
 
 if __name__ == "__main__":
-    run_optimization(n_trials=10)  # Start with a small number of trials for testing
+    parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
+    parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
+    parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
+    
+    args = parser.parse_args()
+    
+    run_optimization(n_trials=args.n_trials, storage_name=args.storage)
