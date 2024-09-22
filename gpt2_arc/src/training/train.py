@@ -22,6 +22,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
+import json
 from gpt2_arc.src.training.trainer import ARCTrainer
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
@@ -66,6 +67,18 @@ def main(args):
         train_data = ARCDataset(train_set)
         val_data = ARCDataset(eval_set)
         logger.debug(f"Train data size: {len(train_data)}, Validation data size: {len(val_data)}")
+
+        # Load model configuration from JSON file
+        config_path = f"results/experiment_{args.model_checkpoint.split('_')[-1].replace('.pth', '.json')}"
+        with open(config_path, 'r') as f:
+            config_data = json.load(f)
+
+        model_config = ModelConfig(
+            n_embd=config_data['config']['model']['n_embd'],
+            n_head=config_data['config']['model']['n_head'],
+            n_layer=config_data['config']['model']['n_layer'],
+            dropout=config_data['config']['model']['dropout']
+        )
 
         # Initialize model
         logger.info("Initializing model")
