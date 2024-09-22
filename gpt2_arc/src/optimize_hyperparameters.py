@@ -32,16 +32,16 @@ def objective(trial):
     logger.info(f"Starting trial {trial.number}")
     log_memory_usage()
     
-    # Suggest hyperparameters
+    # Suggest hyperparameters using ranges from command-line arguments
     model_config = ModelConfig(
-        n_embd=trial.suggest_int("n_embd", 32, 128),
-        n_head=trial.suggest_int("n_head", 2, 4),
-        n_layer=trial.suggest_int("n_layer", 1, 3)
+        n_embd=trial.suggest_int("n_embd", args.n_embd_min, args.n_embd_max),
+        n_head=trial.suggest_int("n_head", args.n_head_min, args.n_head_max),
+        n_layer=trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
     )
     training_config = TrainingConfig(
-        batch_size=trial.suggest_int("batch_size", 16, 64),
-        learning_rate=trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True),
-        max_epochs=trial.suggest_int("max_epochs", 5, 20)
+        batch_size=trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max),
+        learning_rate=trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True),
+        max_epochs=trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
     )
     config = Config(model=model_config, training=training_config)
     
@@ -121,6 +121,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
     parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
+    
+    parser.add_argument("--n_embd_min", type=int, default=32, help="Minimum value for n_embd.")
+    parser.add_argument("--n_embd_max", type=int, default=128, help="Maximum value for n_embd.")
+    parser.add_argument("--n_head_min", type=int, default=2, help="Minimum value for n_head.")
+    parser.add_argument("--n_head_max", type=int, default=4, help="Maximum value for n_head.")
+    parser.add_argument("--n_layer_min", type=int, default=1, help="Minimum value for n_layer.")
+    parser.add_argument("--n_layer_max", type=int, default=3, help="Maximum value for n_layer.")
+    parser.add_argument("--batch_size_min", type=int, default=16, help="Minimum value for batch_size.")
+    parser.add_argument("--batch_size_max", type=int, default=64, help="Maximum value for batch_size.")
+    parser.add_argument("--learning_rate_min", type=float, default=1e-5, help="Minimum value for learning_rate.")
+    parser.add_argument("--learning_rate_max", type=float, default=1e-2, help="Maximum value for learning_rate.")
+    parser.add_argument("--max_epochs_min", type=int, default=5, help="Minimum value for max_epochs.")
+    parser.add_argument("--max_epochs_max", type=int, default=20, help="Maximum value for max_epochs.")
     
     args = parser.parse_args()
     
