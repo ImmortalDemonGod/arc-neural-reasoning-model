@@ -72,19 +72,15 @@ def main(args):
     # Load the checkpoint
     checkpoint = torch.load(args.model_checkpoint)
 
-    # Load the configuration from the JSON file
-    config_path = f"results/experiment_{args.model_checkpoint.split('_')[-1].replace('.pth', '.json')}"
-    config_dict = load_config_from_json(config_path)
-    model_config = ModelConfig(
-        n_embd=config_dict['model']['n_embd'],
-        n_head=config_dict['model']['n_head'],
-        n_layer=config_dict['model']['n_layer'],
-        dropout=config_dict['model']['dropout']
-    )
+    # Extract the model configuration from the checkpoint
+    if 'model_config' in checkpoint:
+        model_config = checkpoint['model_config']
+    else:
+        raise ValueError("Model configuration not found in checkpoint")
 
     # Initialize the model with the checkpoint configuration
     model = GPT2ARC(model_config)
-    model.load_state_dict(checkpoint)
+    model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     logger.info("Model set to evaluation mode")
 

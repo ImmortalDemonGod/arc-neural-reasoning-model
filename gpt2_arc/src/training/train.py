@@ -157,12 +157,15 @@ def main(args):
             "final_test_accuracy": avg_test_accuracy
         })
 
-        # Save the final model
-        logger.info("Saving final model")
+        # Save the final model with configuration
+        logger.info("Saving final model with configuration")
         model_path = f"final_model_{trainer.results_collector.experiment_id}.pth"
-        torch.save(trainer.model.state_dict(), model_path)
+        torch.save({
+            'model_state_dict': trainer.model.state_dict(),
+            'model_config': trainer.config.model
+        }, model_path)
         trainer.results_collector.set_checkpoint_path(model_path)
-        logger.debug(f"Model saved to: {model_path}")
+        logger.debug(f"Model and configuration saved to: {model_path}")
 
         # Save results
         logger.info("Saving experiment results")
