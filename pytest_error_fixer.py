@@ -350,6 +350,10 @@ class PytestErrorFixer:
         return error_file_paths
 
     def fix_error(self, error: Dict[str, Any], file_path: str) -> bool:
+        print(f"DEBUG: Attempting to fix error in {file_path}: {error['function']}")
+
+        error_branch = f"fix-{file_path.replace('/', '-')}-{error['function']}"
+        self.create_branch(error_branch)
         logging.info(f"Attempting to fix error in {file_path}: {error['function']}")
 
         error_dict = {file_path: [error]}
