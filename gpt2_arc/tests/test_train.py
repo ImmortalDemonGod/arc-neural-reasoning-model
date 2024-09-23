@@ -19,6 +19,7 @@ def set_logging_level(level=logging.ERROR):
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 import argparse
 from unittest.mock import ANY, MagicMock, patch
+from torch.utils.data import DataLoader
 
 import pytorch_lightning as pl
 import torch
