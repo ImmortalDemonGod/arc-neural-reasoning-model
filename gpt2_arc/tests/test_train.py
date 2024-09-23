@@ -42,10 +42,13 @@ def mock_args():
     args.no_logging = False
     args.no_checkpointing = False
     args.no_progress_bar = False
-    args.log_level = "INFO"  # Add log_level attribute
-    args.fast_dev_run = False  # Add fast_dev_run attribute
-    args.project = "test_project"  # Add a project attribute to mock_args
-    args.use_optuna = False  # Add use_optuna attribute
+    args.log_level = "INFO"
+    args.fast_dev_run = False
+    args.project = "test_project"
+    args.use_optuna = False
+    args.n_embd = 768  # Add n_embd attribute
+    args.n_head = 12   # Add n_head attribute
+    args.n_layer = 12  # Add n_layer attribute
     return args
 
 
