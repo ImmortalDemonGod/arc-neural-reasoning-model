@@ -4,9 +4,6 @@ import re
 from collections import defaultdict
 import json
 import os
-import os
-import logging
-import re
 from typing import List, Dict, Any
 from aider.coders import Coder
 from aider.models import Model
@@ -16,6 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()  # This loads the variables from .env
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class PytestErrorFixer:
     def __init__(self, project_dir, max_retries=3, progress_log="progress_log.json", initial_temperature=0.4, temperature_increment=0.1):
@@ -432,27 +430,30 @@ class PytestErrorFixer:
         return False
 
     def merge_successful_fixes(self):
-        logging.info("Starting merge of successful fixes")
+        logger.info("Starting merge of successful fixes")
         subprocess.run(["git", "checkout", self.main_branch], cwd=self.project_dir, check=True)
 
         for fix in self.successful_fixes:
             try:
-                logging.info(f"Verifying fix in branch: {fix['branch']}")
+                logger.info(f"Verifying fix in branch: {fix['branch']}")
                 subprocess.run(["git", "checkout", fix['branch']], cwd=self.project_dir, check=True)
                 
-                logging.info(f"Re-running test: {fix['file']}::{fix['function']}")
+                logger.info(f"Re-running test: {fix['file']}::{fix['function']}")
                 stdout, stderr = self.run_test(fix['file'], fix['function'])
 
                 if "PASSED" in stdout:
-                    logging.info(f"Fix verified. Merging {fix['branch']} into {self.main_branch}")
+                    logger.info(f"Fix verified. Merging {fix['branch']} into {self.main_branch}")
                     subprocess.run(["git", "checkout", self.main_branch], cwd=self.project_dir, check=True)
                     subprocess.run(["git", "merge", "--no-ff", fix['branch'], "-m", f"Merge verified fix from {fix['branch']}"], cwd=self.project_dir, check=True)
+                    logger.info(f"Successfully merged {fix['branch']} into {self.main_branch}")
                 else:
-                    logging.warning(f"Fix in {fix['branch']} no longer valid. Skipping merge.")
-                    logging.debug(f"Test output: {stdout}")
-                    logging.debug(f"Test error output: {stderr}")
+                    logger.warning(f"Fix in {fix['branch']} no longer valid. Skipping merge.")
+                    logger.debug(f"Test output: {stdout}")
+                    logger.debug(f"Test error output: {stderr}")
             except subprocess.CalledProcessError as e:
-                logging.error(f"Error while processing branch {fix['branch']}: {str(e)}")
+                logger.error(f"Error while processing branch {fix['branch']}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Unexpected error while processing branch {fix['branch']}: {str(e)}")
             finally:
                 self.delete_branch(fix['branch'])
 
@@ -550,7 +551,7 @@ class PytestErrorFixer:
         return full_prompt
 
     def debug_fix_single_error(self, error, file_path):
-        print(f"DEBUG: Starting debug_fix_single_error for {error['function']} in {file_path}")
+        logger.debug(f"Starting debug_fix_single_error for {error['function']} in {file_path}")
 
         # Extract relevant files for this specific error
         error_dict = {file_path: [error]}
@@ -559,24 +560,24 @@ class PytestErrorFixer:
         # Flatten the list of relevant files
         all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
 
-        print("DEBUG: Relevant files for this error:")
+        logger.debug("Relevant files for this error:")
         for path in all_relevant_files:
-            print(f"  - {path}")
+            logger.debug(f"  - {path}")
 
         # Create a new Coder instance with the relevant files for this error
-        print("DEBUG: Creating new Coder instance")
+        logger.debug("Creating new Coder instance")
         debug_coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
         # Run the test to get the error output
         cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{error['test_file']}::{error['function']}"]
-        print(f"DEBUG: Running command: {' '.join(cmd)}")
+        logger.debug(f"Running command: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True)
 
-        # Debug: Print test output
-        print("\nDEBUG: Initial test output:")
-        print(result.stdout)
-        print("\nDEBUG: Initial test error output:")
-        print(result.stderr)
+        # Debug: Log test output
+        logger.debug("Initial test output:")
+        logger.debug(result.stdout)
+        logger.debug("Initial test error output:")
+        logger.debug(result.stderr)
 
         # Construct a structured prompt using parsed error details
         error_prompt_template = (
@@ -613,29 +614,29 @@ class PytestErrorFixer:
         combined_prompt = f"{error_prompt}\n\n{analysis_prompt}"
         
         # Send the structured prompt to aider
-        print("DEBUG: Sending structured prompt to AI model")
+        logger.debug("Sending structured prompt to AI model")
         try:
             debug_coder.run(combined_prompt)
-            print("DEBUG: AI model suggested changes. Applying changes...")
+            logger.debug("AI model suggested changes. Applying changes...")
         except Exception as e:
-            print(f"DEBUG: Error while applying changes: {str(e)}")
+            logger.error(f"Error while applying changes: {str(e)}")
             return False
 
         # Run the test again to check if it's fixed
-        print("\nDEBUG: Re-running test to check if error is fixed...")
+        logger.debug("Re-running test to check if error is fixed...")
         result = subprocess.run(cmd, capture_output=True, text=True)
 
-        # Debug: Print re-run test output
-        print("\nDEBUG: Re-run test output:")
-        print(result.stdout)
-        print("\nDEBUG: Re-run test error output:")
-        print(result.stderr)
+        # Debug: Log re-run test output
+        logger.debug("Re-run test output:")
+        logger.debug(result.stdout)
+        logger.debug("Re-run test error output:")
+        logger.debug(result.stderr)
 
         if "PASSED" in result.stdout:
-            print(f"DEBUG: Fixed: {file_path} - {error['function']}")
+            logger.info(f"Fixed: {file_path} - {error['function']}")
             return True
         else:
-            print(f"DEBUG: Failed to fix: {file_path} - {error['function']}")
+            logger.warning(f"Failed to fix: {file_path} - {error['function']}")
             return False
 
     def main(self):
