@@ -44,6 +44,7 @@ def mock_args():
     args.log_level = "INFO"  # Add log_level attribute
     args.fast_dev_run = False  # Add fast_dev_run attribute
     args.project = "test_project"  # Add a project attribute to mock_args
+    args.use_optuna = False  # Add use_optuna attribute
     return args
 
 
@@ -142,7 +143,6 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
         "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
     ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
         "gpt2_arc.src.training.train.ARCTrainer"
-    ), patch(
     ) as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
