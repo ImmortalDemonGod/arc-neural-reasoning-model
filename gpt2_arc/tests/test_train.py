@@ -20,7 +20,7 @@ def set_logging_level(level=logging.ERROR):
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 import argparse
 from unittest.mock import ANY, MagicMock, patch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader  # Import before patching
 
 import pytorch_lightning as pl
 import torch
@@ -202,8 +202,8 @@ def test_fit_call(mock_args, mock_dataset, model):
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger"), patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
-    ), patch("torch.utils.data.DataLoader", new_callable=MagicMock) as mock_dataloader:
-        mock_dataloader.return_value = MagicMock()
+    ), patch("gpt2_arc.src.training.train.DataLoader") as mock_dataloader:
+        mock_dataloader.return_value = MagicMock(spec=DataLoader)
 
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
@@ -222,7 +222,7 @@ def test_fit_call(mock_args, mock_dataset, model):
         # Assign the mock ResultsCollector to the trainer instance
         mock_trainer_instance.results_collector = mock_results_collector
 
-        main(mock_args)
+        main(mock_args, save_checkpoint=False)
 
         mock_pl_trainer.fit.assert_called_once_with(mock_trainer_instance)
 
@@ -257,47 +257,39 @@ def test_batch_size_extremes(mock_args, batch_size):
     mock_args.no_checkpointing = True
     mock_args.no_progress_bar = True
     mock_args.use_gpu = False
-    with patch("gpt2_arc.src.training.train.ARCDataset"), patch(
-        "gpt2_arc.src.training.train.GPT2ARC"
-    ), patch(
-        "gpt2_arc.src.training.train.ARCTrainer"
-    ), patch(
-        "gpt2_arc.src.training.train.ARCTrainer"
-    ), patch(
-        "gpt2_arc.src.training.train.ARCTrainer"
-    ), patch(
-        "gpt2_arc.src.training.train.ARCTrainer"
-    ), patch(
-        "gpt2_arc.src.training.train.ARCTrainer"
-    ), patch(
-        "gpt2_arc.src.training.train.ARCTrainer"
-    ), patch("gpt2_arc.src.training.trainer.ARCTrainer") as mock_ARCTrainer, patch(
-        "gpt2_arc.src.training.train.pl.Trainer"
-    ) as mock_trainer, patch("torch.utils.data.DataLoader") as mock_dataloader:
-        # Directly return a mock DataLoader instance
+    with patch("gpt2_arc.src.training.train.ARCDataset"), \
+         patch("gpt2_arc.src.training.train.GPT2ARC"), \
+         patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, \
+         patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
+         patch("gpt2_arc.src.training.train.DataLoader") as mock_dataloader:
+
+        # Mock the DataLoader return value
         mock_dataloader.return_value = MagicMock(spec=DataLoader)
-        logger.debug(f"mock_dataloader: {mock_dataloader}")
-        logger.debug(f"mock_dataloader.return_value: {mock_dataloader.return_value}")
-        logger.debug(f"Type of mock_dataloader.return_value: {type(mock_dataloader.return_value)}")
-        logger.debug(f"Spec of mock_dataloader.return_value: {mock_dataloader.return_value._spec_class}")
+
+        # Set up the ARCTrainer mock instance
+        mock_trainer_instance = mock_ARCTrainer.return_value
+        mock_trainer_instance.config.model = model_config
+        mock_trainer_instance.model.state_dict.return_value = {}
 
         try:
             main(mock_args, save_checkpoint=False)
         except Exception as e:
-            logger.error(f"An error occurred: {e}")
+            logger.error(f"An error occurred during testing: {e}")
             import traceback
             traceback.print_exc()
             raise
 
+        # Include devices=1 in the expected call
         mock_trainer.assert_called_with(
             max_epochs=config.training.max_epochs,
             logger=False,
             callbacks=None,
             enable_checkpointing=False,
             enable_progress_bar=False,
-            fast_dev_run=False,  # Include fast_dev_run in the expected call
+            fast_dev_run=False,
             gradient_clip_val=1.0,
-            accelerator='cpu'
+            accelerator='cpu',
+            devices=1
         )
 
 
