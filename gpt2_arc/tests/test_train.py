@@ -258,7 +258,7 @@ def test_batch_size_extremes(mock_args, batch_size):
         "gpt2_arc.src.training.train.pl.Trainer"
     ) as mock_trainer, patch("torch.utils.data.DataLoader") as mock_dataloader:
         # Directly return a mock DataLoader instance
-        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+        mock_dataloader.return_value = MagicMock(spec=DataLoader)
 
         main(mock_args)
 
@@ -319,7 +319,6 @@ def test_gpu_not_available(mock_args):
     with patch("torch.cuda.is_available", return_value=False), patch(
         "gpt2_arc.src.training.train.ARCDataset"
     ), patch("gpt2_arc.src.training.train.GPT2ARC"), patch(
-        "gpt2_arc.src.training.train.ARCTrainer"
         "gpt2_arc.src.training.train.ARCTrainer"
     ), patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
          patch("gpt2_arc.src.utils.results_collector.ResultsCollector.get_summary") as mock_get_summary:
