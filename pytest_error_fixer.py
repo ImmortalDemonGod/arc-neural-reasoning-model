@@ -27,6 +27,8 @@ class PytestErrorFixer:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY not found in environment variables")
+        self.successful_fixes = []  # New attribute to store successful fixes
+        self.main_branch = "pytest-aider-automation"
         
         self.model = Model("gpt-4o-mini")
         self.io = InputOutput(yes=True)
@@ -407,6 +409,12 @@ class PytestErrorFixer:
                 if "PASSED" in stdout:
                     logging.info(f"Fixed: {file_path} - {error['function']} on attempt {attempt + 1}")
                     self.log_progress("fixed", error, file_path, all_relevant_files, changes, temperature)
+                    self.commit_changes(f"Fix {error['function']} in {file_path}")
+                    self.successful_fixes.append({
+                        'branch': error_branch,
+                        'file': error['test_file'],
+                        'function': error['function']
+                    })
                     return True
                 else:
                     logging.info(f"Fix attempt {attempt + 1} failed for: {file_path} - {error['function']}")
@@ -420,7 +428,52 @@ class PytestErrorFixer:
                 self.revert_changes()
 
         logging.warning(f"Failed to fix after {self.max_retries} attempts: {file_path} - {error['function']}")
+        self.delete_branch(error_branch)
         return False
+
+    def merge_successful_fixes(self):
+        logging.info("Starting merge of successful fixes")
+        subprocess.run(["git", "checkout", self.main_branch], cwd=self.project_dir, check=True)
+
+        for fix in self.successful_fixes:
+            try:
+                logging.info(f"Verifying fix in branch: {fix['branch']}")
+                subprocess.run(["git", "checkout", fix['branch']], cwd=self.project_dir, check=True)
+                
+                logging.info(f"Re-running test: {fix['file']}::{fix['function']}")
+                stdout, stderr = self.run_test(fix['file'], fix['function'])
+
+                if "PASSED" in stdout:
+                    logging.info(f"Fix verified. Merging {fix['branch']} into {self.main_branch}")
+                    subprocess.run(["git", "checkout", self.main_branch], cwd=self.project_dir, check=True)
+                    subprocess.run(["git", "merge", "--no-ff", fix['branch'], "-m", f"Merge verified fix from {fix['branch']}"], cwd=self.project_dir, check=True)
+                else:
+                    logging.warning(f"Fix in {fix['branch']} no longer valid. Skipping merge.")
+                    logging.debug(f"Test output: {stdout}")
+                    logging.debug(f"Test error output: {stderr}")
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Error while processing branch {fix['branch']}: {str(e)}")
+            finally:
+                self.delete_branch(fix['branch'])
+
+    def run_final_verification(self):
+        logging.info("Running final verification on pytest-aider-automation branch")
+        subprocess.run(["git", "checkout", self.main_branch], cwd=self.project_dir, check=True)
+        
+        all_fixes_pass = True
+        for fix in self.successful_fixes:
+            logging.info(f"Running final verification for {fix['file']}::{fix['function']}")
+            stdout, stderr = self.run_test(fix['file'], fix['function'])
+            if "FAILED" in stdout or "FAILED" in stderr:
+                all_fixes_pass = False
+                logging.error(f"Test failed in final verification: {fix['file']}::{fix['function']}")
+                logging.debug(f"Test output: {stdout}")
+                logging.debug(f"Test error output: {stderr}")
+
+        if all_fixes_pass:
+            logging.info("All fixed tests passed in final verification")
+        else:
+            logging.warning("Some fixed tests failed in final verification. Manual intervention may be required.")
 
     def parse_aider_response(self, response: str) -> str:
         """Parse the Aider response to extract search/replace statements."""
@@ -631,6 +684,9 @@ class PytestErrorFixer:
             logging.warning("Failed to fix errors:")
             for error in failed_errors:
                 logging.warning(f"- {error}")
+
+        self.merge_successful_fixes()
+        self.run_final_verification()
 
         logging.info("Re-running full test suite to verify fixes...")
         for test_file in self.discover_test_files():
