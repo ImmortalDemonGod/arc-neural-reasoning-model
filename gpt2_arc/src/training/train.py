@@ -8,6 +8,8 @@ from unittest.mock import MagicMock
 import optuna
 import arckit
 
+logger = logging.getLogger(__name__)
+
 # Add the root directory of the project to the PYTHONPATH
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
 sys.path.insert(0, project_root)
@@ -32,9 +34,10 @@ import os
 # Set up logging
 logger = logging.getLogger(__name__)
 
-def main(args):
+def main(args, save_checkpoint=True):
     logger.info("Starting main function")
     logger.debug(f"Command line arguments: {args}")
+    print(f"DEBUG: save_checkpoint is set to {save_checkpoint}")
 
     try:
         if args.use_optuna:
@@ -162,14 +165,17 @@ def main(args):
         })
 
         # Save the final model with configuration
-        logger.info("Saving final model with configuration")
-        model_path = f"final_model_{trainer.results_collector.experiment_id}.pth"
-        torch.save({
-            'model_state_dict': trainer.model.state_dict(),
-            'model_config': trainer.config.model
-        }, model_path)
-        trainer.results_collector.set_checkpoint_path(model_path)
-        logger.debug(f"Model and configuration saved to: {model_path}")
+        if save_checkpoint:
+            logger.info("Saving final model with configuration")
+            model_path = f"final_model_{trainer.results_collector.experiment_id}.pth"
+            torch.save({
+                'model_state_dict': trainer.model.state_dict(),
+                'model_config': trainer.config.model
+            }, model_path)
+            trainer.results_collector.set_checkpoint_path(model_path)
+            logger.debug(f"Model and configuration saved to: {model_path}")
+        else:
+            logger.info("Checkpoint saving is disabled. Skipping saving the final model checkpoint.")
 
         # Save results
         logger.info("Saving experiment results")

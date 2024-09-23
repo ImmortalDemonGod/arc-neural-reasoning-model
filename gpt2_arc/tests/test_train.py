@@ -10,6 +10,7 @@ import pytest
 import logging
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)  # Set logging level to DEBUG
 
 def set_logging_level(level=logging.ERROR):
     logger = logging.getLogger()
@@ -154,7 +155,11 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
     ), patch("torch.utils.data.DataLoader") as mock_dataloader:
-        mock_dataloader.return_value = MagicMock()
+        mock_dataloader.return_value = MagicMock(spec=DataLoader)
+        logger.debug(f"mock_dataloader: {mock_dataloader}")
+        logger.debug(f"mock_dataloader.return_value: {mock_dataloader.return_value}")
+        logger.debug(f"Type of mock_dataloader.return_value: {type(mock_dataloader.return_value)}")
+        logger.debug(f"Spec of mock_dataloader.return_value: {mock_dataloader.return_value._spec_class}")
 
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
@@ -174,7 +179,13 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
         # Assign the mock ResultsCollector to the trainer instance
         mock_trainer_instance.results_collector = mock_results_collector
 
-        main(mock_args)
+        try:
+            main(mock_args, save_checkpoint=False)
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
 
         mock_logger.assert_called_once_with("tb_logs", name="arc_model")
 
@@ -265,8 +276,18 @@ def test_batch_size_extremes(mock_args, batch_size):
     ) as mock_trainer, patch("torch.utils.data.DataLoader") as mock_dataloader:
         # Directly return a mock DataLoader instance
         mock_dataloader.return_value = MagicMock(spec=DataLoader)
+        logger.debug(f"mock_dataloader: {mock_dataloader}")
+        logger.debug(f"mock_dataloader.return_value: {mock_dataloader.return_value}")
+        logger.debug(f"Type of mock_dataloader.return_value: {type(mock_dataloader.return_value)}")
+        logger.debug(f"Spec of mock_dataloader.return_value: {mock_dataloader.return_value._spec_class}")
 
-        main(mock_args)
+        try:
+            main(mock_args, save_checkpoint=False)
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
 
         mock_trainer.assert_called_with(
             max_epochs=config.training.max_epochs,
