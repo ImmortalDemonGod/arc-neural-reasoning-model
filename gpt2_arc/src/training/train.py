@@ -68,17 +68,21 @@ def main(args):
         val_data = ARCDataset(eval_set)
         logger.debug(f"Train data size: {len(train_data)}, Validation data size: {len(val_data)}")
 
-        # Load model configuration from JSON file
-        config_path = f"results/experiment_{args.model_checkpoint.split('_')[-1].replace('.pth', '.json')}"
-        with open(config_path, 'r') as f:
-            config_data = json.load(f)
+        # Load model configuration from JSON file if checkpoint is specified
+        if args.model_checkpoint:
+            config_path = f"results/experiment_{args.model_checkpoint.split('_')[-1].replace('.pth', '.json')}"
+            with open(config_path, 'r') as f:
+                config_data = json.load(f)
 
-        model_config = ModelConfig(
-            n_embd=config_data['config']['model']['n_embd'],
-            n_head=config_data['config']['model']['n_head'],
-            n_layer=config_data['config']['model']['n_layer'],
-            dropout=config_data['config']['model']['dropout']
-        )
+            model_config = ModelConfig(
+                n_embd=config_data['config']['model']['n_embd'],
+                n_head=config_data['config']['model']['n_head'],
+                n_layer=config_data['config']['model']['n_layer'],
+                dropout=config_data['config']['model']['dropout']
+            )
+        else:
+            # Use the model configuration from args or default values
+            model_config = ModelConfig(n_embd=args.n_embd, n_head=args.n_head, n_layer=args.n_layer)
 
         # Initialize model
         logger.info("Initializing model")

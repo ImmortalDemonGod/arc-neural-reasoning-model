@@ -23,6 +23,7 @@ from torch.utils.data import DataLoader
 
 import pytorch_lightning as pl
 import torch
+from torch.utils.data import DataLoader
 
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
@@ -46,9 +47,10 @@ def mock_args():
     args.fast_dev_run = False
     args.project = "test_project"
     args.use_optuna = False
-    args.n_embd = 768  # Add n_embd attribute
-    args.n_head = 12   # Add n_head attribute
-    args.n_layer = 12  # Add n_layer attribute
+    args.n_embd = 768
+    args.n_head = 12
+    args.n_layer = 12
+    args.model_checkpoint = None  # Add this line
     return args
 
 
@@ -287,9 +289,7 @@ def test_learning_rate_extremes(mock_args, learning_rate):
         "gpt2_arc.src.training.train.GPT2ARC"
     ), patch("gpt2_arc.src.training.train.ARCTrainer") as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer"
-    ), patch("torch.utils.data.DataLoader") as mock_dataloader:
-        # Directly return a mock DataLoader instance
-        mock_dataloader.return_value = MagicMock(spec=torch.utils.data.DataLoader)
+    ), patch("torch.utils.data.DataLoader", return_value=MagicMock(spec=DataLoader)):
 
         # Set up the ARCTrainer mock instance
         mock_trainer_instance = mock_ARCTrainer.return_value
@@ -320,14 +320,14 @@ def test_gpu_not_available(mock_args):
     mock_args.no_logging = False
     mock_args.no_checkpointing = False
     mock_args.no_progress_bar = False
-    with patch("torch.cuda.is_available", return_value=False), patch(
-        "gpt2_arc.src.training.train.ARCDataset"
-    ), patch("gpt2_arc.src.training.train.GPT2ARC"), patch(
-        "gpt2_arc.src.training.train.ARCTrainer"
-    ), patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
-         patch("gpt2_arc.src.utils.results_collector.ResultsCollector.get_summary") as mock_get_summary:
+    with patch("torch.cuda.is_available", return_value=False), \
+         patch("gpt2_arc.src.training.train.ARCDataset"), \
+         patch("gpt2_arc.src.training.train.GPT2ARC"), \
+         patch("gpt2_arc.src.training.train.ARCTrainer"), \
+         patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
+         patch("gpt2_arc.src.utils.results_collector.ResultsCollector.get_summary") as mock_get_summary, \
+         patch("torch.utils.data.DataLoader", return_value=MagicMock(spec=DataLoader)):
 
-        # Mock the get_summary method to return a serializable dictionary
         mock_get_summary.return_value = {
             "experiment_id": "test_id",
             "timestamp": "2023-10-01 12:00:00",
@@ -336,11 +336,9 @@ def test_gpu_not_available(mock_args):
             "test_accuracy": 0.95,
             "config": {"model": {}, "training": {}}
         }
-        # Use a simple function instead of MagicMock for main
-        def simple_main(args):
-            pass
 
-        simple_main(mock_args)
+        main(mock_args)  # Call the actual main function
+
         mock_trainer.assert_called_with(
             max_epochs=mock_args.max_epochs,
             logger=ANY,
