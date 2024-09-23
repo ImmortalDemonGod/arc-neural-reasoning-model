@@ -1,7 +1,5 @@
 import os
-import json
 import subprocess
-from pytest_error_fixer import PytestErrorFixer
 
 def copy_to_clipboard(text):
     """Copy the given text to the clipboard."""
@@ -9,9 +7,87 @@ def copy_to_clipboard(text):
         'pbcopy', env={'LANG': 'en_US.UTF-8'}, stdin=subprocess.PIPE)
     process.communicate(text.encode('utf-8'))
 
+relevant_files_mapping = {
+    "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_benchmark.py": [
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/helpers.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/models/gpt2.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/benchmark.py"
+    ],
+    "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_gpt2.py": [
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/models/gpt2.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/experiment_tracker.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/results_collector.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py"
+    ],
+    "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_end_to_end.py": [
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/models/gpt2.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/training/trainer.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/experiment_tracker.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/results_collector.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/evaluate.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/benchmark.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/training/train.py"
+    ],
+    "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_arc_dataset.py": [
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/experiment_tracker.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/models/gpt2.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py"
+    ],
+    "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_differential_pixel_accuracy.py": [
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/helpers.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/models/gpt2.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py"
+    ],
+    "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_train.py": [
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/training/train.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/training/trainer.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/models/gpt2.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/results_collector.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/experiment_tracker.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/benchmark.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/evaluate.py"
+    ],
+    "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_trainer.py": [
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/models/gpt2.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/training/trainer.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/experiment_tracker.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/results_collector.py"
+    ],
+    "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_results_collector.py": [
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/results_collector.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/experiment_tracker.py"
+    ],
+    "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/tests/test_model_evaluation.py": [
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/models/gpt2.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/training/trainer.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/helpers.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/experiment_tracker.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/results_collector.py"
+    ],
+    "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/test_integration_experiment.py": [
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/data/arc_dataset.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/models/gpt2.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/training/trainer.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/config.py",
+        "/Volumes/Totallynotaharddrive/arc-neural-reasoning-model/gpt2_arc/src/utils/results_collector.py"
+    ]
+}
+
 def main():
-    fixer = PytestErrorFixer(project_dir=".")
-    test_files = list(fixer.relevant_files_mapping.keys())
+    test_files = list(relevant_files_mapping.keys())
 
     print("Select a test file to copy relevant files to clipboard:")
     for idx, test_file in enumerate(test_files, start=1):
@@ -23,7 +99,7 @@ def main():
         return
 
     selected_test_file = test_files[choice]
-    relevant_files = fixer.relevant_files_mapping[selected_test_file]
+    relevant_files = relevant_files_mapping[selected_test_file]
 
     combined_content = ""
     for file_path in relevant_files:
