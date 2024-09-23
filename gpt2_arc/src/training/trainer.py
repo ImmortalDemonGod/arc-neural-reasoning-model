@@ -11,6 +11,8 @@ from ..config import Config
 from ..utils.helpers import differential_pixel_accuracy
 from ..utils.results_collector import ResultsCollector
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,11 @@ class ARCTrainer(pl.LightningModule):
         self.best_val_loss = float('inf')
         self.best_epoch = 0
         self.results_collector = ResultsCollector(config)
+        log_dir = f"runs/experiment_{self.results_collector.experiment_id}"
+        os.makedirs(log_dir, exist_ok=True)  # Ensure the directory exists
+        self.writer = SummaryWriter(log_dir)
+        print(f"DEBUG: TensorBoard writer initialized for experiment {self.results_collector.experiment_id}")
+        print(f"DEBUG: Logs will be written to {log_dir}")
 
     def training_step(self, batch, batch_idx):
         logger.debug(f"Training step - Batch type: {type(batch)}, length: {len(batch)}")
@@ -44,7 +51,6 @@ class ARCTrainer(pl.LightningModule):
             task_ids = batch.get("task_ids")
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
-            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
         # Ensure inputs and labels are the correct type
         inputs = inputs.float()
@@ -56,6 +62,12 @@ class ARCTrainer(pl.LightningModule):
         if hasattr(self, 'log'):
             self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.results_collector.update_train_metrics(self.current_epoch, {"loss": loss.item()})
+        
+        try:
+            self.writer.add_scalar('train/loss', loss.item(), self.current_epoch * len(self.train_dataloader()) + batch_idx)
+            print(f"DEBUG: Logged training loss: {loss.item()} at step {self.current_epoch * len(self.train_dataloader()) + batch_idx}")
+        except Exception as e:
+            print(f"DEBUG: Error logging training step: {str(e)}")
         
         return loss
 
@@ -90,6 +102,12 @@ class ARCTrainer(pl.LightningModule):
             self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.logged_metrics["val_loss"] = loss.item()
         self.results_collector.update_val_metrics(self.current_epoch, {"loss": loss.item()})
+        
+        try:
+            self.writer.add_scalar('val/loss', loss.item(), self.current_epoch)
+            print(f"DEBUG: Logged validation loss: {loss.item()} for epoch {self.current_epoch}")
+        except Exception as e:
+            print(f"DEBUG: Error logging validation step: {str(e)}")
         
         return loss
 
@@ -146,13 +164,6 @@ class ARCTrainer(pl.LightningModule):
 
         # Collect metrics in a dictionary
         metrics = {
-            'test_loss': loss,
-            'test_accuracy': accuracy,
-            'test_diff_accuracy': diff_accuracy
-        }
-
-        # Collect metrics in a dictionary
-        metrics = {
             'test_loss': loss.item() if isinstance(loss, torch.Tensor) else loss,
             'test_accuracy': accuracy.item() if isinstance(accuracy, torch.Tensor) else accuracy,
             'test_diff_accuracy': diff_accuracy.item() if isinstance(diff_accuracy, torch.Tensor) else diff_accuracy
@@ -176,6 +187,14 @@ class ARCTrainer(pl.LightningModule):
             self.log(f"{task_id}_test_loss", metrics['test_loss'], on_step=False, on_epoch=True, prog_bar=True, logger=True)
             self.log(f"{task_id}_test_accuracy", metrics['test_accuracy'], on_step=False, on_epoch=True, prog_bar=True, logger=True)
             self.log(f"{task_id}_test_diff_accuracy", metrics['test_diff_accuracy'], on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
+        try:
+            self.writer.add_scalar('test/loss', metrics['test_loss'], self.current_epoch)
+            self.writer.add_scalar('test/accuracy', metrics['test_accuracy'], self.current_epoch)
+            self.writer.add_scalar('test/diff_accuracy', metrics['test_diff_accuracy'], self.current_epoch)
+            print(f"DEBUG: Logged test metrics for epoch {self.current_epoch}: loss={metrics['test_loss']}, accuracy={metrics['test_accuracy']}, diff_accuracy={metrics['test_diff_accuracy']}")
+        except Exception as e:
+            print(f"DEBUG: Error logging test step: {str(e)}")
 
         self.test_results.append(result)
         return result
@@ -217,17 +236,22 @@ class ARCTrainer(pl.LightningModule):
         return [optimizer], [lr_scheduler]
 
     def on_fit_end(self):
-        # Save the results to a JSON file
         self.results_collector.save_to_json(f"results/experiment_{self.results_collector.experiment_id}.json")
+        try:
+            self.writer.close()
+            print("DEBUG: TensorBoard writer closed successfully.")
+        except Exception as e:
+            print(f"DEBUG: Error closing TensorBoard writer: {str(e)}")
+        print("DEBUG: Results saved and TensorBoard writer closed.")
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=7)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=7)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=4)
 
     def test_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=7)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=4)
 
     def compute_loss(self, outputs, labels):
         return nn.CrossEntropyLoss()(
@@ -236,3 +260,21 @@ class ARCTrainer(pl.LightningModule):
 
     def forward(self, input_ids, attention_mask=None):
         return self.model(input_ids, attention_mask)
+    def log_hyperparameters(self):
+        hparams = {
+            'learning_rate': self.config.training.learning_rate,
+            'batch_size': self.config.training.batch_size,
+            'n_embd': self.config.model.n_embd,
+            'n_head': self.config.model.n_head,
+            'n_layer': self.config.model.n_layer,
+        }
+        metric_dict = {
+            'train_loss': 0,
+            'val_loss': 0,
+            'test_accuracy': 0,
+        }
+        try:
+            self.writer.add_hparams(hparams, metric_dict)
+            print(f"DEBUG: Successfully logged hyperparameters: {hparams}")
+        except Exception as e:
+            print(f"DEBUG: Error logging hyperparameters: {str(e)}")

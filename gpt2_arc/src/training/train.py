@@ -1,9 +1,12 @@
+# gpt2_arc/src/training/train.py
 import argparse
 import sys
 import logging
 import os
 import json
 from unittest.mock import MagicMock
+import optuna
+import arckit
 
 # Add the root directory of the project to the PYTHONPATH
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -19,181 +22,93 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
+import json
 from gpt2_arc.src.training.trainer import ARCTrainer
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
+import optuna
 import os
-
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 def main(args):
-    # Set logging level
-    log_level = getattr(logging, args.log_level.upper(), logging.DEBUG)
-    logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    logger.setLevel(log_level)
-    # Load data
-    import arckit
-    train_set, eval_set = arckit.load_data()
-    train_data = ARCDataset(train_set)
-    val_data = ARCDataset(eval_set)
-    logger.info("Data loaded successfully using arckit")
+    logger.info("Starting main function")
+    logger.debug(f"Command line arguments: {args}")
 
-    logger.info("Initializing model with new configuration")
-    model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
-    model = GPT2ARC(config=model_config)
-
-    logger.info("Initializing trainer with new configuration")
-    config = Config(model=model_config, training=TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs))
-    results_collector = ResultsCollector(config)
     try:
-        tracker = ExperimentTracker(config, project=args.project)
-        trainer = ARCTrainer(
-            model=model,
-            train_dataset=train_data,
-            val_dataset=val_data,
-            config=config,
-            results_collector=results_collector
-        )
-
-    except Exception as e:
-        print(f"Training interrupted: {e}")
-        if 'tracker' in locals():
-            tracker.log_metric("training_interrupted", 1)
-            tracker.log_metric("error_message", str(e))
-    finally:
-        if 'tracker' in locals():
-            tracker.finish()
-
-    # Create PyTorch Lightning trainer
-    tb_logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
-    callbacks = []
-    if not args.no_checkpointing:
-        checkpoint_callback = ModelCheckpoint(
-            dirpath="checkpoints",
-            filename="arc_model-{epoch:02d}-{val_loss:.2f}",
-            save_top_k=3,
-            monitor="val_loss",
-            mode="min",
-        )
-        callbacks.append(checkpoint_callback)
-    from torch.utils.data import DataLoader
-
-    logger.debug(f"Initializing train DataLoader with batch_size={args.batch_size}")
-    train_loader = DataLoader(train_data, batch_size=args.batch_size, num_workers=7)
-    logger.debug(f"Train DataLoader initialized with {len(train_loader)} batches")
-
-    logger.debug(f"Initializing validation DataLoader with batch_size={args.batch_size}")
-    val_loader = DataLoader(val_data, batch_size=args.batch_size, num_workers=7)
-    logger.debug(f"Validation DataLoader initialized with {len(val_loader)} batches")
-
-    pl_trainer = pl.Trainer(
-        max_epochs=config.training.max_epochs,
-        logger=tb_logger,
-        callbacks=callbacks if callbacks else None,
-        enable_checkpointing=not args.no_checkpointing,
-        enable_progress_bar=not args.no_progress_bar,
-        fast_dev_run=args.fast_dev_run,
-        gradient_clip_val=1.0,
-        accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu'
-    )
-
-    global_step = 0
-    for epoch in range(args.max_epochs):
-        for batch in train_loader:
-            # ... (training step)
-            loss = trainer.training_step(batch, batch_idx=global_step)
+        if args.use_optuna:
+            logger.info("Loading best hyperparameters from Optuna study")
+            study = optuna.load_study(study_name=args.optuna_study_name, storage=args.optuna_storage)
+            best_params = study.best_params
+            logger.debug(f"Loaded best parameters: {best_params}")
             
-            tracker.log_metric("train_loss", loss.item(), step=global_step)
-            tracker.update_train_metrics(epoch, {"loss": loss.item()})
-            
-            # ... (backward pass, optimizer step, etc.)
-            global_step += 1
-
-        # Validation loop
-        val_loss = trainer.validation_step(val_loader, batch_idx=global_step)
-        tracker.log_metric("val_loss", val_loss, step=global_step)
-        tracker.update_val_metrics(epoch, {"loss": val_loss})
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
-    parser.add_argument(
-        "--train_data", type=str, required=False, help="Path to training data"
-    )
-    parser.add_argument(
-        "--val_data", type=str, required=False, help="Path to validation data"
-    )
-    parser.add_argument(
-        "--batch_size", type=int, default=32, help="Batch size for training"
-    )
-    parser.add_argument(
-        "--learning_rate", type=float, default=1e-4, help="Learning rate"
-    )
-    parser.add_argument(
-        "--max_epochs", type=int, default=10, help="Maximum number of epochs"
-    )
-    parser.add_argument(
-        "--use_gpu", action="store_true", help="Use GPU for training if available"
-    )
-
-    parser.add_argument(
-        "--no_logging", action="store_true", help="Disable logging"
-    )
-    parser.add_argument(
-        "--no_checkpointing", action="store_true", help="Disable checkpointing"
-    )
-    parser.add_argument(
-        "--no_progress_bar", action="store_true", help="Disable progress bar"
-    )
-
-    parser.add_argument(
-        "--log_level", type=str, default="ERROR", help="Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
-    )
-
-    parser.add_argument(
-        "--fast_dev_run", type=int, default=1, help="Run a few batches for debugging purposes"
-    )
-
-    parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
-    parser.add_argument("--no-wandb", action="store_true", help="Disable W&B logging")
-    parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
-    parser.add_argument("--run_name", type=str, default="default_run", help="Name of the run for saving results")
-    
-    args = parser.parse_args()
-    
-    try:
-        # Initialize configurations
-        model_config = ModelConfig(n_embd=96, n_head=3, n_layer=1)
-        config = Config(model=model_config, training=TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs))
-
-        # Initialize model
-        model = GPT2ARC(config=model_config)
+            model_config = ModelConfig(
+                n_embd=best_params.get("n_embd", 768),
+                n_head=best_params.get("n_head", 12),
+                n_layer=best_params.get("n_layer", 12)
+            )
+            training_config = TrainingConfig(
+                batch_size=best_params.get("batch_size", 32),
+                learning_rate=best_params.get("learning_rate", 1e-4),
+                max_epochs=args.max_epochs  # Always use the user-provided max_epochs
+            )
+        else:
+            logger.info("Using provided or default hyperparameters")
+            model_config = ModelConfig(n_embd=args.n_embd, n_head=args.n_head, n_layer=args.n_layer)
+            training_config = TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs)
+        
+        config = Config(model=model_config, training=training_config)
+        logger.debug(f"Configuration: {config}")
 
         # Load data
-        import arckit
+        logger.info("Loading data")
         train_set, eval_set = arckit.load_data()
         train_data = ARCDataset(train_set)
         val_data = ARCDataset(eval_set)
+        logger.debug(f"Train data size: {len(train_data)}, Validation data size: {len(val_data)}")
 
-        # Initialize tracker
-        tracker = ExperimentTracker(config, project=args.project, use_wandb=not args.no_wandb)
+        # Load model configuration from JSON file
+        config_path = f"results/experiment_{args.model_checkpoint.split('_')[-1].replace('.pth', '.json')}"
+        with open(config_path, 'r') as f:
+            config_data = json.load(f)
+
+        model_config = ModelConfig(
+            n_embd=config_data['config']['model']['n_embd'],
+            n_head=config_data['config']['model']['n_head'],
+            n_layer=config_data['config']['model']['n_layer'],
+            dropout=config_data['config']['model']['dropout']
+        )
+
+        # Initialize model
+        logger.info("Initializing model")
+        model = GPT2ARC(config=model_config)
+        logger.debug(f"Model structure: {model}")
+
+        # Load the checkpoint if specified
+        if args.model_checkpoint:
+            logger.info(f"Loading model from checkpoint: {args.model_checkpoint}")
+            checkpoint = torch.load(args.model_checkpoint)
+            model.load_state_dict(checkpoint)
+
+        # Initialize results collector
+        results_collector = ResultsCollector(config)
+
+        # Initialize experiment tracker
+        tracker = ExperimentTracker(config, project=args.project)
 
         # Initialize trainer
+        logger.info("Initializing trainer")
         trainer = ARCTrainer(
             model=model,
             train_dataset=train_data,
             val_dataset=val_data,
             config=config
         )
+        trainer.log_hyperparameters()
 
-        # Initialize DataLoader
-        from torch.utils.data import DataLoader
-        val_loader = DataLoader(val_data, batch_size=args.batch_size, num_workers=7)
-
-        # Create PyTorch Lightning trainer
-        tb_logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
+        # Set up PyTorch Lightning trainer
+        logger.info("Setting up PyTorch Lightning trainer")
         callbacks = []
         if not args.no_checkpointing:
             checkpoint_callback = ModelCheckpoint(
@@ -205,6 +120,8 @@ if __name__ == "__main__":
             )
             callbacks.append(checkpoint_callback)
 
+        tb_logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
+
         pl_trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
             logger=tb_logger,
@@ -213,38 +130,81 @@ if __name__ == "__main__":
             enable_progress_bar=not args.no_progress_bar,
             fast_dev_run=args.fast_dev_run,
             gradient_clip_val=1.0,
-            accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu'
+            accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu',
+            devices=1
         )
 
         # Train the model
+        logger.info("Starting model training")
         pl_trainer.fit(trainer)
 
-        # After training
-        for batch_idx, batch in enumerate(val_loader):
-            test_results = trainer.test_step(batch, batch_idx)
-        tracker.set_test_results(test_results)
+        # After training, run test
+        logger.info("Running model evaluation")
+        test_results = pl_trainer.test(trainer)
+        if test_results:
+            avg_test_loss = test_results[0]['test_loss']
+            avg_test_accuracy = test_results[0]['test_accuracy']
+            logger.info(f"Test results - Loss: {avg_test_loss}, Accuracy: {avg_test_accuracy}")
+            trainer.results_collector.set_test_results({
+                "test_loss": avg_test_loss,
+                "test_accuracy": avg_test_accuracy
+            })
 
-        tracker.set_final_metrics({
-            "best_val_loss": trainer.results_collector.results.get("best_val_loss"),
-            "best_epoch": trainer.results_collector.results.get("best_epoch"),
+        trainer.results_collector.set_final_metrics({
+            "best_val_loss": trainer.best_val_loss,
+            "best_epoch": trainer.best_epoch,
+            "final_test_loss": avg_test_loss,
+            "final_test_accuracy": avg_test_accuracy
         })
 
-        # If you're saving a checkpoint
-        checkpoint_path = os.path.join(args.results_dir, "model_checkpoint.pth")
-        torch.save(trainer.model.state_dict(), checkpoint_path)
-        tracker.set_checkpoint_path(checkpoint_path)
+        # Save the final model with configuration
+        logger.info("Saving final model with configuration")
+        model_path = f"final_model_{trainer.results_collector.experiment_id}.pth"
+        torch.save({
+            'model_state_dict': trainer.model.state_dict(),
+            'model_config': trainer.config.model
+        }, model_path)
+        trainer.results_collector.set_checkpoint_path(model_path)
+        logger.debug(f"Model and configuration saved to: {model_path}")
 
-        # Save results to JSON
-        os.makedirs(args.results_dir, exist_ok=True)
-        results_path = os.path.join(args.results_dir, f"results_{args.run_name}.json")
-        tracker.save_to_json(results_path)
+        # Save results
+        logger.info("Saving experiment results")
+        results_path = f"results/experiment_{trainer.results_collector.experiment_id}.json"
+        trainer.results_collector.save_to_json(results_path)
+        logger.debug(f"Results saved to: {results_path}")
 
     except Exception as e:
-        print(f"Training interrupted: {e}")
+        logger.error(f"An error occurred: {str(e)}", exc_info=True)
         if 'tracker' in locals():
             tracker.log_metric("training_interrupted", 1)
             tracker.log_metric("error_message", str(e))
+        raise
     finally:
         if 'tracker' in locals():
             tracker.finish()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
+    parser.add_argument("--use-optuna", action="store_true", help="Use best hyperparameters from Optuna study")
+    parser.add_argument("--optuna-study-name", type=str, default="gpt2_arc_optimization", help="Name of the Optuna study to load")
+    parser.add_argument("--optuna-storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
+    parser.add_argument("--n-embd", type=int, default=768, help="Embedding dimension")
+    parser.add_argument("--n-head", type=int, default=12, help="Number of attention heads")
+    parser.add_argument("--n-layer", type=int, default=12, help="Number of transformer layers")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for training")
+    parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
+    parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
+    parser.add_argument("--no-logging", action="store_true", help="Disable logging")
+    parser.add_argument("--no-checkpointing", action="store_true", help="Disable checkpointing")
+    parser.add_argument("--no-progress-bar", action="store_true", help="Disable progress bar")
+    parser.add_argument("--fast-dev-run", action="store_true", help="Run a fast development test")
+    parser.add_argument("--model_checkpoint", type=str, help="Path to the model checkpoint to resume training")
+    parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
+    parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
+    parser.add_argument("--run-name", type=str, default="default_run", help="Name of the run for saving results")
+    
+    args = parser.parse_args()
+    main(args)
 

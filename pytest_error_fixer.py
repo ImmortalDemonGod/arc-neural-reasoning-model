@@ -49,6 +49,8 @@ class PytestErrorFixer:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY not found in environment variables")
+        self.successful_fixes = []  # New attribute to store successful fixes
+        self.main_branch = "pytest-aider-automation"
         
         self.model = Model("o1-mini")
         self.io = InputOutput(yes=True)
@@ -755,6 +757,53 @@ class PytestErrorFixer:
         print(f"DEBUG: All fix attempts completed for {error['function']} in {file_path}")
         return branch_name, "\n".join(all_ai_responses), stdout, stderr
 
+    def merge_successful_fixes(self):
+        logger.info("Starting merge of successful fixes")
+        subprocess.run(["git", "checkout", self.main_branch], cwd=self.project_dir, check=True)
+
+        for fix in self.successful_fixes:
+            try:
+                logger.info(f"Verifying fix in branch: {fix['branch']}")
+                subprocess.run(["git", "checkout", fix['branch']], cwd=self.project_dir, check=True)
+                
+                logger.info(f"Re-running test: {fix['file']}::{fix['function']}")
+                stdout, stderr = self.run_test(fix['file'], fix['function'])
+
+                if "PASSED" in stdout:
+                    logger.info(f"Fix verified. Merging {fix['branch']} into {self.main_branch}")
+                    subprocess.run(["git", "checkout", self.main_branch], cwd=self.project_dir, check=True)
+                    subprocess.run(["git", "merge", "--no-ff", fix['branch'], "-m", f"Merge verified fix from {fix['branch']}"], cwd=self.project_dir, check=True)
+                    logger.info(f"Successfully merged {fix['branch']} into {self.main_branch}")
+                else:
+                    logger.warning(f"Fix in {fix['branch']} no longer valid. Skipping merge.")
+                    logger.debug(f"Test output: {stdout}")
+                    logger.debug(f"Test error output: {stderr}")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Error while processing branch {fix['branch']}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Unexpected error while processing branch {fix['branch']}: {str(e)}")
+            finally:
+                self.delete_branch(fix['branch'])
+
+    def run_final_verification(self):
+        logging.info("Running final verification on pytest-aider-automation branch")
+        subprocess.run(["git", "checkout", self.main_branch], cwd=self.project_dir, check=True)
+        
+        all_fixes_pass = True
+        for fix in self.successful_fixes:
+            logging.info(f"Running final verification for {fix['file']}::{fix['function']}")
+            stdout, stderr = self.run_test(fix['file'], fix['function'])
+            if "FAILED" in stdout or "FAILED" in stderr:
+                all_fixes_pass = False
+                logging.error(f"Test failed in final verification: {fix['file']}::{fix['function']}")
+                logging.debug(f"Test output: {stdout}")
+                logging.debug(f"Test error output: {stderr}")
+
+        if all_fixes_pass:
+            logging.info("All fixed tests passed in final verification")
+        else:
+            logging.warning("Some fixed tests failed in final verification. Manual intervention may be required.")
+
     def parse_aider_response(self, response: str) -> str:
         """
         Parse the AI model's response to extract search/replace statements.
@@ -915,24 +964,24 @@ class PytestErrorFixer:
         # Flatten the list of relevant files
         all_relevant_files = list(set(path for paths in relevant_files.values() for path in paths))
 
-        print("DEBUG: Relevant files for this error:")
+        logger.debug("Relevant files for this error:")
         for path in all_relevant_files:
-            print(f"  - {path}")
+            logger.debug(f"  - {path}")
 
         # Create a new Coder instance with the relevant files for this error
-        print("DEBUG: Creating new Coder instance")
+        logger.debug("Creating new Coder instance")
         debug_coder = Coder.create(main_model=self.model, io=self.io, fnames=all_relevant_files)
 
         # Run the test to get the error output
         cmd = ["pytest", "-v", "--tb=short", "--log-cli-level=DEBUG", f"{error['test_file']}::{error['function']}"]
-        print(f"DEBUG: Running command: {' '.join(cmd)}")
+        logger.debug(f"Running command: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True)
 
-        # Debug: Print test output
-        print("\nDEBUG: Initial test output:")
-        print(result.stdout)
-        print("\nDEBUG: Initial test error output:")
-        print(result.stderr)
+        # Debug: Log test output
+        logger.debug("Initial test output:")
+        logger.debug(result.stdout)
+        logger.debug("Initial test error output:")
+        logger.debug(result.stderr)
 
         # Construct a structured prompt using parsed error details
         error_prompt_template = (
@@ -969,10 +1018,10 @@ class PytestErrorFixer:
         combined_prompt = f"{error_prompt}\n\n{analysis_prompt}"
         
         # Send the structured prompt to aider
-        print("DEBUG: Sending structured prompt to AI model")
+        logger.debug("Sending structured prompt to AI model")
         try:
             debug_coder.run(combined_prompt)
-            print("DEBUG: AI model suggested changes. Applying changes...")
+            logger.debug("AI model suggested changes. Applying changes...")
         except Exception as e:
             print(f"DEBUG: Error while applying changes: {str(e)}")
             # Optionally log the failed attempt
@@ -980,14 +1029,14 @@ class PytestErrorFixer:
             return False
 
         # Run the test again to check if it's fixed
-        print("\nDEBUG: Re-running test to check if error is fixed...")
+        logger.debug("Re-running test to check if error is fixed...")
         result = subprocess.run(cmd, capture_output=True, text=True)
 
-        # Debug: Print re-run test output
-        print("\nDEBUG: Re-run test output:")
-        print(result.stdout)
-        print("\nDEBUG: Re-run test error output:")
-        print(result.stderr)
+        # Debug: Log re-run test output
+        logger.debug("Re-run test output:")
+        logger.debug(result.stdout)
+        logger.debug("Re-run test error output:")
+        logger.debug(result.stderr)
 
         if "PASSED" in result.stdout:
             print(f"DEBUG: Fixed: {file_path} - {error['function']}")
@@ -995,7 +1044,7 @@ class PytestErrorFixer:
             self.log_progress("fixed", error, file_path, all_relevant_files, "Changes applied", 0.0)
             return True
         else:
-            print(f"DEBUG: Failed to fix: {file_path} - {error['function']}")
+            logger.warning(f"Failed to fix: {file_path} - {error['function']}")
             return False
     
     
