@@ -52,7 +52,7 @@ class PytestErrorFixer:
         self.successful_fixes = []  # New attribute to store successful fixes
         self.main_branch = "pytest-aider-automation"
         
-        self.model = Model("o1-mini")
+        self.model = Model("gpt-4o")
         self.io = InputOutput(yes=True)
         self.coder = Coder.create(main_model=self.model, io=self.io)
         self.progress_log = progress_log
