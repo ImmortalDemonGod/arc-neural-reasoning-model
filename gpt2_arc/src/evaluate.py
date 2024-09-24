@@ -28,7 +28,7 @@ def evaluate(model, test_dataset, batch_size=32):
     trainer = ARCTrainer(model, None, test_dataset, config=Config())
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
-    
+
     # Collect individual task metrics
     individual_metrics = []
     for result in results:
@@ -51,13 +51,13 @@ def save_results(results, individual_metrics, output_dir, model_name):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{model_name}_eval_results_{timestamp}.json"
     output_path = os.path.join(output_dir, filename)
-    
+
     with open(output_path, 'w') as f:
         json.dump({
             "aggregate_results": results,
             "individual_metrics": individual_metrics
         }, f, indent=2)
-    
+
     logger.info(f"Results saved to {output_path}")
     return output_path
 
@@ -69,12 +69,14 @@ def main(args):
     _, test_set = arckit.load_data()
     test_data = ARCDataset(test_set)
 
-    # Load the checkpoint
-    checkpoint = torch.load(args.model_checkpoint)
+    # Load the checkpoint with map_location='cpu'
+    checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
 
-    # Extract the model configuration from the checkpoint
+    # Extract and convert the model configuration from the checkpoint
     if 'model_config' in checkpoint:
-        model_config = checkpoint['model_config']
+        model_config_dict = checkpoint['model_config']
+        # Convert dict to ModelConfig object
+        model_config = ModelConfig(**model_config_dict)
     else:
         raise ValueError("Model configuration not found in checkpoint")
 
@@ -110,8 +112,8 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_run_name", type=str, default=None, help="Weights & Biases run name")
 
     args = parser.parse_args()
-    
+
     # Create output directory if it doesn't exist
     os.makedirs(args.output_dir, exist_ok=True)
-    
+
     main(args)
