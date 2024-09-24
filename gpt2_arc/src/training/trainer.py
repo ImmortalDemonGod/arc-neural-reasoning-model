@@ -159,21 +159,31 @@ class ARCTrainer(pl.LightningModule):
         predictions = torch.argmax(model_outputs, dim=-1)
         outputs = outputs.view(B, -1)
         
-        accuracy = (predictions == outputs).float().mean()
+        accuracies = (predictions == outputs).float().mean(dim=1)  # Mean over all pixels for each sample
         diff_accuracy, _, _ = differential_pixel_accuracy(inputs, outputs, predictions)
 
         # Collect metrics in a dictionary
         metrics = {
             'test_loss': loss.item() if isinstance(loss, torch.Tensor) else loss,
-            'test_accuracy': accuracy.item() if isinstance(accuracy, torch.Tensor) else accuracy,
+            'test_accuracy': accuracies.tolist(),  # List of accuracies for each sample
             'test_diff_accuracy': diff_accuracy.item() if isinstance(diff_accuracy, torch.Tensor) else diff_accuracy
         }
 
-        # Return metrics
-        if hasattr(self, 'log'):
-            self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        # Log metrics
+        self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.log("test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
+        # Log task-specific metrics
+        for task_id, accuracy in zip(task_ids, accuracies):
+            self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
+        try:
+            self.writer.add_scalar('test/loss', metrics['test_loss'], self.current_epoch)
+            self.writer.add_scalar('test/avg_accuracy', sum(metrics['test_accuracy']) / len(metrics['test_accuracy']), self.current_epoch)
+            self.writer.add_scalar('test/diff_accuracy', metrics['test_diff_accuracy'], self.current_epoch)
+            print(f"DEBUG: Logged test metrics for epoch {self.current_epoch}: loss={metrics['test_loss']}, avg_accuracy={sum(metrics['test_accuracy']) / len(metrics['test_accuracy'])}, diff_accuracy={metrics['test_diff_accuracy']}")
+        except Exception as e:
+            print(f"DEBUG: Error logging test step: {str(e)}")
 
         result = {
             'test_loss': metrics['test_loss'],
@@ -181,20 +191,6 @@ class ARCTrainer(pl.LightningModule):
             'test_diff_accuracy': metrics['test_diff_accuracy'],
             'task_ids': task_ids,
         }
-
-        # Log task-specific metrics
-        for task_id in task_ids:
-            self.log(f"{task_id}_test_loss", metrics['test_loss'], on_step=False, on_epoch=True, prog_bar=True, logger=True)
-            self.log(f"{task_id}_test_accuracy", metrics['test_accuracy'], on_step=False, on_epoch=True, prog_bar=True, logger=True)
-            self.log(f"{task_id}_test_diff_accuracy", metrics['test_diff_accuracy'], on_step=False, on_epoch=True, prog_bar=True, logger=True)
-
-        try:
-            self.writer.add_scalar('test/loss', metrics['test_loss'], self.current_epoch)
-            self.writer.add_scalar('test/accuracy', metrics['test_accuracy'], self.current_epoch)
-            self.writer.add_scalar('test/diff_accuracy', metrics['test_diff_accuracy'], self.current_epoch)
-            print(f"DEBUG: Logged test metrics for epoch {self.current_epoch}: loss={metrics['test_loss']}, accuracy={metrics['test_accuracy']}, diff_accuracy={metrics['test_diff_accuracy']}")
-        except Exception as e:
-            print(f"DEBUG: Error logging test step: {str(e)}")
 
         self.test_results.append(result)
         return result
