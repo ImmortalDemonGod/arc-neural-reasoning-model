@@ -9,6 +9,13 @@ import pytorch_lightning as pl
 import numpy as np
 from optuna.pruners import MedianPruner
 
+try:
+    from optuna.integration import PyTorchLightningPruningCallback
+except ImportError:
+    print("Error: optuna-integration[pytorch_lightning] is not installed.")
+    print("Please run: pip install optuna-integration[pytorch_lightning]")
+    sys.exit(1)
+
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, project_root)
@@ -88,7 +95,7 @@ def objective(trial):
         arc_trainer = ARCTrainer(model, train_data, val_data, config)
 
         # Set up PyTorch Lightning trainer with pruning callback
-        pruning_callback = optuna.integration.PyTorchLightningPruningCallback(trial, monitor="val_loss")
+        pruning_callback = PyTorchLightningPruningCallback(trial, monitor="val_loss")
         trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
             callbacks=[pruning_callback],
