@@ -9,3 +9,7 @@
   - Modify `optimize_hyperparameters.py` to load a saved model checkpoint before starting each trial.
   - Add logic to the `objective` function to load the model state from a checkpoint.
   - Ensure the script can accept a model checkpoint path as an argument.
+
+- Optimize differential_pixel_accuracy:
+  - Modify `optimize_hyperparameters.py` to use `differential_pixel_accuracy` as the objective metric.
+  - Update the `ARCTrainer` class to calculate and log `differential_pixel_accuracy` during validation or testing.
