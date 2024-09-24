@@ -82,7 +82,14 @@ def main(args):
 
     # Initialize the model with the checkpoint configuration
     model = GPT2ARC(model_config)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    try:
+        # Update the key from 'model_state_dict' to 'state_dict'
+        model.load_state_dict(checkpoint['state_dict'])
+    except KeyError as e:
+        logger.error(f"Key error while loading state_dict: {e}")
+        logger.error(f"Available keys in checkpoint: {list(checkpoint.keys())}")
+        raise KeyError(f"Expected key 'state_dict' not found in checkpoint. Available keys: {list(checkpoint.keys())}")
+
     model.eval()
     logger.info("Model set to evaluation mode")
 
