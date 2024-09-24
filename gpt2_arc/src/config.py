@@ -1,6 +1,5 @@
 # gpt2_arc/src/config.py
-from dataclasses import dataclass, asdict
-
+from dataclasses import dataclass, asdict, field
 
 @dataclass
 class ModelConfig:
@@ -9,6 +8,10 @@ class ModelConfig:
     n_layer: int = 12
     dropout: float = 0.1
 
+    def __post_init__(self):
+        assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
+        assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
+        assert self.n_layer > 0, f"n_layer ({self.n_layer}) must be positive"
 
 @dataclass
 class TrainingConfig:
@@ -16,15 +19,11 @@ class TrainingConfig:
     learning_rate: float = 1e-4
     max_epochs: int = 10
     use_gpu: bool = True
-    log_level: str = "INFO"  # Add log_level attribute with default value
-
-
-from dataclasses import field
-
+    log_level: str = "INFO"
 
 @dataclass
 class EvaluationConfig:
-    perfect_accuracy_threshold: float = 1.0 - 1e-6  # Default to almost 1.0 to account for floating-point precision
+    perfect_accuracy_threshold: float = 1.0 - 1e-6
 
 @dataclass
 class Config:
