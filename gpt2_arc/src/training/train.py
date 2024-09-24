@@ -56,7 +56,7 @@ def main(args):
         else:
             logger.info("Using provided or default hyperparameters")
             model_config = ModelConfig(n_embd=args.n_embd, n_head=args.n_head, n_layer=args.n_layer)
-            training_config = TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs)
+            training_config = TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs, optimizer_name=args.optimizer_name)
         
         config = Config(model=model_config, training=training_config)
         logger.debug(f"Configuration: {config}")
@@ -191,6 +191,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
     parser.add_argument("--use-optuna", action="store_true", help="Use best hyperparameters from Optuna study")
+    parser.add_argument("--optimizer-name", type=str, default="Adam", help="Optimizer to use for training")
     parser.add_argument("--optuna-study-name", type=str, default="gpt2_arc_optimization", help="Name of the Optuna study to load")
     parser.add_argument("--optuna-storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
     parser.add_argument("--n-embd", type=int, default=768, help="Embedding dimension")
