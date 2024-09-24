@@ -24,23 +24,42 @@ from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def evaluate(model, test_dataset, batch_size=32):
-    trainer = ARCTrainer(model, None, test_dataset, config=Config())
+def evaluate(model, test_dataset, config, batch_size=32):
+    trainer = ARCTrainer(model, None, test_dataset, config=config)
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
 
-    # Collect individual task metrics
+    perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold
+    perfect_tasks = 0
+    total_tasks = 0
     individual_metrics = []
+
     for result in results:
-        task_id = result.get('task_id', 'unknown')
-        individual_metrics.append((task_id, result))
+        task_ids = result.get('task_ids', ['unknown'])
+        accuracies = result.get('test_accuracy', [])
+        
+        if len(task_ids) != len(accuracies):
+            logger.warning(f"Mismatch in number of task_ids ({len(task_ids)}) and accuracies ({len(accuracies)})")
+        
+        for task_id, accuracy in zip(task_ids, accuracies):
+            individual_metrics.append((task_id, {'test_accuracy': accuracy}))
+            logger.info(f"Task {task_id}: Accuracy = {accuracy:.4f}")
+            
+            if accuracy >= perfect_accuracy_threshold:
+                perfect_tasks += 1
+            total_tasks += 1
 
-    # Log individual task metrics
-    logger.info("Individual Task Metrics:")
-    for task_id, metrics in individual_metrics:
-        logger.info(f"Task {task_id}: {metrics}")
+    complete_task_accuracy = perfect_tasks / total_tasks if total_tasks > 0 else 0
 
-    return results[0], individual_metrics
+    logger.info(f"Complete Task Accuracy: {complete_task_accuracy:.2%}")
+
+    aggregated_results = {
+        'test_loss': sum(r['test_loss'].item() for r in results) / len(results),
+        'test_accuracy': sum(sum(r['test_accuracy']) / len(r['test_accuracy']) for r in results) / len(results),
+        'complete_task_accuracy': complete_task_accuracy
+    }
+
+    return aggregated_results, individual_metrics
 
 def load_config_from_json(json_path):
     with open(json_path, 'r') as f:
@@ -94,8 +113,15 @@ def main(args):
     model.eval()
     logger.info("Model set to evaluation mode")
 
+    # Create configuration
+    config = Config(
+        model=model_config,
+        training=TrainingConfig(),
+        evaluation=EvaluationConfig(perfect_accuracy_threshold=1.0 - 1e-6)
+    )
+
     # Evaluate the model
-    results, individual_metrics = evaluate(model, test_data, args.batch_size)
+    results, individual_metrics = evaluate(model, test_data, config, args.batch_size)
 
     logger.info("Evaluation Results:")
     for metric, value in results.items():

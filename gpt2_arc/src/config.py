@@ -23,8 +23,14 @@ from dataclasses import field
 
 
 @dataclass
+class EvaluationConfig:
+    perfect_accuracy_threshold: float = 1.0 - 1e-6  # Default to almost 1.0 to account for floating-point precision
+
+@dataclass
 class Config:
-    def to_dict(self):
-        return asdict(self)
     model: ModelConfig = field(default_factory=ModelConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
+    evaluation: EvaluationConfig = field(default_factory=EvaluationConfig)
+
+    def to_dict(self):
+        return asdict(self)
