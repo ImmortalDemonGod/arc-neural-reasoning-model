@@ -12,7 +12,7 @@ from datetime import datetime
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, project_root)
 
-from gpt2_arc.src.config import Config, ModelConfig
+from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig, EvaluationConfig
 import arckit
 import logging
 from gpt2_arc.src.data.arc_dataset import ARCDataset
@@ -117,7 +117,7 @@ def main(args):
     config = Config(
         model=model_config,
         training=TrainingConfig(),
-        evaluation=EvaluationConfig(perfect_accuracy_threshold=1.0 - 1e-6)
+        evaluation=EvaluationConfig()
     )
 
     # Evaluate the model
