@@ -32,6 +32,15 @@ import os
 # Set up logging
 logger = logging.getLogger(__name__)
 
+class ConfigSavingModelCheckpoint(ModelCheckpoint):
+    def __init__(self, config, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.config = config
+
+    def on_save_checkpoint(self, trainer, pl_module, checkpoint):
+        super().on_save_checkpoint(trainer, pl_module, checkpoint)
+        checkpoint['model_config'] = self.config.model.__dict__
+
 def main(args):
     logger.info("Starting main function")
     logger.debug(f"Command line arguments: {args}")
@@ -68,22 +77,6 @@ def main(args):
         val_data = ARCDataset(eval_set)
         logger.debug(f"Train data size: {len(train_data)}, Validation data size: {len(val_data)}")
 
-        # Load model configuration from JSON file if a checkpoint is provided
-        if args.model_checkpoint:
-            config_path = f"results/experiment_{args.model_checkpoint.split('_')[-1].replace('.pth', '.json')}"
-            with open(config_path, 'r') as f:
-                config_data = json.load(f)
-
-            model_config = ModelConfig(
-                n_embd=config_data['config']['model']['n_embd'],
-                n_head=config_data['config']['model']['n_head'],
-                n_layer=config_data['config']['model']['n_layer'],
-                dropout=config_data['config']['model']['dropout']
-            )
-        else:
-            logger.info("No model checkpoint provided. Using default configuration.")
-
-
         # Initialize model
         logger.info("Initializing model")
         model = GPT2ARC(config=model_config)
@@ -93,7 +86,10 @@ def main(args):
         if args.model_checkpoint:
             logger.info(f"Loading model from checkpoint: {args.model_checkpoint}")
             checkpoint = torch.load(args.model_checkpoint)
-            model.load_state_dict(checkpoint)
+            if 'model_config' in checkpoint:
+                model_config = ModelConfig(**checkpoint['model_config'])
+                model = GPT2ARC(config=model_config)
+            model.load_state_dict(checkpoint['state_dict'])
 
         # Initialize results collector
         results_collector = ResultsCollector(config)
@@ -115,7 +111,8 @@ def main(args):
         logger.info("Setting up PyTorch Lightning trainer")
         callbacks = []
         if not args.no_checkpointing:
-            checkpoint_callback = ModelCheckpoint(
+            checkpoint_callback = ConfigSavingModelCheckpoint(
+                config=config,
                 dirpath="checkpoints",
                 filename="arc_model-{epoch:02d}-{val_loss:.2f}",
                 save_top_k=3,
@@ -165,8 +162,8 @@ def main(args):
         logger.info("Saving final model with configuration")
         model_path = f"final_model_{trainer.results_collector.experiment_id}.pth"
         torch.save({
-            'model_state_dict': trainer.model.state_dict(),
-            'model_config': trainer.config.model
+            'state_dict': trainer.model.state_dict(),
+            'model_config': trainer.config.model.__dict__
         }, model_path)
         trainer.results_collector.set_checkpoint_path(model_path)
         logger.debug(f"Model and configuration saved to: {model_path}")
@@ -211,4 +208,3 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     main(args)
-
