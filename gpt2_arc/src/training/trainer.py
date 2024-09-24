@@ -18,12 +18,13 @@ logger = logging.getLogger(__name__)
 
 
 class ARCTrainer(pl.LightningModule):
-    def __init__(self, model, train_dataset, val_dataset, config: Config):
+    def __init__(self, model, train_dataset, val_dataset, config: Config, optimizer_name="Adam"):
         super().__init__()
         self.model = model
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.config = config
+        self.optimizer_name = optimizer_name
         self.batch_size = config.training.batch_size
         self.lr = config.training.learning_rate
         self.train_losses = []
@@ -228,7 +229,11 @@ class ARCTrainer(pl.LightningModule):
         self.log('epoch', self.current_epoch)
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        if self.optimizer_name == "Adam":
+            optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        elif self.optimizer_name == "SGD":
+            optimizer = optim.SGD(self.model.parameters(), lr=self.lr)
+        # Add more optimizers as needed
         lr_scheduler = {
             'scheduler': optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.95),
             'name': 'learning_rate',

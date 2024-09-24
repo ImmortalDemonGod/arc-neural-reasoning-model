@@ -17,6 +17,7 @@ class TrainingConfig:
     max_epochs: int = 10
     use_gpu: bool = True
     log_level: str = "INFO"  # Add log_level attribute with default value
+    optimizer_name: str = "Adam"  # Add optimizer_name attribute
 
 
 from dataclasses import field

@@ -36,9 +36,13 @@ def objective(trial):
     model_config = ModelConfig(
         n_embd=trial.suggest_int("n_embd", args.n_embd_min, args.n_embd_max),
         n_head=trial.suggest_int("n_head", args.n_head_min, args.n_head_max),
-        n_layer=trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
+        n_layer=trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max),
+        dropout=trial.suggest_float("dropout", args.dropout_min, args.dropout_max)
     )
+    optimizer_name = trial.suggest_categorical("optimizer", args.optimizers)
+    
     training_config = TrainingConfig(
+        optimizer_name=optimizer_name,
         batch_size=trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max),
         learning_rate=trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True),
         max_epochs=trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
@@ -120,6 +124,7 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db"):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
     parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
+    parser.add_argument("--optimizers", nargs='+', default=["Adam", "SGD"], help="List of optimizers to try.")
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
     
     parser.add_argument("--n_embd_min", type=int, default=32, help="Minimum value for n_embd.")
@@ -134,6 +139,8 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate_max", type=float, default=1e-2, help="Maximum value for learning_rate.")
     parser.add_argument("--max_epochs_min", type=int, default=5, help="Minimum value for max_epochs.")
     parser.add_argument("--max_epochs_max", type=int, default=20, help="Maximum value for max_epochs.")
+    parser.add_argument("--dropout_min", type=float, default=0.0, help="Minimum value for dropout.")
+    parser.add_argument("--dropout_max", type=float, default=0.5, help="Maximum value for dropout.")
     
     args = parser.parse_args()
     
