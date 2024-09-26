@@ -75,13 +75,15 @@ def save_results(results, individual_metrics, output_dir, model_name):
     filename = f"{model_name}_eval_results_{timestamp}.json"
     output_path = os.path.join(output_dir, filename)
 
-    with open(output_path, 'w') as f:
-        json.dump({
-            "aggregate_results": results,
-            "individual_metrics": individual_metrics
-        }, f, indent=2)
+    data_to_save = {
+        "aggregate_results": results,
+        "individual_metrics": dict(individual_metrics)
+    }
 
-    logger.debug(f"DEBUG: Data to be saved: {{'aggregate_results': results, 'individual_metrics': individual_metrics}}")
+    logger.debug(f"DEBUG: Data to be saved: {data_to_save}")
+
+    with open(output_path, 'w') as f:
+        json.dump(data_to_save, f, indent=2)
 
     logger.info(f"Results saved to {output_path}")
     return output_path
