@@ -12,6 +12,7 @@ from ..utils.helpers import differential_pixel_accuracy
 from ..utils.results_collector import ResultsCollector
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from pytorch_lightning.loggers import TensorBoardLogger
 import os
 
 logger = logging.getLogger(__name__)
