@@ -35,6 +35,7 @@ def evaluate(model, test_dataset, config, batch_size=32):
     total_tasks = 0
     individual_metrics = []
     all_accuracies = []
+    all_diff_accuracies = []
 
     for result in results:
         logger.debug(f"Processing result: {result}")
@@ -56,6 +57,7 @@ def evaluate(model, test_dataset, config, batch_size=32):
                     'test_diff_accuracy': diff_accuracy
                 }))
                 all_accuracies.append(accuracy)
+                all_diff_accuracies.append(diff_accuracy)
                 logger.info(f"Task {task_id}: Accuracy = {accuracy:.4f}, Diff Accuracy = {diff_accuracy:.4f}")
 
                 if accuracy >= perfect_accuracy_threshold:
@@ -72,6 +74,7 @@ def evaluate(model, test_dataset, config, batch_size=32):
     aggregated_results = {
         'test_loss': sum(r.get('test_loss', 0) for r in results) / len(results),
         'test_accuracy': sum(all_accuracies) / len(all_accuracies) if all_accuracies else 0,
+        'test_diff_accuracy': sum(all_diff_accuracies) / len(all_diff_accuracies) if all_diff_accuracies else 0,
         'complete_task_accuracy': complete_task_accuracy
     }
 
@@ -153,7 +156,10 @@ def main(args):
         print(f"{metric}: {value}")
         wandb.log({f"eval/{metric}": value})
 
-    # Save results locally
+    # Log individual task metrics
+    for task_id, metrics in individual_metrics:
+        for metric_name, metric_value in metrics.items():
+            wandb.log({f"eval/task_{task_id}/{metric_name}": metric_value})
     model_name = os.path.basename(args.model_checkpoint).split('.')[0]
     results_path = save_results(results, individual_metrics, args.output_dir, model_name)
 
