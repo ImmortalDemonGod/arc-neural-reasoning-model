@@ -136,6 +136,7 @@ class ARCTrainer(pl.LightningModule):
         """
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
+        attention_mask = None
         if isinstance(batch, (list, tuple)) and len(batch) >= 3:
             inputs, outputs, task_ids = batch[:3]
         elif isinstance(batch, dict):
