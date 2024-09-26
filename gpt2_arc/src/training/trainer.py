@@ -29,7 +29,7 @@ class ARCTrainer(pl.LightningModule):
         self.lr = config.training.learning_rate
         self.train_losses = []
         self.logged_metrics = {}
-        self.test_outputs = []  # Store test outputs for aggregation
+        self.test_outputs = []  # Initialize an empty list to store test outputs
         self.test_results = []  # Initialize test results for storing test outcomes
         self.best_val_loss = float('inf')
         self.best_epoch = 0
@@ -116,6 +116,9 @@ class ARCTrainer(pl.LightningModule):
         
         return loss
 
+    def on_test_epoch_start(self):
+        self.test_outputs = []
+
     def test_step(self, batch, batch_idx):
         """
         The `test_step` function processes a batch of data for testing a model, computes metrics such as
@@ -197,14 +200,17 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: test_step output - result: {result}")
         logger.debug(f"DEBUG: Test step result: {result}")
 
+        # Append the result to self.test_outputs
+        self.test_outputs.append(result)
+
         return result
 
-    def test_epoch_end(self, outputs):
-        total_loss = torch.stack([torch.tensor(x['test_loss']) for x in outputs]).mean()
+    def on_test_epoch_end(self):
+        total_loss = torch.stack([torch.tensor(x['test_loss']) for x in self.test_outputs]).mean()
         all_accuracies = []
         all_diff_accuracies = []
 
-        for output in outputs:
+        for output in self.test_outputs:
             if 'test_accuracy' in output:
                 all_accuracies.append(output['test_accuracy'])
             if 'test_diff_accuracy' in output:
