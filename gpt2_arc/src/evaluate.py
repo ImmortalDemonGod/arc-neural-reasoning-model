@@ -150,10 +150,12 @@ def main(args):
         wandb.log({f"eval/{metric}": value})
 
     # Log individual task metrics
-    # Average the metrics for each task
     for task_id, metrics in individual_metrics.items():
-        metrics['test_accuracy'] = sum(metrics['test_accuracy']) / len(metrics['test_accuracy'])
-        metrics['test_diff_accuracy'] = sum(metrics['test_diff_accuracy']) / len(metrics['test_diff_accuracy'])
+        # Ensure metrics are not already floats
+        if isinstance(metrics['test_accuracy'], list):
+            metrics['test_accuracy'] = sum(metrics['test_accuracy']) / len(metrics['test_accuracy'])
+        if isinstance(metrics['test_diff_accuracy'], list):
+            metrics['test_diff_accuracy'] = sum(metrics['test_diff_accuracy']) / len(metrics['test_diff_accuracy'])
         logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
     model_name = os.path.basename(args.model_checkpoint).split('.')[0]
     results_path = save_results(results, individual_metrics, args.output_dir, model_name)
