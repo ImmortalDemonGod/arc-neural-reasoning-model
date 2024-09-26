@@ -190,7 +190,9 @@ class ARCTrainer(pl.LightningModule):
 
     def compute_accuracy(self, outputs, targets):
         predictions = outputs.argmax(dim=-1)
-        return (predictions == targets).float().mean(dim=-1)
+        # Reshape predictions to match the target shape
+        predictions = predictions.view(targets.size())
+        return (predictions == targets).float().mean()
         
     def on_validation_epoch_end(self):
         # Compute average validation loss
