@@ -25,6 +25,11 @@ class ResultsCollector:
         self.task_specific_results = {}
         self.environment = self._get_environment_info()
         self.checkpoint_path = None
+        self.tensorboard_log_path = None
+
+    def set_tensorboard_log_path(self, path):
+        self.tensorboard_log_path = path
+        print(f"DEBUG: Set TensorBoard log path in ResultsCollector: {path}")
 
     def _get_environment_info(self) -> Dict[str, str]:
         """Retrieve environment information such as Python and PyTorch versions."""
@@ -108,8 +113,10 @@ class ResultsCollector:
             "final_train_loss": self.results["train"][-1]["loss"] if self.results["train"] else None,
             "final_val_loss": self.results["validation"][-1]["loss"] if self.results["validation"] else None,
             "test_accuracy": self.results["test"].get("accuracy"),
-            "config": self._serialize_config(self.config)
+            "config": self._serialize_config(self.config),
+            "tensorboard_log_path": self.tensorboard_log_path
         }
+        print(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
     def _make_serializable(self, obj):

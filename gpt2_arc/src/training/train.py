@@ -121,7 +121,15 @@ def main(args):
             )
             callbacks.append(checkpoint_callback)
 
-        tb_logger = False if args.no_logging else TensorBoardLogger("tb_logs", name="arc_model")
+        if not args.no_logging:
+            tb_logger = TensorBoardLogger(
+                save_dir="runs",
+                name=f"experiment_{trainer.results_collector.experiment_id}"
+            )
+            print(f"DEBUG: TensorBoard logger initialized. Log dir: {tb_logger.log_dir}")
+        else:
+            tb_logger = False
+            print("DEBUG: Logging is disabled")
 
         pl_trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
@@ -134,6 +142,10 @@ def main(args):
             accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu',
             devices=1
         )
+
+        if tb_logger:
+            trainer.results_collector.set_tensorboard_log_path(tb_logger.log_dir)
+            print(f"DEBUG: TensorBoard log path set in results collector: {tb_logger.log_dir}")
 
         # Train the model
         logger.info("Starting model training")

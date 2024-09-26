@@ -33,11 +33,13 @@ class ARCTrainer(pl.LightningModule):
         self.best_val_loss = float('inf')
         self.best_epoch = 0
         self.results_collector = ResultsCollector(config)
-        log_dir = f"runs/experiment_{self.results_collector.experiment_id}"
-        os.makedirs(log_dir, exist_ok=True)  # Ensure the directory exists
-        self.writer = SummaryWriter(log_dir)
-        print(f"DEBUG: TensorBoard writer initialized for experiment {self.results_collector.experiment_id}")
-        print(f"DEBUG: Logs will be written to {log_dir}")
+
+    def get_tensorboard_logger(self):
+        for logger in self.trainer.loggers:
+            if isinstance(logger, TensorBoardLogger):
+                return logger.experiment
+        print("DEBUG: No TensorBoardLogger found in trainer.loggers")
+        return None
 
     def training_step(self, batch, batch_idx):
         logger.debug(f"Training step - Batch type: {type(batch)}, length: {len(batch)}")
@@ -63,11 +65,12 @@ class ARCTrainer(pl.LightningModule):
             self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.results_collector.update_train_metrics(self.current_epoch, {"loss": loss.item()})
         
-        try:
-            self.writer.add_scalar('train/loss', loss.item(), self.current_epoch * len(self.train_dataloader()) + batch_idx)
-            print(f"DEBUG: Logged training loss: {loss.item()} at step {self.current_epoch * len(self.train_dataloader()) + batch_idx}")
-        except Exception as e:
-            print(f"DEBUG: Error logging training step: {str(e)}")
+        tb_logger = self.get_tensorboard_logger()
+        if tb_logger:
+            tb_logger.add_scalar('train/loss', loss.item(), self.global_step)
+            print(f"DEBUG: Logged training loss: {loss.item()} at step {self.global_step}")
+        else:
+            print(f"DEBUG: Failed to log training loss. No TensorBoard logger available.")
         
         return loss
 

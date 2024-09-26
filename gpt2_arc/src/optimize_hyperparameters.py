@@ -8,6 +8,7 @@ import torch
 import pytorch_lightning as pl
 import numpy as np
 from optuna.pruners import MedianPruner
+from pytorch_lightning.loggers import TensorBoardLogger
 
 try:
     from optuna.integration import PyTorchLightningPruningCallback
@@ -96,14 +97,19 @@ def objective(trial):
 
         # Set up PyTorch Lightning trainer with pruning callback
         pruning_callback = PyTorchLightningPruningCallback(trial, monitor="val_loss")
+        experiment_id = f"optuna_trial_{trial.number}"
+        tb_logger = TensorBoardLogger(save_dir="runs", name=f"experiment_{experiment_id}")
+        print(f"DEBUG: Optuna trial TensorBoard logger initialized. Log dir: {tb_logger.log_dir}")
+        
         trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
             callbacks=[pruning_callback],
-            logger=False,
+            logger=tb_logger,
             enable_checkpointing=False,
             accelerator='gpu' if torch.cuda.is_available() else 'cpu',
             devices=1,
         )
+        print(f"DEBUG: Trainer created for Optuna trial with TensorBoard logger")
         logger.debug(f"Trainer created with config: {trainer.state}")
 
         # Train and evaluate
