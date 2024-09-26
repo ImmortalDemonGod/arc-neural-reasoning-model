@@ -139,37 +139,50 @@ class ARCTrainer(pl.LightningModule):
         attention_mask = None
         if isinstance(batch, (list, tuple)) and len(batch) >= 3:
             inputs, outputs, task_ids = batch[:3]
+            if len(batch) == 4:
+                attention_mask = batch[3]
         elif isinstance(batch, dict):
             inputs = batch.get('input_ids')
             outputs = batch.get('labels')
             task_ids = batch.get('task_ids')
+            attention_mask = batch.get('attention_mask')
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
-        # Ensure inputs and outputs are the correct type
+        logger.debug(f"DEBUG: Task IDs in batch: {task_ids}")
+
         inputs = inputs.float()
         outputs = outputs.long()
 
-        # Create a dummy attention mask if it's None
         if attention_mask is None:
             attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32, device=inputs.device)
 
         model_outputs = self(inputs, attention_mask)
         loss = self.compute_loss(model_outputs, outputs)
-        
+
         accuracies = self.compute_accuracy(model_outputs, outputs)
+        diff_accuracy, _, _ = differential_pixel_accuracy(inputs, outputs, model_outputs.argmax(dim=-1))
 
         logger.debug(f"DEBUG: Computed accuracies: {accuracies}")
+        logger.debug(f"DEBUG: Differential accuracy: {diff_accuracy}")
 
         result = {
             'test_loss': loss.item(),
             'test_accuracy': accuracies.tolist(),
+            'test_diff_accuracy': diff_accuracy.item(),
             'task_ids': task_ids,
         }
 
-        # Log task-specific metrics
         for task_id, accuracy in zip(task_ids, accuracies):
             self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
+        try:
+            self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)
+            self.writer.add_scalar('test/avg_accuracy', sum(result['test_accuracy']) / len(result['test_accuracy']), self.current_epoch)
+            self.writer.add_scalar('test/diff_accuracy', result['test_diff_accuracy'], self.current_epoch)
+            logger.debug(f"DEBUG: Logged test metrics for epoch {self.current_epoch}: loss={result['test_loss']}, avg_accuracy={sum(result['test_accuracy']) / len(result['test_accuracy'])}, diff_accuracy={result['test_diff_accuracy']}")
+        except Exception as e:
+            logger.error(f"DEBUG: Error logging test step: {str(e)}")
 
         logger.debug(f"DEBUG: Test step result: {result}")
 
