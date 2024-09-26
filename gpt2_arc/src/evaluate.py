@@ -31,11 +31,12 @@ def evaluate(model, test_dataset, config, batch_size=32):
     logger.debug(f"Results from test: {results}")
 
     for result in results:
-        logger.debug(f"Result: {result}")
-        task_ids = result.get('task_ids', ['unknown'])
+        logger.debug(f"Full Result: {result}")
+        task_ids = result.get('task_ids', [])
         accuracies = result.get('test_accuracy', [])
         
-        logger.debug(f"Extracted Task IDs: {task_ids}, Extracted Accuracies: {accuracies}")
+        logger.debug(f"DEBUG: Task IDs: {task_ids}")
+        logger.debug(f"DEBUG: Accuracies: {accuracies}")
 
     perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold
     perfect_tasks = 0
@@ -61,6 +62,9 @@ def evaluate(model, test_dataset, config, batch_size=32):
 
     complete_task_accuracy = perfect_tasks / total_tasks if total_tasks > 0 else 0
 
+    logger.debug(f"DEBUG: Individual metrics collected: {individual_metrics}")
+    logger.debug(f"DEBUG: Perfect tasks: {perfect_tasks}, Total tasks: {total_tasks}")
+
     logger.info(f"Complete Task Accuracy: {complete_task_accuracy:.2%}")
 
     aggregated_results = {
@@ -68,6 +72,8 @@ def evaluate(model, test_dataset, config, batch_size=32):
         'test_accuracy': sum(sum(r['test_accuracy']) / len(r['test_accuracy']) for r in results if 'test_accuracy' in r) / len(results),
         'complete_task_accuracy': complete_task_accuracy
     }
+
+    logger.debug(f"DEBUG: Aggregated results: {aggregated_results}")
 
     return aggregated_results, individual_metrics
 
@@ -86,6 +92,8 @@ def save_results(results, individual_metrics, output_dir, model_name):
             "aggregate_results": results,
             "individual_metrics": individual_metrics
         }, f, indent=2)
+
+    logger.debug(f"DEBUG: Data to be saved: {data_to_save}")
 
     logger.info(f"Results saved to {output_path}")
     return output_path
@@ -132,6 +140,9 @@ def main(args):
 
     # Evaluate the model
     results, individual_metrics = evaluate(model, test_data, config, args.batch_size)
+
+    logger.debug(f"DEBUG: Evaluation results: {results}")
+    logger.debug(f"DEBUG: Individual metrics: {individual_metrics}")
 
     logger.info("Evaluation Results:")
     for metric, value in results.items():

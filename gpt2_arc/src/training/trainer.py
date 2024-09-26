@@ -134,7 +134,7 @@ class ARCTrainer(pl.LightningModule):
         test_accuracy, and test_diff_accuracy. The method also appends the result to `self.test_outputs` and
         calculates task success for TSR, logging it as well.
         """
-        logger.debug(f"Test step - Batch type: {type(batch)}, length: {len(batch)}")
+        logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
         if isinstance(batch, list) and len(batch) == 3:
             inputs, outputs, task_ids = batch
@@ -144,7 +144,7 @@ class ARCTrainer(pl.LightningModule):
             attention_mask = None
         elif isinstance(batch, tuple) and len(batch) == 4:
             inputs, attention_mask, outputs, task_ids = batch
-            logger.debug(f"Task IDs in batch: {task_ids}")
+            logger.debug(f"DEBUG: Task IDs in batch: {task_ids}")
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
@@ -249,7 +249,9 @@ class ARCTrainer(pl.LightningModule):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=4)
+        loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=4)
+        logger.debug(f"DEBUG: Test dataloader created with {len(loader)} batches")
+        return loader
 
     def test_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=4)
