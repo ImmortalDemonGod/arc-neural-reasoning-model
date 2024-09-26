@@ -30,35 +30,23 @@ def evaluate(model, test_dataset, config, batch_size=32):
     results = pl_trainer.test(trainer)
     logger.debug(f"Results from test: {results}")
 
-    for result in results:
-        logger.debug(f"Full Result: {result}")
-        task_ids = result.get('task_ids', [])
-        accuracies = result.get('test_accuracy', [])
-        
-        logger.debug(f"DEBUG: Task IDs: {task_ids}")
-        logger.debug(f"DEBUG: Accuracies: {accuracies}")
-
     perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold
     perfect_tasks = 0
     total_tasks = 0
     individual_metrics = []
 
     for result in results:
-        task_ids = result.get('task_ids', ['unknown'])
-        accuracies = result.get('test_accuracy', [])
-        
-        logger.debug(f"Task IDs: {task_ids}, Accuracies: {accuracies}")
+        logger.debug(f"Full Result: {result}")
+        for key, value in result.items():
+            if key.endswith('_test_accuracy') and key != 'test_accuracy':
+                task_id = key.replace('_test_accuracy', '')
+                accuracy = value
+                individual_metrics.append((task_id, {'test_accuracy': accuracy}))
+                logger.info(f"Task {task_id}: Accuracy = {accuracy:.4f}")
 
-        if len(task_ids) != len(accuracies):
-            logger.warning(f"Mismatch in number of task_ids ({len(task_ids)}) and accuracies ({len(accuracies)})")
-        
-        for task_id, accuracy in zip(task_ids, accuracies):
-            individual_metrics.append((task_id, {'test_accuracy': accuracy}))
-            logger.info(f"Task {task_id}: Accuracy = {accuracy:.4f}")
-            
-            if accuracy >= perfect_accuracy_threshold:
-                perfect_tasks += 1
-            total_tasks += 1
+                if accuracy >= perfect_accuracy_threshold:
+                    perfect_tasks += 1
+                total_tasks += 1
 
     complete_task_accuracy = perfect_tasks / total_tasks if total_tasks > 0 else 0
 
