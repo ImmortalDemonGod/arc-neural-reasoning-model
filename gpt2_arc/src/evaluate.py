@@ -50,7 +50,8 @@ def evaluate(model, test_dataset, config, batch_size=32):
 
         logger.debug(f"Task IDs: {task_ids}, Accuracies: {accuracies}, Diff Accuracies: {diff_accuracies}")
 
-        for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
+        for task_id, accuracy in zip(task_ids, accuracies):
+            diff_accuracy = diff_accuracies  # Use the single diff_accuracy value
             if task_id and accuracy is not None and diff_accuracy is not None:
                 individual_metrics.append((task_id, {
                     'test_accuracy': accuracy,
