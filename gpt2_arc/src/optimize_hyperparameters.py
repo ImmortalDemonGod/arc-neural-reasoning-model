@@ -10,12 +10,20 @@ import numpy as np
 from optuna.pruners import MedianPruner
 from pytorch_lightning.loggers import TensorBoardLogger
 
-try:
-    from optuna.integration import PyTorchLightningPruningCallback
-except ImportError:
-    print("Error: optuna-integration[pytorch_lightning] is not installed.")
-    print("Please run: pip install optuna-integration[pytorch_lightning]")
-    sys.exit(1)
+class CustomPruningCallback(pl.Callback):
+    def __init__(self, trial, monitor="val_loss"):
+        super().__init__()
+        self.trial = trial
+        self.monitor = monitor
+
+    def on_validation_end(self, trainer, pl_module):
+        epoch = trainer.current_epoch
+        current_score = trainer.callback_metrics.get(self.monitor)
+        if current_score is None:
+            return
+        self.trial.report(current_score, step=epoch)
+        if self.trial.should_prune():
+            raise optuna.TrialPruned()
 
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -95,8 +103,8 @@ def objective(trial):
         model = GPT2ARC(config.model)
         arc_trainer = ARCTrainer(model, train_data, val_data, config)
 
-        # Set up PyTorch Lightning trainer with pruning callback
-        pruning_callback = PyTorchLightningPruningCallback(trial, monitor="val_loss")
+        # Set up PyTorch Lightning trainer with custom pruning callback
+        pruning_callback = CustomPruningCallback(trial, monitor="val_loss")
         experiment_id = f"optuna_trial_{trial.number}"
         tb_logger = TensorBoardLogger(save_dir="runs", name=f"experiment_{experiment_id}")
         print(f"DEBUG: Optuna trial TensorBoard logger initialized. Log dir: {tb_logger.log_dir}")

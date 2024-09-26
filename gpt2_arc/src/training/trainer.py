@@ -34,6 +34,7 @@ class ARCTrainer(pl.LightningModule):
         self.best_val_loss = float('inf')
         self.best_epoch = 0
         self.results_collector = ResultsCollector(config)
+        self.writer = SummaryWriter(f"runs/experiment_{self.results_collector.experiment_id}")
 
     def get_tensorboard_logger(self):
         for logger in self.trainer.loggers:
