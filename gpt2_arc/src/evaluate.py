@@ -121,7 +121,20 @@ def main(args):
         raise ValueError("Model configuration not found in checkpoint")
 
     # Initialize the model with the checkpoint configuration
-    model = GPT2ARC(model_config)
+    # Determine the number of classes from the dataset
+    def find_max_label(task_set):
+        max_label = 0
+        for task in task_set.tasks:
+            for sample in task.train + task.test:
+                input_grid, output_grid = sample
+                max_label = max(max_label, np.max(input_grid), np.max(output_grid))
+        return max_label
+
+    # Determine the number of classes from the test dataset
+    max_label_test = find_max_label(test_set)
+    num_classes = max_label_test + 1  # Add 1 because labels start from 0
+
+    model = GPT2ARC(model_config, num_classes=num_classes)
     try:
         # Remove the "model." prefix from state dict keys
         state_dict = {k.replace('model.', ''): v for k, v in checkpoint['state_dict'].items()}
