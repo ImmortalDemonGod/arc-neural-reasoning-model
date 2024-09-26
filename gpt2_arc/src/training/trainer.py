@@ -173,7 +173,7 @@ class ARCTrainer(pl.LightningModule):
             'task_ids': task_ids,
         }
 
-        for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
+        for task_id, accuracy in zip(task_ids, accuracies):
             self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
         try:
