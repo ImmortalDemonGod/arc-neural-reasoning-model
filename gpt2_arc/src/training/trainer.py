@@ -135,8 +135,6 @@ class ARCTrainer(pl.LightningModule):
         calculates task success for TSR, logging it as well.
         """
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
-        logger.debug(f"Accuracies: {accuracies}")
-        logger.debug(f"Differential accuracy: {diff_accuracy}")
 
         if isinstance(batch, list) and len(batch) == 3:
             inputs, outputs, task_ids = batch
@@ -168,6 +166,9 @@ class ARCTrainer(pl.LightningModule):
         
         accuracies = (predictions == outputs).float().mean(dim=1)  # Mean over all pixels for each sample
         diff_accuracy, _, _ = differential_pixel_accuracy(inputs, outputs, predictions)
+
+        logger.debug(f"Accuracies: {accuracies}")
+        logger.debug(f"Differential accuracy: {diff_accuracy}")
 
         # Collect metrics in a dictionary
         metrics = {
