@@ -6,6 +6,7 @@ import argparse
 import pytorch_lightning as pl
 import torch
 import wandb
+import numpy as np
 from datetime import datetime
 
 # Define the base directory for the arc-neural-reasoning-model
