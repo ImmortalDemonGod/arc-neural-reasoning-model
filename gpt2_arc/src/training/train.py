@@ -84,7 +84,22 @@ def main(args):
         logger.info("Initializing model")
         
         # Determine the number of classes from the dataset
-        num_classes = len(set(task['train']['output'].max() for task in train_set))
+        # Function to find the maximum label value in the dataset
+        def find_max_label(task_set):
+            max_label = 0
+            for task in task_set.tasks:
+                for sample in task.train + task.test:
+                    input_grid, output_grid = sample
+                    max_label = max(max_label, np.max(input_grid), np.max(output_grid))
+            return max_label
+
+        # Determine the number of classes from the datasets
+        max_label_train = find_max_label(train_set)
+        max_label_val = find_max_label(eval_set)
+        max_label_overall = max(max_label_train, max_label_val)
+        num_classes = max_label_overall + 1  # Add 1 because labels start from 0
+
+        logger.info(f"Determined num_classes: {num_classes}")
         
         model = GPT2ARC(config=model_config, num_classes=num_classes)
         logger.debug(f"Model structure: {model}")

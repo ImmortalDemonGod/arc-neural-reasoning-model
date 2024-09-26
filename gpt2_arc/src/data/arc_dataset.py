@@ -106,30 +106,7 @@ class ARCDataset(Dataset):
         self.test_split = test_split
         logger.debug(f"test_split set to: {self.test_split}")
         self.test_split = test_split
-        self.samples = []
-        if TaskSet is not None and isinstance(data_source, TaskSet):
-            for task in data_source.tasks:
-                self.samples.extend(task.train)
-                self.samples.extend(task.test)
-        
-        if isinstance(data_source, str):
-            if os.path.isdir(data_source):
-                self.data = self._process_synthetic_data(data_source)
-            elif os.path.isfile(data_source):
-                with open(data_source, 'r') as f:
-                    raw_data = json.load(f)
-                self.data = self._process_json_data(raw_data)
-            else:
-                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-        elif isinstance(data_source, list):
-            self.data = self._process_list_data(data_source)
-        elif isinstance(data_source, tuple):
-            self.data = self._combine_data(*data_source)
-        elif TaskSet is not None and isinstance(data_source, TaskSet):
-            self.data = self._process_arckit_data(data_source)
-        else:
-            logger.error(f"Invalid data_source type: {type(data_source)}")
-            raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
+        self.samples = self._process_arckit_data(data_source) if TaskSet is not None and isinstance(data_source, TaskSet) else []
         
         print(f"Number of train samples: {sum(len(task['train']) for task in self.data)}")
         print(f"Number of test samples: {sum(len(task['test']) for task in self.data)}")
