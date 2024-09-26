@@ -34,23 +34,29 @@ def evaluate(model, test_dataset, config, batch_size=32):
     perfect_tasks = 0
     total_tasks = 0
     individual_metrics = []
+    all_accuracies = []
 
     for result in results:
         logger.debug(f"Processing result: {result}")
         task_ids = result.get('task_ids', [])
         accuracies = result.get('test_accuracy', [])
+        diff_accuracies = result.get('test_diff_accuracy', [])
         
         if not isinstance(task_ids, list):
             task_ids = [task_ids]
         if not isinstance(accuracies, list):
             accuracies = [accuracies]
 
-        logger.debug(f"Task IDs: {task_ids}, Accuracies: {accuracies}")
+        logger.debug(f"Task IDs: {task_ids}, Accuracies: {accuracies}, Diff Accuracies: {diff_accuracies}")
 
-        for task_id, accuracy in zip(task_ids, accuracies):
+        for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
             if task_id and accuracy is not None:
-                individual_metrics.append((task_id, {'test_accuracy': accuracy}))
-                logger.info(f"Task {task_id}: Accuracy = {accuracy:.4f}")
+                individual_metrics.append((task_id, {
+                    'test_accuracy': accuracy,
+                    'test_diff_accuracy': diff_accuracy
+                }))
+                all_accuracies.append(accuracy)
+                logger.info(f"Task {task_id}: Accuracy = {accuracy:.4f}, Diff Accuracy = {diff_accuracy:.4f}")
 
                 if accuracy >= perfect_accuracy_threshold:
                     perfect_tasks += 1
@@ -65,7 +71,7 @@ def evaluate(model, test_dataset, config, batch_size=32):
 
     aggregated_results = {
         'test_loss': sum(r.get('test_loss', 0) for r in results) / len(results),
-        'test_accuracy': sum(sum(r.get('test_accuracy', [])) / len(r.get('test_accuracy', [])) for r in results if r.get('test_accuracy')) / len(results) if results else 0,
+        'test_accuracy': sum(all_accuracies) / len(all_accuracies) if all_accuracies else 0,
         'complete_task_accuracy': complete_task_accuracy
     }
 
