@@ -33,40 +33,32 @@ def evaluate(model, test_dataset, config, batch_size=32):
     perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold
     perfect_tasks = 0
     total_tasks = 0
-    individual_metrics = []
+    individual_metrics = {}
     all_accuracies = []
     all_diff_accuracies = []
     total_loss = 0
 
     for result in results:
         logger.debug(f"Processing result: {result}")
-        task_ids = result.get('task_ids', [])
-        accuracies = result.get('test_accuracy', [])
-        diff_accuracy = result.get('test_diff_accuracy', 0)
-        loss = result.get('test_loss', 0)
+        total_loss += result['test_loss']
         
-        if not isinstance(task_ids, list):
-            task_ids = [task_ids]
-        if not isinstance(accuracies, list):
-            accuracies = [accuracies]
-
-        logger.debug(f"Task IDs: {task_ids}, Accuracies: {accuracies}, Diff Accuracy: {diff_accuracy}")
-
-        for task_id, accuracy in zip(task_ids, accuracies):
-            if task_id and accuracy is not None and diff_accuracy is not None:
-                individual_metrics.append((task_id, {
-                    'test_accuracy': accuracy,
-                    'test_diff_accuracy': diff_accuracy
-                }))
+        for key, value in result.items():
+            if key.endswith('_test_accuracy'):
+                task_id = key.rsplit('_', 2)[0]
+                accuracy = value
+                diff_accuracy = result.get(f"{task_id}_test_diff_accuracy", 0)
+                
+                if task_id not in individual_metrics:
+                    individual_metrics[task_id] = {'test_accuracy': [], 'test_diff_accuracy': []}
+                
+                individual_metrics[task_id]['test_accuracy'].append(accuracy)
+                individual_metrics[task_id]['test_diff_accuracy'].append(diff_accuracy)
                 all_accuracies.append(accuracy)
                 all_diff_accuracies.append(diff_accuracy)
-                logger.info(f"Task {task_id}: Accuracy = {accuracy:.4f}, Diff Accuracy = {diff_accuracy:.4f}")
-
+                
                 if accuracy >= perfect_accuracy_threshold:
                     perfect_tasks += 1
                 total_tasks += 1
-
-        total_loss += loss
 
     complete_task_accuracy = perfect_tasks / total_tasks if total_tasks > 0 else 0
 
@@ -161,9 +153,11 @@ def main(args):
         wandb.log({f"eval/{metric}": value})
 
     # Log individual task metrics
-    for task_id, metrics in individual_metrics:
-        for metric_name, metric_value in metrics.items():
-            wandb.log({f"eval/task_{task_id}/{metric_name}": metric_value})
+    # Average the metrics for each task
+    for task_id, metrics in individual_metrics.items():
+        metrics['test_accuracy'] = sum(metrics['test_accuracy']) / len(metrics['test_accuracy'])
+        metrics['test_diff_accuracy'] = sum(metrics['test_diff_accuracy']) / len(metrics['test_diff_accuracy'])
+        logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
     model_name = os.path.basename(args.model_checkpoint).split('.')[0]
     results_path = save_results(results, individual_metrics, args.output_dir, model_name)
 

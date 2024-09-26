@@ -162,21 +162,26 @@ class ARCTrainer(pl.LightningModule):
         loss = self.compute_loss(model_outputs, outputs)
 
         accuracies = self.compute_accuracy(model_outputs, outputs)
-        diff_accuracies = self.compute_diff_accuracy(inputs, outputs, model_outputs)
-
-        logger.debug(f"DEBUG: Computed accuracies: {accuracies}")
-        logger.debug(f"DEBUG: Computed diff accuracies: {diff_accuracies}")
+        accuracies = []
+        diff_accuracies = []
+        
+        for i in range(len(inputs)):
+            accuracy = self.compute_accuracy(model_outputs[i:i+1], outputs[i:i+1])
+            diff_accuracy, _, _ = differential_pixel_accuracy(inputs[i:i+1], outputs[i:i+1], model_outputs[i:i+1].argmax(dim=-1))
+            accuracies.append(accuracy.item())
+            diff_accuracies.append(diff_accuracy.item())
 
         result = {
             'test_loss': loss.item(),
-            'test_accuracy': accuracies.tolist(),
-            'test_diff_accuracy': diff_accuracies,
             'task_ids': task_ids,
         }
 
-        for task_id, accuracy in zip(task_ids, accuracies):
+        # Log task-specific metrics
+        for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
+            result[f"{task_id}_test_accuracy"] = accuracy
+            result[f"{task_id}_test_diff_accuracy"] = diff_accuracy
             self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test_diff_accuracy", diff_accuracies, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{task_id}_test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
         try:
             self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)
