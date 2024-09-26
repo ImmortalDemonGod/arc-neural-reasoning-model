@@ -135,6 +135,8 @@ class ARCTrainer(pl.LightningModule):
         calculates task success for TSR, logging it as well.
         """
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
+        logger.debug(f"Accuracies: {accuracies}")
+        logger.debug(f"Differential accuracy: {diff_accuracy}")
 
         if isinstance(batch, list) and len(batch) == 3:
             inputs, outputs, task_ids = batch
@@ -198,6 +200,7 @@ class ARCTrainer(pl.LightningModule):
         }
 
         self.test_results.append(result)
+        logger.debug(f"DEBUG: Test step result: {result}")
         return result
         
     def on_validation_epoch_end(self):
