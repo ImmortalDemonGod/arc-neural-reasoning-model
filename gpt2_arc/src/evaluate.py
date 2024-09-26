@@ -163,6 +163,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_checkpoint", type=str, required=True, help="Path to the model checkpoint")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for evaluation")
     parser.add_argument("--output_dir", type=str, default="./evaluation_results", help="Directory to save evaluation results")
+    parser.add_argument("--log-level", type=str, default="INFO", help="Set the logging level (e.g., DEBUG, INFO, WARNING)")
     parser.add_argument("--wandb_project", type=str, default="arc-evaluation", help="Weights & Biases project name")
     parser.add_argument("--wandb_run_name", type=str, default=None, help="Weights & Biases run name")
 
@@ -171,4 +172,7 @@ if __name__ == "__main__":
     # Create output directory if it doesn't exist
     os.makedirs(args.output_dir, exist_ok=True)
 
+    # Set logging level
+    logging.basicConfig(level=getattr(logging, args.log_level.upper(), None))
+    
     main(args)
