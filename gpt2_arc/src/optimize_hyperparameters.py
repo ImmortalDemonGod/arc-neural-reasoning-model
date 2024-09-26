@@ -168,6 +168,10 @@ if __name__ == "__main__":
     parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
 
+    parser.add_argument("--n_embd_min", type=int, default=64, help="Minimum value for n_embd")
+    parser.add_argument("--n_embd_max", type=int, default=256, help="Maximum value for n_embd")
+    parser.add_argument("--n_head_min", type=int, default=2, help="Minimum value for n_head")
+    parser.add_argument("--n_head_max", type=int, default=16, help="Maximum value for n_head")
     parser.add_argument("--n_head_exp_min", type=int, default=1, help="Minimum exponent for n_head (2^x)")
     parser.add_argument("--n_head_exp_max", type=int, default=3, help="Maximum exponent for n_head (2^x)")
     parser.add_argument("--n_embd_multiplier_min", type=int, default=4, help="Minimum multiplier for n_embd")
