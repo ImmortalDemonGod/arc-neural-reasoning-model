@@ -82,7 +82,11 @@ def main(args):
 
         # Initialize model
         logger.info("Initializing model")
-        model = GPT2ARC(config=model_config)
+        
+        # Determine the number of classes from the dataset
+        num_classes = len(set(task['output'].max() for task in train_set))
+        
+        model = GPT2ARC(config=model_config, num_classes=num_classes)
         logger.debug(f"Model structure: {model}")
 
         # Load the checkpoint if specified
