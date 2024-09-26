@@ -92,7 +92,7 @@ class ModelConfig:
 
 
 class GPT2ARC(nn.Module):
-    def __init__(self, config: ModelConfig):
+    def __init__(self, config: ModelConfig, num_classes: int):
         super().__init__()
         self.config = config
         # Replace token embedding with a convolutional layer
@@ -104,6 +104,7 @@ class GPT2ARC(nn.Module):
             ]
         )
         self.ln_f = nn.LayerNorm(self.config.n_embd)
+        self.fc_out = nn.Linear(self.config.n_embd, num_classes)  # Add final linear layer
         
         # Initialize weights
         self.apply(self._init_weights)
@@ -150,4 +151,5 @@ class GPT2ARC(nn.Module):
             logger.debug(f"After block {i+1} shape: {x.shape}")
         
         x = self.ln_f(x)
+        x = self.fc_out(x)  # Apply final linear layer
         return x
