@@ -9,8 +9,11 @@ import optuna
 import arckit
 import numpy as np
 
+# Define the base directory for the arc-neural-reasoning-model
+arc_model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+
 # Add the root directory of the project to the PYTHONPATH
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+project_root = arc_model_dir
 sys.path.insert(0, project_root)
 
 import pytorch_lightning as pl

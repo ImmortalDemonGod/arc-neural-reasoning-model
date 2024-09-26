@@ -25,8 +25,11 @@ class CustomPruningCallback(pl.Callback):
         if self.trial.should_prune():
             raise optuna.TrialPruned()
 
+# Define the base directory for the arc-neural-reasoning-model
+arc_model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+
 # Add the project root to the Python path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+project_root = arc_model_dir
 sys.path.insert(0, project_root)
 
 from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
