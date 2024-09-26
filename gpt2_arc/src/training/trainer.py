@@ -191,6 +191,14 @@ class ARCTrainer(pl.LightningModule):
 
         return result
 
+    def compute_accuracy(self, outputs, targets):
+        predictions = outputs.argmax(dim=-1)
+        # Reshape predictions to match the target shape
+        predictions = predictions.view(targets.size())
+        # Calculate accuracy for each sample in the batch
+        accuracies = (predictions == targets).float().mean(dim=[1, 2, 3])
+        return accuracies
+
     def compute_diff_accuracy(self, inputs, targets, outputs):
         predictions = outputs.argmax(dim=-1)
         diff_accuracies, _, _ = differential_pixel_accuracy(inputs, targets, predictions)
