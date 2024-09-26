@@ -40,16 +40,16 @@ def evaluate(model, test_dataset, config, batch_size=32):
         logger.debug(f"Processing result: {result}")
         task_ids = result.get('task_ids', [])
         accuracies = result.get('test_accuracy', [])
-        diff_accuracies = result.get('test_diff_accuracy', [])
+        diff_accuracy = result.get('test_diff_accuracy', 0.0)
         
         if not isinstance(task_ids, list):
             task_ids = [task_ids]
         if not isinstance(accuracies, list):
             accuracies = [accuracies]
 
-        logger.debug(f"Task IDs: {task_ids}, Accuracies: {accuracies}, Diff Accuracies: {diff_accuracies}")
+        logger.debug(f"Task IDs: {task_ids}, Accuracies: {accuracies}, Diff Accuracy: {diff_accuracy}")
 
-        for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
+        for task_id, accuracy in zip(task_ids, accuracies):
             if task_id and accuracy is not None:
                 individual_metrics.append((task_id, {
                     'test_accuracy': accuracy,
