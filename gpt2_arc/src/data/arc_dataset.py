@@ -263,7 +263,6 @@ class ARCDataset(Dataset):
         return total_samples
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        logger.debug(f"DEBUG: Dataset __getitem__ called with idx {idx}, returning item with task_id {task_id}")
         if idx < 0 or idx >= len(self):
             raise IndexError(f"Index {idx} out of range (total samples: {len(self)})")
 
@@ -277,6 +276,7 @@ class ARCDataset(Dataset):
                 logger.debug(f"Returning input shape: {input_grid.shape}, output shape: {output_grid.shape}")
                 logger.debug(f"__getitem__ input dtype: {input_grid.dtype}, output dtype: {output_grid.dtype}")
                 task_id = task.get("id", -1)  # Default to -1 if no id is found
+                logger.debug(f"DEBUG: Dataset __getitem__ called with idx {idx}, returning item with task_id {task_id}")
                 return input_grid, output_grid, task_id
             current_idx += len(task[split])
 
