@@ -161,20 +161,21 @@ class ARCTrainer(pl.LightningModule):
         loss = self.compute_loss(model_outputs, outputs)
 
         accuracies = self.compute_accuracy(model_outputs, outputs)
-        diff_accuracy, _, _ = differential_pixel_accuracy(inputs, outputs, model_outputs.argmax(dim=-1))
+        diff_accuracies = self.compute_diff_accuracy(inputs, outputs, model_outputs)
 
         logger.debug(f"DEBUG: Computed accuracies: {accuracies}")
-        logger.debug(f"DEBUG: Differential accuracy: {diff_accuracy}")
+        logger.debug(f"DEBUG: Computed diff accuracies: {diff_accuracies}")
 
         result = {
             'test_loss': loss.item(),
             'test_accuracy': accuracies.tolist(),
-            'test_diff_accuracy': diff_accuracy,
+            'test_diff_accuracy': diff_accuracies.tolist(),
             'task_ids': task_ids,
         }
 
-        for task_id, accuracy in zip(task_ids, accuracies):
+        for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
             self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{task_id}_test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
         try:
             self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)
@@ -188,7 +189,10 @@ class ARCTrainer(pl.LightningModule):
 
         return result
 
-    def compute_accuracy(self, outputs, targets):
+    def compute_diff_accuracy(self, inputs, targets, outputs):
+        predictions = outputs.argmax(dim=-1)
+        diff_accuracies, _, _ = differential_pixel_accuracy(inputs, targets, predictions)
+        return diff_accuracies
         predictions = outputs.argmax(dim=-1)
         # Reshape predictions to match the target shape
         predictions = predictions.view(targets.size())
