@@ -93,7 +93,7 @@ def save_results(results, individual_metrics, output_dir, model_name):
             "individual_metrics": individual_metrics
         }, f, indent=2)
 
-    logger.debug(f"DEBUG: Data to be saved: {data_to_save}")
+    logger.debug(f"DEBUG: Data to be saved: {{'aggregate_results': results, 'individual_metrics': individual_metrics}}")
 
     logger.info(f"Results saved to {output_path}")
     return output_path
