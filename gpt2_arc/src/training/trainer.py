@@ -161,7 +161,6 @@ class ARCTrainer(pl.LightningModule):
         model_outputs = self(inputs, attention_mask)
         loss = self.compute_loss(model_outputs, outputs)
 
-        accuracies = self.compute_accuracy(model_outputs, outputs)
         accuracies = []
         diff_accuracies = []
         
@@ -169,12 +168,16 @@ class ARCTrainer(pl.LightningModule):
             accuracy = self.compute_accuracy(model_outputs[i:i+1], outputs[i:i+1])
             diff_accuracy, _, _ = differential_pixel_accuracy(inputs[i:i+1], outputs[i:i+1], model_outputs[i:i+1].argmax(dim=-1))
             accuracies.append(accuracy.item())
-            diff_accuracies.append(diff_accuracy.item())
+            diff_accuracies.append(diff_accuracy)
+            print(f"DEBUG: diff_accuracy type: {type(diff_accuracy)}, value: {diff_accuracy}")
 
         result = {
             'test_loss': loss.item(),
             'task_ids': task_ids,
+            'test_accuracy': sum(accuracies) / len(accuracies) if accuracies else 0,
+            'test_diff_accuracy': sum(diff_accuracies) / len(diff_accuracies) if diff_accuracies else 0,
         }
+        print(f"DEBUG: Test loss: {result['test_loss']}, Avg accuracy: {result['test_accuracy']}, Avg diff accuracy: {result['test_diff_accuracy']}")
 
         # Log task-specific metrics
         for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
@@ -196,7 +199,25 @@ class ARCTrainer(pl.LightningModule):
 
         return result
 
-    def compute_accuracy(self, outputs, targets):
+    def test_epoch_end(self, outputs):
+        total_loss = torch.stack([torch.tensor(x['test_loss']) for x in outputs]).mean()
+        all_accuracies = []
+        all_diff_accuracies = []
+
+        for output in outputs:
+            if 'test_accuracy' in output:
+                all_accuracies.append(output['test_accuracy'])
+            if 'test_diff_accuracy' in output:
+                all_diff_accuracies.append(output['test_diff_accuracy'])
+
+        avg_accuracy = sum(all_accuracies) / len(all_accuracies) if all_accuracies else 0
+        avg_diff_accuracy = sum(all_diff_accuracies) / len(all_diff_accuracies) if all_diff_accuracies else 0
+
+        self.log('avg_test_loss', total_loss)
+        self.log('avg_test_accuracy', avg_accuracy)
+        self.log('avg_test_diff_accuracy', avg_diff_accuracy)
+
+        print(f"DEBUG: Test epoch end - Avg loss: {total_loss}, Avg accuracy: {avg_accuracy}, Avg diff accuracy: {avg_diff_accuracy}")
         predictions = outputs.argmax(dim=-1)
         # Reshape predictions to match the target shape
         predictions = predictions.view(targets.size())

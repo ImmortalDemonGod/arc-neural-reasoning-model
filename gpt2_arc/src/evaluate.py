@@ -30,53 +30,19 @@ def evaluate(model, test_dataset, config, batch_size=32):
     results = pl_trainer.test(trainer)
     logger.debug(f"DEBUG: Raw results from test: {results}")
 
-    perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold
-    perfect_tasks = 0
-    total_tasks = 0
-    individual_metrics = {}
-    all_accuracies = []
-    all_diff_accuracies = []
-    total_loss = 0
-
-    for result in results:
-        logger.debug(f"Processing result: {result}")
-        total_loss += result['test_loss']
-        
-        for key, value in result.items():
-            if key.endswith('_test_accuracy'):
-                task_id = key.rsplit('_', 2)[0]
-                accuracy = value
-                diff_accuracy = result.get(f"{task_id}_test_diff_accuracy", 0)
-                
-                if task_id not in individual_metrics:
-                    individual_metrics[task_id] = {'test_accuracy': [], 'test_diff_accuracy': []}
-                
-                individual_metrics[task_id]['test_accuracy'].append(accuracy)
-                individual_metrics[task_id]['test_diff_accuracy'].append(diff_accuracy)
-                all_accuracies.append(accuracy)
-                all_diff_accuracies.append(diff_accuracy)
-                
-                if accuracy >= perfect_accuracy_threshold:
-                    perfect_tasks += 1
-                total_tasks += 1
-
-    complete_task_accuracy = perfect_tasks / total_tasks if total_tasks > 0 else 0
-
-    logger.debug(f"DEBUG: Individual metrics collected: {individual_metrics}")
-    logger.debug(f"DEBUG: Perfect tasks: {perfect_tasks}, Total tasks: {total_tasks}")
-
-    logger.info(f"Complete Task Accuracy: {complete_task_accuracy:.2%}")
+    avg_test_loss = trainer.logged_metrics.get('avg_test_loss')
+    avg_test_accuracy = trainer.logged_metrics.get('avg_test_accuracy')
+    avg_test_diff_accuracy = trainer.logged_metrics.get('avg_test_diff_accuracy')
 
     aggregated_results = {
-        'test_loss': total_loss / len(results) if results else 0,
-        'test_accuracy': sum(all_accuracies) / len(all_accuracies) if all_accuracies else 0,
-        'test_diff_accuracy': sum(all_diff_accuracies) / len(all_diff_accuracies) if all_diff_accuracies else 0,
-        'complete_task_accuracy': complete_task_accuracy
+        'test_loss': avg_test_loss,
+        'test_accuracy': avg_test_accuracy,
+        'test_diff_accuracy': avg_test_diff_accuracy,
     }
 
-    logger.debug(f"DEBUG: Aggregated results: {aggregated_results}")
+    print(f"DEBUG: Logged metrics - Avg test loss: {avg_test_loss}, Avg test accuracy: {avg_test_accuracy}, Avg diff accuracy: {avg_test_diff_accuracy}")
 
-    return aggregated_results, individual_metrics
+    return aggregated_results, {}
 
 def load_config_from_json(json_path):
     with open(json_path, 'r') as f:
