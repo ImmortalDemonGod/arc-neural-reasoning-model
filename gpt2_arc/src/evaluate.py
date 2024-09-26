@@ -145,8 +145,14 @@ def main(args):
 
     logger.info("Evaluation Results:")
     for metric, value in results.items():
-        print(f"{metric}: {value}")
-        wandb.log({f"eval/{metric}": value})
+        if metric != 'complete_task_accuracy':
+            print(f"{metric}: {value}")
+            wandb.log({f"eval/{metric}": value})
+
+    # Print complete_task_accuracy at the bottom
+    if 'complete_task_accuracy' in results:
+        print(f"complete_task_accuracy: {results['complete_task_accuracy']}")
+        wandb.log({"eval/complete_task_accuracy": results['complete_task_accuracy']})
 
     # Log individual task metrics
     for task_id, metrics in individual_metrics.items():
