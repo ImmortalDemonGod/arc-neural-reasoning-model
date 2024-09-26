@@ -54,7 +54,7 @@ def evaluate(model, test_dataset, config, batch_size=32):
     logger.info(f"Complete Task Accuracy: {complete_task_accuracy:.2%}")
 
     aggregated_results = {
-        'test_loss': sum(r['test_loss'].item() for r in results) / len(results),
+        'test_loss': sum(r['test_loss'] for r in results) / len(results),
         'test_accuracy': sum(sum(r['test_accuracy']) / len(r['test_accuracy']) for r in results) / len(results),
         'complete_task_accuracy': complete_task_accuracy
     }
