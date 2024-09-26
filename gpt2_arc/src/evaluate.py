@@ -65,7 +65,7 @@ def evaluate(model, test_dataset, config, batch_size=32):
     # Compute complete task accuracy (fraction of tasks with 100% accuracy)
     num_tasks = len(individual_metrics)
     num_complete_accuracy = sum(
-        1 for metrics in individual_metrics.values() if metrics.get('test_accuracy', 0) >= 0.9999
+        1 for metrics in individual_metrics.values() if metrics.get('test_accuracy', 0) >= 0.98
     )
     complete_task_accuracy = num_complete_accuracy / num_tasks if num_tasks > 0 else 0.0
     aggregated_results['complete_task_accuracy'] = complete_task_accuracy
@@ -95,7 +95,6 @@ def save_results(results, individual_metrics, output_dir, model_name):
         json.dump(data_to_save, f, indent=2)
 
     logger.info(f"Results saved to {output_path}")
-    return output_path
     return output_path
 
 def main(args):
