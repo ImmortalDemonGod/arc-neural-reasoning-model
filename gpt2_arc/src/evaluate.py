@@ -184,7 +184,9 @@ def main(args):
     results_path = save_results(results, individual_metrics, args.output_dir, model_name)
 
     # Log results file to wandb
-    wandb.save(results_path)
+    artifact = wandb.Artifact(name=model_name, type='evaluation')
+    artifact.add_file(results_path)
+    wandb.log_artifact(artifact)
 
     wandb.finish()
 
