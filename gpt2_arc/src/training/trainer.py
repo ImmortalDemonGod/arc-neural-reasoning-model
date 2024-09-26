@@ -277,4 +277,3 @@ class ARCTrainer(pl.LightningModule):
             print(f"DEBUG: Successfully logged hyperparameters: {hparams}")
         except Exception as e:
             print(f"DEBUG: Error logging hyperparameters: {str(e)}")
-            self.log(f"{task_id}_test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
