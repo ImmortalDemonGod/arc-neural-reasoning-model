@@ -144,12 +144,33 @@ def main(args):
         test_results = pl_trainer.test(trainer)
         if test_results:
             avg_test_loss = test_results[0]['test_loss']
-            avg_test_accuracy = test_results[0]['test_accuracy']
-            logger.info(f"Test results - Loss: {avg_test_loss}, Accuracy: {avg_test_accuracy}")
-            trainer.results_collector.set_test_results({
+        
+            # Calculate average test accuracy
+            accuracy_keys = [key for key in test_results[0].keys() if key.endswith('_test_accuracy')]
+            if accuracy_keys:
+                avg_test_accuracy = sum(test_results[0][key] for key in accuracy_keys) / len(accuracy_keys)
+            else:
+                avg_test_accuracy = None  # or some default value
+        
+            test_diff_accuracy = test_results[0].get('test_diff_accuracy')
+        
+            # Logging results
+            log_message = f"Test results - Loss: {avg_test_loss}"
+            if avg_test_accuracy is not None:
+                log_message += f", Avg Accuracy: {avg_test_accuracy}"
+            if test_diff_accuracy is not None:
+                log_message += f", Diff Accuracy: {test_diff_accuracy}"
+            logger.info(log_message)
+        
+            # Collecting results
+            results = {
                 "test_loss": avg_test_loss,
-                "test_accuracy": avg_test_accuracy
-            })
+            }
+            if avg_test_accuracy is not None:
+                results["avg_test_accuracy"] = avg_test_accuracy
+            if test_diff_accuracy is not None:
+                results["test_diff_accuracy"] = test_diff_accuracy
+            trainer.results_collector.set_test_results(results)
 
         trainer.results_collector.set_final_metrics({
             "best_val_loss": trainer.best_val_loss,
