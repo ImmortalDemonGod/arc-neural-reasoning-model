@@ -169,7 +169,7 @@ class ARCTrainer(pl.LightningModule):
         result = {
             'test_loss': loss.item(),
             'test_accuracy': accuracies.tolist(),
-            'test_diff_accuracy': diff_accuracy.item(),
+            'test_diff_accuracy': diff_accuracy,
             'task_ids': task_ids,
         }
 
