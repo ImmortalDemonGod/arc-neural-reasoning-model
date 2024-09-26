@@ -103,7 +103,8 @@ def objective(trial):
 
         # Create model and trainer
         logger.debug("Creating model and trainer")
-        model = GPT2ARC(config.model)
+        num_classes = 10  # Set this to the appropriate number of classes for your task
+        model = GPT2ARC(config.model, num_classes=num_classes)
         arc_trainer = ARCTrainer(model, train_data, val_data, config)
 
         # Set up PyTorch Lightning trainer with custom pruning callback
