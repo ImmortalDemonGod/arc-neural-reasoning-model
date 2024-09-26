@@ -28,6 +28,7 @@ def evaluate(model, test_dataset, config, batch_size=32):
     trainer = ARCTrainer(model, None, test_dataset, config=config)
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
+    logger.debug(f"Results from test: {results}")
 
     perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold
     perfect_tasks = 0
@@ -38,6 +39,8 @@ def evaluate(model, test_dataset, config, batch_size=32):
         task_ids = result.get('task_ids', ['unknown'])
         accuracies = result.get('test_accuracy', [])
         
+        logger.debug(f"Task IDs: {task_ids}, Accuracies: {accuracies}")
+
         if len(task_ids) != len(accuracies):
             logger.warning(f"Mismatch in number of task_ids ({len(task_ids)}) and accuracies ({len(accuracies)})")
         
