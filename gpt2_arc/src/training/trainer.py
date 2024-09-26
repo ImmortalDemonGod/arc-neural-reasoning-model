@@ -136,15 +136,12 @@ class ARCTrainer(pl.LightningModule):
         """
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
-        if isinstance(batch, list) and len(batch) == 3:
-            inputs, outputs, task_ids = batch
-            attention_mask = None
-        elif isinstance(batch, tuple) and len(batch) == 3:
-            inputs, outputs, task_ids = batch
-            attention_mask = None
-        elif isinstance(batch, tuple) and len(batch) == 4:
-            inputs, attention_mask, outputs, task_ids = batch
-            logger.debug(f"DEBUG: Task IDs in batch: {task_ids}")
+        if isinstance(batch, (list, tuple)) and len(batch) >= 3:
+            inputs, outputs, task_ids = batch[:3]
+        elif isinstance(batch, dict):
+            inputs = batch.get('input_ids')
+            outputs = batch.get('labels')
+            task_ids = batch.get('task_ids')
         else:
             raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
 
@@ -159,50 +156,27 @@ class ARCTrainer(pl.LightningModule):
         model_outputs = self(inputs, attention_mask)
         loss = self.compute_loss(model_outputs, outputs)
         
-        B, T, C = model_outputs.size()
-        model_outputs = model_outputs.view(B, -1, C)
-        predictions = torch.argmax(model_outputs, dim=-1)
-        outputs = outputs.view(B, -1)
-        
-        accuracies = (predictions == outputs).float().mean(dim=1)  # Mean over all pixels for each sample
-        diff_accuracy, _, _ = differential_pixel_accuracy(inputs, outputs, predictions)
+        accuracies = self.compute_accuracy(model_outputs, outputs)
 
-        logger.debug(f"Accuracies: {accuracies}")
-        logger.debug(f"Differential accuracy: {diff_accuracy}")
+        logger.debug(f"DEBUG: Computed accuracies: {accuracies}")
 
-        # Collect metrics in a dictionary
-        metrics = {
-            'test_loss': loss.item() if isinstance(loss, torch.Tensor) else loss,
-            'test_accuracy': accuracies.tolist(),  # List of accuracies for each sample
-            'test_diff_accuracy': diff_accuracy.item() if isinstance(diff_accuracy, torch.Tensor) else diff_accuracy
+        result = {
+            'test_loss': loss.item(),
+            'test_accuracy': accuracies.tolist(),
+            'task_ids': task_ids,
         }
-
-        # Log metrics
-        self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
         # Log task-specific metrics
         for task_id, accuracy in zip(task_ids, accuracies):
             self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
-        try:
-            self.writer.add_scalar('test/loss', metrics['test_loss'], self.current_epoch)
-            self.writer.add_scalar('test/avg_accuracy', sum(metrics['test_accuracy']) / len(metrics['test_accuracy']), self.current_epoch)
-            self.writer.add_scalar('test/diff_accuracy', metrics['test_diff_accuracy'], self.current_epoch)
-            print(f"DEBUG: Logged test metrics for epoch {self.current_epoch}: loss={metrics['test_loss']}, avg_accuracy={sum(metrics['test_accuracy']) / len(metrics['test_accuracy'])}, diff_accuracy={metrics['test_diff_accuracy']}")
-        except Exception as e:
-            print(f"DEBUG: Error logging test step: {str(e)}")
-
-        result = {
-            'test_loss': metrics['test_loss'],
-            'test_accuracy': metrics['test_accuracy'],
-            'test_diff_accuracy': metrics['test_diff_accuracy'],
-            'task_ids': task_ids,
-        }
-
-        self.test_results.append(result)
         logger.debug(f"DEBUG: Test step result: {result}")
+
         return result
+
+    def compute_accuracy(self, outputs, targets):
+        predictions = outputs.argmax(dim=-1)
+        return (predictions == targets).float().mean(dim=-1)
         
     def on_validation_epoch_end(self):
         # Compute average validation loss

@@ -28,7 +28,7 @@ def evaluate(model, test_dataset, config, batch_size=32):
     trainer = ARCTrainer(model, None, test_dataset, config=config)
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
-    logger.debug(f"Results from test: {results}")
+    logger.debug(f"Raw results from test: {results}")
 
     perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold
     perfect_tasks = 0
@@ -36,11 +36,19 @@ def evaluate(model, test_dataset, config, batch_size=32):
     individual_metrics = []
 
     for result in results:
-        logger.debug(f"Full Result: {result}")
-        for key, value in result.items():
-            if key.endswith('_test_accuracy') and key != 'test_accuracy':
-                task_id = key.replace('_test_accuracy', '')
-                accuracy = value
+        logger.debug(f"Processing result: {result}")
+        task_ids = result.get('task_ids', [])
+        accuracies = result.get('test_accuracy', [])
+        
+        if not isinstance(task_ids, list):
+            task_ids = [task_ids]
+        if not isinstance(accuracies, list):
+            accuracies = [accuracies]
+
+        logger.debug(f"Task IDs: {task_ids}, Accuracies: {accuracies}")
+
+        for task_id, accuracy in zip(task_ids, accuracies):
+            if task_id and accuracy is not None:
                 individual_metrics.append((task_id, {'test_accuracy': accuracy}))
                 logger.info(f"Task {task_id}: Accuracy = {accuracy:.4f}")
 
@@ -56,8 +64,8 @@ def evaluate(model, test_dataset, config, batch_size=32):
     logger.info(f"Complete Task Accuracy: {complete_task_accuracy:.2%}")
 
     aggregated_results = {
-        'test_loss': sum(r['test_loss'] for r in results) / len(results),
-        'test_accuracy': sum(sum(r['test_accuracy']) / len(r['test_accuracy']) for r in results if 'test_accuracy' in r) / len(results),
+        'test_loss': sum(r.get('test_loss', 0) for r in results) / len(results),
+        'test_accuracy': sum(sum(r.get('test_accuracy', [])) / len(r.get('test_accuracy', [])) for r in results if r.get('test_accuracy')) / len(results) if results else 0,
         'complete_task_accuracy': complete_task_accuracy
     }
 
@@ -77,7 +85,7 @@ def save_results(results, individual_metrics, output_dir, model_name):
 
     data_to_save = {
         "aggregate_results": results,
-        "individual_metrics": dict(individual_metrics)
+        "individual_metrics": {task_id: metrics for task_id, metrics in individual_metrics}
     }
 
     logger.debug(f"DEBUG: Data to be saved: {data_to_save}")
