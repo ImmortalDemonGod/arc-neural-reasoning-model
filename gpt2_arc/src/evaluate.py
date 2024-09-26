@@ -28,7 +28,7 @@ def evaluate(model, test_dataset, config, batch_size=32):
     trainer = ARCTrainer(model, None, test_dataset, config=config)
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
-    logger.debug(f"Raw results from test: {results}")
+    logger.debug(f"DEBUG: Raw results from test: {results}")
 
     perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold
     perfect_tasks = 0

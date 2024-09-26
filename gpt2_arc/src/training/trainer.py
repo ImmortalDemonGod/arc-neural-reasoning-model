@@ -134,6 +134,7 @@ class ARCTrainer(pl.LightningModule):
         test_accuracy, and test_diff_accuracy. The method also appends the result to `self.test_outputs` and
         calculates task success for TSR, logging it as well.
         """
+        logger.debug(f"DEBUG: test_step input - batch: {batch}, batch_idx: {batch_idx}")
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
         attention_mask = None
@@ -185,6 +186,7 @@ class ARCTrainer(pl.LightningModule):
         except Exception as e:
             logger.error(f"DEBUG: Error logging test step: {str(e)}")
 
+        logger.debug(f"DEBUG: test_step output - result: {result}")
         logger.debug(f"DEBUG: Test step result: {result}")
 
         return result
