@@ -84,7 +84,7 @@ def main(args):
         logger.info("Initializing model")
         
         # Determine the number of classes from the dataset
-        num_classes = len(set(task['output'].max() for task in train_set))
+        num_classes = len(set(task.output.max() for task in train_set))
         
         model = GPT2ARC(config=model_config, num_classes=num_classes)
         logger.debug(f"Model structure: {model}")
