@@ -50,7 +50,29 @@ def evaluate(model, test_dataset, config, batch_size=32):
 
     print(f"DEBUG: Logged metrics - Avg test loss: {avg_test_loss}, Avg test accuracy: {avg_test_accuracy}, Avg diff accuracy: {avg_test_diff_accuracy}")
 
-    return aggregated_results, {}
+    # Collect individual task metrics
+    individual_metrics = {}
+    for key, value in pl_trainer.callback_metrics.items():
+        if '_test_accuracy' in key or '_test_diff_accuracy' in key:
+            if isinstance(value, torch.Tensor):
+                value = value.item()
+            # Key format: 'taskid_test_accuracy' or 'taskid_test_diff_accuracy'
+            task_id, metric_name = key.split('_test_')
+            if task_id not in individual_metrics:
+                individual_metrics[task_id] = {}
+            individual_metrics[task_id][f'test_{metric_name}'] = value
+
+    # Compute complete task accuracy (fraction of tasks with 100% accuracy)
+    num_tasks = len(individual_metrics)
+    num_complete_accuracy = sum(
+        1 for metrics in individual_metrics.values() if metrics.get('test_accuracy', 0) >= 0.9999
+    )
+    complete_task_accuracy = num_complete_accuracy / num_tasks if num_tasks > 0 else 0.0
+    aggregated_results['complete_task_accuracy'] = complete_task_accuracy
+
+    print(f"DEBUG: Computed complete task accuracy: {complete_task_accuracy}")
+
+    return aggregated_results, individual_metrics
 
 def load_config_from_json(json_path):
     with open(json_path, 'r') as f:
@@ -73,6 +95,7 @@ def save_results(results, individual_metrics, output_dir, model_name):
         json.dump(data_to_save, f, indent=2)
 
     logger.info(f"Results saved to {output_path}")
+    return output_path
     return output_path
 
 def main(args):
