@@ -94,6 +94,7 @@ def save_results(results, individual_metrics, output_dir, model_name):
 
     logger.debug(f"DEBUG: Data to be saved: {data_to_save}")
 
+    os.makedirs(output_dir, exist_ok=True)
     with open(output_path, 'w') as f:
         json.dump(data_to_save, f, indent=2)
 

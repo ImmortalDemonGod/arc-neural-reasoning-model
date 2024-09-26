@@ -197,6 +197,7 @@ def main(args):
         # Save the final model with configuration
         logger.info("Saving final model with configuration")
         model_path = f"final_model_{trainer.results_collector.experiment_id}.pth"
+        os.makedirs("checkpoints", exist_ok=True)
         torch.save({
             'state_dict': trainer.model.state_dict(),
             'model_config': trainer.config.model.__dict__
@@ -206,6 +207,7 @@ def main(args):
 
         # Save results
         logger.info("Saving experiment results")
+        os.makedirs("results", exist_ok=True)
         results_path = f"results/experiment_{trainer.results_collector.experiment_id}.json"
         trainer.results_collector.save_to_json(results_path)
         logger.debug(f"Results saved to: {results_path}")
