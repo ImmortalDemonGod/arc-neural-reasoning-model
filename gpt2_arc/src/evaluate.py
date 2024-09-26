@@ -30,6 +30,13 @@ def evaluate(model, test_dataset, config, batch_size=32):
     results = pl_trainer.test(trainer)
     logger.debug(f"Results from test: {results}")
 
+    for result in results:
+        logger.debug(f"Result: {result}")
+        task_ids = result.get('task_ids', ['unknown'])
+        accuracies = result.get('test_accuracy', [])
+        
+        logger.debug(f"Extracted Task IDs: {task_ids}, Extracted Accuracies: {accuracies}")
+
     perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold
     perfect_tasks = 0
     total_tasks = 0
