@@ -219,9 +219,9 @@ class ARCTrainer(pl.LightningModule):
         avg_accuracy = sum(all_accuracies) / len(all_accuracies) if all_accuracies else 0
         avg_diff_accuracy = sum(all_diff_accuracies) / len(all_diff_accuracies) if all_diff_accuracies else 0
 
-        self.log('avg_test_loss', total_loss)
-        self.log('avg_test_accuracy', avg_accuracy)
-        self.log('avg_test_diff_accuracy', avg_diff_accuracy)
+        self.log('avg_test_loss', total_loss, prog_bar=True)
+        self.log('avg_test_accuracy', avg_accuracy, prog_bar=True)
+        self.log('avg_test_diff_accuracy', avg_diff_accuracy, prog_bar=True)
 
         print(f"DEBUG: Test epoch end - Avg loss: {total_loss}, Avg accuracy: {avg_accuracy}, Avg diff accuracy: {avg_diff_accuracy}")
 

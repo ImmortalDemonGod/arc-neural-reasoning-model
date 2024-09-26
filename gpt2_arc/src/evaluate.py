@@ -30,9 +30,17 @@ def evaluate(model, test_dataset, config, batch_size=32):
     results = pl_trainer.test(trainer)
     logger.debug(f"DEBUG: Raw results from test: {results}")
 
-    avg_test_loss = trainer.logged_metrics.get('avg_test_loss')
-    avg_test_accuracy = trainer.logged_metrics.get('avg_test_accuracy')
-    avg_test_diff_accuracy = trainer.logged_metrics.get('avg_test_diff_accuracy')
+    avg_test_loss = pl_trainer.callback_metrics.get('avg_test_loss')
+    avg_test_accuracy = pl_trainer.callback_metrics.get('avg_test_accuracy')
+    avg_test_diff_accuracy = pl_trainer.callback_metrics.get('avg_test_diff_accuracy')
+
+    # Convert tensors to Python floats if necessary
+    if avg_test_loss is not None:
+        avg_test_loss = avg_test_loss.item()
+    if avg_test_accuracy is not None:
+        avg_test_accuracy = avg_test_accuracy.item()
+    if avg_test_diff_accuracy is not None:
+        avg_test_diff_accuracy = avg_test_diff_accuracy.item()
 
     aggregated_results = {
         'test_loss': avg_test_loss,
