@@ -225,6 +225,15 @@ class ARCTrainer(pl.LightningModule):
 
         print(f"DEBUG: Test epoch end - Avg loss: {total_loss}, Avg accuracy: {avg_accuracy}, Avg diff accuracy: {avg_diff_accuracy}")
 
+    def compute_accuracy(self, outputs, targets):
+        predictions = outputs.argmax(dim=-1)
+        # Reshape predictions to match the target shape
+        predictions = predictions.view(targets.size())
+        # Calculate accuracy over all elements
+        accuracy = (predictions == targets).float().mean()
+        print(f"DEBUG: compute_accuracy - Accuracy: {accuracy.item()}")
+        return accuracy
+
     def compute_diff_accuracy(self, inputs, targets, outputs):
         predictions = outputs.argmax(dim=-1)
         diff_accuracies, _, _ = differential_pixel_accuracy(inputs, targets, predictions)
