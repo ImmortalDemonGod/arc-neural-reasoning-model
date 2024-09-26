@@ -161,15 +161,15 @@ class ARCTrainer(pl.LightningModule):
         loss = self.compute_loss(model_outputs, outputs)
 
         accuracies = self.compute_accuracy(model_outputs, outputs)
-        diff_accuracies, _, _ = differential_pixel_accuracy(inputs, outputs, model_outputs.argmax(dim=-1))
+        diff_accuracy, _, _ = differential_pixel_accuracy(inputs, outputs, model_outputs.argmax(dim=-1))
 
         logger.debug(f"DEBUG: Computed accuracies: {accuracies}")
-        logger.debug(f"DEBUG: Differential accuracies: {diff_accuracies}")
+        logger.debug(f"DEBUG: Differential accuracy: {diff_accuracy}")
 
         result = {
             'test_loss': loss.item(),
             'test_accuracy': accuracies.tolist(),
-            'test_diff_accuracy': diff_accuracies.tolist(),
+            'test_diff_accuracy': diff_accuracy,
             'task_ids': task_ids,
         }
 
