@@ -154,7 +154,7 @@ def main(args):
     # Generate model summary
     # Create a dummy trainer to pass to ModelSummary
     dummy_trainer = pl.Trainer(logger=False, enable_checkpointing=False)
-    model_summary = ModelSummary(model, max_depth=-1, trainer=dummy_trainer)
+    model_summary = ModelSummary(model, max_depth=-1)
 
     # Save the model summary to a file
     model_summary_path = os.path.join(args.output_dir, f"{model_name}_model_summary.txt")
