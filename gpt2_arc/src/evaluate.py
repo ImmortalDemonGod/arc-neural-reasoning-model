@@ -148,6 +148,9 @@ def main(args):
 
     model.eval()
 
+    # Extract model name from the checkpoint path
+    model_name = os.path.basename(args.model_checkpoint).split('.')[0]
+
     # Generate model summary
     model_summary = ModelSummary(model, max_depth=-1)
 
