@@ -159,6 +159,9 @@ def main(args):
     input_size = (1, sequence_length)  # Example for (channels, sequence_length)
     logger.info(f"Defined input_size for summary: {input_size}")
 
+    # Extract model name from the checkpoint path
+    model_name = os.path.basename(args.model_checkpoint).split('.')[0]
+
     # Generate model summary using torchsummary
     try:
         logger.info("Generating model summary using torchsummary...")
