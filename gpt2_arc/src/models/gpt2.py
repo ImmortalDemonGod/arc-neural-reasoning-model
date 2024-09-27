@@ -93,6 +93,8 @@ class ModelConfig:
 
 class GPT2ARC(nn.Module):
     def __init__(self, config: ModelConfig, num_classes: int):
+        # Define an example input array for model summary
+        self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
         super().__init__()
         self.config = config
         # Replace token embedding with a convolutional layer
