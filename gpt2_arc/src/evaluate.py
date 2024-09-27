@@ -176,23 +176,19 @@ def main(args):
     # Sanitize model_name to contain only valid characters
     model_name = ''.join(c if c.isalnum() or c in '-_.' else '_' for c in model_name)
 
-    # Generate model summary using ModelSummary
-    try:
-        logger.info("Generating model summary using ModelSummary...")
-        # Ensure the model has a _trainer attribute
-        if not hasattr(model, '_trainer'):
-            model._trainer = None  # Assign a dummy value or the actual trainer if available
+    # Debugging statements
+    logger.debug(f"Sanitized model_name: {model_name}")
+    print(f"DEBUG: Sanitized model_name: {model_name}")
 
-        model_summary = ModelSummary(model, max_depth=-1)
-        logger.info("Model summary generated successfully.")
-        print(model_summary)
-
-    except Exception as e:
-        logger.error(f"Failed to generate model summary: {e}")
-        sys.exit(1)
-
-    # Removed redundant extraction of model_name to preserve sanitized name
-    # model_name = os.path.basename(args.model_checkpoint).split('.')[0]
+    # Verify that model_name contains only allowed characters
+    allowed_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.")
+    invalid_chars = set(model_name) - allowed_chars
+    if invalid_chars:
+        logger.error(f"Model name contains invalid characters after sanitization: {invalid_chars}")
+        print(f"ERROR: Model name contains invalid characters after sanitization: {invalid_chars}")
+    else:
+        logger.debug("Model name contains only valid characters.")
+        print("DEBUG: Model name contains only valid characters.")
 
 
     # Create configuration
