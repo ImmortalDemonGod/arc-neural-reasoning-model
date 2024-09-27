@@ -7,6 +7,7 @@ import os
 import torch
 import pytorch_lightning as pl
 import numpy as np
+from pytorch_lightning.utilities.model_summary import ModelSummary
 from optuna.pruners import MedianPruner
 from pytorch_lightning.loggers import TensorBoardLogger
 
@@ -105,6 +106,27 @@ def objective(trial):
         logger.debug("Creating model and trainer")
         num_classes = 10  # Set this to the appropriate number of classes for your task
         model = GPT2ARC(config.model, num_classes=num_classes)
+        
+        # Generate model summary
+        print("DEBUG: Attempting to generate model summary")
+        try:
+            model_summary = str(ModelSummary(model, max_depth=-1))
+            print("DEBUG: Model summary generated successfully")
+        except Exception as e:
+            print(f"DEBUG: Error generating model summary - {str(e)}")
+            model_summary = "Error generating model summary"
+
+        # Save model summary to trial user attributes
+        print("DEBUG: Attempting to save model summary to trial user attributes")
+        try:
+            trial.set_user_attr("model_summary", model_summary)
+            print("DEBUG: Model summary saved to trial user attributes")
+        except Exception as e:
+            print(f"DEBUG: Error saving model summary to trial - {str(e)}")
+
+        print("DEBUG: Model summary:")
+        print(model_summary)
+
         arc_trainer = ARCTrainer(model, train_data, val_data, config)
 
         # Set up PyTorch Lightning trainer with custom pruning callback
@@ -155,6 +177,18 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db"):
     study.optimize(objective, n_trials=n_trials)
 
     logger.info("Optimization completed")
+
+    if study.best_trial:
+        print("DEBUG: Best trial found, attempting to retrieve model summary")
+        best_model_summary = study.best_trial.user_attrs.get("model_summary")
+        if best_model_summary:
+            print("DEBUG: Model summary retrieved successfully")
+            logger.info("Model summary for the best trial:")
+            logger.info(best_model_summary)
+        else:
+            print("DEBUG: No model summary found for the best trial")
+    else:
+        print("DEBUG: No successful trials found")
     if study.best_trial:
         logger.info(f"Best trial: {study.best_trial.number}")
         logger.info(f"Best value: {study.best_value}")
