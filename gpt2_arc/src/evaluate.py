@@ -94,7 +94,7 @@ def save_results(results, individual_metrics, output_dir, model_name, model_summ
     data_to_save = {
         "aggregate_results": results,
         "individual_metrics": {task_id: metrics for task_id, metrics in individual_metrics.items()},
-        "model_summary": model_summary
+        "model_summary": str(model_summary)  # Convert ModelSummary to string
     }
 
     logger.debug(f"DEBUG: Data to be saved: {data_to_save}")
