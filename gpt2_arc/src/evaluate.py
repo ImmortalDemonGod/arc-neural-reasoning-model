@@ -8,6 +8,7 @@ import torch
 import wandb
 import numpy as np
 from datetime import datetime
+from pytorch_lightning.utilities.model_summary import ModelSummary
 from torchsummary import summary
 
 # Define the base directory for the arc-neural-reasoning-model
