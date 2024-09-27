@@ -188,17 +188,6 @@ def main(args):
     # Extract model name from the checkpoint path
     model_name = os.path.basename(args.model_checkpoint).split('.')[0]
 
-    # Generate model summary
-    # Create a dummy trainer to pass to ModelSummary
-    dummy_trainer = pl.Trainer(logger=False, enable_checkpointing=False)
-    model_summary = ModelSummary(model, max_depth=-1)
-
-    # Save the model summary to a file
-    model_summary_path = os.path.join(args.output_dir, f"{model_name}_model_summary.txt")
-    with open(model_summary_path, "w") as f:
-        f.write(str(model_summary))
-    logger.info(f"Model summary saved to {model_summary_path}")
-    logger.info("Model set to evaluation mode")
 
     # Create configuration
     config = Config(
