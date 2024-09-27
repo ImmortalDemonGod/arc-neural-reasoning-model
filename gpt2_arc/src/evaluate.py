@@ -10,6 +10,7 @@ import numpy as np
 from datetime import datetime
 from pytorch_lightning.utilities.model_summary import ModelSummary
 from torchsummary import summary
+from pytorch_lightning.utilities.model_summary import ModelSummary
 
 # Define the base directory for the arc-neural-reasoning-model
 arc_model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -85,14 +86,15 @@ def load_config_from_json(json_path):
         data = json.load(f)
     return data['config']
 
-def save_results(results, individual_metrics, output_dir, model_name):
+def save_results(results, individual_metrics, output_dir, model_name, model_summary):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{model_name}_eval_results_{timestamp}.json"
     output_path = os.path.join(output_dir, filename)
 
     data_to_save = {
         "aggregate_results": results,
-        "individual_metrics": {task_id: metrics for task_id, metrics in individual_metrics.items()}
+        "individual_metrics": {task_id: metrics for task_id, metrics in individual_metrics.items()},
+        "model_summary": model_summary
     }
 
     logger.debug(f"DEBUG: Data to be saved: {data_to_save}")
@@ -149,7 +151,17 @@ def main(args):
 
     model.eval()
 
-    # Move the model to the appropriate device
+    # Generate model summary
+    print("DEBUG: Attempting to generate model summary")
+    try:
+        model_summary = str(ModelSummary(model, max_depth=-1))
+        print("DEBUG: Model summary generated successfully")
+    except Exception as e:
+        print(f"DEBUG: Error generating model summary - {str(e)}")
+        model_summary = "Error generating model summary"
+
+    print("DEBUG: Model summary:")
+    print(model_summary)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     logger.info(f"Model moved to device: {device}")
@@ -215,7 +227,7 @@ def main(args):
             metrics['test_diff_accuracy'] = sum(metrics['test_diff_accuracy']) / len(metrics['test_diff_accuracy'])
         logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
     model_name = os.path.basename(args.model_checkpoint).split('.')[0]
-    results_path = save_results(results, individual_metrics, args.output_dir, model_name)
+    results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
 
     # Log results file to wandb
     artifact = wandb.Artifact(name=model_name, type='evaluation')
