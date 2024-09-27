@@ -161,27 +161,19 @@ def main(args):
     # Extract model name from the checkpoint path
     model_name = os.path.basename(args.model_checkpoint).split('.')[0]
 
-    # Generate model summary using torchsummary
+    # Generate model summary using ModelSummary
     try:
-        logger.info("Generating model summary using torchsummary...")
-        # Capture the summary output
-        summary_str = ""
-        import io
-        from contextlib import redirect_stdout
+        logger.info("Generating model summary using ModelSummary...")
+        # Ensure the model has a _trainer attribute
+        if not hasattr(model, '_trainer'):
+            model._trainer = None  # Assign a dummy value or the actual trainer if available
 
-        with io.StringIO() as buf, redirect_stdout(buf):
-            summary(model, input_size=input_size, device=str(device))
-            summary_str = buf.getvalue()
+        model_summary = ModelSummary(model, max_depth=-1)
         logger.info("Model summary generated successfully.")
-
-        # Save the summary to a file
-        model_summary_path = os.path.join(args.output_dir, f"{model_name}_model_summary.txt")
-        with open(model_summary_path, "w") as f:
-            f.write(summary_str)
-        logger.info(f"Model summary saved to {model_summary_path}")
+        print(model_summary)
 
     except Exception as e:
-        logger.error(f"Failed to generate or save model summary: {e}")
+        logger.error(f"Failed to generate model summary: {e}")
         sys.exit(1)
 
     # Extract model name from the checkpoint path
