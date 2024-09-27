@@ -156,7 +156,7 @@ def main(args):
 
     # Define the input size based on your model's expected input
     sequence_length = 100  # Example value; adjust as needed
-    input_size = (1, sequence_length)  # Example for (channels, sequence_length)
+    input_size = (1, 1, sequence_length)  # Adjusted to match (batch_size, channels, sequence_length)
     logger.info(f"Defined input_size for summary: {input_size}")
 
     # Extract model name from the checkpoint path
