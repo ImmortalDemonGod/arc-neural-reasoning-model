@@ -152,7 +152,9 @@ def main(args):
     model_name = os.path.basename(args.model_checkpoint).split('.')[0]
 
     # Generate model summary
-    model_summary = ModelSummary(model, max_depth=-1)
+    # Create a dummy trainer to pass to ModelSummary
+    dummy_trainer = pl.Trainer(logger=False, enable_checkpointing=False)
+    model_summary = ModelSummary(model, max_depth=-1, trainer=dummy_trainer)
 
     # Save the model summary to a file
     model_summary_path = os.path.join(args.output_dir, f"{model_name}_model_summary.txt")
