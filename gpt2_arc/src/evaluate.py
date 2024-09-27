@@ -21,6 +21,7 @@ import arckit
 import logging
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
+from pytorch_lightning.utilities.model_summary import ModelSummary
 from gpt2_arc.src.training.trainer import ARCTrainer
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 
@@ -146,6 +147,15 @@ def main(args):
         raise
 
     model.eval()
+
+    # Generate model summary
+    model_summary = ModelSummary(model, max_depth=-1)
+
+    # Save the model summary to a file
+    model_summary_path = os.path.join(args.output_dir, f"{model_name}_model_summary.txt")
+    with open(model_summary_path, "w") as f:
+        f.write(str(model_summary))
+    logger.info(f"Model summary saved to {model_summary_path}")
     logger.info("Model set to evaluation mode")
 
     # Create configuration
