@@ -191,8 +191,8 @@ def main(args):
         logger.error(f"Failed to generate model summary: {e}")
         sys.exit(1)
 
-    # Extract model name from the checkpoint path
-    model_name = os.path.basename(args.model_checkpoint).split('.')[0]
+    # Removed redundant extraction of model_name to preserve sanitized name
+    # model_name = os.path.basename(args.model_checkpoint).split('.')[0]
 
 
     # Create configuration
@@ -230,10 +230,20 @@ def main(args):
     model_name = os.path.basename(args.model_checkpoint).split('.')[0]
     results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
 
-    # Log results file to wandb
-    artifact = wandb.Artifact(name=model_name, type='evaluation')
-    artifact.add_file(results_path)
-    wandb.log_artifact(artifact)
+    # Debugging statements before Artifact creation
+    logger.debug(f"Creating wandb Artifact with name: {model_name}")
+    print(f"DEBUG: Creating wandb Artifact with name: {model_name}")
+
+    try:
+        artifact = wandb.Artifact(name=model_name, type='evaluation')
+        artifact.add_file(results_path)
+        wandb.log_artifact(artifact)
+        logger.debug("Artifact created and logged successfully.")
+        print("DEBUG: Artifact created and logged successfully.")
+    except ValueError as ve:
+        logger.error(f"Failed to create wandb Artifact: {ve}")
+        print(f"ERROR: Failed to create wandb Artifact: {ve}")
+        raise ve
 
     wandb.finish()
 
