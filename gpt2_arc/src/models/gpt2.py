@@ -4,6 +4,7 @@ import logging
 
 import torch
 import torch.nn.functional as F
+import pytorch_lightning as pl
 from torch import nn
 import torch.nn.init as init
 
@@ -91,7 +92,7 @@ class ModelConfig:
     dropout: float = 0.1
 
 
-class GPT2ARC(nn.Module):
+class GPT2ARC(pl.LightningModule):
     def __init__(self, config: ModelConfig, num_classes: int):
         # Define an example input array for model summary
         self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
