@@ -171,9 +171,10 @@ def main(args):
     input_size = (1, 1, sequence_length)  # Adjusted to match (batch_size, channels, sequence_length)
     logger.info(f"Defined input_size for summary: {input_size}")
 
-    # Extract model name from the checkpoint path and replace invalid characters
+    # Extract model name from the checkpoint path and sanitize it
     model_name = os.path.basename(args.model_checkpoint).split('.')[0]
-    model_name = model_name.replace('=', '_').replace('-', '_')
+    # Sanitize model_name to contain only valid characters
+    model_name = ''.join(c if c.isalnum() or c in '-_.' else '_' for c in model_name)
 
     # Generate model summary using ModelSummary
     try:
