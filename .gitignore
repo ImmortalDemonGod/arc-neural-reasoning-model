@@ -174,3 +174,6 @@ arc/.DS_Store
 .aider*
 syntheticARC/*
 wandb/*
+runs/*
+results/*
+EXPERIMENTAL/*
