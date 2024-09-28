@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch, patch
 import optuna
 import arckit
 import numpy as np
+import torch
 
 # Define the base directory for the arc-neural-reasoning-model
 arc_model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -30,6 +31,13 @@ from gpt2_arc.src.utils.results_collector import ResultsCollector
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
+def find_max_label_from_dataset(dataset):
+    max_label = 0
+    for i in range(len(dataset)):
+        input_grid, output_grid, _ = dataset[i]
+        max_label = max(max_label, input_grid.max().item(), output_grid.max().item())
+    return max_label + 1  # Add 1 because labels start from 0
 
 class ConfigSavingModelCheckpoint(ModelCheckpoint):
     def __init__(self, config, *args, **kwargs):
@@ -88,44 +96,31 @@ def main(args):
         if args.use_synthetic_data:
             if not args.synthetic_data_path:
                 raise ValueError("Synthetic data path not provided")
+            logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
             train_data = ARCDataset(args.synthetic_data_path)
             val_data = ARCDataset(args.synthetic_data_path, is_test=True)
         else:
+            logger.info("Loading ARC dataset")
             train_set, eval_set = arckit.load_data()
             train_data = ARCDataset(train_set)
             val_data = ARCDataset(eval_set)
         logger.debug(f"Train data size: {len(train_data)}, Validation data size: {len(val_data)}")
 
         # Determine the number of classes
-        num_classes = 10  # Assuming 10 symbols (0-9) for synthetic data
+        logger.info("Determining number of classes")
+        num_classes = find_max_label_from_dataset(train_data)
+        logger.info(f"Number of classes determined: {num_classes}")
 
         # Create DataLoader instances
+        logger.info("Creating DataLoader instances")
         train_loader = torch.utils.data.DataLoader(train_data, batch_size=int(args.batch_size), num_workers=7)
         val_loader = torch.utils.data.DataLoader(val_data, batch_size=int(args.batch_size), num_workers=7)
+        logger.debug(f"DataLoaders created with batch size {args.batch_size}")
 
         # Initialize model
         logger.info("Initializing model")
-        
-        # Determine the number of classes from the dataset
-        # Function to find the maximum label value in the dataset
-        def find_max_label(task_set):
-            max_label = 0
-            for task in task_set.tasks:
-                for sample in task.train + task.test:
-                    input_grid, output_grid = sample
-                    max_label = max(max_label, np.max(input_grid), np.max(output_grid))
-            return max_label
-
-        # Determine the number of classes from the datasets
-        max_label_train = find_max_label(train_set)
-        max_label_val = find_max_label(eval_set)
-        max_label_overall = max(max_label_train, max_label_val)
-        num_classes = max_label_overall + 1  # Add 1 because labels start from 0
-
-        logger.info(f"Determined num_classes: {num_classes}")
-        
         model = GPT2ARC(config=model_config, num_classes=num_classes)
-        logger.debug(f"Model structure: {model}")
+        logger.debug(f"Model initialized with config: {model_config}")
 
         # Load the checkpoint if specified
         if args.model_checkpoint:
