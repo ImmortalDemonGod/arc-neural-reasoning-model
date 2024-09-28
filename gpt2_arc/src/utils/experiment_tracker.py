@@ -18,6 +18,7 @@ class ExperimentTracker:
         self.entity = entity
         self.run = None
         self.use_wandb = use_wandb
+        self.metrics = {}
         if self.use_wandb:
             try:
                 self.run = wandb.init(project=self.project, entity=self.entity, config=self.config)
@@ -73,6 +74,8 @@ class ExperimentTracker:
                 print("Wandb run finished")
             except Exception as e:
                 print(f"Error finishing wandb run: {str(e)}")
+        else:
+            print("Experiment finished. Metrics:", self.metrics)
 
     def log_metric(self, name: str, value: float, step: Optional[int] = None):
         if self.use_wandb:
@@ -173,6 +176,18 @@ class ExperimentTracker:
 
     def _serialize_config(self, config):
         return {k: self._make_serializable(v) for k, v in config.items()}
+
+    def log_metric(self, name: str, value: float, step: Optional[int] = None):
+        if self.use_wandb:
+            try:
+                wandb.log({name: value}, step=step)
+                print(f"Logged metric to wandb: {name}={value}, step={step}")
+            except Exception as e:
+                print(f"Error logging metric to wandb: {str(e)}")
+        
+        # Always log locally as a fallback
+        self.metrics[name] = value
+        print(f"Logged metric locally: {name}={value}, step={step}")
 
 # Add a simple test
 if __name__ == "__main__":
