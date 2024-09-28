@@ -4,7 +4,7 @@ import sys
 import logging
 import os
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, patch
 import optuna
 import arckit
 import numpy as np
