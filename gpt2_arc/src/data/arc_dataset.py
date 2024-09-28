@@ -55,8 +55,6 @@ class ARCDataset(Dataset):
         logger.debug(f"data_source content: {data_source}")
         logger.debug(f"self.test_split is set to: {self.test_split}")
         logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
-        logger.debug(f"self.test_split is set to: {self.test_split}")
-        set_debug_mode(debug)  # Set debug mode based on parameter
         # Add logging to verify task_id presence
         if isinstance(data_source, list):
             for item in data_source:
@@ -243,17 +241,23 @@ class ARCDataset(Dataset):
         return {"input": input_grid, "output": output_grid}
 
     def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
-        print(f"DEBUG: Inside _process_single_task, self.test_split is: {self.test_split}")
-        logger.debug(f"Inside _process_single_task, test_split is: {self.test_split}")
+        logger.debug(f"Inside _process_single_task, self.test_split is: {self.test_split}")
+        logger.debug(f"Task data type: {type(task_data)}")
+        logger.debug(f"Task data content: {task_data}")
+        
         if isinstance(task_data, dict):
             train_examples = task_data.get("train", [])
             test_examples = task_data.get("test", [])
+            logger.debug(f"Dict task data - Train examples: {len(train_examples)}, Test examples: {len(test_examples)}")
         elif isinstance(task_data, list):
             split_idx = int(len(task_data) * (1 - self.test_split))
             train_examples = task_data[:split_idx]
             test_examples = task_data[split_idx:]
+            logger.debug(f"List task data - Train examples: {len(train_examples)}, Test examples: {len(test_examples)}")
         else:
-            raise ValueError("Task data must be either a dictionary or a list")
+            error_msg = f"Task data must be either a dictionary or a list. Got {type(task_data)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
         return {
             "train": [self._preprocess_grid(example) for example in train_examples],

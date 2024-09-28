@@ -40,9 +40,11 @@ def test_main_with_synthetic_data(synthetic_data, use_synthetic):
     args.no_checkpointing = True
     args.no_progress_bar = True
     args.project = "test_project"
-    args.log_level = "INFO"
+    args.log_level = "DEBUG"
     args.batch_size = 1  # Set batch_size to a positive integer
+    args.learning_rate = 1e-4  # Set a default learning rate
     print(f"DEBUG: args.batch_size = {args.batch_size}")
+    print(f"DEBUG: args.learning_rate = {args.learning_rate}")
 
     with patch("gpt2_arc.src.training.train.pl.Trainer") as mock_pl_trainer, \
          patch("gpt2_arc.src.training.train.ARCDataset") as mock_dataset, \

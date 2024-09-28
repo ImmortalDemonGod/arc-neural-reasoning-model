@@ -42,11 +42,17 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
 
 def main(args):
     # Set logging level
-    log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'INFO', logging.DEBUG)
-    logger.setLevel(log_level)
+    log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'DEBUG', logging.DEBUG)
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
     
     logger.info("Starting main function")
     logger.debug(f"Command line arguments: {args}")
+
+    trainer = None  # Initialize trainer to None
 
     try:
         if args.use_optuna:
@@ -133,13 +139,17 @@ def main(args):
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
 
-        # Initialize trainer
-        logger.info("Initializing trainer")
+        logger.debug("Initializing ExperimentTracker")
+        tracker = ExperimentTracker(config, project=args.project)
+        tracker.start()
+
+        logger.debug("Initializing ARCTrainer")
         trainer = ARCTrainer(
             model=model,
             train_dataset=train_data,
             val_dataset=val_data,
-            config=config
+            config=config,
+            results_collector=results_collector
         )
         trainer.log_hyperparameters()
 
@@ -162,10 +172,10 @@ def main(args):
                 save_dir="runs",
                 name=f"experiment_{trainer.results_collector.experiment_id}"
             )
-            print(f"DEBUG: TensorBoard logger initialized. Log dir: {tb_logger.log_dir}")
+            logger.debug(f"TensorBoard logger initialized. Log dir: {tb_logger.log_dir}")
         else:
             tb_logger = False
-            print("DEBUG: Logging is disabled")
+            logger.debug("Logging is disabled")
 
         pl_trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
@@ -181,7 +191,7 @@ def main(args):
 
         if tb_logger:
             trainer.results_collector.set_tensorboard_log_path(tb_logger.log_dir)
-            print(f"DEBUG: TensorBoard log path set in results collector: {tb_logger.log_dir}")
+            logger.debug(f"TensorBoard log path set in results collector: {tb_logger.log_dir}")
 
         # Train the model
         logger.info("Starting model training")
@@ -250,10 +260,15 @@ def main(args):
         if 'tracker' in locals():
             tracker.log_metric("training_interrupted", 1)
             tracker.log_metric("error_message", str(e))
-        raise
     finally:
         if 'tracker' in locals():
             tracker.finish()
+
+    if trainer is not None:
+        # ... proceed with training ...
+        pass
+    else:
+        logger.error("Trainer was not initialized. Exiting the training loop.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
