@@ -54,38 +54,32 @@ class ARCDataset(Dataset):
         logger.debug(f"data_source type: {type(data_source)}")
         logger.debug(f"data_source content: {data_source}")
         logger.debug(f"self.test_split is set to: {self.test_split}")
-        logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
-        # Add logging to verify task_id presence
-        if isinstance(data_source, list):
-            for item in data_source:
-                if isinstance(item, Task):
-                    logger.debug(f"Processing Task object with ID: {item.id}")
-                elif 'task_id' not in item:
-                    logger.warning(f"Missing task_id in data item: {item}")
-        self.debug_attr = "test"  # Simple attribute for testing
-        set_debug_mode(debug)  # Set debug mode based on parameter
-        logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")
+        
+        self.data = self._process_data_source(data_source)
+        
+    def _process_data_source(self, data_source):
+        logger.debug(f"Processing data source of type: {type(data_source)}")
         if isinstance(data_source, str):
             logger.debug(f"Data source path: {data_source}")
             if os.path.isdir(data_source):
                 logger.debug("Processing synthetic data from directory")
-                self.data = self._process_synthetic_data(data_source)
+                return self._process_synthetic_data(data_source)
             elif os.path.isfile(data_source):
                 logger.debug("Processing JSON data from file")
                 with open(data_source, 'r') as f:
                     raw_data = json.load(f)
-                self.data = self._process_json_data(raw_data)
+                return self._process_json_data(raw_data)
             else:
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
         elif isinstance(data_source, list):
             logger.debug("Processing list data")
-            self.data = self._process_list_data(data_source)
+            return self._process_list_data(data_source)
         elif isinstance(data_source, tuple):
             logger.debug("Processing combined data")
-            self.data = self._combine_data(*data_source)
+            return self._combine_data(*data_source)
         elif TaskSet is not None and isinstance(data_source, TaskSet):
             logger.debug("Processing ARCkit data")
-            self.data = self._process_arckit_data(data_source)
+            return self._process_arckit_data(data_source)
         else:
             logger.error(f"Invalid data_source type: {type(data_source)}")
             raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
