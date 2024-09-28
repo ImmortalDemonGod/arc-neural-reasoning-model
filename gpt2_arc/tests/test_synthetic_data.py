@@ -41,13 +41,18 @@ def test_main_with_synthetic_data(synthetic_data, use_synthetic):
     args.no_progress_bar = True
     args.project = "test_project"
     args.log_level = "INFO"
+    args.batch_size = 1  # Set batch_size to a positive integer
+    print(f"DEBUG: args.batch_size = {args.batch_size}")
 
-    with patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
+    with patch("gpt2_arc.src.training.train.pl.Trainer") as mock_pl_trainer, \
          patch("gpt2_arc.src.training.train.ARCDataset") as mock_dataset, \
          patch("gpt2_arc.src.training.train.GPT2ARC") as mock_model, \
-         patch("gpt2_arc.src.training.train.ARCTrainer") as mock_trainer:
+         patch("gpt2_arc.src.training.train.ARCTrainer") as mock_arc_trainer:
+        print("DEBUG: Inside test_main_with_synthetic_data")
+        print(f"DEBUG: mock_pl_trainer = {mock_pl_trainer}")
+        print(f"DEBUG: mock_arc_trainer = {mock_arc_trainer}")
         main(args)
-        mock_trainer.assert_called_once()
+        mock_pl_trainer.assert_called_once()
 
 def test_synthetic_data_argument_parsing():
     import argparse
