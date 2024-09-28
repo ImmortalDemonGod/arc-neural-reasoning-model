@@ -5,7 +5,7 @@ import math
 def calculate_params(n_layers, n_heads, d_model):
     return n_layers * (12 * d_model * d_model + 13 * d_model) + d_model * 10
 
-def estimate_memory_usage(total_params, batch_size, seq_length, dtype_size=4):
+def estimate_memory_usage(total_params, batch_size, seq_length, d_model, dtype_size=4):
     model_memory = total_params * dtype_size  # Model parameters
     optimizer_memory = model_memory * 2  # Adam optimizer uses 2x model size
     activations_memory = batch_size * seq_length * d_model * dtype_size * 2  # Forward & backward pass
@@ -32,7 +32,7 @@ def test_model_configurations():
 
     for config in configurations:
         total_params = calculate_params(config["n_layers"], config["n_heads"], config["d_model"])
-        estimated_memory = estimate_memory_usage(total_params, config["batch_size"], config["seq_length"])
+        estimated_memory = estimate_memory_usage(total_params, config["batch_size"], config["seq_length"], config["d_model"])
         
         print(f"\nConfiguration: {config}")
         print(f"Total parameters: {total_params:,}")
