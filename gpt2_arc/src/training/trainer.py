@@ -120,46 +120,16 @@ class ARCTrainer(pl.LightningModule):
         self.test_outputs = []
 
     def test_step(self, batch, batch_idx):
-        """
-        The `test_step` function processes a batch of data for testing a model, computes metrics such as
-        loss and accuracy, logs the results, and stores them for further analysis.
-        
-        :param batch: The `batch` parameter in the `test_step` function is expected to contain input data,
-        attention masks (optional), target outputs, and task IDs. The function processes the batch based on
-        its format and performs inference using a model. It calculates loss, accuracy, and differential
-        pixel accuracy metrics for evaluation
-        :param batch_idx: Batch index is used to keep track of the current batch being processed during
-        testing. It helps in identifying and logging information specific to each batch, such as loss and
-        accuracy values. The batch index is typically an integer value that increments for each batch
-        processed during testing
-        :return: The `test_step` method returns a dictionary named `result` containing the keys 'loss',
-        'accuracy', 'task_ids', and 'test_loss'. Additionally, it logs various metrics such as test_loss,
-        test_accuracy, and test_diff_accuracy. The method also appends the result to `self.test_outputs` and
-        calculates task success for TSR, logging it as well.
-        """
         logger.debug(f"DEBUG: test_step input - batch: {batch}, batch_idx: {batch_idx}")
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
-        attention_mask = None
-        if isinstance(batch, (list, tuple)) and len(batch) >= 3:
-            inputs, outputs, task_ids = batch[:3]
-            if len(batch) == 4:
-                attention_mask = batch[3]
-        elif isinstance(batch, dict):
-            inputs = batch.get('input_ids')
-            outputs = batch.get('labels')
-            task_ids = batch.get('task_ids')
-            attention_mask = batch.get('attention_mask')
-        else:
-            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
-
+        inputs, outputs, task_ids = batch
         logger.debug(f"DEBUG: Task IDs in batch: {task_ids}")
 
         inputs = inputs.float()
         outputs = outputs.long()
 
-        if attention_mask is None:
-            attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32, device=inputs.device)
+        attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32, device=inputs.device)
 
         model_outputs = self(inputs, attention_mask)
         loss = self.compute_loss(model_outputs, outputs)
@@ -172,7 +142,7 @@ class ARCTrainer(pl.LightningModule):
             diff_accuracy, _, _ = differential_pixel_accuracy(inputs[i:i+1], outputs[i:i+1], model_outputs[i:i+1].argmax(dim=-1))
             accuracies.append(accuracy.item())
             diff_accuracies.append(diff_accuracy)
-            print(f"DEBUG: diff_accuracy type: {type(diff_accuracy)}, value: {diff_accuracy}")
+            logger.debug(f"DEBUG: diff_accuracy type: {type(diff_accuracy)}, value: {diff_accuracy}")
 
         result = {
             'test_loss': loss.item(),
@@ -180,7 +150,7 @@ class ARCTrainer(pl.LightningModule):
             'test_accuracy': sum(accuracies) / len(accuracies) if accuracies else 0,
             'test_diff_accuracy': sum(diff_accuracies) / len(diff_accuracies) if diff_accuracies else 0,
         }
-        print(f"DEBUG: Test loss: {result['test_loss']}, Avg accuracy: {result['test_accuracy']}, Avg diff accuracy: {result['test_diff_accuracy']}")
+        logger.debug(f"DEBUG: Test loss: {result['test_loss']}, Avg accuracy: {result['test_accuracy']}, Avg diff accuracy: {result['test_diff_accuracy']}")
 
         # Log task-specific metrics
         for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
@@ -191,9 +161,9 @@ class ARCTrainer(pl.LightningModule):
 
         try:
             self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)
-            self.writer.add_scalar('test/avg_accuracy', sum(result['test_accuracy']) / len(result['test_accuracy']), self.current_epoch)
+            self.writer.add_scalar('test/avg_accuracy', result['test_accuracy'], self.current_epoch)
             self.writer.add_scalar('test/diff_accuracy', result['test_diff_accuracy'], self.current_epoch)
-            logger.debug(f"DEBUG: Logged test metrics for epoch {self.current_epoch}: loss={result['test_loss']}, avg_accuracy={sum(result['test_accuracy']) / len(result['test_accuracy'])}, diff_accuracy={result['test_diff_accuracy']}")
+            logger.debug(f"DEBUG: Logged test metrics for epoch {self.current_epoch}: loss={result['test_loss']}, avg_accuracy={result['test_accuracy']}, diff_accuracy={result['test_diff_accuracy']}")
         except Exception as e:
             logger.error(f"DEBUG: Error logging test step: {str(e)}")
 

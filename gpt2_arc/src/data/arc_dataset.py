@@ -204,9 +204,11 @@ class ARCDataset(Dataset):
         processed_data = []
         for filename in os.listdir(directory):
             if filename.endswith('.json'):
+                task_id = os.path.splitext(filename)[0]  # Use filename without extension as task_id
                 with open(os.path.join(directory, filename), 'r') as f:
                     task_data = json.load(f)
                     processed_task = self._process_single_task(task_data)
+                    processed_task['id'] = task_id  # Add task_id to the processed task
                     if processed_task['train'] or processed_task['test']:
                         processed_data.append(processed_task)
         return processed_data
@@ -302,7 +304,7 @@ class ARCDataset(Dataset):
         logger.debug(f"Total samples in dataset: {total_samples}")
         return total_samples
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, str]:
         if idx < 0 or idx >= len(self):
             raise IndexError(f"Index {idx} out of range (total samples: {len(self)})")
 
@@ -318,7 +320,7 @@ class ARCDataset(Dataset):
                 output_grid = self._preprocess_grid(sample["output"])
                 logger.debug(f"Returning input shape: {input_grid.shape}, output shape: {output_grid.shape}")
                 logger.debug(f"__getitem__ input dtype: {input_grid.dtype}, output dtype: {output_grid.dtype}")
-                task_id = task.get("id", -1)  # Default to -1 if no id is found
+                task_id = task.get("id", "unknown")  # Get task_id, use "unknown" if not found
                 logger.debug(f"DEBUG: Dataset __getitem__ called with idx {idx}, returning item with task_id {task_id}")
                 return input_grid, output_grid, task_id
             current_idx += len(task[split])
