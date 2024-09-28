@@ -206,8 +206,19 @@ class ARCDataset(Dataset):
             if filename.endswith('.json'):
                 with open(os.path.join(directory, filename), 'r') as f:
                     task_data = json.load(f)
-                    processed_data.append(self._process_single_task(task_data))
+                    processed_task = self._process_single_task(task_data)
+                    if processed_task['train'] or processed_task['test']:
+                        processed_data.append(processed_task)
         return processed_data
+
+    def _process_single_task(self, task_data: Dict) -> Dict:
+        processed_task = {"train": [], "test": []}
+        for split in ["train", "test"]:
+            for sample in task_data.get(split, []):
+                input_grid = torch.tensor(sample["input"], dtype=torch.float32).unsqueeze(0)
+                output_grid = torch.tensor(sample["output"], dtype=torch.float32).unsqueeze(0)
+                processed_task[split].append({"input": input_grid, "output": output_grid})
+        return processed_task
 
     def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
         logger.debug(f"Inside _process_single_task, test_split is: {self.test_split}")

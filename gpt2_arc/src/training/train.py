@@ -96,6 +96,9 @@ def main(args):
             val_data = ARCDataset(eval_set)
         logger.debug(f"Train data size: {len(train_data)}, Validation data size: {len(val_data)}")
 
+        # Determine the number of classes
+        num_classes = 10  # Assuming 10 symbols (0-9) for synthetic data
+
         # Create DataLoader instances
         train_loader = torch.utils.data.DataLoader(train_data, batch_size=int(args.batch_size), num_workers=7)
         val_loader = torch.utils.data.DataLoader(val_data, batch_size=int(args.batch_size), num_workers=7)
