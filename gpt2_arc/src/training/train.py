@@ -141,7 +141,6 @@ def main(args):
 
         logger.debug("Initializing ExperimentTracker")
         tracker = ExperimentTracker(config, project=args.project)
-        tracker.start()
 
         logger.debug("Initializing ARCTrainer")
         trainer = ARCTrainer(
