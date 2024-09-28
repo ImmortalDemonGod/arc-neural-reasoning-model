@@ -37,7 +37,7 @@ def find_max_label_from_dataset(dataset):
     for i in range(len(dataset)):
         input_grid, output_grid, _ = dataset[i]
         max_label = max(max_label, input_grid.max().item(), output_grid.max().item())
-    return max_label + 1  # Add 1 because labels start from 0
+    return int(max_label) + 1  # Ensure max_label is integer
 
 class ConfigSavingModelCheckpoint(ModelCheckpoint):
     def __init__(self, config, *args, **kwargs):
@@ -109,7 +109,9 @@ def main(args):
         # Determine the number of classes
         logger.info("Determining number of classes")
         num_classes = find_max_label_from_dataset(train_data)
+        num_classes = int(num_classes)  # Ensure num_classes is integer
         logger.info(f"Number of classes determined: {num_classes}")
+        logger.debug(f"num_classes (type: {type(num_classes)}): {num_classes}")
 
         # Create DataLoader instances
         logger.info("Creating DataLoader instances")

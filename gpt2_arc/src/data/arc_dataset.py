@@ -390,7 +390,7 @@ class ARCDataset(Dataset):
         padded_grid = self._pad_grid(input_grid, height=30, width=30)
     
         # Convert to tensor and add channel dimension
-        grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
+        grid_tensor = torch.tensor(padded_grid, dtype=torch.long).unsqueeze(0)
     
         logger.debug(f"Preprocessed grid shape: {grid_tensor.shape}")
         logger.debug(f"Preprocessed grid content:\n{grid_tensor}")
