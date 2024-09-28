@@ -48,10 +48,12 @@ class ARCDataset(Dataset):
     ):
         self.test_split = test_split
         self.is_test = is_test
+        self.num_symbols = num_symbols
         print("DEBUG: Starting ARCDataset initialization")
         print(f"DEBUG: data_source type: {type(data_source)}")
         print(f"DEBUG: data_source content: {data_source}")
         logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
+        print(f"DEBUG: self.test_split is set to: {self.test_split}")
         # Add logging to verify task_id presence
         if isinstance(data_source, list):
             for item in data_source:
@@ -192,6 +194,7 @@ class ARCDataset(Dataset):
         return processed_data
 
     def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
+        print(f"DEBUG: Inside _process_single_task, self.test_split is: {self.test_split}")
         logger.debug(f"Inside _process_single_task, test_split is: {self.test_split}")
         if isinstance(task_data, dict):
             train_examples = task_data.get("train", [])
