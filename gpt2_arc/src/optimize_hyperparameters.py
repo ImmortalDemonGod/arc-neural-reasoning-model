@@ -8,7 +8,9 @@ import torch
 import pytorch_lightning as pl
 import numpy as np
 from pytorch_lightning.utilities.model_summary import ModelSummary
-from optuna.pruners import MedianPruner
+from optuna.pruners import PercentilePruner
+from optuna.samplers import TPESampler
+from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 from utils.model_memory_estimator import (
     estimate_memory_usage,
@@ -151,13 +153,14 @@ def objective(trial):
 
         # Set up PyTorch Lightning trainer with custom pruning callback
         pruning_callback = CustomPruningCallback(trial, monitor="val_loss")
+        early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=3, verbose=False, mode="min")
         experiment_id = f"optuna_trial_{trial.number}"
         tb_logger = TensorBoardLogger(save_dir="runs", name=f"experiment_{experiment_id}")
         print(f"DEBUG: Optuna trial TensorBoard logger initialized. Log dir: {tb_logger.log_dir}")
         
         trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
-            callbacks=[pruning_callback],
+            callbacks=[pruning_callback, early_stop_callback],
             logger=tb_logger,
             enable_checkpointing=False,
             accelerator='gpu' if torch.cuda.is_available() else 'cpu',
@@ -183,14 +186,16 @@ def objective(trial):
 def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1):
     study_name = "gpt2_arc_optimization"
 
-    pruner = MedianPruner(n_startup_trials=5, n_warmup_steps=5, interval_steps=1)
+    pruner = PercentilePruner(percentile=25, n_startup_trials=5, n_warmup_steps=2, interval_steps=1)
+    sampler = TPESampler(n_startup_trials=5)
 
     study = optuna.create_study(
         study_name=study_name,
         storage=storage_name,
         load_if_exists=True,
         direction="minimize",
-        pruner=pruner
+        pruner=pruner,
+        sampler=sampler
     )
 
     logger.info(f"Starting optimization with {n_trials} trials using {n_jobs} parallel jobs")
