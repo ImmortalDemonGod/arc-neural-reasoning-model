@@ -90,6 +90,10 @@ def main(args):
             val_data = ARCDataset(eval_set)
         logger.debug(f"Train data size: {len(train_data)}, Validation data size: {len(val_data)}")
 
+        # Create DataLoader instances
+        train_loader = torch.utils.data.DataLoader(train_data, batch_size=int(args.batch_size), num_workers=7)
+        val_loader = torch.utils.data.DataLoader(val_data, batch_size=int(args.batch_size), num_workers=7)
+
         # Initialize model
         logger.info("Initializing model")
         
