@@ -238,7 +238,7 @@ class ARCDataset(Dataset):
         logger.debug(f"Inside _process_single_task, self.test_split is: {self.test_split}")
         logger.debug(f"Task data type: {type(task_data)}")
         logger.debug(f"Task data content: {task_data}")
-        
+    
         if isinstance(task_data, dict):
             train_examples = task_data.get("train", [])
             test_examples = task_data.get("test", [])
