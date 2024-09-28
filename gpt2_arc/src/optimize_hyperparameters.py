@@ -10,7 +10,7 @@ import numpy as np
 from pytorch_lightning.utilities.model_summary import ModelSummary
 from optuna.pruners import MedianPruner
 from pytorch_lightning.loggers import TensorBoardLogger
-from gpt2_arc.src.utils.model_memory_estimator import (
+from utils.model_memory_estimator import (
     estimate_memory_usage,
     get_available_memory,
     can_fit_model,
