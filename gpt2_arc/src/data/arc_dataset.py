@@ -54,6 +54,7 @@ class ARCDataset(Dataset):
         print(f"DEBUG: data_source content: {data_source}")
         logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
         print(f"DEBUG: self.test_split is set to: {self.test_split}")
+        set_debug_mode(debug)  # Set debug mode based on parameter
         # Add logging to verify task_id presence
         if isinstance(data_source, list):
             for item in data_source:
