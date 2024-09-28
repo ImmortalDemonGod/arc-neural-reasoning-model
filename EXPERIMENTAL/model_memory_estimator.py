@@ -4,13 +4,18 @@ import psutil
 import argparse
 
 def calculate_params(n_layers, n_heads, d_model):
-    return n_layers * (12 * d_model * d_model + 13 * d_model) + d_model * 10
+    conv_params = 3 * 3 * 1 * d_model  # 3x3 conv, 1 input channel, d_model output channels
+    transformer_params = n_layers * (12 * d_model * d_model + 13 * d_model)
+    final_layer_params = d_model * 10  # Assuming 10 output classes
+    return conv_params + transformer_params + final_layer_params
 
-def estimate_memory_usage(total_params, batch_size, seq_length, d_model, dtype_size=4):
+def estimate_memory_usage(total_params, batch_size, height, width, d_model, dtype_size=4):
     model_memory = total_params * dtype_size  # Model parameters
     optimizer_memory = model_memory * 2  # Adam optimizer uses 2x model size
-    activations_memory = batch_size * seq_length * d_model * dtype_size * 2  # Forward & backward pass
-    total_memory = model_memory + optimizer_memory + activations_memory
+    input_memory = batch_size * height * width * dtype_size  # Input tensors
+    conv_output_memory = batch_size * height * width * d_model * dtype_size  # After conv layer
+    activations_memory = batch_size * (height * width) * d_model * dtype_size * 2  # Forward & backward pass
+    total_memory = model_memory + optimizer_memory + input_memory + conv_output_memory + activations_memory
     return total_memory / (1024**3)  # Convert to GB
 
 def get_available_memory():
@@ -40,7 +45,7 @@ def get_device_info():
 def can_fit_model(estimated_memory, available_memory, threshold=0.9):
     return estimated_memory < available_memory * threshold
 
-def estimate_single_configuration(n_layers, n_heads, d_model, batch_size, seq_length):
+def estimate_single_configuration(n_layers, n_heads, d_model, batch_size, height, width):
     device_info = get_device_info()
     available_memory = get_available_memory()
     
@@ -50,14 +55,15 @@ def estimate_single_configuration(n_layers, n_heads, d_model, batch_size, seq_le
     print(f"Available memory: {available_memory:.2f} GB")
 
     total_params = calculate_params(n_layers, n_heads, d_model)
-    estimated_memory = estimate_memory_usage(total_params, batch_size, seq_length, d_model)
+    estimated_memory = estimate_memory_usage(total_params, batch_size, height, width, d_model)
     
     print(f"\nConfiguration:")
     print(f"  n_layers: {n_layers}")
     print(f"  n_heads: {n_heads}")
     print(f"  d_model: {d_model}")
     print(f"  batch_size: {batch_size}")
-    print(f"  seq_length: {seq_length}")
+    print(f"  input_height: {height}")
+    print(f"  input_width: {width}")
     print(f"Total parameters: {total_params:,}")
     print(f"Estimated memory usage: {estimated_memory:.2f} GB")
     
@@ -69,16 +75,17 @@ def estimate_single_configuration(n_layers, n_heads, d_model, batch_size, seq_le
     print(f"Memory utilization: {(estimated_memory / available_memory) * 100:.2f}%")
 
 def main():
-    parser = argparse.ArgumentParser(description="Estimate memory usage for a transformer model configuration.")
+    parser = argparse.ArgumentParser(description="Estimate memory usage for the GPT2ARC model configuration.")
     parser.add_argument("--n_layers", type=int, required=True, help="Number of layers in the model")
     parser.add_argument("--n_heads", type=int, required=True, help="Number of attention heads")
     parser.add_argument("--d_model", type=int, required=True, help="Dimension of the model")
     parser.add_argument("--batch_size", type=int, required=True, help="Batch size for training")
-    parser.add_argument("--seq_length", type=int, required=True, help="Sequence length for input")
+    parser.add_argument("--height", type=int, required=True, help="Height of the input grid")
+    parser.add_argument("--width", type=int, required=True, help="Width of the input grid")
     
     args = parser.parse_args()
     
-    estimate_single_configuration(args.n_layers, args.n_heads, args.d_model, args.batch_size, args.seq_length)
+    estimate_single_configuration(args.n_layers, args.n_heads, args.d_model, args.batch_size, args.height, args.width)
 
 if __name__ == "__main__":
     main()
