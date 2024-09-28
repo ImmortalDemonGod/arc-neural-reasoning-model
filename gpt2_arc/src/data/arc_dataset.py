@@ -153,29 +153,50 @@ class ARCDataset(Dataset):
         max_h, max_w = 0, 0
         for task in self.data:
             for split in ['train', 'test']:
-                for sample in task[split]:
-                    if isinstance(sample['input'], torch.Tensor):
-                        if sample['input'].dim() == 3:
-                            h, w = sample['input'].shape[1], sample['input'].shape[2]
-                        elif sample['input'].dim() == 2:
-                            h, w = sample['input'].shape
-                        else:
-                            raise ValueError(f"Unexpected tensor dimensions: {sample['input'].dim()}")
-                    elif isinstance(sample['input'], np.ndarray):
-                        if sample['input'].ndim == 2:
-                            h, w = sample['input'].shape
-                        elif sample['input'].ndim == 3:
-                            h, w = sample['input'].shape[1], sample['input'].shape[2]
-                        else:
-                            raise ValueError(f"Unexpected ndarray dimensions: {sample['input'].ndim}")
-                    elif isinstance(sample['input'], list):
-                        h, w = len(sample['input']), len(sample['input'][0])
+                samples = task[split]
+                if isinstance(samples, torch.Tensor):
+                    if samples.dim() == 4:  # [num_samples, channels, height, width]
+                        h, w = samples.shape[2], samples.shape[3]
+                    elif samples.dim() == 3:  # [num_samples, height, width]
+                        h, w = samples.shape[1], samples.shape[2]
                     else:
-                        raise TypeError(f"Unexpected input type: {type(sample['input'])}")
-                    
-                    max_h = max(max_h, h)
-                    max_w = max(max_w, w)
-        
+                        raise ValueError(f"Unexpected tensor dimensions: {samples.dim()}")
+                elif isinstance(samples, list):
+                    for sample in samples:
+                        if isinstance(sample, torch.Tensor):
+                            if sample.dim() == 3:  # [channels, height, width]
+                                h, w = sample.shape[1], sample.shape[2]
+                            elif sample.dim() == 2:  # [height, width]
+                                h, w = sample.shape
+                            else:
+                                raise ValueError(f"Unexpected tensor dimensions: {sample.dim()}")
+                        elif isinstance(sample, dict):
+                            input_data = sample['input']
+                            if isinstance(input_data, torch.Tensor):
+                                if input_data.dim() == 3:
+                                    h, w = input_data.shape[1], input_data.shape[2]
+                                elif input_data.dim() == 2:
+                                    h, w = input_data.shape
+                                else:
+                                    raise ValueError(f"Unexpected tensor dimensions: {input_data.dim()}")
+                            elif isinstance(input_data, np.ndarray):
+                                if input_data.ndim == 2:
+                                    h, w = input_data.shape
+                                elif input_data.ndim == 3:
+                                    h, w = input_data.shape[1], input_data.shape[2]
+                                else:
+                                    raise ValueError(f"Unexpected ndarray dimensions: {input_data.ndim}")
+                            elif isinstance(input_data, list):
+                                h, w = len(input_data), len(input_data[0])
+                            else:
+                                raise TypeError(f"Unexpected input type: {type(input_data)}")
+                        else:
+                            raise TypeError(f"Unexpected sample type: {type(sample)}")
+                        max_h = max(max_h, h)
+                        max_w = max(max_w, w)
+                else:
+                    raise TypeError(f"Unexpected samples type: {type(samples)}")
+                
         logger.debug(f"Computed max grid size: ({max_h}, {max_w})")
         return (max_h, max_w)
 
