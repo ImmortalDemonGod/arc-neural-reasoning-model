@@ -216,13 +216,12 @@ class ARCDataset(Dataset):
         return processed_data
 
     def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
-        logger.debug(f"Inside _process_single_task, test_split is: {self.test_split}")
+        test_split = getattr(self, 'test_split', 0.2)  # Use 0.2 as default if not set
+        logger.debug(f"Inside _process_single_task, test_split is: {test_split}")
         if isinstance(task_data, dict):
             train_examples = task_data.get("train", [])
             test_examples = task_data.get("test", [])
         elif isinstance(task_data, list):
-            # Use a default test_split of 0.2 if not set
-            test_split = getattr(self, 'test_split', 0.2)
             split_idx = int(len(task_data) * (1 - test_split))
             train_examples = task_data[:split_idx]
             test_examples = task_data[split_idx:]
