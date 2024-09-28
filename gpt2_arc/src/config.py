@@ -1,3 +1,4 @@
+from typing import Optional
 # gpt2_arc/src/config.py
 from dataclasses import dataclass, asdict, field
 from typing import Optional
