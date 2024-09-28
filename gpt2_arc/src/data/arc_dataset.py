@@ -298,6 +298,7 @@ class ARCDataset(Dataset):
                     symbol_counts += np.bincount(sample["input"].flatten(), minlength=self.num_symbols)
                     symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
         return symbol_counts / symbol_counts.sum()
+    
     def _preprocess_grid(self, grid: Union[dict, np.ndarray]) -> torch.Tensor:
         if isinstance(grid, dict):
             input_grid = np.array(grid['input'])
