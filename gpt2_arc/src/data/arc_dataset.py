@@ -265,8 +265,8 @@ class ARCDataset(Dataset):
             raise ValueError(error_msg)
 
         return {
-            "train": [self._preprocess_grid(example) for example in train_examples],
-            "test": [self._preprocess_grid(example) for example in test_examples]
+            "train": train_examples,
+            "test": test_examples
         }
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
@@ -311,6 +311,9 @@ class ARCDataset(Dataset):
             split = 'test' if self.is_test else 'train'
             if idx < current_idx + len(task[split]):
                 sample = task[split][idx - current_idx]
+                logger.debug(f"Sample index: {idx}")
+                logger.debug(f"Sample input type: {type(sample['input'])}")
+                logger.debug(f"Sample output type: {type(sample['output'])}")
                 input_grid = self._preprocess_grid(sample["input"])
                 output_grid = self._preprocess_grid(sample["output"])
                 logger.debug(f"Returning input shape: {input_grid.shape}, output shape: {output_grid.shape}")
@@ -362,27 +365,36 @@ class ARCDataset(Dataset):
                     symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
         return symbol_counts / symbol_counts.sum()
     
-    def _preprocess_grid(self, grid: Union[dict, np.ndarray]) -> torch.Tensor:
+    def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
+        logger.debug(f"Grid type: {type(grid)}")
+    
         if isinstance(grid, dict):
             input_grid = np.array(grid['input'])
-            logger.debug(f"Original grid shape: {input_grid.shape}")
-            logger.debug(f"Original grid content:\n{input_grid}")
+        elif isinstance(grid, list):
+            input_grid = np.array(grid)
         elif isinstance(grid, np.ndarray):
             input_grid = grid
-            logger.debug(f"Original grid shape: {input_grid.shape}")
-            logger.debug(f"Original grid content:\n{input_grid}")
+        elif isinstance(grid, torch.Tensor):
+            input_grid = grid.numpy()
         else:
             raise ValueError(f"Unexpected grid type: {type(grid)}")
-
+    
+        logger.debug(f"Input grid shape before processing: {input_grid.shape}")
+    
+        # Ensure input_grid is 2D
+        if input_grid.ndim > 2:
+            input_grid = np.squeeze(input_grid)
+            logger.debug(f"Input grid shape after squeezing: {input_grid.shape}")
+    
         # Pad the grid to 30x30
         padded_grid = self._pad_grid(input_grid, height=30, width=30)
-
+    
         # Convert to tensor and add channel dimension
         grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
-
+    
         logger.debug(f"Preprocessed grid shape: {grid_tensor.shape}")
         logger.debug(f"Preprocessed grid content:\n{grid_tensor}")
-
+    
         return grid_tensor
     def kronecker_scale(self, X, target_height=30, target_width=30):
         print(f"Kronecker scaling input shape: {X.shape}")
