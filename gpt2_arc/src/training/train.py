@@ -199,14 +199,14 @@ def main(args):
         logger.info("Running model evaluation")
         test_results = pl_trainer.test(trainer)
         if test_results:
-            avg_test_loss = sum(result['test_loss'] for result in test_results) / len(test_results)
-            avg_test_accuracy = sum(result['test_accuracy'] for result in test_results) / len(test_results)
-            avg_test_diff_accuracy = sum(result['test_diff_accuracy'] for result in test_results) / len(test_results)
+            avg_test_loss = sum(result['avg_test_loss'] for result in test_results) / len(test_results)
+            avg_test_accuracy = sum(result['avg_test_accuracy'] for result in test_results) / len(test_results)
+            avg_test_diff_accuracy = sum(result['avg_test_diff_accuracy'] for result in test_results) / len(test_results)
 
             logger.info(f"Test results - Loss: {avg_test_loss}, Accuracy: {avg_test_accuracy}, Diff Accuracy: {avg_test_diff_accuracy}")
 
             results = {
-                "test_loss": avg_test_loss,
+                "avg_test_loss": avg_test_loss,
                 "avg_test_accuracy": avg_test_accuracy,
                 "avg_test_diff_accuracy": avg_test_diff_accuracy,
             }
