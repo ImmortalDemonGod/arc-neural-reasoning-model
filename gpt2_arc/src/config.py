@@ -20,6 +20,8 @@ class TrainingConfig:
     max_epochs: int = 10
     use_gpu: bool = True
     log_level: str = "INFO"
+    use_synthetic_data: bool = False
+    synthetic_data_path: Optional[str] = None
 
 @dataclass
 class EvaluationConfig:

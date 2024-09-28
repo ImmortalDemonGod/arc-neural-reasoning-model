@@ -19,6 +19,7 @@ class ResultsCollector:
             "validation": {},
             "test": {}
         }
+        self.used_synthetic_data = config.training.use_synthetic_data
         print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
         self._log_results_type("After initialization")
         self.metrics = {}
@@ -93,7 +94,8 @@ class ResultsCollector:
                 "metrics": self.metrics,
                 "task_specific_results": self.task_specific_results,
                 "environment": self.environment,
-                "checkpoint_path": self.checkpoint_path
+                "checkpoint_path": self.checkpoint_path,
+                "used_synthetic_data": self.used_synthetic_data
             }
             with open(filepath, 'w') as f:
                 json.dump(data, f, indent=2)

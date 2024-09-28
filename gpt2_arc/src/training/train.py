@@ -75,9 +75,15 @@ def main(args):
 
         # Load data
         logger.info("Loading data")
-        train_set, eval_set = arckit.load_data()
-        train_data = ARCDataset(train_set)
-        val_data = ARCDataset(eval_set)
+        if args.use_synthetic_data:
+            if not args.synthetic_data_path:
+                raise ValueError("Synthetic data path not provided")
+            train_data = ARCDataset(args.synthetic_data_path)
+            val_data = ARCDataset(args.synthetic_data_path, is_test=True)
+        else:
+            train_set, eval_set = arckit.load_data()
+            train_data = ARCDataset(train_set)
+            val_data = ARCDataset(eval_set)
         logger.debug(f"Train data size: {len(train_data)}, Validation data size: {len(val_data)}")
 
         # Initialize model
@@ -261,6 +267,53 @@ if __name__ == "__main__":
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
     parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
     parser.add_argument("--run-name", type=str, default="default_run", help="Name of the run for saving results")
+    parser.add_argument("--use-synthetic-data", action="store_true", help="Use synthetic data for training")
+    parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
     
     args = parser.parse_args()
     main(args)
+
+def test_synthetic_data_loading(tmp_path):
+    # Create a temporary synthetic dataset
+    synthetic_data_path = tmp_path / "synthetic_data"
+    synthetic_data_path.mkdir()
+    with open(synthetic_data_path / "task1.json", "w") as f:
+        json.dump({
+            "train": [{"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]}],
+            "test": [{"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]}]
+        }, f)
+
+    # Mock command-line arguments
+    args = argparse.Namespace(
+        use_synthetic_data=True,
+        synthetic_data_path=str(synthetic_data_path),
+        batch_size=32,
+        learning_rate=1e-4,
+        max_epochs=1,
+        use_gpu=False,
+        no_logging=True,
+        no_checkpointing=True,
+        no_progress_bar=True,
+        fast_dev_run=True,
+        project="test_project"
+    )
+
+    # Run main function with synthetic data
+    with patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer:
+        main(args)
+        mock_trainer.assert_called_once()
+
+def test_synthetic_data_argument_parsing():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--use-synthetic-data", action="store_true")
+    parser.add_argument("--synthetic-data-path", type=str)
+
+    # Test with synthetic data
+    args = parser.parse_args(["--use-synthetic-data", "--synthetic-data-path", "/path/to/data"])
+    assert args.use_synthetic_data
+    assert args.synthetic_data_path == "/path/to/data"
+
+    # Test without synthetic data
+    args = parser.parse_args([])
+    assert not args.use_synthetic_data
+    assert args.synthetic_data_path is None
