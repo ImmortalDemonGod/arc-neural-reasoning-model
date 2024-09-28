@@ -273,47 +273,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args)
 
-def test_synthetic_data_loading(tmp_path):
-    # Create a temporary synthetic dataset
-    synthetic_data_path = tmp_path / "synthetic_data"
-    synthetic_data_path.mkdir()
-    with open(synthetic_data_path / "task1.json", "w") as f:
-        json.dump({
-            "train": [{"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]}],
-            "test": [{"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]}]
-        }, f)
-
-    # Mock command-line arguments
-    args = argparse.Namespace(
-        use_synthetic_data=True,
-        synthetic_data_path=str(synthetic_data_path),
-        batch_size=32,
-        learning_rate=1e-4,
-        max_epochs=1,
-        use_gpu=False,
-        no_logging=True,
-        no_checkpointing=True,
-        no_progress_bar=True,
-        fast_dev_run=True,
-        project="test_project"
-    )
-
-    # Run main function with synthetic data
-    with patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer:
-        main(args)
-        mock_trainer.assert_called_once()
-
-def test_synthetic_data_argument_parsing():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--use-synthetic-data", action="store_true")
-    parser.add_argument("--synthetic-data-path", type=str)
-
-    # Test with synthetic data
-    args = parser.parse_args(["--use-synthetic-data", "--synthetic-data-path", "/path/to/data"])
-    assert args.use_synthetic_data
-    assert args.synthetic_data_path == "/path/to/data"
-
-    # Test without synthetic data
-    args = parser.parse_args([])
-    assert not args.use_synthetic_data
-    assert args.synthetic_data_path is None
+# Synthetic data tests have been moved to gpt2_arc/tests/test_synthetic_data.py
