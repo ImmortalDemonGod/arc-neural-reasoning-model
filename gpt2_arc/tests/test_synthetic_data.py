@@ -6,6 +6,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.training.train import main
+import torch
 
 @pytest.fixture
 def synthetic_data():
@@ -27,6 +28,28 @@ def test_synthetic_data_loading(synthetic_data):
     assert len(sample) == 3  # input, output, task_id
     assert sample[0].shape == (1, 2, 2)  # Assuming 2x2 grid
     assert sample[1].shape == (1, 2, 2)
+
+def test_short_training_run(synthetic_data):
+    args = MagicMock()
+    args.use_synthetic_data = True
+    args.synthetic_data_path = synthetic_data
+    args.max_epochs = 1
+    args.fast_dev_run = True
+    args.use_gpu = torch.cuda.is_available()
+    args.no_logging = True
+    args.no_checkpointing = True
+    args.no_progress_bar = True
+    args.project = "test_project"
+    args.log_level = "DEBUG"
+    args.batch_size = 1
+    args.learning_rate = 1e-4
+    args.n_embd = 32
+    args.n_head = 2
+    args.n_layer = 2
+
+    with patch("gpt2_arc.src.training.train.pl.Trainer") as mock_pl_trainer:
+        main(args)
+        mock_pl_trainer.assert_called_once()
 
 @pytest.mark.parametrize("use_synthetic", [True, False])
 def test_main_with_synthetic_data(synthetic_data, use_synthetic):
