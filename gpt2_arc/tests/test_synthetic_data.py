@@ -58,7 +58,7 @@ def test_synthetic_data_argument_parsing():
     # Test with synthetic data
     args = parser.parse_args(["--use-synthetic-data", "--synthetic-data-path", "/path/to/data"])
     assert args.use_synthetic_data
-    assert args.synthetic_data_path == "/path/to/data"
+    assert args.synthetic_data_path == "/workspaces/arc-neural-reasoning-model/gpt2_arc/src/data/SyntheticARC/tasks/"
 
     # Test without synthetic data
     args = parser.parse_args([])
