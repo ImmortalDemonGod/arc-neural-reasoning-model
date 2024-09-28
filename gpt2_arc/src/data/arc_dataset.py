@@ -236,6 +236,11 @@ class ARCDataset(Dataset):
         input_grid = torch.tensor(example["input"], dtype=torch.float32).unsqueeze(0)
         output_grid = torch.tensor(example["output"], dtype=torch.float32).unsqueeze(0)
         return {"input": input_grid, "output": output_grid}
+
+    def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
+        print(f"DEBUG: Inside _process_single_task, self.test_split is: {self.test_split}")
+        logger.debug(f"Inside _process_single_task, test_split is: {self.test_split}")
+        if isinstance(task_data, dict):
             train_examples = task_data.get("train", [])
             test_examples = task_data.get("test", [])
         elif isinstance(task_data, list):
