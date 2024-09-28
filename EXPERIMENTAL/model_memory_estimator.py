@@ -1,6 +1,7 @@
 import torch
 import math
 import psutil
+import argparse
 
 def calculate_params(n_layers, n_heads, d_model):
     return n_layers * (12 * d_model * d_model + 13 * d_model) + d_model * 10
@@ -39,7 +40,7 @@ def get_device_info():
 def can_fit_model(estimated_memory, available_memory, threshold=0.9):
     return estimated_memory < available_memory * threshold
 
-def test_model_configurations():
+def estimate_single_configuration(n_layers, n_heads, d_model, batch_size, seq_length):
     device_info = get_device_info()
     available_memory = get_available_memory()
     
@@ -48,26 +49,36 @@ def test_model_configurations():
         print(f"  {key}: {value}")
     print(f"Available memory: {available_memory:.2f} GB")
 
-    configurations = [
-        {"n_layers": 113, "n_heads": 64, "d_model": 4096, "batch_size": 32, "seq_length": 1024},
-        {"n_layers": 96, "n_heads": 32, "d_model": 2048, "batch_size": 64, "seq_length": 512},
-        {"n_layers": 48, "n_heads": 16, "d_model": 1024, "batch_size": 128, "seq_length": 256},
-    ]
+    total_params = calculate_params(n_layers, n_heads, d_model)
+    estimated_memory = estimate_memory_usage(total_params, batch_size, seq_length, d_model)
+    
+    print(f"\nConfiguration:")
+    print(f"  n_layers: {n_layers}")
+    print(f"  n_heads: {n_heads}")
+    print(f"  d_model: {d_model}")
+    print(f"  batch_size: {batch_size}")
+    print(f"  seq_length: {seq_length}")
+    print(f"Total parameters: {total_params:,}")
+    print(f"Estimated memory usage: {estimated_memory:.2f} GB")
+    
+    if can_fit_model(estimated_memory, available_memory):
+        print(f"Model should fit in {device_info['device']} memory.")
+    else:
+        print(f"Warning: Model may be too large for available {device_info['device']} memory!")
+    
+    print(f"Memory utilization: {(estimated_memory / available_memory) * 100:.2f}%")
 
-    for config in configurations:
-        total_params = calculate_params(config["n_layers"], config["n_heads"], config["d_model"])
-        estimated_memory = estimate_memory_usage(total_params, config["batch_size"], config["seq_length"], config["d_model"])
-        
-        print(f"\nConfiguration: {config}")
-        print(f"Total parameters: {total_params:,}")
-        print(f"Estimated memory usage: {estimated_memory:.2f} GB")
-        
-        if can_fit_model(estimated_memory, available_memory):
-            print(f"Model should fit in {device_info['device']} memory.")
-        else:
-            print(f"Warning: Model may be too large for available {device_info['device']} memory!")
-        
-        print(f"Memory utilization: {(estimated_memory / available_memory) * 100:.2f}%")
+def main():
+    parser = argparse.ArgumentParser(description="Estimate memory usage for a transformer model configuration.")
+    parser.add_argument("--n_layers", type=int, required=True, help="Number of layers in the model")
+    parser.add_argument("--n_heads", type=int, required=True, help="Number of attention heads")
+    parser.add_argument("--d_model", type=int, required=True, help="Dimension of the model")
+    parser.add_argument("--batch_size", type=int, required=True, help="Batch size for training")
+    parser.add_argument("--seq_length", type=int, required=True, help="Sequence length for input")
+    
+    args = parser.parse_args()
+    
+    estimate_single_configuration(args.n_layers, args.n_heads, args.d_model, args.batch_size, args.seq_length)
 
 if __name__ == "__main__":
-    test_model_configurations()
+    main()
