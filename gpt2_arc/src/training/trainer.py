@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class ARCTrainer(pl.LightningModule):
-    def __init__(self, model, train_dataset, val_dataset, config: Config):
+    def __init__(self, model, train_dataset, val_dataset, config: Config, results_collector=None):
         super().__init__()
         self.model = model
         self.train_dataset = train_dataset
@@ -33,7 +33,7 @@ class ARCTrainer(pl.LightningModule):
         self.test_results = []  # Initialize test results for storing test outcomes
         self.best_val_loss = float('inf')
         self.best_epoch = 0
-        self.results_collector = ResultsCollector(config)
+        self.results_collector = results_collector if results_collector else ResultsCollector(config)
         self.writer = SummaryWriter(f"runs/experiment_{self.results_collector.experiment_id}")
 
     def get_tensorboard_logger(self):
