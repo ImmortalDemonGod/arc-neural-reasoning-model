@@ -49,11 +49,11 @@ class ARCDataset(Dataset):
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
-        print("DEBUG: Starting ARCDataset initialization")
-        print(f"DEBUG: data_source type: {type(data_source)}")
-        print(f"DEBUG: data_source content: {data_source}")
+        logger.debug("Starting ARCDataset initialization")
+        logger.debug(f"data_source type: {type(data_source)}")
+        logger.debug(f"data_source content: {data_source}")
         logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
-        print(f"DEBUG: self.test_split is set to: {self.test_split}")
+        logger.debug(f"self.test_split is set to: {self.test_split}")
         set_debug_mode(debug)  # Set debug mode based on parameter
         # Add logging to verify task_id presence
         if isinstance(data_source, list):
