@@ -277,6 +277,7 @@ if __name__ == "__main__":
     parser.add_argument("--run-name", type=str, default="default_run", help="Name of the run for saving results")
     parser.add_argument("--use-synthetic-data", action="store_true", help="Use synthetic data for training")
     parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
+    parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
     
     args = parser.parse_args()
     main(args)
