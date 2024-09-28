@@ -40,8 +40,12 @@ def test_main_with_synthetic_data(synthetic_data, use_synthetic):
     args.no_checkpointing = True
     args.no_progress_bar = True
     args.project = "test_project"
+    args.log_level = "INFO"
 
-    with patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer:
+    with patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
+         patch("gpt2_arc.src.training.train.ARCDataset") as mock_dataset, \
+         patch("gpt2_arc.src.training.train.GPT2ARC") as mock_model, \
+         patch("gpt2_arc.src.training.train.ARCTrainer") as mock_trainer:
         main(args)
         mock_trainer.assert_called_once()
 
