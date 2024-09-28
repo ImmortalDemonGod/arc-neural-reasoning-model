@@ -93,23 +93,23 @@ class ARCDataset(Dataset):
         if self.data:
             print(f"DEBUG: First item keys: {self.data[0].keys()}")
             if 'train' in self.data[0]:
-                print(f"DEBUG: First train item: {self.data[0]['train'][0] if self.data[0]['train'] else 'No train data'}")
+                train_data = self.data[0]['train']
+                if isinstance(train_data, torch.Tensor):
+                    print(f"DEBUG: First train item (tensor): {train_data}")
+                    print(f"DEBUG: First train item shape: {train_data.shape}")
+                elif isinstance(train_data, list) and train_data:
+                    print(f"DEBUG: First train item: {train_data[0]}")
+                    if isinstance(train_data[0], dict):
+                        print(f"DEBUG: First train input shape: {np.array(train_data[0]['input']).shape}")
+                    else:
+                        print(f"DEBUG: Unexpected train data type: {type(train_data[0])}")
+                else:
+                    print(f"DEBUG: Unexpected train data type: {type(train_data)}")
+            else:
+                print("DEBUG: No 'train' key in first item")
+
         logger.debug(f"Number of tasks: {len(self.data)}")
         logger.debug(f"First task structure: {self.data[0].keys()}")
-        if self.data and 'train' in self.data[0] and self.data[0]['train']:
-            first_train_sample = self.data[0]['train'][0]
-            if isinstance(first_train_sample, dict):
-                logger.debug(f"First train sample structure: {first_train_sample.keys()}")
-            else:
-                logger.debug(f"First train sample is not a dict. Type: {type(first_train_sample)}, Content: {first_train_sample}")
-        else:
-            logger.debug("No train samples found in first task")
-        logger.debug(f"First train input shape: {np.array(self.data[0]['train'][0]['input']).shape}")
-        self.is_test = is_test
-        self.num_symbols = num_symbols
-        self.test_split = test_split
-        logger.debug(f"test_split set to: {self.test_split}")
-        self.test_split = test_split
         self.samples = self._process_arckit_data(data_source) if TaskSet is not None and isinstance(data_source, TaskSet) else []
         
         print(f"Number of train samples: {sum(len(task['train']) for task in self.data)}")
