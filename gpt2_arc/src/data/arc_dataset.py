@@ -232,6 +232,24 @@ class ARCDataset(Dataset):
             "test": [self._preprocess_grid(example) for example in test_examples]
         }
 
+    def _preprocess_grid(self, example: Dict) -> Dict:
+        input_grid = torch.tensor(example["input"], dtype=torch.float32).unsqueeze(0)
+        output_grid = torch.tensor(example["output"], dtype=torch.float32).unsqueeze(0)
+        return {"input": input_grid, "output": output_grid}
+            train_examples = task_data.get("train", [])
+            test_examples = task_data.get("test", [])
+        elif isinstance(task_data, list):
+            split_idx = int(len(task_data) * (1 - self.test_split))
+            train_examples = task_data[:split_idx]
+            test_examples = task_data[split_idx:]
+        else:
+            raise ValueError("Task data must be either a dictionary or a list")
+
+        return {
+            "train": [self._preprocess_grid(example) for example in train_examples],
+            "test": [self._preprocess_grid(example) for example in test_examples]
+        }
+
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         processed_data = []
         logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
