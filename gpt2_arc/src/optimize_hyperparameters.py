@@ -10,6 +10,12 @@ import numpy as np
 from pytorch_lightning.utilities.model_summary import ModelSummary
 from optuna.pruners import MedianPruner
 from pytorch_lightning.loggers import TensorBoardLogger
+from gpt2_arc.src.utils.model_memory_estimator import (
+    estimate_memory_usage,
+    get_available_memory,
+    can_fit_model,
+    calculate_params
+)
 
 class CustomPruningCallback(pl.Callback):
     def __init__(self, trial, monitor="val_loss"):
@@ -74,17 +80,29 @@ def objective(trial):
         # Validate hyperparameters
         validate_hyperparameters(n_embd, n_head, n_layer)
 
+        # Suggest training hyperparameters
+        batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
+        learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
+        max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
+
+        # Check if the model will fit in memory
+        total_params = calculate_params(n_layer, n_head, n_embd)
+        estimated_memory = estimate_memory_usage(total_params, batch_size, 30, 30, n_embd)  # Using 30x30 input
+        available_memory = get_available_memory()
+
+        logger.info(f"Trial {trial.number}: Estimated memory usage: {estimated_memory:.2f} GB")
+        logger.info(f"Trial {trial.number}: Available memory: {available_memory:.2f} GB")
+
+        if not can_fit_model(estimated_memory, available_memory):
+            logger.warning(f"Trial {trial.number}: Model too large for available memory. Skipping.")
+            raise optuna.exceptions.TrialPruned()
+
         model_config = ModelConfig(
             n_embd=n_embd,
             n_head=n_head,
             n_layer=n_layer
         )
         logger.debug(f"Model config: {model_config}")
-
-        # Suggest training hyperparameters
-        batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
-        learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
-        max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
 
         training_config = TrainingConfig(
             batch_size=batch_size,
@@ -93,6 +111,8 @@ def objective(trial):
         )
 
         config = Config(model=model_config, training=training_config)
+        config.estimated_memory = estimated_memory
+        config.available_memory = available_memory
         logger.debug(f"Full config: {config}")
 
         # Load data
