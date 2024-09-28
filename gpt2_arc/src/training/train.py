@@ -41,6 +41,10 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
         checkpoint['model_config'] = self.config.model.__dict__
 
 def main(args):
+    # Set logging level
+    log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'INFO', logging.DEBUG)
+    logger.setLevel(log_level)
+    
     logger.info("Starting main function")
     logger.debug(f"Command line arguments: {args}")
 
