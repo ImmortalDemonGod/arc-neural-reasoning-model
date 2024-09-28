@@ -47,6 +47,7 @@ class ARCDataset(Dataset):
         debug=False,
     ):
         self.test_split = test_split
+        self.is_test = is_test
         print("DEBUG: Starting ARCDataset initialization")
         print(f"DEBUG: data_source type: {type(data_source)}")
         print(f"DEBUG: data_source content: {data_source}")
