@@ -85,7 +85,14 @@ def main(args):
             )
         else:
             logger.info("Using provided or default hyperparameters")
-            model_config = ModelConfig(n_embd=args.n_embd, n_head=args.n_head, n_layer=args.n_layer)
+            model_config = ModelConfig(
+                n_embd=args.n_embd,
+                n_head=args.n_head,
+                n_layer=args.n_layer,
+                mamba_ratio=args.mamba_ratio,
+                d_state=args.d_state,
+                d_conv=args.d_conv
+            )
             training_config = TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs)
         
         config = Config(model=model_config, training=training_config)
@@ -270,6 +277,9 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=16, help="Batch size for training")
     parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
+    parser.add_argument("--mamba-ratio", type=int, default=0, help="Number of Mamba layers per Transformer layer")
+    parser.add_argument("--d-state", type=int, default=16, help="Mamba state dimension")
+    parser.add_argument("--d-conv", type=int, default=4, help="Mamba convolution dimension")
     parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
     parser.add_argument("--no-logging", action="store_true", help="Disable logging")
     parser.add_argument("--no-checkpointing", action="store_true", help="Disable checkpointing")
