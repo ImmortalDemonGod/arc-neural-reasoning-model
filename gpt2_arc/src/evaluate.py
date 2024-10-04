@@ -109,19 +109,17 @@ def save_results(results, individual_metrics, output_dir, model_name, model_summ
     return output_path
 
 def main(args):
-    # Retrieve WANDB API key from environment variable
-    api_key = os.getenv("WANDB_API_KEY")
-    if api_key:
-        # Log in to Weights & Biases programmatically
-        wandb.login(key=api_key)
+    if args.use_wandb:
+        api_key = os.getenv("WANDB_API_KEY")
+        if api_key:
+            wandb.login(key=api_key)
+            wandb.init(project=args.wandb_project, name=args.wandb_run_name)
+        else:
+            print("WARNING: WANDB_API_KEY not found in environment variables.")
+            print("Weights & Biases logging is disabled.")
+            args.use_wandb = False
     else:
-        # Handle missing API key (e.g., skip wandb initialization or exit)
-        print("ERROR: WANDB_API_KEY not found in environment variables.")
-        print("Please set the WANDB_API_KEY environment variable.")
-        sys.exit(1)  # Exit the script if the API key is required
-
-    # Initialize wandb after successful login
-    wandb.init(project=args.wandb_project, name=args.wandb_run_name)
+        print("Weights & Biases logging is disabled.")
 
     # Load the test data using arckit
     _, test_set = arckit.load_data()
@@ -228,33 +226,34 @@ def main(args):
         print(f"complete_task_accuracy: {results['complete_task_accuracy']}")
         wandb.log({"eval/complete_task_accuracy": results['complete_task_accuracy']})
 
-    # Log individual task metrics
-    for task_id, metrics in individual_metrics.items():
-        # Ensure metrics are not already floats
-        if isinstance(metrics['test_accuracy'], list):
-            metrics['test_accuracy'] = sum(metrics['test_accuracy']) / len(metrics['test_accuracy'])
-        if isinstance(metrics['test_diff_accuracy'], list):
-            metrics['test_diff_accuracy'] = sum(metrics['test_diff_accuracy']) / len(metrics['test_diff_accuracy'])
-        logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
-    # Use the sanitized model_name
-    results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
+    if args.use_wandb:
+        # Log individual task metrics
+        for task_id, metrics in individual_metrics.items():
+            # Ensure metrics are not already floats
+            if isinstance(metrics['test_accuracy'], list):
+                metrics['test_accuracy'] = sum(metrics['test_accuracy']) / len(metrics['test_accuracy'])
+            if isinstance(metrics['test_diff_accuracy'], list):
+                metrics['test_diff_accuracy'] = sum(metrics['test_diff_accuracy']) / len(metrics['test_diff_accuracy'])
+            logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
+        # Use the sanitized model_name
+        results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
 
-    # Debugging statements before Artifact creation
-    logger.debug(f"Creating wandb Artifact with name: {model_name}")
-    print(f"DEBUG: Creating wandb Artifact with name: {model_name}")
+        # Debugging statements before Artifact creation
+        logger.debug(f"Creating wandb Artifact with name: {model_name}")
+        print(f"DEBUG: Creating wandb Artifact with name: {model_name}")
 
-    try:
-        artifact = wandb.Artifact(name=model_name, type='evaluation')
-        artifact.add_file(results_path)
-        wandb.log_artifact(artifact)
-        logger.debug("Artifact created and logged successfully.")
-        print("DEBUG: Artifact created and logged successfully.")
-    except ValueError as ve:
-        logger.error(f"Failed to create wandb Artifact: {ve}")
-        print(f"ERROR: Failed to create wandb Artifact: {ve}")
-        raise ve
+        try:
+            artifact = wandb.Artifact(name=model_name, type='evaluation')
+            artifact.add_file(results_path)
+            wandb.log_artifact(artifact)
+            logger.debug("Artifact created and logged successfully.")
+            print("DEBUG: Artifact created and logged successfully.")
+        except ValueError as ve:
+            logger.error(f"Failed to create wandb Artifact: {ve}")
+            print(f"ERROR: Failed to create wandb Artifact: {ve}")
+            raise ve
 
-    wandb.finish()
+        wandb.finish()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate the ARC Neural Reasoning Model")
@@ -265,6 +264,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_project", type=str, default="arc-evaluation", help="Weights & Biases project name")
     parser.add_argument("--wandb_run_name", type=str, default=None, help="Weights & Biases run name")
 
+    parser.add_argument("--use_wandb", action='store_true', help="Use Weights & Biases for logging")
     args = parser.parse_args()
 
     # Create output directory if it doesn't exist
