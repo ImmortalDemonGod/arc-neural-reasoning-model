@@ -12,11 +12,11 @@ from optuna.pruners import PercentilePruner
 from optuna.samplers import TPESampler
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
-from utils.model_memory_estimator import (
+from gpt2_arc.src.utils.model_memory_estimator import (
+    calculate_params,
     estimate_memory_usage,
     get_available_memory,
-    can_fit_model,
-    calculate_params
+    can_fit_model
 )
 
 class CustomPruningCallback(pl.Callback):
@@ -53,7 +53,8 @@ logger = logging.getLogger(__name__)
 
 def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv):
     """Validate that hyperparameters meet necessary constraints."""
-    logger.debug(f"Validating hyperparameters: n_embd={n_embd}, n_head={n_head}, n_layer={n_layer}")
+    logger.debug(f"Validating hyperparameters: n_embd={n_embd}, n_head={n_head}, n_layer={n_layer}, "
+                 f"mamba_ratio={mamba_ratio}, d_state={d_state}, d_conv={d_conv}")
     assert n_embd % n_head == 0, f"n_embd ({n_embd}) must be divisible by n_head ({n_head})"
     assert n_embd >= n_head, f"n_embd ({n_embd}) must be greater than or equal to n_head ({n_head})"
     assert n_layer > 0, f"n_layer ({n_layer}) must be positive"
@@ -100,8 +101,21 @@ def objective(trial):
         total_layers = n_layer + n_layer * mamba_ratio
 
         # Recalculate total parameters based on total_layers
-        total_params = calculate_params(total_layers, n_head, n_embd)
-        estimated_memory = estimate_memory_usage(total_params, batch_size, 30, 30, n_embd)  # Using 30x30 input
+        total_params = calculate_params(
+            n_layers=total_layers,
+            n_heads=n_head,
+            d_model=n_embd,
+            mamba_ratio=mamba_ratio,
+            d_state=d_state,
+            d_conv=d_conv
+        )
+        estimated_memory = estimate_memory_usage(
+            total_params=total_params,
+            batch_size=batch_size,
+            height=30,  # Adjust as necessary based on your data
+            width=30,   # Adjust as necessary
+            d_model=n_embd
+        )
         available_memory = get_available_memory()
 
         logger.info(f"Trial {trial.number}: Estimated memory usage: {estimated_memory:.2f} GB")
@@ -131,6 +145,9 @@ def objective(trial):
         config.estimated_memory = estimated_memory
         config.available_memory = available_memory
         logger.debug(f"Suggested Mamba parameters - mamba_ratio: {mamba_ratio}, d_state: {d_state}, d_conv: {d_conv}")
+        trial.set_user_attr("mamba_ratio", mamba_ratio)
+        trial.set_user_attr("d_state", d_state)
+        trial.set_user_attr("d_conv", d_conv)
         logger.debug(f"Full config: {config}")
 
         # Load data
