@@ -86,9 +86,15 @@ class MambaLayer(nn.Module):
     def __init__(self, n_embd, d_state, d_conv, dropout):
         super().__init__()
         self.mamba_block = MambaBlock(
-            d_model=n_embd,
+            dim=n_embd,
+            dim_inner=n_embd * 2,  # Using default expand=2, so dim_inner = dim * expand
+            depth=1,               # You can adjust the depth as needed
             d_state=d_state,
             d_conv=d_conv,
+            expand=2,              # Default value
+            dt_rank="auto",        # Default value
+            conv_bias=True,        # Default value
+            bias=False,            # Default value
             dropout=dropout
         )
         self.layer_norm = nn.LayerNorm(n_embd)
