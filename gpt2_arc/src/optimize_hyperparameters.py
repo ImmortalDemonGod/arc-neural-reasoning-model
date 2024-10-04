@@ -46,6 +46,7 @@ from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.training.trainer import ARCTrainer
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 import arckit
+from gpt2_arc.src.utils.performance_metrics import calculate_mamba_efficiency
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -182,6 +183,15 @@ def objective(trial):
         print("DEBUG: Model summary:")
         print(model_summary)
 
+        # Calculate Mamba efficiency metrics
+        logger.debug("Calculating Mamba efficiency metrics")
+        sample_input = torch.randn(1, 1, 6, 6).to(device)
+        model.to(device)
+        mamba_metrics = calculate_mamba_efficiency(model, sample_input)
+        for key, value in mamba_metrics.items():
+            trial.set_user_attr(key, value)
+            logger.debug(f"Mamba metric - {key}: {value}")
+
         arc_trainer = ARCTrainer(model, train_data, val_data, config)
 
         # Set up PyTorch Lightning trainer with custom pruning callback
@@ -255,6 +265,12 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
         best_trial.set_user_attr("mamba_ratio", best_trial.params.get("mamba_ratio"))
         best_trial.set_user_attr("d_state", best_trial.params.get("d_state"))
         best_trial.set_user_attr("d_conv", best_trial.params.get("d_conv"))
+
+        logger.info("Best Mamba metrics:")
+        for key in ['mamba_forward_pass_time', 'mamba_params', 'mamba_params_ratio']:
+            value = study.best_trial.user_attrs.get(key)
+            if value is not None:
+                logger.info(f"  {key}: {value}")
 
         logger.info("Best hyperparameters:")
         for key, value in study.best_params.items():
