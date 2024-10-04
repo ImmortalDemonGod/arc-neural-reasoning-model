@@ -57,6 +57,9 @@ def validate_hyperparameters(n_embd, n_head, n_layer):
     assert n_embd % n_head == 0, f"n_embd ({n_embd}) must be divisible by n_head ({n_head})"
     assert n_embd >= n_head, f"n_embd ({n_embd}) must be greater than or equal to n_head ({n_head})"
     assert n_layer > 0, f"n_layer ({n_layer}) must be positive"
+    assert mamba_ratio >= 0, f"mamba_ratio ({mamba_ratio}) must be non-negative"
+    assert d_state > 0, f"d_state ({d_state}) must be positive"
+    assert d_conv > 0, f"d_conv ({d_conv}) must be positive"
     logger.debug("Hyperparameters validated successfully")
     return True
 
@@ -79,8 +82,13 @@ def objective(trial):
         n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
         logger.debug(f"Suggested n_layer: {n_layer}")
 
+        # Suggest Mamba-specific hyperparameters
+        mamba_ratio = trial.suggest_int("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max)
+        d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
+        d_conv = trial.suggest_int("d_conv", args.d_conv_min, args.d_conv_max)
+
         # Validate hyperparameters
-        validate_hyperparameters(n_embd, n_head, n_layer)
+        validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv)
 
         # Suggest training hyperparameters
         batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
@@ -88,7 +96,11 @@ def objective(trial):
         max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
 
         # Check if the model will fit in memory
-        total_params = calculate_params(n_layer, n_head, n_embd)
+        # Adjust the total number of layers to include Mamba layers
+        total_layers = n_layer + n_layer * mamba_ratio
+
+        # Recalculate total parameters based on total_layers
+        total_params = calculate_params(total_layers, n_head, n_embd)
         estimated_memory = estimate_memory_usage(total_params, batch_size, 30, 30, n_embd)  # Using 30x30 input
         available_memory = get_available_memory()
 
@@ -102,7 +114,10 @@ def objective(trial):
         model_config = ModelConfig(
             n_embd=n_embd,
             n_head=n_head,
-            n_layer=n_layer
+            n_layer=n_layer,
+            mamba_ratio=mamba_ratio,
+            d_state=d_state,
+            d_conv=d_conv
         )
         logger.debug(f"Model config: {model_config}")
 
@@ -115,6 +130,7 @@ def objective(trial):
         config = Config(model=model_config, training=training_config)
         config.estimated_memory = estimated_memory
         config.available_memory = available_memory
+        logger.debug(f"Suggested Mamba parameters - mamba_ratio: {mamba_ratio}, d_state: {d_state}, d_conv: {d_conv}")
         logger.debug(f"Full config: {config}")
 
         # Load data
@@ -245,6 +261,13 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate_max", type=float, default=1e-2, help="Maximum value for learning_rate")
     parser.add_argument("--max_epochs_min", type=int, default=1, help="Minimum value for max_epochs")
     parser.add_argument("--max_epochs_max", type=int, default=20, help="Maximum value for max_epochs")
+
+    parser.add_argument("--mamba_ratio_min", type=int, default=0, help="Minimum value for mamba_ratio")
+    parser.add_argument("--mamba_ratio_max", type=int, default=2, help="Maximum value for mamba_ratio")
+    parser.add_argument("--d_state_min", type=int, default=16, help="Minimum value for d_state")
+    parser.add_argument("--d_state_max", type=int, default=128, help="Maximum value for d_state")
+    parser.add_argument("--d_conv_min", type=int, default=4, help="Minimum value for d_conv")
+    parser.add_argument("--d_conv_max", type=int, default=32, help="Maximum value for d_conv")
 
     args = parser.parse_args()
 
