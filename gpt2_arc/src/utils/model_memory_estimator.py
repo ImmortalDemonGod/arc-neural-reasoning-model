@@ -88,11 +88,6 @@ import torch
 import math
 import psutil
 
-def calculate_params(n_layers, n_heads, d_model):
-    conv_params = 3 * 3 * 1 * d_model  # 3x3 conv, 1 input channel, d_model output channels
-    transformer_params = n_layers * (12 * d_model * d_model + 13 * d_model)
-    final_layer_params = d_model * 10  # Assuming 10 output classes
-    return conv_params + transformer_params + final_layer_params
 
 def estimate_memory_usage(total_params, batch_size, height, width, d_model, dtype_size=4):
     model_memory = total_params * dtype_size  # Model parameters
