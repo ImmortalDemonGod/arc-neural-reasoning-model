@@ -106,15 +106,7 @@ class MambaLayer(nn.Module):
         return output
 
 
-from dataclasses import dataclass
-from ..config import ModelConfig
-
-@dataclass
-class ModelConfig:
-    n_embd: int = 768
-    n_head: int = 12
-    n_layer: int = 12
-    dropout: float = 0.1
+from gpt2_arc.src.config import ModelConfig
 
 
 class GPT2ARC(pl.LightningModule):
