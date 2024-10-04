@@ -45,10 +45,10 @@ class Attention(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, n_embd):
+    def __init__(self, n_embd, dropout):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(n_embd, 4 * n_embd), nn.ReLU(), nn.Linear(4 * n_embd, n_embd)
+            nn.Linear(n_embd, 4 * n_embd), nn.ReLU(), nn.Dropout(dropout), nn.Linear(4 * n_embd, n_embd)
         )
         logger.debug(f"Initialized FeedForward with n_embd={n_embd}")
 
@@ -62,12 +62,13 @@ class FeedForward(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, n_embd, n_head):
+    def __init__(self, n_embd, n_head, dropout):
         super().__init__()
-        self.attention = Attention(n_embd, n_head)
-        self.feed_forward = FeedForward(n_embd)
+        self.attention = Attention(n_embd, n_head, dropout)
+        self.feed_forward = FeedForward(n_embd, dropout)
         self.ln1 = nn.LayerNorm(n_embd)
         self.ln2 = nn.LayerNorm(n_embd)
+        self.dropout = nn.Dropout(dropout)
         self.dropout = nn.Dropout(dropout)
         logger.debug(
             f"Initialized TransformerBlock with n_embd={n_embd}, n_head={n_head}"
@@ -86,6 +87,7 @@ class TransformerBlock(nn.Module):
 class MambaLayer(nn.Module):
     def __init__(self, n_embd, d_state, d_conv, dropout):
         super().__init__()
+        self.dropout = nn.Dropout(dropout)
         self.mamba_block = MambaBlock(
             dim=n_embd,
             depth=1,               # You can adjust the depth as needed
