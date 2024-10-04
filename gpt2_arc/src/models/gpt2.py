@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch import nn
 import torch.nn.init as init
+from zeta.nn import MambaBlock
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -79,6 +80,30 @@ class TransformerBlock(nn.Module):
         if not torch._dynamo.is_compiling():
             logger.debug(f"TransformerBlock output shape: {x.shape}")
         return x
+
+
+class MambaLayer(nn.Module):
+    def __init__(self, n_embd, d_state, d_conv, dropout):
+        super().__init__()
+        self.mamba_block = MambaBlock(
+            d_model=n_embd,
+            d_state=d_state,
+            d_conv=d_conv,
+            dropout=dropout
+        )
+        self.layer_norm = nn.LayerNorm(n_embd)
+        logger.debug(
+            f"Initialized MambaLayer with n_embd={n_embd}, d_state={d_state}, d_conv={d_conv}, dropout={dropout}"
+        )
+
+    def forward(self, x):
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"MambaLayer input shape: {x.shape}")
+        x_norm = self.layer_norm(x)
+        output = x + self.mamba_block(x_norm)
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"MambaLayer output shape: {output.shape}")
+        return output
 
 
 from dataclasses import dataclass
