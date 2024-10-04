@@ -7,7 +7,6 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch import nn
 import torch.nn.init as init
-from zeta.nn import MambaBlock
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
