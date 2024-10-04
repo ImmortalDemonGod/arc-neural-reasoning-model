@@ -125,12 +125,23 @@ class GPT2ARC(pl.LightningModule):
         self.config = config
         # Replace token embedding with a convolutional layer
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.n_embd, kernel_size=3, padding=1).to(torch.float32)
-        self.blocks = nn.ModuleList(
-            [
-                TransformerBlock(self.config.n_embd, self.config.n_head)
-                for _ in range(self.config.n_layer)
-            ]
-        )
+        # Initialize blocks with interleaved TransformerBlocks and MambaLayer(s)
+        self.blocks = nn.ModuleList()
+        for layer_idx in range(self.config.n_layer):
+            # Add a TransformerBlock
+            self.blocks.append(TransformerBlock(self.config.n_embd, self.config.n_head))
+            
+            # Add MambaLayer(s) according to mamba_ratio
+            for _ in range(self.config.mamba_ratio):
+                self.blocks.append(
+                    MambaLayer(
+                        n_embd=self.config.n_embd,
+                        d_state=self.config.d_state,
+                        d_conv=self.config.d_conv,
+                        dropout=self.config.dropout
+                    )
+                )
+            logger.debug(f"Layer {layer_idx + 1}: Added 1 TransformerBlock and {self.config.mamba_ratio} MambaLayer(s)")
         self.ln_f = nn.LayerNorm(self.config.n_embd)
         self.fc_out = nn.Linear(self.config.n_embd, num_classes)  # Add final linear layer
         
@@ -175,8 +186,13 @@ class GPT2ARC(pl.LightningModule):
         logger.debug(f"Reshaped for transformer blocks: {x.shape}")
 
         for i, block in enumerate(self.blocks):
-            x = block(x, attention_mask)
-            logger.debug(f"After block {i+1} shape: {x.shape}")
+            # Check if the block is a TransformerBlock or MambaLayer
+            if isinstance(block, TransformerBlock):
+                x = block(x, attention_mask)
+                logger.debug(f"After TransformerBlock {i + 1}: shape {x.shape}")
+            else:
+                x = block(x)
+                logger.debug(f"After MambaLayer {i + 1}: shape {x.shape}")
         
         x = self.ln_f(x)
         x = self.fc_out(x)  # Apply final linear layer
