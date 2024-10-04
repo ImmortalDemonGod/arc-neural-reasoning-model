@@ -87,7 +87,6 @@ class MambaLayer(nn.Module):
         super().__init__()
         self.mamba_block = MambaBlock(
             dim=n_embd,
-            dim_inner=n_embd * 2,  # Using default expand=2, so dim_inner = dim * expand
             depth=1,               # You can adjust the depth as needed
             d_state=d_state,
             d_conv=d_conv,
