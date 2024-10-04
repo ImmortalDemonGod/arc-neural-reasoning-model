@@ -21,6 +21,7 @@ class Attention(nn.Module):
         self.query = nn.Linear(n_embd, n_embd)
         self.value = nn.Linear(n_embd, n_embd)
         self.proj = nn.Linear(n_embd, n_embd)
+        self.dropout = nn.Dropout(dropout)  # Add this line
         logger.debug(f"Initialized Attention with n_embd={n_embd}, n_head={n_head}")
 
     def forward(self, x, mask=None):
@@ -35,6 +36,9 @@ class Attention(nn.Module):
         if mask is not None:
             att = att.masked_fill(mask[:, None, None, :] == 0, float("-inf"))
         att = F.softmax(att, dim=-1)
+
+        # Apply dropout to attention probabilities
+        att = self.dropout(att)  # Add this line
         y = att @ v
         y = y.transpose(1, 2).contiguous().view(B, T, C)
         output = self.proj(y)
