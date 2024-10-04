@@ -184,6 +184,7 @@ def objective(trial):
         print(model_summary)
 
         # Calculate Mamba efficiency metrics
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         logger.debug("Calculating Mamba efficiency metrics")
         sample_input = torch.randn(1, 1, 6, 6).to(device)
         model.to(device)
