@@ -1,11 +1,13 @@
 import unittest
 import torch
+import inspect
 from gpt2_arc.src.models.gpt2 import MambaLayer, GPT2ARC
 from gpt2_arc.src.config import ModelConfig
 
 class TestMambaLayer(unittest.TestCase):
     def test_mamba_layer_forward(self):
-        # Initialize MambaLayer with test parameters
+        # Print the __init__ method signature of MambaBlock
+        print(f"MambaBlock.__init__ signature: {inspect.signature(MambaBlock.__init__)}")
         n_embd = 64
         d_state = 16
         d_conv = 4
