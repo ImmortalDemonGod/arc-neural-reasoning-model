@@ -57,8 +57,7 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
         model.eval()
         checkpoint_used = True
         checkpoint_info = {
-            'checkpoint_path': model_checkpoint,
-            'config': checkpoint['config'],
+            'state_dict_keys': list(state_dict.keys())
             'state_dict_keys': list(checkpoint['state_dict'].keys())
         }
     run_id = str(uuid.uuid4())
