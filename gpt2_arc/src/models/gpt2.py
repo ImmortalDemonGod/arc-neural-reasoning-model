@@ -72,7 +72,6 @@ class TransformerBlock(nn.Module):
         self.ln1 = nn.LayerNorm(n_embd)
         self.ln2 = nn.LayerNorm(n_embd)
         self.dropout = nn.Dropout(dropout)
-        self.dropout = nn.Dropout(dropout)
         logger.debug(
             f"Initialized TransformerBlock with n_embd={n_embd}, n_head={n_head}"
         )
@@ -80,8 +79,15 @@ class TransformerBlock(nn.Module):
     def forward(self, x, mask=None):
         if not torch._dynamo.is_compiling():
             logger.debug(f"TransformerBlock input shape: {x.shape}")
-        x = x + self.attention(self.ln1(x), mask)
-        x = x + self.feed_forward(self.ln2(x))
+        # Attention sublayer with residual dropout
+        attn_output = self.attention(self.ln1(x), mask)
+        attn_output = self.dropout(attn_output)  # Apply dropout
+        x = x + attn_output
+
+        # Feed-forward sublayer with residual dropout
+        ff_output = self.feed_forward(self.ln2(x))
+        ff_output = self.dropout(ff_output)  # Apply dropout
+        x = x + ff_output
         if not torch._dynamo.is_compiling():
             logger.debug(f"TransformerBlock output shape: {x.shape}")
         return x
