@@ -12,7 +12,7 @@ from optuna.pruners import PercentilePruner
 from optuna.samplers import TPESampler
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
-from gpt2_arc.src.utils.model_memory_estimator import (
+from utils.model_memory_estimator import (
     calculate_params,
     estimate_memory_usage,
     get_available_memory,
