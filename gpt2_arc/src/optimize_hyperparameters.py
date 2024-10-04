@@ -59,7 +59,7 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
     assert n_embd % n_head == 0, f"n_embd ({n_embd}) must be divisible by n_head ({n_head})"
     assert n_embd >= n_head, f"n_embd ({n_embd}) must be greater than or equal to n_head ({n_head})"
     assert n_layer > 0, f"n_layer ({n_layer}) must be positive"
-    assert mamba_ratio >= 0, f"mamba_ratio ({mamba_ratio}) must be non-negative"
+    assert mamba_ratio >= 0.0, f"mamba_ratio ({mamba_ratio}) must be non-negative"
     assert d_state > 0, f"d_state ({d_state}) must be positive"
     assert d_conv > 0, f"d_conv ({d_conv}) must be positive"
     logger.debug("Hyperparameters validated successfully")
@@ -85,7 +85,7 @@ def objective(trial):
         logger.debug(f"Suggested n_layer: {n_layer}")
 
         # Suggest Mamba-specific hyperparameters
-        mamba_ratio = trial.suggest_int("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max)
+        mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
         d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
         d_conv = trial.suggest_int("d_conv", args.d_conv_min, args.d_conv_max)
 
@@ -99,7 +99,8 @@ def objective(trial):
 
         # Check if the model will fit in memory
         # Adjust the total number of layers to include Mamba layers
-        total_layers = n_layer + n_layer * mamba_ratio
+        total_mamba_layers = int(n_layer * mamba_ratio)
+        total_layers = n_layer + total_mamba_layers
 
         # Recalculate total parameters based on total_layers
         total_params = calculate_params(
@@ -311,8 +312,9 @@ if __name__ == "__main__":
     parser.add_argument("--max_epochs_min", type=int, default=1, help="Minimum value for max_epochs")
     parser.add_argument("--max_epochs_max", type=int, default=20, help="Maximum value for max_epochs")
 
-    parser.add_argument("--mamba_ratio_min", type=int, default=0, help="Minimum value for mamba_ratio")
-    parser.add_argument("--mamba_ratio_max", type=int, default=2, help="Maximum value for mamba_ratio")
+    parser.add_argument("--mamba_ratio_min", type=float, default=0.0, help="Minimum value for mamba_ratio")
+    parser.add_argument("--mamba_ratio_max", type=float, default=2.0, help="Maximum value for mamba_ratio")
+    parser.add_argument("--mamba_ratio_step", type=float, default=0.25, help="Step size for mamba_ratio")
     parser.add_argument("--d_state_min", type=int, default=16, help="Minimum value for d_state")
     parser.add_argument("--d_state_max", type=int, default=128, help="Maximum value for d_state")
     parser.add_argument("--d_conv_min", type=int, default=4, help="Minimum value for d_conv")

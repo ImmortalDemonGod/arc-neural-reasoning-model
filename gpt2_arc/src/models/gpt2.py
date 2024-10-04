@@ -127,12 +127,27 @@ class GPT2ARC(pl.LightningModule):
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.n_embd, kernel_size=3, padding=1).to(torch.float32)
         # Initialize blocks with interleaved TransformerBlocks and MambaLayer(s)
         self.blocks = nn.ModuleList()
-        for layer_idx in range(self.config.n_layer):
+        num_transformer_blocks = self.config.n_layer
+        total_mamba_layers = int(num_transformer_blocks * self.config.mamba_ratio)
+        
+        logger.debug(f"Total TransformerBlocks: {num_transformer_blocks}")
+        logger.debug(f"Total MambaLayers to add: {total_mamba_layers}")
+
+        # Distribute MambaLayers across TransformerBlocks
+        mamba_layer_positions = []
+        if total_mamba_layers > 0:
+            step = num_transformer_blocks / total_mamba_layers
+            mamba_layer_positions = [int(i * step) for i in range(total_mamba_layers)]
+
+        current_mamba_index = 0
+        for layer_idx in range(num_transformer_blocks):
             # Add a TransformerBlock
             self.blocks.append(TransformerBlock(self.config.n_embd, self.config.n_head, self.config.dropout))
-            
-            # Add MambaLayer(s) according to mamba_ratio
-            for _ in range(self.config.mamba_ratio):
+            logger.debug(f"Layer {len(self.blocks)}: Added TransformerBlock")
+
+            # Check if we should add a MambaLayer after this TransformerBlock
+            if current_mamba_index < len(mamba_layer_positions) and layer_idx == mamba_layer_positions[current_mamba_index]:
+                # Add a MambaLayer
                 self.blocks.append(
                     MambaLayer(
                         n_embd=self.config.n_embd,
@@ -141,7 +156,8 @@ class GPT2ARC(pl.LightningModule):
                         dropout=self.config.dropout
                     )
                 )
-            logger.debug(f"Layer {layer_idx + 1}: Added 1 TransformerBlock and {self.config.mamba_ratio} MambaLayer(s)")
+                logger.debug(f"Layer {len(self.blocks)}: Added MambaLayer after TransformerBlock {layer_idx + 1}")
+                current_mamba_index += 1
         self.ln_f = nn.LayerNorm(self.config.n_embd)
         self.fc_out = nn.Linear(self.config.n_embd, num_classes)  # Add final linear layer
         
