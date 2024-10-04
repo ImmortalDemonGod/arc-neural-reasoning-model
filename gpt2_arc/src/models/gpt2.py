@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Attention(nn.Module):
-    def __init__(self, n_embd, n_head):
+    def __init__(self, n_embd, n_head, dropout):
         super().__init__()
         self.n_head = n_head
         self.n_embd = n_embd
@@ -127,7 +127,7 @@ class GPT2ARC(pl.LightningModule):
         self.blocks = nn.ModuleList()
         for layer_idx in range(self.config.n_layer):
             # Add a TransformerBlock
-            self.blocks.append(TransformerBlock(self.config.n_embd, self.config.n_head))
+            self.blocks.append(TransformerBlock(self.config.n_embd, self.config.n_head, self.config.dropout))
             
             # Add MambaLayer(s) according to mamba_ratio
             for _ in range(self.config.mamba_ratio):
