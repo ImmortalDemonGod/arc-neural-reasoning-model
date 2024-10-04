@@ -255,10 +255,10 @@ def main(args):
         if 'CUDA out of memory' in str(e):
             logger.error("CUDA out of memory error occurred.")
             logger.error("Consider reducing the batch size or model complexity.")
-            raise
+            raise RuntimeError("CUDA out of memory error occurred.")
         else:
             logger.error(f"A runtime error occurred: {str(e)}", exc_info=True)
-            raise
+            raise RuntimeError(f"A runtime error occurred: {str(e)}")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {str(e)}", exc_info=True)
         raise

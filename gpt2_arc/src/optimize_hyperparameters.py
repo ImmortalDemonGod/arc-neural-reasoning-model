@@ -231,10 +231,10 @@ def objective(trial):
             raise optuna.exceptions.TrialPruned()
         else:
             logger.error(f"Trial {trial.number}: A runtime error occurred: {str(e)}", exc_info=True)
-            raise
+            raise RuntimeError(f"Trial {trial.number}: A runtime error occurred: {str(e)}")
     except Exception as e:
         logger.error(f"Trial {trial.number}: An unexpected error occurred: {str(e)}", exc_info=True)
-        raise optuna.exceptions.TrialPruned()
+        raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: An unexpected error occurred: {str(e)}")
 
 def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1):
     study_name = "gpt2_arc_optimization"
