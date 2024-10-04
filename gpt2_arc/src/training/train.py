@@ -251,11 +251,17 @@ def main(args):
         trainer.results_collector.save_to_json(results_path)
         logger.debug(f"Results saved to: {results_path}")
 
+    except RuntimeError as e:
+        if 'CUDA out of memory' in str(e):
+            logger.error("CUDA out of memory error occurred.")
+            logger.error("Consider reducing the batch size or model complexity.")
+            raise
+        else:
+            logger.error(f"A runtime error occurred: {str(e)}", exc_info=True)
+            raise
     except Exception as e:
-        logger.error(f"An error occurred: {str(e)}", exc_info=True)
-        if 'tracker' in locals():
-            tracker.log_metric("training_interrupted", 1)
-            tracker.log_metric("error_message", str(e))
+        logger.error(f"An unexpected error occurred: {str(e)}", exc_info=True)
+        raise
     finally:
         if 'tracker' in locals():
             tracker.finish()

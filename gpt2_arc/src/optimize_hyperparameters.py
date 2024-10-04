@@ -223,8 +223,17 @@ def objective(trial):
 
         return best_val_loss
 
+    except RuntimeError as e:
+        if 'CUDA out of memory' in str(e):
+            logger.error(f"Trial {trial.number}: CUDA out of memory error.")
+            logger.error("Pruning trial and suggesting to adjust hyperparameters.")
+            trial.set_user_attr('failed_reason', 'CUDA out of memory')
+            raise optuna.exceptions.TrialPruned()
+        else:
+            logger.error(f"Trial {trial.number}: A runtime error occurred: {str(e)}", exc_info=True)
+            raise
     except Exception as e:
-        logger.error(f"Error in trial {trial.number}: {str(e)}", exc_info=True)
+        logger.error(f"Trial {trial.number}: An unexpected error occurred: {str(e)}", exc_info=True)
         raise optuna.exceptions.TrialPruned()
 
 def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1):
