@@ -71,11 +71,19 @@ def evaluate(model, test_dataset, config, batch_size=32):
                 individual_metrics[task_id] = {}
             individual_metrics[task_id][f'test_{metric_name}'] = value
 
-    # Compute complete task accuracy (fraction of tasks with 100% accuracy)
+    # Compute complete task accuracy (fraction of tasks with perfect accuracy)
     num_tasks = len(individual_metrics)
-    num_complete_accuracy = sum(
-        1 for metrics in individual_metrics.values() if metrics.get('test_accuracy', 0) >= 0.98
-    )
+    perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold / 100.0  # Convert percentage to fraction
+
+    num_complete_accuracy = 0
+    for task_id, metrics in individual_metrics.items():
+        test_accuracy = metrics.get('test_accuracy', 0)
+        # Determine if the task is completely solved
+        completely_solved = test_accuracy >= perfect_accuracy_threshold
+        metrics['completely_solved'] = completely_solved
+        if completely_solved:
+            num_complete_accuracy += 1
+
     complete_task_accuracy = num_complete_accuracy / num_tasks if num_tasks > 0 else 0.0
     aggregated_results['complete_task_accuracy'] = complete_task_accuracy
 
