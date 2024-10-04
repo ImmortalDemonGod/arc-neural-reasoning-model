@@ -233,6 +233,10 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     if study.best_trial:
         logger.info(f"Best trial: {study.best_trial.number}")
         logger.info(f"Best value: {study.best_value}")
+        trial.set_user_attr("mamba_ratio", mamba_ratio)
+        trial.set_user_attr("d_state", d_state)
+        trial.set_user_attr("d_conv", d_conv)
+
         logger.info("Best hyperparameters:")
         for key, value in study.best_params.items():
             logger.info(f"  {key}: {value}")
