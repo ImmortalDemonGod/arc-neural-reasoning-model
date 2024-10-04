@@ -51,7 +51,7 @@ import arckit
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-def validate_hyperparameters(n_embd, n_head, n_layer):
+def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv):
     """Validate that hyperparameters meet necessary constraints."""
     logger.debug(f"Validating hyperparameters: n_embd={n_embd}, n_head={n_head}, n_layer={n_layer}")
     assert n_embd % n_head == 0, f"n_embd ({n_embd}) must be divisible by n_head ({n_head})"
@@ -233,9 +233,11 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     if study.best_trial:
         logger.info(f"Best trial: {study.best_trial.number}")
         logger.info(f"Best value: {study.best_value}")
-        trial.set_user_attr("mamba_ratio", mamba_ratio)
-        trial.set_user_attr("d_state", d_state)
-        trial.set_user_attr("d_conv", d_conv)
+        
+        best_trial = study.best_trial
+        best_trial.set_user_attr("mamba_ratio", best_trial.params.get("mamba_ratio"))
+        best_trial.set_user_attr("d_state", best_trial.params.get("d_state"))
+        best_trial.set_user_attr("d_conv", best_trial.params.get("d_conv"))
 
         logger.info("Best hyperparameters:")
         for key, value in study.best_params.items():
