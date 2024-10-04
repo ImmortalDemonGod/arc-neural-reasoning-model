@@ -68,6 +68,7 @@ class TransformerBlock(nn.Module):
         self.feed_forward = FeedForward(n_embd)
         self.ln1 = nn.LayerNorm(n_embd)
         self.ln2 = nn.LayerNorm(n_embd)
+        self.dropout = nn.Dropout(dropout)
         logger.debug(
             f"Initialized TransformerBlock with n_embd={n_embd}, n_head={n_head}"
         )
@@ -91,10 +92,8 @@ class MambaLayer(nn.Module):
             d_state=d_state,
             d_conv=d_conv,
             expand=2,              # Default value
-            dt_rank="auto",        # Default value
             conv_bias=True,        # Default value
-            bias=False,            # Default value
-            dropout=dropout
+            bias=False             # Default value
         )
         self.layer_norm = nn.LayerNorm(n_embd)
         logger.debug(
@@ -105,7 +104,9 @@ class MambaLayer(nn.Module):
         if not torch._dynamo.is_compiling():
             logger.debug(f"MambaLayer input shape: {x.shape}")
         x_norm = self.layer_norm(x)
-        output = x + self.mamba_block(x_norm)
+        x_mamba = self.mamba_block(x_norm)
+        x_mamba = self.dropout(x_mamba)
+        output = x + x_mamba
         if not torch._dynamo.is_compiling():
             logger.debug(f"MambaLayer output shape: {output.shape}")
         return output
