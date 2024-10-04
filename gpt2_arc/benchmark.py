@@ -49,16 +49,16 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
     checkpoint_info = {}
     if model_checkpoint:
         checkpoint = torch.load(model_checkpoint)
-        model_config = ModelConfig(**checkpoint['config'])
-        model = GPT2ARC(model_config)
-        state_dict = {k.replace("model.", ""): v for k, v in checkpoint['state_dict'].items()}
+        if 'state_dict' in checkpoint:
+            state_dict = checkpoint['state_dict']
+        else:
+            state_dict = checkpoint
         model.load_state_dict(state_dict)
         model.to(device_type)
         model.eval()
         checkpoint_used = True
         checkpoint_info = {
             'state_dict_keys': list(state_dict.keys())
-            'state_dict_keys': list(checkpoint['state_dict'].keys())
         }
     run_id = str(uuid.uuid4())
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
