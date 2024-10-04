@@ -89,8 +89,9 @@ def objective(trial):
         d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
         d_conv = trial.suggest_int("d_conv", args.d_conv_min, args.d_conv_max)
 
-        # Validate hyperparameters
-        validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv)
+        # Suggest dropout rate
+        dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
+        validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
 
         # Suggest training hyperparameters
         batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
@@ -109,7 +110,8 @@ def objective(trial):
             d_model=n_embd,
             mamba_ratio=mamba_ratio,
             d_state=d_state,
-            d_conv=d_conv
+            d_conv=d_conv,
+            dropout=dropout
         )
         estimated_memory = estimate_memory_usage(
             total_params=total_params,
@@ -126,6 +128,8 @@ def objective(trial):
         if not can_fit_model(estimated_memory, available_memory):
             logger.warning(f"Trial {trial.number}: Model too large for available memory. Skipping.")
             raise optuna.exceptions.TrialPruned()
+
+        logger.debug(f"Suggested dropout rate: {dropout}")
 
         model_config = ModelConfig(
             n_embd=n_embd,
@@ -320,6 +324,9 @@ if __name__ == "__main__":
     parser.add_argument("--d_conv_min", type=int, default=4, help="Minimum value for d_conv")
     parser.add_argument("--d_conv_max", type=int, default=32, help="Maximum value for d_conv")
 
+    parser.add_argument("--dropout_min", type=float, default=0.0, help="Minimum value for dropout")
+    parser.add_argument("--dropout_max", type=float, default=0.5, help="Maximum value for dropout")
+    parser.add_argument("--dropout_step", type=float, default=0.1, help="Step size for dropout")
     args = parser.parse_args()
 
     run_optimization(n_trials=args.n_trials, storage_name=args.storage, n_jobs=args.n_jobs)

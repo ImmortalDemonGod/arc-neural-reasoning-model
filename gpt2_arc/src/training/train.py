@@ -76,7 +76,8 @@ def main(args):
             model_config = ModelConfig(
                 n_embd=n_embd,
                 n_head=n_head,
-                n_layer=best_params['n_layer']
+                n_layer=best_params['n_layer'],
+                dropout=dropout
             )
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
@@ -91,7 +92,8 @@ def main(args):
                 n_layer=args.n_layer,
                 mamba_ratio=args.mamba_ratio,
                 d_state=args.d_state,
-                d_conv=args.d_conv
+                d_conv=args.d_conv,
+                dropout=args.dropout
             )
             training_config = TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs)
         
@@ -284,6 +286,7 @@ if __name__ == "__main__":
     parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
     parser.add_argument("--mamba-ratio", type=int, default=0, help="Number of Mamba layers per Transformer layer")
+    parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate")
     parser.add_argument("--d-state", type=int, default=16, help="Mamba state dimension")
     parser.add_argument("--d-conv", type=int, default=4, help="Mamba convolution dimension")
     parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
