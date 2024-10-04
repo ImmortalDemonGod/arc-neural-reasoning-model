@@ -1,9 +1,11 @@
 # gpt2_arc/src/evaluate.py
 import sys
+import sys
 import os
 import json
 import argparse
 import pytorch_lightning as pl
+import os
 import torch
 import wandb
 import numpy as np
@@ -107,7 +109,18 @@ def save_results(results, individual_metrics, output_dir, model_name, model_summ
     return output_path
 
 def main(args):
-    # Initialize wandb
+    # Retrieve WANDB API key from environment variable
+    api_key = os.getenv("WANDB_API_KEY")
+    if api_key:
+        # Log in to Weights & Biases programmatically
+        wandb.login(key=api_key)
+    else:
+        # Handle missing API key (e.g., skip wandb initialization or exit)
+        print("ERROR: WANDB_API_KEY not found in environment variables.")
+        print("Please set the WANDB_API_KEY environment variable.")
+        sys.exit(1)  # Exit the script if the API key is required
+
+    # Initialize wandb after successful login
     wandb.init(project=args.wandb_project, name=args.wandb_run_name)
 
     # Load the test data using arckit
