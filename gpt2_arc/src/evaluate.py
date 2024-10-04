@@ -228,35 +228,35 @@ def main(args):
         if args.use_wandb:
             wandb.log({"eval/complete_task_accuracy": results['complete_task_accuracy']})
 
+    # Log individual task metrics
+    for task_id, metrics in individual_metrics.items():
+        # Ensure metrics are not already floats
+        if isinstance(metrics['test_accuracy'], list):
+            metrics['test_accuracy'] = sum(metrics['test_accuracy']) / len(metrics['test_accuracy'])
+        if isinstance(metrics['test_diff_accuracy'], list):
+            metrics['test_diff_accuracy'] = sum(metrics['test_diff_accuracy']) / len(metrics['test_diff_accuracy'])
+        logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
+
+    # Save results regardless of wandb usage
+    results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
+
     if args.use_wandb:
-        # Log individual task metrics
-        for task_id, metrics in individual_metrics.items():
-            # Ensure metrics are not already floats
-            if isinstance(metrics['test_accuracy'], list):
-                metrics['test_accuracy'] = sum(metrics['test_accuracy']) / len(metrics['test_accuracy'])
-            if isinstance(metrics['test_diff_accuracy'], list):
-                metrics['test_diff_accuracy'] = sum(metrics['test_diff_accuracy']) / len(metrics['test_diff_accuracy'])
-            logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
-        if args.use_wandb:
-            # Use the sanitized model_name
-            results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
+        # Wandb artifact creation and logging
+        logger.debug(f"Creating wandb Artifact with name: {model_name}")
+        print(f"DEBUG: Creating wandb Artifact with name: {model_name}")
 
-            # Debugging statements before Artifact creation
-            logger.debug(f"Creating wandb Artifact with name: {model_name}")
-            print(f"DEBUG: Creating wandb Artifact with name: {model_name}")
+        try:
+            artifact = wandb.Artifact(name=model_name, type='evaluation')
+            artifact.add_file(results_path)
+            wandb.log_artifact(artifact)
+            logger.debug("Artifact created and logged successfully.")
+            print("DEBUG: Artifact created and logged successfully.")
+        except ValueError as ve:
+            logger.error(f"Failed to create wandb Artifact: {ve}")
+            print(f"ERROR: Failed to create wandb Artifact: {ve}")
+            raise ve
 
-            try:
-                artifact = wandb.Artifact(name=model_name, type='evaluation')
-                artifact.add_file(results_path)
-                wandb.log_artifact(artifact)
-                logger.debug("Artifact created and logged successfully.")
-                print("DEBUG: Artifact created and logged successfully.")
-            except ValueError as ve:
-                logger.error(f"Failed to create wandb Artifact: {ve}")
-                print(f"ERROR: Failed to create wandb Artifact: {ve}")
-                raise ve
-
-            wandb.finish()
+        wandb.finish()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate the ARC Neural Reasoning Model")
