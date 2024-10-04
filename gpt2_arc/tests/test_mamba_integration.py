@@ -2,6 +2,7 @@ import unittest
 import torch
 import inspect
 from gpt2_arc.src.models.gpt2 import MambaLayer, GPT2ARC
+from zeta.nn import MambaBlock
 from gpt2_arc.src.config import ModelConfig
 
 class TestMambaLayer(unittest.TestCase):
