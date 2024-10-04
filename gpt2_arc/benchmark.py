@@ -53,7 +53,7 @@ def benchmark_model(model, dataset, batch_size=1, num_batches=1, num_runs=1, dev
             state_dict = checkpoint['state_dict']
         else:
             state_dict = checkpoint
-        model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict, strict=False)
         model.to(device_type)
         model.eval()
         checkpoint_used = True
@@ -372,7 +372,14 @@ def main(args):
     full_dataset = ARCDataset(train_set, is_test=False)
 
     # Create the model configuration
-    model_config = ModelConfig(n_embd=args.n_embd, n_head=args.n_head, n_layer=args.n_layer)
+    model_config = ModelConfig(
+        n_embd=args.n_embd,
+        n_head=args.n_head,
+        n_layer=args.n_layer,
+        mamba_ratio=args.mamba_ratio,
+        d_state=args.d_state,
+        d_conv=args.d_conv
+    )
     model = GPT2ARC(model_config, num_classes=args.num_classes)
 
     # Run the benchmark for different configurations
@@ -393,6 +400,9 @@ if __name__ == "__main__":
     parser.add_argument('--n-embd', type=int, default=64, help='Number of embeddings for the model')
     parser.add_argument('--n-head', type=int, default=2, help='Number of attention heads')
     parser.add_argument('--n-layer', type=int, default=1, help='Number of layers')
+    parser.add_argument('--mamba-ratio', type=int, default=7, help='Number of Mamba layers per Transformer layer')
+    parser.add_argument('--d-state', type=int, default=16, help='Mamba state dimension')
+    parser.add_argument('--d-conv', type=int, default=4, help='Mamba convolution dimension')
     parser.add_argument('--device', choices=['cpu', 'cuda', 'mps'], default='cpu', help='Device to run the benchmark on (cpu, cuda, or mps)')
     parser.add_argument('--precision', choices=['highest', 'high', 'medium'], default='highest', help='Precision level for float32 matrix multiplications')
     parser.add_argument('--num-classes', type=int, default=10, help='Number of classes for the model')
