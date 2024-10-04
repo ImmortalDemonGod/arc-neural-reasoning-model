@@ -77,7 +77,7 @@ def main(args):
                 n_embd=n_embd,
                 n_head=n_head,
                 n_layer=best_params['n_layer'],
-                dropout=dropout
+                dropout=best_params['dropout']
             )
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
