@@ -9,11 +9,15 @@ class ModelConfig:
     n_head: int = 12
     n_layer: int = 12
     dropout: float = 0.1
+    mamba_ratio: int = 7  # Number of Mamba layers per Transformer layer
+    d_state: int = 16     # Mamba state dimension
+    d_conv: int = 4       # Mamba convolution dimension
 
     def __post_init__(self):
         assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
         assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
         assert self.n_layer > 0, f"n_layer ({self.n_layer}) must be positive"
+        assert self.mamba_ratio >= 0, f"mamba_ratio ({self.mamba_ratio}) must be non-negative"
 
 @dataclass
 class TrainingConfig:
