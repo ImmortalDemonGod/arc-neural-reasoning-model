@@ -374,7 +374,7 @@ def main(args):
 
     # Create the model configuration
     model_config = ModelConfig(n_embd=args.n_embd, n_head=args.n_head, n_layer=args.n_layer)
-    model = GPT2ARC(model_config)
+    model = GPT2ARC(model_config, num_classes=args.num_classes)
 
     # Run the benchmark for different configurations
     for run_num in range(args.num_full_runs):
@@ -396,6 +396,7 @@ if __name__ == "__main__":
     parser.add_argument('--n-layer', type=int, default=1, help='Number of layers')
     parser.add_argument('--device', choices=['cpu', 'cuda', 'mps'], default='cpu', help='Device to run the benchmark on (cpu, cuda, or mps)')
     parser.add_argument('--precision', choices=['highest', 'high', 'medium'], default='highest', help='Precision level for float32 matrix multiplications')
+    parser.add_argument('--num-classes', type=int, default=10, help='Number of classes for the model')
     
     args = parser.parse_args()
     main(args)
