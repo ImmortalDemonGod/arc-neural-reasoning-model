@@ -116,10 +116,7 @@ class ARCDataset(IterableDataset):
                     num_samples += len(task.test)
                 else:
                     num_samples += len(task.train)
-        else:
-            error_msg = "Data source type not supported in get_num_samples."
-            logger.error(error_msg)
-            raise NotImplementedError(error_msg)
+        return self.num_samples
     def _count_samples_in_directory(self, directory: str):
         num_samples = 0
         file_list = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.json')]
