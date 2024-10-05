@@ -125,7 +125,11 @@ def main(args):
             train_set, eval_set = arckit.load_data()
             train_data = ARCDataset(train_set)
             val_data = ARCDataset(eval_set)
-        if len(train_data) == 0 or len(val_data) == 0:
+        num_train_samples = train_data.get_num_samples()
+        num_val_samples = val_data.get_num_samples()
+
+        logger.info(f"Number of training examples: {num_train_samples}")
+        logger.info(f"Number of validation examples: {num_val_samples}")
             logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
             return
 

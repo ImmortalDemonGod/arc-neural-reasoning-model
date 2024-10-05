@@ -88,7 +88,34 @@ class ARCDataset(IterableDataset):
             raise ValueError(error_msg)
 
 
-    def __len__(self):
+    def get_num_samples(self):
+        num_samples = 0
+        if isinstance(self.data_source, str) and os.path.isdir(self.data_source):
+            file_list = [os.path.join(self.data_source, f) for f in os.listdir(self.data_source) if f.endswith('.json')]
+            for file_path in file_list:
+                with open(file_path, 'r') as f:
+                    try:
+                        task_data = json.load(f)
+                        processed_task = self._process_single_task(task_data)
+                        for split in ["train", "test"]:
+                            if self.is_test and split != "test":
+                                continue
+                            if not self.is_test and split != "train":
+                                continue
+                            num_samples += len(processed_task.get(split, []))
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Error decoding JSON from file {file_path}: {e}")
+        elif TaskSet is not None and isinstance(self.data_source, TaskSet):
+            for task in self.data_source.tasks:
+                if self.is_test:
+                    num_samples += len(task.test)
+                else:
+                    num_samples += len(task.train)
+        else:
+            error_msg = "Data source type not supported in get_num_samples."
+            logger.error(error_msg)
+            raise NotImplementedError(error_msg)
+        return num_samples
         return len(self.data)
 
     def __getitem__(self, index):
