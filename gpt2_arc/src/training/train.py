@@ -125,38 +125,36 @@ def main(args):
             train_set, eval_set = arckit.load_data()
             train_data = ARCDataset(train_set)
             val_data = ARCDataset(eval_set)
-        num_train_samples = train_data.get_num_samples()
-        num_val_samples = val_data.get_num_samples()
+    num_train_samples = train_data.get_num_samples()
+    num_val_samples = val_data.get_num_samples()
 
-        logger.info(f"Number of training examples: {num_train_samples}")
-        logger.info(f"Number of validation examples: {num_val_samples}")
-        if num_train_samples == 0 or num_val_samples == 0:
-            logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
-            return
+    logger.info(f"Number of training examples: {num_train_samples}")
+    logger.info(f"Number of validation examples: {num_val_samples}")
+    if num_train_samples == 0 or num_val_samples == 0:
+        logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
+        return
 
-        logger.debug(f"Train data size: {train_data.get_num_samples()}, Validation data size: {val_data.get_num_samples()}")
+    logger.debug(f"Train data size: {train_data.get_num_samples()}, Validation data size: {val_data.get_num_samples()}")
 
-        # Set the number of classes
-        num_classes = 10
-        logger.info(f"Number of classes set to: {num_classes}")
+    # Set the number of classes
+    num_classes = 10
+    logger.info(f"Number of classes set to: {num_classes}")
 
-        # Create DataLoader instances
-        logger.info("Creating DataLoader instances")
-        train_loader = DataLoader(
-            train_data,
-            batch_size=args.batch_size,
-            num_workers=0,
-            pin_memory=True,
-            collate_fn=ARCDataset.collate_fn
-        )
-        val_loader = DataLoader(
-            val_data,
-            batch_size=args.batch_size,
-            num_workers=0,
-            pin_memory=True,
-            collate_fn=ARCDataset.collate_fn
-        )
-        logger.debug(f"DataLoaders created with batch size {args.batch_size}")
+    # Create DataLoader instances
+    logger.info("Creating DataLoader instances")
+    train_loader = DataLoader(
+        train_data,
+        batch_size=args.batch_size,
+        num_workers=0,
+        pin_memory=True
+    )
+    val_loader = DataLoader(
+        val_data,
+        batch_size=args.batch_size,
+        num_workers=0,
+        pin_memory=True
+    )
+    logger.debug(f"DataLoaders created with batch size {args.batch_size}")
 
         # Initialize model
         logger.info("Initializing model")
@@ -223,7 +221,8 @@ def main(args):
             fast_dev_run=args.fast_dev_run,
             gradient_clip_val=1.0,
             accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu',
-            devices=1
+            devices=1,
+            reload_dataloaders_every_n_epochs=1
         )
 
         if tb_logger:

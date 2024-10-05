@@ -51,7 +51,6 @@ class ARCDataset(IterableDataset):
         self.num_symbols = num_symbols
         self.data_files = []  # Initialize data_files as an empty list
         self.data_source = data_source
-        self.data = []  # Initialize data as an empty list
         self.num_samples = 0  # Initialize num_samples
         set_debug_mode(debug)  # Set debug mode based on parameter
         logger.debug("Starting ARCDataset initialization")
@@ -62,59 +61,25 @@ class ARCDataset(IterableDataset):
         logger.debug(f"Data files found: {self.data_files[:5]}... (total {len(self.data_files)})")
         logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
 
-        logger.debug(f"Data files found: {self.data_files}")
-        logger.debug(f"Data loaded: {self.data}")
-
         if isinstance(data_source, str):
             if os.path.isdir(data_source):
-                logger.debug("Processing synthetic data from directory")
-                self._process_synthetic_data(data_source)
-            self.num_samples = self._count_samples_in_directory(data_source)
-        elif os.path.isfile(data_source):
-            logger.debug("Processing JSON data from file")
-            self.data = self._process_json_data(data_source)
-            self.num_samples = len(self.data)
-        elif TaskSet is not None and isinstance(data_source, TaskSet):
-            logger.debug("Processing TaskSet data")
-            self.data = self._process_arckit_data(data_source)
-            self.num_samples = sum(len(task.test if self.is_test else task.train) for task in data_source.tasks)
-        elif isinstance(data_source, list):
-            logger.debug("Processing list data")
-            self.data = self._process_list_data(data_source)
-            self.num_samples = len(self.data)
-        elif isinstance(data_source, tuple):
-            logger.debug("Processing combined data")
-            self.data = self._combine_data(*data_source)
-            self.num_samples = len(self.data)
-        else:
-            error_msg = f"Unsupported data_source type: {type(data_source)}"
-            logger.error(error_msg)
-            raise ValueError(error_msg)
+                logger.debug("Initializing dataset with data from directory")
+                self.data_dir = data_source
+                self.data_files = [
+                    os.path.join(data_source, f)
+                    for f in os.listdir(data_source)
+                    if f.endswith('.json')
+                ]
+                random.shuffle(self.data_files)  # Optional shuffling for randomness
+                self.num_samples = self._count_samples_in_directory(data_source)
+            elif os.path.isfile(data_source):
+                # Handle single file case if necessary
+                pass
+            else:
+                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
 
 
     def get_num_samples(self):
-        num_samples = 0
-        if isinstance(self.data_source, str) and os.path.isdir(self.data_source):
-            file_list = [os.path.join(self.data_source, f) for f in os.listdir(self.data_source) if f.endswith('.json')]
-            for file_path in file_list:
-                with open(file_path, 'r') as f:
-                    try:
-                        task_data = json.load(f)
-                        processed_task = self._process_single_task(task_data)
-                        for split in ["train", "test"]:
-                            if self.is_test and split != "test":
-                                continue
-                            if not self.is_test and split != "train":
-                                continue
-                            num_samples += len(processed_task.get(split, []))
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Error decoding JSON from file {file_path}: {e}")
-        elif TaskSet is not None and isinstance(self.data_source, TaskSet):
-            for task in self.data_source.tasks:
-                if self.is_test:
-                    num_samples += len(task.test)
-                else:
-                    num_samples += len(task.train)
         return self.num_samples
     def _count_samples_in_directory(self, directory: str):
         num_samples = 0
@@ -136,38 +101,6 @@ class ARCDataset(IterableDataset):
                     logger.error(f"Error decoding JSON from file {file_path}: {e}")
         return num_samples
 
-    def __getitem__(self, index):
-        task = self.data[index]
-        input_grid = self._preprocess_grid(task['input'])
-        output_grid = self._preprocess_grid(task['output'])
-        return input_grid, output_grid
-
-        print(f"DEBUG: Processed data length: {len(self.data)}")
-        if self.data:
-            print(f"DEBUG: First item keys: {self.data[0].keys()}")
-            if 'train' in self.data[0]:
-                train_data = self.data[0]['train']
-                if isinstance(train_data, torch.Tensor):
-                    print(f"DEBUG: First train item (tensor): {train_data}")
-                    print(f"DEBUG: First train item shape: {train_data.shape}")
-                elif isinstance(train_data, list) and train_data:
-                    print(f"DEBUG: First train item: {train_data[0]}")
-                    if isinstance(train_data[0], dict):
-                        print(f"DEBUG: First train input shape: {np.array(train_data[0]['input']).shape}")
-                    else:
-                        print(f"DEBUG: Unexpected train data type: {type(train_data[0])}")
-                else:
-                    print(f"DEBUG: Unexpected train data type: {type(train_data)}")
-            else:
-                print("DEBUG: No 'train' key in first item")
-
-        logger.debug(f"Number of tasks: {len(self.data)}")
-        logger.debug(f"First task structure: {self.data[0].keys()}")
-        
-        # print(f"Number of train samples: {sum(len(task['train']) for task in self.data)}")
-        # print(f"Number of test samples: {sum(len(task['test']) for task in self.data)}")
-        self.max_grid_size = self._compute_max_grid_size()
-        self._validate_data()
 
     def _process_json_data(self, raw_data: List[Dict]) -> List[Dict]:
         print(f"DEBUG: Processing {len(raw_data)} items")
@@ -280,10 +213,7 @@ class ARCDataset(IterableDataset):
         return processed_data
 
     def __iter__(self):
-        if isinstance(self.data_source, str) and os.path.isdir(self.data_source):
-            file_list = [os.path.join(self.data_source, f) for f in os.listdir(self.data_source) if f.endswith('.json')]
-            random.shuffle(file_list)  # Shuffle the file list
-            for file_path in file_list:
+        for file_path in self.data_files:
                 with open(file_path, 'r') as f:
                     try:
                         task_data = json.load(f)
@@ -299,10 +229,7 @@ class ARCDataset(IterableDataset):
                                 yield input_tensor, output_tensor
                     except json.JSONDecodeError as e:
                         logger.error(f"Error decoding JSON from file {file_path}: {e}")
-        else:
-            error_msg = "Data source type not supported in iterable mode."
-            logger.error(error_msg)
-            raise NotImplementedError(error_msg)
+                    continue  # Skip this file and proceed to the next
 
     def _validate_data(self):
         for task in self.data:
