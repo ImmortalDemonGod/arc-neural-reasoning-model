@@ -73,9 +73,11 @@ class ARCDataset(IterableDataset):
         elif os.path.isfile(data_source):
                 logger.debug("Processing JSON data from file")
                 self.data = self._process_json_data(data_source)
+        elif os.path.isfile(data_source):
+            logger.debug("Processing JSON data from file")
+            self.data = self._process_json_data(data_source)
         else:
             raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-        elif isinstance(data_source, TaskSet):
             logger.debug("Processing TaskSet data")
             self.data = self._process_arckit_data(data_source)
             self.num_samples = sum(len(task.test if self.is_test else task.train) for task in data_source.tasks)
