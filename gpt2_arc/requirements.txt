@@ -1,4 +1,4 @@
-aider-chat
+aider-chat>=0.58.1
 torch>=2.0.0
 transformers>=4.0.0
 pytorch-lightning>=2.0.0
@@ -23,3 +23,18 @@ wandb
 optuna
 optuna-integration[pytorch_lightning]
 psutil
+requests
+beautifulsoup4==4.12.3  # Updated version to match aider-chat requirements
+PyPDF2==2.10.0
+tiktoken
+nltk==3.7
+nbformat==5.4.0
+nbconvert==6.5.0
+youtube-transcript-api==0.4.1
+pyperclip
+wget==3.2
+tqdm
+rich
+zetascale
+pyngrok
+torchsummary
