@@ -84,31 +84,31 @@ class ARCDataset(Dataset):
             logger.error(f"Invalid data_source type: {type(data_source)}")
             raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
 
-        print(f"DEBUG: Processed data length: {len(self.data)}")
-        if self.data:
-            print(f"DEBUG: First item keys: {self.data[0].keys()}")
-            if 'train' in self.data[0]:
-                train_data = self.data[0]['train']
-                if isinstance(train_data, torch.Tensor):
-                    print(f"DEBUG: First train item (tensor): {train_data}")
-                    print(f"DEBUG: First train item shape: {train_data.shape}")
-                elif isinstance(train_data, list) and train_data:
-                    print(f"DEBUG: First train item: {train_data[0]}")
-                    if isinstance(train_data[0], dict):
-                        print(f"DEBUG: First train input shape: {np.array(train_data[0]['input']).shape}")
-                    else:
-                        print(f"DEBUG: Unexpected train data type: {type(train_data[0])}")
-                else:
-                    print(f"DEBUG: Unexpected train data type: {type(train_data)}")
-            else:
-                print("DEBUG: No 'train' key in first item")
+        # print(f"DEBUG: Processed data length: {len(self.data)}")
+        # if self.data:
+        #     print(f"DEBUG: First item keys: {self.data[0].keys()}")
+        #     if 'train' in self.data[0]:
+        #         train_data = self.data[0]['train']
+        #         if isinstance(train_data, torch.Tensor):
+        #             print(f"DEBUG: First train item (tensor): {train_data}")
+        #             print(f"DEBUG: First train item shape: {train_data.shape}")
+        #         elif isinstance(train_data, list) and train_data:
+        #             print(f"DEBUG: First train item: {train_data[0]}")
+        #             if isinstance(train_data[0], dict):
+        #                 print(f"DEBUG: First train input shape: {np.array(train_data[0]['input']).shape}")
+        #             else:
+        #                 print(f"DEBUG: Unexpected train data type: {type(train_data[0])}")
+        #         else:
+        #             print(f"DEBUG: Unexpected train data type: {type(train_data)}")
+        #     else:
+        #         print("DEBUG: No 'train' key in first item")
 
         logger.debug(f"Number of tasks: {len(self.data)}")
         logger.debug(f"First task structure: {self.data[0].keys()}")
         self.samples = self._process_arckit_data(data_source) if TaskSet is not None and isinstance(data_source, TaskSet) else []
         
-        print(f"Number of train samples: {sum(len(task['train']) for task in self.data)}")
-        print(f"Number of test samples: {sum(len(task['test']) for task in self.data)}")
+        # print(f"Number of train samples: {sum(len(task['train']) for task in self.data)}")
+        # print(f"Number of test samples: {sum(len(task['test']) for task in self.data)}")
         self.max_grid_size = self._compute_max_grid_size()
         self._validate_data()
 
@@ -142,7 +142,7 @@ class ARCDataset(Dataset):
                     for sample in task[split]:
                         if not ("input" in sample and "output" in sample):
                             raise ValueError(f"Each sample must contain 'input' and 'output'. Task: {task.get('id', 'unknown')}")
-        print("Data validation passed.")
+        # print("Data validation passed.")
 
     def _compute_max_grid_size(self):
         max_h, max_w = 0, 0
@@ -505,9 +505,9 @@ class ARCDataset(Dataset):
 
     @staticmethod
     def collate_fn(batch):
-        print(f"Collating batch of size: {len(batch)}")
+        # print(f"Collating batch of size: {len(batch)}")
         if not batch:
-            print("Warning: Empty batch received")
+            # print("Warning: Empty batch received")
             return torch.tensor([]), torch.tensor([]), []
         
         try:

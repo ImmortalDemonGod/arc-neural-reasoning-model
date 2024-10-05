@@ -18,6 +18,7 @@ project_root = arc_model_dir
 sys.path.insert(0, project_root)
 
 import pytorch_lightning as pl
+import torch.autograd.profiler as profiler
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -204,7 +205,11 @@ def main(args):
 
         # Train the model
         logger.info("Starting model training")
-        pl_trainer.fit(trainer)
+        with profiler.profile(record_shapes=True, profile_memory=True) as prof:
+            pl_trainer.fit(trainer)
+
+        # After training, print profiler results
+        print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
 
         # After training, run test
         logger.info("Running model evaluation")
