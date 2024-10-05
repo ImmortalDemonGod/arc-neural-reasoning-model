@@ -116,7 +116,8 @@ def main(args):
             logger.debug(f"Total files in synthetic data path: {len(synthetic_files)}")
             logger.debug(f"Sample files: {synthetic_files[:5]}... (total {len(synthetic_files)})")
             train_data = ARCDataset(args.synthetic_data_path)
-            logger.debug(f"Listing files in synthetic data path for validation: {os.listdir(args.synthetic_data_path)}")
+            synthetic_files = os.listdir(args.synthetic_data_path)
+            logger.debug(f"Listing files in synthetic data path for validation: {synthetic_files[:5]}... (total {len(synthetic_files)})")
             val_data = ARCDataset(args.synthetic_data_path, is_test=True)
         else:
             logger.info("Loading ARC dataset")
