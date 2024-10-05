@@ -49,6 +49,7 @@ class ARCDataset(IterableDataset):
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
+        self.data_files = []  # Initialize data_files as an empty list
         set_debug_mode(debug)  # Set debug mode based on parameter
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"data_source type: {type(data_source)}")
