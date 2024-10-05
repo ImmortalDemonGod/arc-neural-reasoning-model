@@ -134,7 +134,7 @@ def main(args):
             logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
             return
 
-        logger.debug(f"Train data size: {len(train_data)}, Validation data size: {len(val_data)}")
+        logger.debug(f"Train data size: {train_data.get_num_samples()}, Validation data size: {val_data.get_num_samples()}")
 
         # Set the number of classes
         num_classes = 10
