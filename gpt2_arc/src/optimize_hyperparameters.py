@@ -111,8 +111,7 @@ def objective(trial):
             d_model=n_embd,
             mamba_ratio=mamba_ratio,
             d_state=d_state,
-            d_conv=d_conv,
-            dropout=dropout
+            d_conv=d_conv
         )
         estimated_memory = estimate_memory_usage(
             total_params=total_params,
