@@ -254,10 +254,6 @@ class ARCDataset(IterableDataset):
                                 yield input_tensor, output_tensor
                     except json.JSONDecodeError as e:
                         logger.error(f"Error decoding JSON from file {file_path}: {e}")
-        else:
-            error_msg = "Data source type not supported in iterable mode."
-            logger.error(error_msg)
-            raise NotImplementedError(error_msg)
             file_list = [os.path.join(self.data_source, f) for f in os.listdir(self.data_source) if f.endswith('.json')]
             random.shuffle(file_list)  # Shuffle the file list
             for file_path in file_list:
@@ -455,9 +451,6 @@ class ARCDataset(IterableDataset):
             print(f"DEBUG: Item content: {item}")
 
             if 'input' in item and 'output' in item and isinstance(item['input'], (list, np.ndarray)) and isinstance(item['output'], (list, np.ndarray)):
-                processed_data.append(item)
-            else:
-                raise ValueError("Unexpected item format in data_source.")
                 processed_data.append(item)
             else:
                 raise ValueError("Unexpected item format in data_source.")
