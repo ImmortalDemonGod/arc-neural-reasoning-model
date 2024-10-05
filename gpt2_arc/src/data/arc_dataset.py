@@ -46,6 +46,7 @@ class ARCDataset(IterableDataset):
         test_split: float = 0.2,
         debug=False,
     ):
+        self.data_source = data_source
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
