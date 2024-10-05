@@ -329,4 +329,8 @@ if __name__ == "__main__":
     parser.add_argument("--dropout_step", type=float, default=0.1, help="Step size for dropout")
     args = parser.parse_args()
 
+    # Ensure the storage_name has the correct SQLite prefix
+    if not args.storage.startswith("sqlite:///"):
+        args.storage = f"sqlite:///{args.storage}"
+    
     run_optimization(n_trials=args.n_trials, storage_name=args.storage, n_jobs=args.n_jobs)
