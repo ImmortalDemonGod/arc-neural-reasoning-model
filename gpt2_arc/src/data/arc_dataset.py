@@ -87,7 +87,8 @@ class ARCDataset(IterableDataset):
             raise ValueError(error_msg)
 
 
-    def _process_data_source(self, data_source):
+    def __len__(self):
+        return len(self.data)
         logger.debug(f"Processing data source of type: {type(data_source)}")
         if isinstance(data_source, str):
             logger.debug(f"Data source path: {data_source}")
