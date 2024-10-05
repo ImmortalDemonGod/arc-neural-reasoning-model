@@ -55,7 +55,13 @@ class ARCDataset(Dataset):
         logger.debug(f"data_source content: {data_source}")
         logger.debug(f"self.test_split is set to: {self.test_split}")
         
-        self.data = self._process_data_source(data_source)
+        self.data_files = []
+
+        if os.path.isdir(data_source):
+            logger.debug("Processing synthetic data from directory")
+            self._process_synthetic_data(data_source)
+        else:
+            raise FileNotFoundError(f"Data source directory not found: {data_source}")
         
     def _process_data_source(self, data_source):
         logger.debug(f"Processing data source of type: {type(data_source)}")
@@ -140,102 +146,18 @@ class ARCDataset(Dataset):
         
         return flattened_data
 
-    def _validate_data(self):
-        for task in self.data:
-            for split in ["train", "test"]:
-                if split in task:
-                    for sample in task[split]:
-                        if not ("input" in sample and "output" in sample):
-                            raise ValueError(f"Each sample must contain 'input' and 'output'. Task: {task.get('id', 'unknown')}")
-        print("Data validation passed.")
-        print(f"DEBUG: Processed data length: {len(self.data)}")
-        if self.data:
-            print(f"DEBUG: First item keys: {self.data[0].keys()}")
-            if 'train' in self.data[0]:
-                train_data = self.data[0]['train']
-                if isinstance(train_data, torch.Tensor):
-                    print(f"DEBUG: First train item (tensor): {train_data}")
-                    print(f"DEBUG: First train item shape: {train_data.shape}")
-                elif isinstance(train_data, list) and train_data:
-                    print(f"DEBUG: First train item: {train_data[0]}")
-                    if isinstance(train_data[0], dict):
-                        print(f"DEBUG: First train input shape: {np.array(train_data[0]['input']).shape}")
-                    else:
-                        print(f"DEBUG: Unexpected train data type: {type(train_data[0])}")
-                else:
-                    print(f"DEBUG: Unexpected train data type: {type(train_data)}")
-            else:
-                print("DEBUG: No 'train' key in first item")
-
-    def _compute_max_grid_size(self):
-        max_h, max_w = 0, 0
-        for task in self.data:
-            for split in ['train', 'test']:
-                samples = task[split]
-                if isinstance(samples, torch.Tensor):
-                    if samples.dim() == 4:  # [num_samples, channels, height, width]
-                        h, w = samples.shape[2], samples.shape[3]
-                    elif samples.dim() == 3:  # [num_samples, height, width]
-                        h, w = samples.shape[1], samples.shape[2]
-                    else:
-                        raise ValueError(f"Unexpected tensor dimensions: {samples.dim()}")
-                elif isinstance(samples, list):
-                    for sample in samples:
-                        if isinstance(sample, torch.Tensor):
-                            if sample.dim() == 3:  # [channels, height, width]
-                                h, w = sample.shape[1], sample.shape[2]
-                            elif sample.dim() == 2:  # [height, width]
-                                h, w = sample.shape
-                            else:
-                                raise ValueError(f"Unexpected tensor dimensions: {sample.dim()}")
-                        elif isinstance(sample, dict):
-                            input_data = sample['input']
-                            if isinstance(input_data, torch.Tensor):
-                                if input_data.dim() == 3:
-                                    h, w = input_data.shape[1], input_data.shape[2]
-                                elif input_data.dim() == 2:
-                                    h, w = input_data.shape
-                                else:
-                                    raise ValueError(f"Unexpected tensor dimensions: {input_data.dim()}")
-                            elif isinstance(input_data, np.ndarray):
-                                if input_data.ndim == 2:
-                                    h, w = input_data.shape
-                                elif input_data.ndim == 3:
-                                    h, w = input_data.shape[1], input_data.shape[2]
-                                else:
-                                    raise ValueError(f"Unexpected ndarray dimensions: {input_data.ndim}")
-                            elif isinstance(input_data, list):
-                                h, w = len(input_data), len(input_data[0])
-                            else:
-                                raise TypeError(f"Unexpected input type: {type(input_data)}")
-                        else:
-                            raise TypeError(f"Unexpected sample type: {type(sample)}")
-                        max_h = max(max_h, h)
-                        max_w = max(max_w, w)
-                else:
-                    raise TypeError(f"Unexpected samples type: {type(samples)}")
-                
-        logger.debug(f"Computed max grid size: ({max_h}, {max_w})")
-        print(f"Computed max grid size: ({max_h}, {max_w})")
-        return (max_h, max_w)
 
     def _combine_data(self, official_data, synthetic_data_path):
         official_processed = self._process_arckit_data(official_data) if TaskSet is not None and isinstance(official_data, TaskSet) else official_data
         synthetic_processed = self._process_synthetic_data(synthetic_data_path)
         return official_processed + synthetic_processed
 
-    def _process_synthetic_data(self, directory: str) -> List[Dict]:
-        processed_data = []
+    def _process_synthetic_data(self, directory: str):
+        self.data_files = []
         for filename in os.listdir(directory):
             if filename.endswith('.json'):
-                task_id = os.path.splitext(filename)[0]  # Use filename without extension as task_id
-                with open(os.path.join(directory, filename), 'r') as f:
-                    task_data = json.load(f)
-                    processed_task = self._process_single_task(task_data)
-                    processed_task['id'] = task_id  # Add task_id to the processed task
-                    if processed_task['train'] or processed_task['test']:
-                        processed_data.append(processed_task)
-        return processed_data
+                file_path = os.path.join(directory, filename)
+                self.data_files.append(file_path)
 
     def _process_single_task(self, task_data: Dict) -> Dict:
         processed_task = {"train": [], "test": []}
@@ -321,35 +243,27 @@ class ARCDataset(Dataset):
         return processed_data
 
     def __len__(self) -> int:
-        if self.is_test:
-            total_samples = sum(len(task['test']) for task in self.data)
-        else:
-            total_samples = sum(len(task['train']) for task in self.data)
-        logger.debug(f"Total samples in dataset: {total_samples}")
-        return total_samples
+        return len(self.data_files)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, str]:
         if idx < 0 or idx >= len(self):
             raise IndexError(f"Index {idx} out of range (total samples: {len(self)})")
 
-        current_idx = 0
-        for task in self.data:
-            split = 'test' if self.is_test else 'train'
-            if idx < current_idx + len(task[split]):
-                sample = task[split][idx - current_idx]
-                logger.debug(f"Sample index: {idx}")
-                logger.debug(f"Sample input type: {type(sample['input'])}")
-                logger.debug(f"Sample output type: {type(sample['output'])}")
-                input_grid = self._preprocess_grid(sample["input"])
-                output_grid = self._preprocess_grid(sample["output"])
-                logger.debug(f"Returning input shape: {input_grid.shape}, output shape: {output_grid.shape}")
-                logger.debug(f"__getitem__ input dtype: {input_grid.dtype}, output dtype: {output_grid.dtype}")
-                task_id = task.get("id", "unknown")  # Get task_id, use "unknown" if not found
-                logger.debug(f"DEBUG: Dataset __getitem__ called with idx {idx}, returning item with task_id {task_id}")
-                return input_grid, output_grid, task_id
-            current_idx += len(task[split])
+        file_path = self.data_files[idx]
+        with open(file_path, 'r') as f:
+            task_data = json.load(f)
+        processed_task = self._process_single_task(task_data)
+        task_id = os.path.splitext(os.path.basename(file_path))[0]
 
-        raise RuntimeError("Unexpected error in __getitem__")
+        split = 'test' if self.is_test else 'train'
+        if not processed_task[split]:
+            raise ValueError(f"No {split} data available in {task_id}")
+
+        sample = random.choice(processed_task[split])
+
+        input_grid = self._preprocess_grid(sample["input"])
+        output_grid = self._preprocess_grid(sample["output"])
+        return input_grid, output_grid, task_id
 
     def _validate_data(self):
         for task in self.data:

@@ -127,8 +127,8 @@ def main(args):
 
         # Create DataLoader instances
         logger.info("Creating DataLoader instances")
-        train_loader = torch.utils.data.DataLoader(train_data, batch_size=int(args.batch_size), num_workers=7)
-        val_loader = torch.utils.data.DataLoader(val_data, batch_size=int(args.batch_size), num_workers=7)
+        train_loader = torch.utils.data.DataLoader(train_data, batch_size=int(args.batch_size), num_workers=0)
+        val_loader = torch.utils.data.DataLoader(val_data, batch_size=int(args.batch_size), num_workers=0)
         logger.debug(f"DataLoaders created with batch size {args.batch_size}")
 
         # Initialize model
