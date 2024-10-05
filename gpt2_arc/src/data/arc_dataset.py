@@ -196,7 +196,10 @@ class ARCDataset(Dataset):
                 with open(file_path, 'r') as f:
                     try:
                         task_data = json.load(f)
-                        self.data.append(self._process_single_task(task_data))
+                        task_id = os.path.splitext(filename)[0]  # Use the filename (without extension) as the task ID
+                        processed_task = self._process_single_task(task_data)
+                        processed_task["id"] = task_id
+                        self.data.append(processed_task)
                     except json.JSONDecodeError as e:
                         logger.error(f"Error decoding JSON from file {file_path}: {e}")
 
