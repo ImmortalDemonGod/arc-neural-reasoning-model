@@ -113,7 +113,12 @@ class ARCDataset(Dataset):
         self._validate_data()
 
     def _process_json_data(self, raw_data: List[Dict]) -> List[Dict]:
+        print(f"DEBUG: Processing {len(data_source)} items")
         processed_data = []
+        for idx, item in enumerate(data_source):
+            print(f"DEBUG: Processing item {idx}")
+            print(f"DEBUG: Item type: {type(item)}")
+            print(f"DEBUG: Item content: {item}")
         for task in raw_data:
             logger.debug(f"Processing task: {task}")
             processed_task = {
@@ -143,6 +148,24 @@ class ARCDataset(Dataset):
                         if not ("input" in sample and "output" in sample):
                             raise ValueError(f"Each sample must contain 'input' and 'output'. Task: {task.get('id', 'unknown')}")
         print("Data validation passed.")
+        print(f"DEBUG: Processed data length: {len(self.data)}")
+        if self.data:
+            print(f"DEBUG: First item keys: {self.data[0].keys()}")
+            if 'train' in self.data[0]:
+                train_data = self.data[0]['train']
+                if isinstance(train_data, torch.Tensor):
+                    print(f"DEBUG: First train item (tensor): {train_data}")
+                    print(f"DEBUG: First train item shape: {train_data.shape}")
+                elif isinstance(train_data, list) and train_data:
+                    print(f"DEBUG: First train item: {train_data[0]}")
+                    if isinstance(train_data[0], dict):
+                        print(f"DEBUG: First train input shape: {np.array(train_data[0]['input']).shape}")
+                    else:
+                        print(f"DEBUG: Unexpected train data type: {type(train_data[0])}")
+                else:
+                    print(f"DEBUG: Unexpected train data type: {type(train_data)}")
+            else:
+                print("DEBUG: No 'train' key in first item")
 
     def _compute_max_grid_size(self):
         max_h, max_w = 0, 0
@@ -193,6 +216,7 @@ class ARCDataset(Dataset):
                     raise TypeError(f"Unexpected samples type: {type(samples)}")
                 
         logger.debug(f"Computed max grid size: ({max_h}, {max_w})")
+        print(f"Computed max grid size: ({max_h}, {max_w})")
         return (max_h, max_w)
 
     def _combine_data(self, official_data, synthetic_data_path):
@@ -369,6 +393,7 @@ class ARCDataset(Dataset):
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
         logger.debug(f"Grid type: {type(grid)}")
+        print(f"Grid type: {type(grid)}")
     
         if isinstance(grid, dict):
             input_grid = np.array(grid['input'])
@@ -382,6 +407,7 @@ class ARCDataset(Dataset):
             raise ValueError(f"Unexpected grid type: {type(grid)}")
     
         logger.debug(f"Input grid shape before processing: {input_grid.shape}")
+        print(f"Input grid shape before processing: {input_grid.shape}")
     
         # Ensure input_grid is 2D
         if input_grid.ndim > 2:
@@ -396,6 +422,8 @@ class ARCDataset(Dataset):
     
         logger.debug(f"Preprocessed grid shape: {grid_tensor.shape}")
         logger.debug(f"Preprocessed grid content:\n{grid_tensor}")
+        print(f"Preprocessed grid shape: {grid_tensor.shape}")
+        print(f"Preprocessed grid content:\n{grid_tensor}")
     
         return grid_tensor
     def kronecker_scale(self, X, target_height=30, target_width=30):
