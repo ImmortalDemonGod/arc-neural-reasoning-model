@@ -460,7 +460,18 @@ class ARCDataset(Dataset):
         h, w = grid.shape
         pad_h = (height - h) // 2
         pad_w = (width - w) // 2
-        return np.pad(grid, ((pad_h, height - h - pad_h), (pad_w, width - w - pad_w)), mode='constant')
+        # Compute padding for height and width, ensuring non-negative values
+        pad_top = pad_h
+        pad_bottom = max(0, height - h - pad_h)
+        pad_left = pad_w
+        pad_right = max(0, width - w - pad_w)
+
+        # Apply padding
+        return np.pad(
+            grid,
+            ((pad_top, pad_bottom), (pad_left, pad_right)),
+            mode='constant'
+        )
     def _process_list_data(self, data_source):
         print(f"DEBUG: Processing {len(data_source)} items")
         processed_data = []
