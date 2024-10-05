@@ -431,25 +431,10 @@ class ARCDataset(IterableDataset):
             print(f"DEBUG: Item type: {type(item)}")
             print(f"DEBUG: Item content: {item}")
 
-            if isinstance(item, Task):
-                processed_item = {
-                    "train": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.train],
-                    "test": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.test]
-                }
-            elif 'train' in item and 'test' in item:
-                processed_item = {
-                    "train": [{"input": np.array(sample["input"]), "output": np.array(sample["output"])} for sample in item['train']],
-                    "test": [{"input": np.array(sample["input"]), "output": np.array(sample["output"])} for sample in item['test']]
-                }
-            elif 'input' in item and 'output' in item:
-                processed_item = {
-                    "train": [{"input": np.array(item["input"]), "output": np.array(item["output"])}],
-                    "test": []
-                }
+            if 'input' in item and 'output' in item:
+                processed_data.append(item)
             else:
                 raise ValueError("Unexpected item format in data_source.")
-        
-            processed_data.append(processed_item)
     
         return processed_data
 
