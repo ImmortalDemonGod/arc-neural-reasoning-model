@@ -112,7 +112,9 @@ def main(args):
             if not args.synthetic_data_path:
                 raise ValueError("Synthetic data path not provided")
             logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
-            logger.debug(f"Listing files in synthetic data path: {os.listdir(args.synthetic_data_path)}")
+            synthetic_files = os.listdir(args.synthetic_data_path)
+            logger.debug(f"Total files in synthetic data path: {len(synthetic_files)}")
+            logger.debug(f"Sample files: {synthetic_files[:5]}")
             train_data = ARCDataset(args.synthetic_data_path)
             logger.debug(f"Listing files in synthetic data path for validation: {os.listdir(args.synthetic_data_path)}")
             val_data = ARCDataset(args.synthetic_data_path, is_test=True)
