@@ -212,10 +212,16 @@ def main(args):
             trainer.results_collector.set_tensorboard_log_path(tb_logger.log_dir)
             logger.debug(f"TensorBoard log path set in results collector: {tb_logger.log_dir}")
 
+        # Log initial memory usage
+        logger.info(f"Initial memory usage: {torch.cuda.memory_allocated()} bytes")
+
         # Train the model
         logger.info("Starting model training")
         with profiler.profile(record_shapes=True, profile_memory=True) as prof:
             pl_trainer.fit(trainer)
+
+        # Log memory usage after training
+        logger.info(f"Memory usage after training: {torch.cuda.memory_allocated()} bytes")
 
         # After training, print profiler results
         print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
@@ -298,7 +304,7 @@ if __name__ == "__main__":
     parser.add_argument("--n-embd", type=int, default=16, help="Embedding dimension")
     parser.add_argument("--n-head", type=int, default=1, help="Number of attention heads")
     parser.add_argument("--n-layer", type=int, default=1, help="Number of transformer layers")
-    parser.add_argument("--batch-size", type=int, default=4, help="Batch size for training")
+    parser.add_argument("--batch-size", type=int, default=2, help="Batch size for training")
     parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
     parser.add_argument("--mamba-ratio", type=int, default=0, help="Number of Mamba layers per Transformer layer")
