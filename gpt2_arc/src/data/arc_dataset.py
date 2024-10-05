@@ -111,7 +111,6 @@ class ARCDataset(IterableDataset):
 
         logger.debug(f"Number of tasks: {len(self.data)}")
         logger.debug(f"First task structure: {self.data[0].keys()}")
-        self.samples = self._process_arckit_data(data_source) if TaskSet is not None and isinstance(data_source, TaskSet) else []
         
         # print(f"Number of train samples: {sum(len(task['train']) for task in self.data)}")
         # print(f"Number of test samples: {sum(len(task['test']) for task in self.data)}")
