@@ -95,7 +95,15 @@ def main(args):
                 d_conv=args.d_conv,
                 dropout=args.dropout
             )
-            training_config = TrainingConfig(batch_size=args.batch_size, learning_rate=args.learning_rate, max_epochs=args.max_epochs)
+            training_config = TrainingConfig(
+                batch_size=args.batch_size,
+                learning_rate=args.learning_rate,
+                max_epochs=args.max_epochs,
+                use_gpu=args.use_gpu,
+                log_level=args.log_level,
+                use_synthetic_data=args.use_synthetic_data,
+                synthetic_data_path=args.synthetic_data_path
+            )
         
         config = Config(model=model_config, training=training_config)
         logger.debug(f"Configuration: {config}")
