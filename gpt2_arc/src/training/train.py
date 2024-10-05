@@ -119,6 +119,10 @@ def main(args):
             train_set, eval_set = arckit.load_data()
             train_data = ARCDataset(train_set)
             val_data = ARCDataset(eval_set)
+        if len(train_data) == 0 or len(val_data) == 0:
+            logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
+            return
+
         logger.debug(f"Train data size: {len(train_data)}, Validation data size: {len(val_data)}")
 
         # Set the number of classes
