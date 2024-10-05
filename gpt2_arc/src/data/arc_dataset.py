@@ -62,7 +62,22 @@ class ARCDataset(Dataset):
             self._process_synthetic_data(data_source)
         else:
             raise FileNotFoundError(f"Data source directory not found: {data_source}")
-        
+
+        # Build an index of all samples
+        self.sample_index = []  # List of tuples: (file_path, split, sample_idx)
+        for file_path in self.data_files:
+            with open(file_path, 'r') as f:
+                task_data = json.load(f)
+            processed_task = self._process_single_task(task_data)
+
+            # Depending on is_test, collect samples from the appropriate split
+            split = 'test' if self.is_test else 'train'
+            samples = processed_task[split]
+            for idx_in_split in range(len(samples)):
+                self.sample_index.append((file_path, split, idx_in_split))
+
+        logger.debug(f"Total number of samples indexed: {len(self.sample_index)}")
+
     def _process_data_source(self, data_source):
         logger.debug(f"Processing data source of type: {type(data_source)}")
         if isinstance(data_source, str):
@@ -243,23 +258,20 @@ class ARCDataset(Dataset):
         return processed_data
 
     def __len__(self) -> int:
-        return len(self.data_files)
+        return len(self.sample_index)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, str]:
         if idx < 0 or idx >= len(self):
             raise IndexError(f"Index {idx} out of range (total samples: {len(self)})")
 
-        file_path = self.data_files[idx]
+        file_path, split, sample_idx = self.sample_index[idx]
+
         with open(file_path, 'r') as f:
             task_data = json.load(f)
         processed_task = self._process_single_task(task_data)
         task_id = os.path.splitext(os.path.basename(file_path))[0]
 
-        split = 'test' if self.is_test else 'train'
-        if not processed_task[split]:
-            raise ValueError(f"No {split} data available in {task_id}")
-
-        sample = random.choice(processed_task[split])
+        sample = processed_task[split][sample_idx]
 
         input_grid = self._preprocess_grid(sample["input"])
         output_grid = self._preprocess_grid(sample["output"])
