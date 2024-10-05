@@ -112,6 +112,10 @@ def objective(trial):
             mamba_ratio=mamba_ratio,
             d_state=d_state,
             d_conv=d_conv
+            use_gpu=args.use_gpu,
+            log_level=args.log_level,
+            use_synthetic_data=args.use_synthetic_data,
+            synthetic_data_path=args.synthetic_data_path
         )
         estimated_memory = estimate_memory_usage(
             total_params=total_params,
