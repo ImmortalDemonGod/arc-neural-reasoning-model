@@ -77,7 +77,7 @@ def main(args):
                 n_embd=n_embd,
                 n_head=n_head,
                 n_layer=best_params['n_layer'],
-                dropout=best_params['dropout']
+                dropout=best_params['dropout'],
                 use_gpu=args.use_gpu,
                 log_level=args.log_level,
                 use_synthetic_data=args.use_synthetic_data,
