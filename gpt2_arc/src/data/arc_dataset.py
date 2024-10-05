@@ -123,10 +123,15 @@ class ARCDataset(IterableDataset):
             with open(file_path, 'r') as f:
                 try:
                     task_data = json.load(f)
-                    if self.is_test:
-                        num_samples += len(task_data.get('test', []))
+                    if isinstance(task_data, dict):
+                        if self.is_test:
+                            num_samples += len(task_data.get('test', []))
+                        else:
+                            num_samples += len(task_data.get('train', []))
+                    elif isinstance(task_data, list):
+                        num_samples += len(task_data)
                     else:
-                        num_samples += len(task_data.get('train', []))
+                        logger.error(f"Unexpected data format in file {file_path}")
                 except json.JSONDecodeError as e:
                     logger.error(f"Error decoding JSON from file {file_path}: {e}")
         return num_samples
