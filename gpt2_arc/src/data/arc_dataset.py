@@ -460,33 +460,20 @@ class ARCDataset(IterableDataset):
 
     @staticmethod
     def collate_fn(batch):
-        # print(f"Collating batch of size: {len(batch)}")
         if not batch:
-            # print("Warning: Empty batch received")
-            return torch.tensor([]), torch.tensor([]), []
-        
+            return torch.tensor([]), torch.tensor([])
+
         try:
-            inputs, outputs, task_ids = zip(*batch)
+            inputs, outputs = zip(*batch)
         except ValueError as e:
             print(f"Error unpacking batch: {e}")
             print(f"Batch content: {batch}")
-            # Return empty tensors and list if unpacking fails
-            return torch.tensor([]), torch.tensor([]), []
+            return torch.tensor([]), torch.tensor([])
 
-        print(f"Input shapes: {[i.shape for i in inputs]}")
-        print(f"Output shapes: {[o.shape for o in outputs]}")
-
-        # Find max dimensions in the batch
         max_h = max(i.size(1) for i in inputs)
         max_w = max(i.size(2) for i in inputs)
 
-        print(f"Max dimensions: height={max_h}, width={max_w}")
-
-        # Pad inputs and outputs to max size in the batch
         padded_inputs = torch.stack([F.pad(i, (0, max_w - i.size(2), 0, max_h - i.size(1))) for i in inputs])
         padded_outputs = torch.stack([F.pad(o, (0, max_w - o.size(2), 0, max_h - o.size(1))) for o in outputs])
 
-        print(f"Padded input shape: {padded_inputs.shape}")
-        print(f"Padded output shape: {padded_outputs.shape}")
-
-        return [padded_inputs, padded_outputs, list(task_ids)]
+        return padded_inputs, padded_outputs
