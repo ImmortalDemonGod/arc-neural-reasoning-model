@@ -52,11 +52,12 @@ from gpt2_arc.src.utils.performance_metrics import calculate_mamba_efficiency
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv):
+def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout):
     """Validate that hyperparameters meet necessary constraints."""
     logger.debug(f"Validating hyperparameters: n_embd={n_embd}, n_head={n_head}, n_layer={n_layer}, "
-                 f"mamba_ratio={mamba_ratio}, d_state={d_state}, d_conv={d_conv}")
+                 f"mamba_ratio={mamba_ratio}, d_state={d_state}, d_conv={d_conv}, dropout={dropout}")
     assert n_embd % n_head == 0, f"n_embd ({n_embd}) must be divisible by n_head ({n_head})"
+    assert 0.0 <= dropout <= 1.0, f"dropout ({dropout}) must be between 0.0 and 1.0"
     assert n_embd >= n_head, f"n_embd ({n_embd}) must be greater than or equal to n_head ({n_head})"
     assert n_layer > 0, f"n_layer ({n_layer}) must be positive"
     assert mamba_ratio >= 0.0, f"mamba_ratio ({mamba_ratio}) must be non-negative"
