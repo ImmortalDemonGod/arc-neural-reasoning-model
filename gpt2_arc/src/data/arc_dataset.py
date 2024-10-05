@@ -90,6 +90,12 @@ class ARCDataset(IterableDataset):
     def __len__(self):
         return len(self.data)
 
+    def __getitem__(self, index):
+        task = self.data[index]
+        input_grid = self._preprocess_grid(task['input'])
+        output_grid = self._preprocess_grid(task['output'])
+        return input_grid, output_grid
+
         print(f"DEBUG: Processed data length: {len(self.data)}")
         if self.data:
             print(f"DEBUG: First item keys: {self.data[0].keys()}")
