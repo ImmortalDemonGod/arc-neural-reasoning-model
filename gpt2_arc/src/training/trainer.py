@@ -261,10 +261,10 @@ class ARCTrainer(pl.LightningModule):
         print("DEBUG: Results saved and TensorBoard writer closed.")
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=0)
 
     def val_dataloader(self):
-        loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=4)
+        loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=0)
         logger.debug(f"DEBUG: Test dataloader created with {len(loader)} batches")
         return loader
 
