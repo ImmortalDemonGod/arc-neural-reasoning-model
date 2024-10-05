@@ -125,8 +125,9 @@ def main(args):
             train_set, eval_set = arckit.load_data()
             train_data = ARCDataset(train_set)
             val_data = ARCDataset(eval_set)
-    num_train_samples = train_data.get_num_samples()
-    num_val_samples = val_data.get_num_samples()
+        
+        num_train_samples = train_data.get_num_samples()
+        num_val_samples = val_data.get_num_samples()
 
     logger.info(f"Number of training examples: {num_train_samples}")
     logger.info(f"Number of validation examples: {num_val_samples}")
