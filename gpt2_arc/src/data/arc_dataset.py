@@ -52,6 +52,7 @@ class ARCDataset(IterableDataset):
         self.data_files = []  # Initialize data_files as an empty list
         self.data_source = data_source
         self.data = []  # Initialize data as an empty list
+        self.num_samples = 0  # Initialize num_samples
         set_debug_mode(debug)  # Set debug mode based on parameter
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"data_source type: {type(data_source)}")
@@ -68,7 +69,8 @@ class ARCDataset(IterableDataset):
             if os.path.isdir(data_source):
                 logger.debug("Processing synthetic data from directory")
                 self._process_synthetic_data(data_source)
-            elif os.path.isfile(data_source):
+            self.num_samples = self._count_samples_in_directory(data_source)
+        elif os.path.isfile(data_source):
                 logger.debug("Processing JSON data from file")
                 self.data = self._process_json_data(data_source)
             else:
@@ -76,12 +78,15 @@ class ARCDataset(IterableDataset):
         elif isinstance(data_source, TaskSet):
             logger.debug("Processing TaskSet data")
             self.data = self._process_arckit_data(data_source)
+            self.num_samples = sum(len(task.test if self.is_test else task.train) for task in data_source.tasks)
         elif isinstance(data_source, list):
             logger.debug("Processing list data")
             self.data = self._process_list_data(data_source)
+            self.num_samples = len(self.data)
         elif isinstance(data_source, tuple):
             logger.debug("Processing combined data")
             self.data = self._combine_data(*data_source)
+            self.num_samples = len(self.data)
         else:
             error_msg = f"Unsupported data_source type: {type(data_source)}"
             logger.error(error_msg)
@@ -115,8 +120,20 @@ class ARCDataset(IterableDataset):
             error_msg = "Data source type not supported in get_num_samples."
             logger.error(error_msg)
             raise NotImplementedError(error_msg)
+    def _count_samples_in_directory(self, directory: str):
+        num_samples = 0
+        file_list = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.json')]
+        for file_path in file_list:
+            with open(file_path, 'r') as f:
+                try:
+                    task_data = json.load(f)
+                    if self.is_test:
+                        num_samples += len(task_data.get('test', []))
+                    else:
+                        num_samples += len(task_data.get('train', []))
+                except json.JSONDecodeError as e:
+                    logger.error(f"Error decoding JSON from file {file_path}: {e}")
         return num_samples
-        return len(self.data)
 
     def __getitem__(self, index):
         task = self.data[index]
