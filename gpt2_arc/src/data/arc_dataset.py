@@ -431,7 +431,7 @@ class ARCDataset(IterableDataset):
             print(f"DEBUG: Item type: {type(item)}")
             print(f"DEBUG: Item content: {item}")
 
-            if 'input' in item and 'output' in item:
+            if 'input' in item and 'output' in item and isinstance(item['input'], (list, np.ndarray)) and isinstance(item['output'], (list, np.ndarray)):
                 processed_data.append(item)
             else:
                 raise ValueError("Unexpected item format in data_source.")
