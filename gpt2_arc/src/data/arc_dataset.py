@@ -74,24 +74,22 @@ class ARCDataset(IterableDataset):
             logger.debug("Processing JSON data from file")
             self.data = self._process_json_data(data_source)
             self.num_samples = len(self.data)
+        elif TaskSet is not None and isinstance(data_source, TaskSet):
+            logger.debug("Processing TaskSet data")
+            self.data = self._process_arckit_data(data_source)
+            self.num_samples = sum(len(task.test if self.is_test else task.train) for task in data_source.tasks)
+        elif isinstance(data_source, list):
+            logger.debug("Processing list data")
+            self.data = self._process_list_data(data_source)
+            self.num_samples = len(self.data)
+        elif isinstance(data_source, tuple):
+            logger.debug("Processing combined data")
+            self.data = self._combine_data(*data_source)
+            self.num_samples = len(self.data)
         else:
-            raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-    elif TaskSet is not None and isinstance(data_source, TaskSet):
-        logger.debug("Processing TaskSet data")
-        self.data = self._process_arckit_data(data_source)
-        self.num_samples = sum(len(task.test if self.is_test else task.train) for task in data_source.tasks)
-    elif isinstance(data_source, list):
-        logger.debug("Processing list data")
-        self.data = self._process_list_data(data_source)
-        self.num_samples = len(self.data)
-    elif isinstance(data_source, tuple):
-        logger.debug("Processing combined data")
-        self.data = self._combine_data(*data_source)
-        self.num_samples = len(self.data)
-    else:
-        error_msg = f"Unsupported data_source type: {type(data_source)}"
-        logger.error(error_msg)
-        raise ValueError(error_msg)
+            error_msg = f"Unsupported data_source type: {type(data_source)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
 
     def get_num_samples(self):
