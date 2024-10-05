@@ -190,31 +190,7 @@ class ARCDataset(Dataset):
                 file_path = os.path.join(directory, filename)
                 self.data_files.append(file_path)
 
-    def _process_single_task(self, task_data: Dict) -> Dict:
-        processed_task = {"train": [], "test": []}
-        for split in ["train", "test"]:
-            for sample in task_data.get(split, []):
-                input_grid = torch.tensor(sample["input"], dtype=torch.float32).unsqueeze(0)
-                output_grid = torch.tensor(sample["output"], dtype=torch.float32).unsqueeze(0)
-                processed_task[split].append({"input": input_grid, "output": output_grid})
-        return processed_task
 
-    def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
-        logger.debug(f"Inside _process_single_task, test_split is: {self.test_split}")
-        if isinstance(task_data, dict):
-            train_examples = task_data.get("train", [])
-            test_examples = task_data.get("test", [])
-        elif isinstance(task_data, list):
-            split_idx = int(len(task_data) * (1 - self.test_split))
-            train_examples = task_data[:split_idx]
-            test_examples = task_data[split_idx:]
-        else:
-            raise ValueError("Task data must be either a dictionary or a list")
-
-        return {
-            "train": [self._preprocess_grid(example) for example in train_examples],
-            "test": [self._preprocess_grid(example) for example in test_examples]
-        }
 
     def _preprocess_grid(self, example: Dict) -> Dict:
         if isinstance(example, dict) and 'input' in example and 'output' in example:
