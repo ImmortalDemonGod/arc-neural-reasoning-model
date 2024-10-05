@@ -126,8 +126,14 @@ def main(args):
             train_data = ARCDataset(train_set)
             val_data = ARCDataset(eval_set)
         
-            num_train_samples = train_data.get_num_samples()
-            num_val_samples = val_data.get_num_samples()
+            try:
+                num_train_samples = train_data.get_num_samples()
+                num_val_samples = val_data.get_num_samples()
+                logger.info(f"Number of training examples: {num_train_samples}")
+                logger.info(f"Number of validation examples: {num_val_samples}")
+            except Exception as e:
+                logger.error(f"Failed to get number of samples: {e}", exc_info=True)
+                sys.exit(1)  # Exit program on critical error
 
         if 'num_train_samples' in locals() and 'num_val_samples' in locals():
             logger.info(f"Number of training examples: {num_train_samples}")
@@ -307,7 +313,7 @@ def main(args):
             raise RuntimeError(f"A runtime error occurred: {str(e)}")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {str(e)}", exc_info=True)
-        raise
+        sys.exit(1)  # Exit the program after logging the error
     finally:
         if 'tracker' in locals():
             tracker.finish()

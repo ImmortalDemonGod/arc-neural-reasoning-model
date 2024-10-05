@@ -80,7 +80,7 @@ class ARCDataset(IterableDataset):
                     raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
         except Exception as e:
             logger.error(f"Error initializing ARCDataset: {e}", exc_info=True)
-            raise
+            raise  # Re-raise the exception to prevent silent failures
 
 
     def get_num_samples(self):
@@ -104,7 +104,7 @@ class ARCDataset(IterableDataset):
                     logger.error(f"Unexpected data format in file {file_path}")
             except Exception as e:
                 logger.error(f"Error processing file {file_path}: {e}", exc_info=True)
-                continue
+                continue  # Skip this file and proceed to the next
         logger.debug(f"Total samples counted: {num_samples}")
         return num_samples
 
