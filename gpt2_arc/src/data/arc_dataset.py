@@ -45,7 +45,9 @@ class ARCDataset(IterableDataset):
         num_symbols: int = 10,
         test_split: float = 0.2,
         debug=False,
+        batch_size=8,  # Default batch size
     ):
+        self.batch_size = batch_size
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
@@ -220,23 +222,33 @@ class ARCDataset(IterableDataset):
         return processed_data
 
     def __iter__(self):
+        batch_inputs = []
+        batch_outputs = []
         for file_path in self.data_files:
-                with open(file_path, 'r') as f:
-                    try:
-                        task_data = json.load(f)
-                        processed_task = self._process_single_task(task_data)
-                        for split in ["train", "test"]:
-                            if self.is_test and split != "test":
-                                continue
-                            if not self.is_test and split != "train":
-                                continue
-                            for sample in processed_task.get(split, []):
-                                input_tensor = self._preprocess_grid(sample["input"])
-                                output_tensor = self._preprocess_grid(sample["output"])
-                                yield input_tensor, output_tensor
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Error decoding JSON from file {file_path}: {e}")
+            with open(file_path, 'r') as f:
+                try:
+                    task_data = json.load(f)
+                    processed_task = self._process_single_task(task_data)
+                    for split in ["train", "test"]:
+                        if self.is_test and split != "test":
+                            continue
+                        if not self.is_test and split != "train":
+                            continue
+                        for sample in processed_task.get(split, []):
+                            input_tensor = self._preprocess_grid(sample["input"])
+                            output_tensor = self._preprocess_grid(sample["output"])
+                            batch_inputs.append(input_tensor)
+                            batch_outputs.append(output_tensor)
+                            if len(batch_inputs) == self.batch_size:
+                                yield torch.stack(batch_inputs), torch.stack(batch_outputs)
+                                batch_inputs = []
+                                batch_outputs = []
+                except json.JSONDecodeError as e:
+                    logger.error(f"Error decoding JSON from file {file_path}: {e}")
                     continue  # Skip this file and proceed to the next
+        # Yield any remaining samples
+        if batch_inputs:
+            yield torch.stack(batch_inputs), torch.stack(batch_outputs)
 
     def _validate_data(self):
         for task in self.data:

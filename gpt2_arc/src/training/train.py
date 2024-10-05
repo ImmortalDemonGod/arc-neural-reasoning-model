@@ -148,15 +148,15 @@ def main(args):
         logger.info("Creating DataLoader instances")
         train_loader = DataLoader(
             train_data,
-            batch_size=args.batch_size,
+            batch_size=None,  # Set batch_size to None for IterableDataset
             num_workers=0,
-            pin_memory=True
+            pin_memory=False  # Set to False to save memory
         )
         val_loader = DataLoader(
             val_data,
-            batch_size=args.batch_size,
+            batch_size=None,  # Set batch_size to None for IterableDataset
             num_workers=0,
-            pin_memory=True
+            pin_memory=False  # Set to False to save memory
         )
         logger.debug(f"DataLoaders created with batch size {args.batch_size}")
 
