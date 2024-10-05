@@ -125,22 +125,15 @@ def main(args):
             train_set, eval_set = arckit.load_data()
             train_data = ARCDataset(train_set)
             val_data = ARCDataset(eval_set)
-        
-            try:
-                num_train_samples = train_data.get_num_samples()
-                num_val_samples = val_data.get_num_samples()
-                logger.info(f"Number of training examples: {num_train_samples}")
-                logger.info(f"Number of validation examples: {num_val_samples}")
-            except Exception as e:
-                logger.error(f"Failed to get number of samples: {e}", exc_info=True)
-                sys.exit(1)  # Exit program on critical error
 
-        if 'num_train_samples' in locals() and 'num_val_samples' in locals():
+        try:
+            num_train_samples = train_data.get_num_samples()
+            num_val_samples = val_data.get_num_samples()
             logger.info(f"Number of training examples: {num_train_samples}")
             logger.info(f"Number of validation examples: {num_val_samples}")
-        else:
-            logger.error("num_train_samples or num_val_samples is not defined.")
-            return
+        except Exception as e:
+            logger.error(f"Failed to get number of samples: {e}", exc_info=True)
+            sys.exit(1)  # Exit program on critical error
         if num_train_samples == 0 or num_val_samples == 0:
             logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
             return
