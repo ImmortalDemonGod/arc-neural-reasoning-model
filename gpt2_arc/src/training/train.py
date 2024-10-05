@@ -9,6 +9,8 @@ import optuna
 import arckit
 import numpy as np
 import torch
+import multiprocessing
+from multiprocessing import Pool, cpu_count
 
 # Define the base directory for the arc-neural-reasoning-model
 arc_model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -32,12 +34,21 @@ from gpt2_arc.src.utils.results_collector import ResultsCollector
 # Set up logging
 logger = logging.getLogger(__name__)
 
-def find_max_label_from_dataset(dataset):
-    max_label = 0
-    for i in range(len(dataset)):
-        input_grid, output_grid, _ = dataset[i]
-        max_label = max(max_label, input_grid.max().item(), output_grid.max().item())
-    return int(max_label) + 1  # Ensure max_label is integer
+def get_max_label(sample):
+    input_grid, output_grid, _ = sample
+    return max(input_grid.max().item(), output_grid.max().item())
+
+def find_max_label_from_dataset_parallel(dataset, num_workers=None):
+    if num_workers is None:
+        num_workers = cpu_count()
+
+    logger.info(f"Starting parallel computation with {num_workers} workers...")
+    with Pool(processes=num_workers) as pool:
+        max_labels = pool.map(get_max_label, dataset)
+
+    overall_max_label = max(max_labels) + 1
+    logger.info(f"Determined total number of classes: {overall_max_label}")
+    return overall_max_label
 
 class ConfigSavingModelCheckpoint(ModelCheckpoint):
     def __init__(self, config, *args, **kwargs):
@@ -129,8 +140,7 @@ def main(args):
 
         # Determine the number of classes
         logger.info("Determining number of classes")
-        num_classes = find_max_label_from_dataset(train_data)
-        num_classes = int(num_classes)  # Ensure num_classes is integer
+        num_classes = find_max_label_from_dataset_parallel(train_data, num_workers=8)
         logger.info(f"Number of classes determined: {num_classes}")
         logger.debug(f"num_classes (type: {type(num_classes)}): {num_classes}")
 
