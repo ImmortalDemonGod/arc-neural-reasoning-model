@@ -319,7 +319,7 @@ class ARCDataset(Dataset):
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
         logger.debug(f"Grid type: {type(grid)}")
-        print(f"Grid type: {type(grid)}")
+        # print(f"Grid type: {type(grid)}")
     
         if isinstance(grid, dict):
             input_grid = np.array(grid['input'])
@@ -333,7 +333,7 @@ class ARCDataset(Dataset):
             raise ValueError(f"Unexpected grid type: {type(grid)}")
     
         logger.debug(f"Input grid shape before processing: {input_grid.shape}")
-        print(f"Input grid shape before processing: {input_grid.shape}")
+        # print(f"Input grid shape before processing: {input_grid.shape}")
     
         # Ensure input_grid is 2D
         if input_grid.ndim > 2:
@@ -348,8 +348,8 @@ class ARCDataset(Dataset):
     
         logger.debug(f"Preprocessed grid shape: {grid_tensor.shape}")
         logger.debug(f"Preprocessed grid content:\n{grid_tensor}")
-        print(f"Preprocessed grid shape: {grid_tensor.shape}")
-        print(f"Preprocessed grid content:\n{grid_tensor}")
+        # print(f"Preprocessed grid shape: {grid_tensor.shape}")
+        # print(f"Preprocessed grid content:\n{grid_tensor}")
     
         return grid_tensor
     def kronecker_scale(self, X, target_height=30, target_width=30):
@@ -412,11 +412,11 @@ class ARCDataset(Dataset):
 
     def _pad_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
         h, w = grid.shape
-        print(f"DEBUG: Grid shape before padding: (h={h}, w={w}), target: (height={height}, width={width})")
+        # print(f"DEBUG: Grid shape before padding: (h={h}, w={w}), target: (height={height}, width={width})")
 
         # Handle grids larger than target dimensions
         if h > height or w > width:
-            print(f"DEBUG: Grid is larger than target size. Cropping the grid.")
+            # print(f"DEBUG: Grid is larger than target size. Cropping the grid.")
             # Crop the grid to the target size
             grid = grid[:height, :width]
             h, w = grid.shape  # Update dimensions after cropping
@@ -428,7 +428,7 @@ class ARCDataset(Dataset):
         pad_left = pad_w
         pad_right = width - w - pad_w
 
-        print(f"DEBUG: Calculated padding - pad_top: {pad_top}, pad_bottom: {pad_bottom}, pad_left: {pad_left}, pad_right: {pad_right}")
+        # print(f"DEBUG: Calculated padding - pad_top: {pad_top}, pad_bottom: {pad_bottom}, pad_left: {pad_left}, pad_right: {pad_right}")
 
         # Ensure padding values are non-negative
         pad_top = max(0, pad_top)
