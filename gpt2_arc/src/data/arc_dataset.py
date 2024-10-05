@@ -46,11 +46,11 @@ class ARCDataset(IterableDataset):
         test_split: float = 0.2,
         debug=False,
     ):
-        self.data_source = data_source
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
         self.data_files = []  # Initialize data_files as an empty list
+        self.data_source = data_source
         self.data = []  # Initialize data as an empty list
         set_debug_mode(debug)  # Set debug mode based on parameter
         logger.debug("Starting ARCDataset initialization")
@@ -258,6 +258,28 @@ class ARCDataset(IterableDataset):
             error_msg = "Data source type not supported in iterable mode."
             logger.error(error_msg)
             raise NotImplementedError(error_msg)
+            file_list = [os.path.join(self.data_source, f) for f in os.listdir(self.data_source) if f.endswith('.json')]
+            random.shuffle(file_list)  # Shuffle the file list
+            for file_path in file_list:
+                with open(file_path, 'r') as f:
+                    try:
+                        task_data = json.load(f)
+                        processed_task = self._process_single_task(task_data)
+                        for split in ["train", "test"]:
+                            if self.is_test and split != "test":
+                                continue
+                            if not self.is_test and split != "train":
+                                continue
+                            for sample in processed_task.get(split, []):
+                                input_tensor = self._preprocess_grid(sample["input"])
+                                output_tensor = self._preprocess_grid(sample["output"])
+                                yield input_tensor, output_tensor
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Error decoding JSON from file {file_path}: {e}")
+        else:
+            error_msg = "Data source type not supported in iterable mode."
+            logger.error(error_msg)
+            raise NotImplementedError(error_msg)
 
     def _validate_data(self):
         for task in self.data:
@@ -433,6 +455,9 @@ class ARCDataset(IterableDataset):
             print(f"DEBUG: Item content: {item}")
 
             if 'input' in item and 'output' in item and isinstance(item['input'], (list, np.ndarray)) and isinstance(item['output'], (list, np.ndarray)):
+                processed_data.append(item)
+            else:
+                raise ValueError("Unexpected item format in data_source.")
                 processed_data.append(item)
             else:
                 raise ValueError("Unexpected item format in data_source.")
