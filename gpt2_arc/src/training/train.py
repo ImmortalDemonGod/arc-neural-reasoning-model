@@ -130,6 +130,7 @@ def main(args):
 
         logger.info(f"Number of training examples: {num_train_samples}")
         logger.info(f"Number of validation examples: {num_val_samples}")
+        if num_train_samples == 0 or num_val_samples == 0:
             logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
             return
 
