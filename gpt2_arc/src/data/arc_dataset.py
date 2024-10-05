@@ -57,7 +57,7 @@ class ARCDataset(Dataset):
         logger.debug(f"data_source content: {data_source}")
         logger.debug(f"self.test_split is set to: {self.test_split}")
         
-        logger.debug(f"Data files found: {self.data_files}")
+        logger.debug(f"Data files found: {self.data_files[:5]}... (total {len(self.data_files)})")
         logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
 
         logger.debug(f"Data files found: {self.data_files}")
@@ -89,7 +89,7 @@ class ARCDataset(Dataset):
         # Build an index of all samples
         self.sample_index = []  # List of tuples: (task_id, split, sample_idx)
         for task in self.data:
-            task_id = task.get("id", "unknown")
+            task_id = task.get("id", f"task_{len(self.sample_index)}")
             for split in ["train", "test"]:
                 samples = task.get(split, [])
                 for idx_in_split in range(len(samples)):
