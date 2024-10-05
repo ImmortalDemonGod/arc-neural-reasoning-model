@@ -486,13 +486,29 @@ class ARCDataset(Dataset):
 
     def _pad_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
         h, w = grid.shape
+        print(f"DEBUG: Grid shape before padding: (h={h}, w={w}), target: (height={height}, width={width})")
+
+        # Handle grids larger than target dimensions
+        if h > height or w > width:
+            print(f"DEBUG: Grid is larger than target size. Cropping the grid.")
+            # Crop the grid to the target size
+            grid = grid[:height, :width]
+            h, w = grid.shape  # Update dimensions after cropping
+
         pad_h = (height - h) // 2
         pad_w = (width - w) // 2
-        # Compute padding for height and width, ensuring non-negative values
         pad_top = pad_h
-        pad_bottom = max(0, height - h - pad_h)
+        pad_bottom = height - h - pad_h
         pad_left = pad_w
-        pad_right = max(0, width - w - pad_w)
+        pad_right = width - w - pad_w
+
+        print(f"DEBUG: Calculated padding - pad_top: {pad_top}, pad_bottom: {pad_bottom}, pad_left: {pad_left}, pad_right: {pad_right}")
+
+        # Ensure padding values are non-negative
+        pad_top = max(0, pad_top)
+        pad_bottom = max(0, pad_bottom)
+        pad_left = max(0, pad_left)
+        pad_right = max(0, pad_right)
 
         # Apply padding
         return np.pad(
