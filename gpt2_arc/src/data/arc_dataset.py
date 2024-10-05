@@ -89,31 +89,6 @@ class ARCDataset(IterableDataset):
 
     def __len__(self):
         return len(self.data)
-        logger.debug(f"Processing data source of type: {type(data_source)}")
-        if isinstance(data_source, str):
-            logger.debug(f"Data source path: {data_source}")
-            if os.path.isdir(data_source):
-                logger.debug("Processing synthetic data from directory")
-                return self._process_synthetic_data(data_source)
-            elif os.path.isfile(data_source):
-                logger.debug("Processing JSON data from file")
-                with open(data_source, 'r') as f:
-                    raw_data = json.load(f)
-                return self._process_json_data(raw_data)
-            else:
-                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-        elif isinstance(data_source, list):
-            logger.debug("Processing list data")
-            return self._process_list_data(data_source)
-        elif isinstance(data_source, tuple):
-            logger.debug("Processing combined data")
-            return self._combine_data(*data_source)
-        elif TaskSet is not None and isinstance(data_source, TaskSet):
-            logger.debug("Processing ARCkit data")
-            return self._process_arckit_data(data_source)
-        else:
-            logger.error(f"Invalid data_source type: {type(data_source)}")
-            raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
 
         print(f"DEBUG: Processed data length: {len(self.data)}")
         if self.data:
