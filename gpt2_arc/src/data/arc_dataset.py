@@ -113,9 +113,9 @@ class ARCDataset(Dataset):
         self._validate_data()
 
     def _process_json_data(self, raw_data: List[Dict]) -> List[Dict]:
-        print(f"DEBUG: Processing {len(data_source)} items")
+        print(f"DEBUG: Processing {len(raw_data)} items")
         processed_data = []
-        for idx, item in enumerate(data_source):
+        for idx, item in enumerate(raw_data):
             print(f"DEBUG: Processing item {idx}")
             print(f"DEBUG: Item type: {type(item)}")
             print(f"DEBUG: Item content: {item}")
