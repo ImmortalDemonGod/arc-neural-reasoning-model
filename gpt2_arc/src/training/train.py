@@ -136,8 +136,20 @@ def main(args):
 
         # Create DataLoader instances
         logger.info("Creating DataLoader instances")
-        train_loader = torch.utils.data.DataLoader(train_data, batch_size=int(args.batch_size), num_workers=0)
-        val_loader = torch.utils.data.DataLoader(val_data, batch_size=int(args.batch_size), num_workers=0)
+        train_loader = DataLoader(
+            train_data,
+            batch_size=args.batch_size,
+            num_workers=0,
+            pin_memory=True,
+            collate_fn=ARCDataset.collate_fn
+        )
+        val_loader = DataLoader(
+            val_data,
+            batch_size=args.batch_size,
+            num_workers=0,
+            pin_memory=True,
+            collate_fn=ARCDataset.collate_fn
+        )
         logger.debug(f"DataLoaders created with batch size {args.batch_size}")
 
         # Initialize model
@@ -218,7 +230,7 @@ def main(args):
         # Train the model
         logger.info("Starting model training")
         with profiler.profile(record_shapes=True, profile_memory=True) as prof:
-            pl_trainer.fit(trainer)
+            pl_trainer.fit(trainer, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
         # Log memory usage after training
         logger.info(f"Memory usage after training: {torch.cuda.memory_allocated()} bytes")

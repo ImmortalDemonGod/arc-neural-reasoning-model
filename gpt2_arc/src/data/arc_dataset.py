@@ -6,7 +6,7 @@ from typing import Union, List, Dict, Tuple
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import Dataset
+from torch.utils.data import IterableDataset
 import logging
 
 try:
@@ -37,7 +37,7 @@ def set_debug_mode(debug=False):
         logger.setLevel(logging.ERROR)
         handler.setLevel(logging.ERROR)
 
-class ARCDataset(Dataset):
+class ARCDataset(IterableDataset):
     def __init__(
         self,
         data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
@@ -49,8 +49,6 @@ class ARCDataset(Dataset):
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
-        self.data_files = []  # Initialize data_files as an empty list
-        self.data = []  # Initialize data as an empty list
         set_debug_mode(debug)  # Set debug mode based on parameter
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"data_source type: {type(data_source)}")
@@ -86,16 +84,6 @@ class ARCDataset(Dataset):
             logger.error(error_msg)
             raise ValueError(error_msg)
 
-        # Build an index of all samples
-        self.sample_index = []  # List of tuples: (task_id, split, sample_idx)
-        for task in self.data:
-            task_id = task.get("id", f"task_{len(self.sample_index)}")
-            for split in ["train", "test"]:
-                samples = task.get(split, [])
-                for idx_in_split in range(len(samples)):
-                    self.sample_index.append((task_id, split, idx_in_split))
-
-        logger.debug(f"Total number of samples indexed: {len(self.sample_index)}")
 
     def _process_data_source(self, data_source):
         logger.debug(f"Processing data source of type: {type(data_source)}")
@@ -262,29 +250,30 @@ class ARCDataset(Dataset):
         logger.debug(f"Processed {len(processed_data)} tasks")
         return processed_data
 
-    def __len__(self) -> int:
-        return len(self.sample_index)
-
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, str]:
-        if idx < 0 or idx >= len(self):
-            raise IndexError(f"Index {idx} out of range (total samples: {len(self)})")
-
-        task_id, split, sample_idx = self.sample_index[idx]
-
-        # Find the corresponding task in self.data
-        task = next((t for t in self.data if t.get("id") == task_id), None)
-        if task is None:
-            raise ValueError(f"Task with id {task_id} not found in data")
-
-        samples = task.get(split, [])
-        if sample_idx < 0 or sample_idx >= len(samples):
-            raise IndexError(f"Sample index {sample_idx} out of range in split '{split}' for task '{task_id}'")
-
-        sample = samples[sample_idx]
-
-        input_tensor = self._preprocess_grid(sample["input"])
-        output_tensor = self._preprocess_grid(sample["output"])
-        return input_tensor, output_tensor, task_id
+    def __iter__(self):
+        if isinstance(self.data_source, str) and os.path.isdir(self.data_source):
+            file_list = [os.path.join(self.data_source, f) for f in os.listdir(self.data_source) if f.endswith('.json')]
+            random.shuffle(file_list)  # Shuffle the file list
+            for file_path in file_list:
+                with open(file_path, 'r') as f:
+                    try:
+                        task_data = json.load(f)
+                        processed_task = self._process_single_task(task_data)
+                        for split in ["train", "test"]:
+                            if self.is_test and split != "test":
+                                continue
+                            if not self.is_test and split != "train":
+                                continue
+                            for sample in processed_task.get(split, []):
+                                input_tensor = self._preprocess_grid(sample["input"])
+                                output_tensor = self._preprocess_grid(sample["output"])
+                                yield input_tensor, output_tensor
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Error decoding JSON from file {file_path}: {e}")
+        else:
+            error_msg = "Data source type not supported in iterable mode."
+            logger.error(error_msg)
+            raise NotImplementedError(error_msg)
 
     def _validate_data(self):
         for task in self.data:
