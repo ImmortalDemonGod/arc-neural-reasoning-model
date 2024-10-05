@@ -61,22 +61,26 @@ class ARCDataset(IterableDataset):
         logger.debug(f"Data files found: {self.data_files[:5]}... (total {len(self.data_files)})")
         logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
 
-        if isinstance(data_source, str):
-            if os.path.isdir(data_source):
-                logger.debug("Initializing dataset with data from directory")
-                self.data_dir = data_source
-                self.data_files = [
-                    os.path.join(data_source, f)
-                    for f in os.listdir(data_source)
-                    if f.endswith('.json')
-                ]
-                random.shuffle(self.data_files)  # Optional shuffling for randomness
-                self.num_samples = self._count_samples_in_directory(data_source)
-            elif os.path.isfile(data_source):
-                # Handle single file case if necessary
-                pass
-            else:
-                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
+        try:
+            if isinstance(data_source, str):
+                if os.path.isdir(data_source):
+                    logger.debug("Initializing dataset with data from directory")
+                    self.data_dir = data_source
+                    self.data_files = [
+                        os.path.join(data_source, f)
+                        for f in os.listdir(data_source)
+                        if f.endswith('.json')
+                    ]
+                    random.shuffle(self.data_files)  # Optional shuffling for randomness
+                    self.num_samples = self._count_samples_in_directory(data_source)
+                elif os.path.isfile(data_source):
+                    # Handle single file case if necessary
+                    pass
+                else:
+                    raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
+        except Exception as e:
+            logger.error(f"Error initializing ARCDataset: {e}", exc_info=True)
+            raise
 
 
     def get_num_samples(self):
@@ -84,21 +88,24 @@ class ARCDataset(IterableDataset):
     def _count_samples_in_directory(self, directory: str):
         num_samples = 0
         file_list = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.json')]
+        logger.debug(f"Counting samples in {len(file_list)} files")
         for file_path in file_list:
-            with open(file_path, 'r') as f:
-                try:
+            try:
+                with open(file_path, 'r') as f:
                     task_data = json.load(f)
-                    if isinstance(task_data, dict):
-                        if self.is_test:
-                            num_samples += len(task_data.get('test', []))
-                        else:
-                            num_samples += len(task_data.get('train', []))
-                    elif isinstance(task_data, list):
-                        num_samples += len(task_data)
-                    else:
-                        logger.error(f"Unexpected data format in file {file_path}")
-                except json.JSONDecodeError as e:
-                    logger.error(f"Error decoding JSON from file {file_path}: {e}")
+                if isinstance(task_data, dict):
+                    sample_count = len(task_data.get('test', [])) if self.is_test else len(task_data.get('train', []))
+                    num_samples += sample_count
+                    logger.debug(f"File {file_path}: {sample_count} samples")
+                elif isinstance(task_data, list):
+                    num_samples += len(task_data)
+                    logger.debug(f"File {file_path}: {len(task_data)} samples")
+                else:
+                    logger.error(f"Unexpected data format in file {file_path}")
+            except Exception as e:
+                logger.error(f"Error processing file {file_path}: {e}", exc_info=True)
+                continue
+        logger.debug(f"Total samples counted: {num_samples}")
         return num_samples
 
 

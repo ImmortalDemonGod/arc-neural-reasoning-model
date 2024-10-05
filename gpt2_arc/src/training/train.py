@@ -129,8 +129,12 @@ def main(args):
             num_train_samples = train_data.get_num_samples()
             num_val_samples = val_data.get_num_samples()
 
-        logger.info(f"Number of training examples: {num_train_samples}")
-        logger.info(f"Number of validation examples: {num_val_samples}")
+        if 'num_train_samples' in locals() and 'num_val_samples' in locals():
+            logger.info(f"Number of training examples: {num_train_samples}")
+            logger.info(f"Number of validation examples: {num_val_samples}")
+        else:
+            logger.error("num_train_samples or num_val_samples is not defined.")
+            return
         if num_train_samples == 0 or num_val_samples == 0:
             logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
             return
