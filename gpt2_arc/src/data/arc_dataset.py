@@ -55,10 +55,11 @@ class ARCDataset(Dataset):
         logger.debug(f"data_source content: {data_source}")
         logger.debug(f"self.test_split is set to: {self.test_split}")
         
-        self.data_files = []
+        logger.debug(f"Data files found: {self.data_files}")
+        logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
 
-        self.data_files = []
-        self.data = []
+        logger.debug(f"Data files found: {self.data_files}")
+        logger.debug(f"Data loaded: {self.data}")
 
         if isinstance(data_source, str):
             if os.path.isdir(data_source):
@@ -189,6 +190,13 @@ class ARCDataset(Dataset):
             if filename.endswith('.json'):
                 file_path = os.path.join(directory, filename)
                 self.data_files.append(file_path)
+                logger.debug(f"Processing file: {file_path}")
+                with open(file_path, 'r') as f:
+                    try:
+                        task_data = json.load(f)
+                        self.data.append(self._process_single_task(task_data))
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Error decoding JSON from file {file_path}: {e}")
 
 
 
