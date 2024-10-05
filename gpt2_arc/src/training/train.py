@@ -9,6 +9,7 @@ import optuna
 import arckit
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 
 # Define the base directory for the arc-neural-reasoning-model
 arc_model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
