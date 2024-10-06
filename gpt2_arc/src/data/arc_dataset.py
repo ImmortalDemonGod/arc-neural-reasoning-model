@@ -54,6 +54,7 @@ class ARCDataset(IterableDataset):
         self.data_files = []  # Initialize data_files as an empty list
         self.data_source = data_source
         self.num_samples = 0  # Initialize num_samples
+        self.data = []  # Initialize an empty list to store all samples
         set_debug_mode(debug)  # Set debug mode based on parameter
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"data_source type: {type(data_source)}")
@@ -80,13 +81,29 @@ class ARCDataset(IterableDataset):
                     pass
                 else:
                     raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-        except Exception as e:
+                    for sample in processed_task.get(split, []):
+                        input_tensor = self._preprocess_grid(sample["input"])
+                        output_tensor = self._preprocess_grid(sample["output"])
+                        # Store the sample as a tuple
+                        self.data.append((input_tensor, output_tensor))
+        except json.JSONDecodeError as e:
+            logger.error(f"Error decoding JSON from file {file_path}: {e}")
+            continue  # Skip this file and proceed to the next
+
+# After processing all files, update the sample count
+self.num_samples = len(self.data)
             logger.error(f"Error initializing ARCDataset: {e}", exc_info=True)
             raise  # Re-raise the exception to prevent silent failures
 
 
+    def __len__(self):
+        return len(self.data)
+
     def get_num_samples(self):
         return self.num_samples
+    def __getitem__(self, idx):
+        return self.data[idx]
+
     def _count_samples_in_directory(self, directory: str):
         num_samples = 0
         file_list = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.json')]
@@ -221,39 +238,6 @@ class ARCDataset(IterableDataset):
         logger.debug(f"Processed {len(processed_data)} tasks")
         return processed_data
 
-    def __iter__(self):
-        worker_info = get_worker_info()
-        if worker_info is None:
-            # Single-process data loading
-            files = self.data_files
-        else:
-            # Multi-process data loading
-            worker_id = worker_info.id
-            num_workers = worker_info.num_workers
-            per_worker = int(math.ceil(len(self.data_files) / float(num_workers)))
-            # Calculate the start and end indices of files for this worker
-            start = worker_id * per_worker
-            end = min(start + per_worker, len(self.data_files))
-            files = self.data_files[start:end]
-
-        for file_path in files:
-            with open(file_path, 'r') as f:
-                try:
-                    task_data = json.load(f)
-                    processed_task = self._process_single_task(task_data)
-                    for split in ["train", "test"]:
-                        if self.is_test and split != "test":
-                            continue
-                        if not self.is_test and split != "train":
-                            continue
-                        for sample in processed_task.get(split, []):
-                            input_tensor = self._preprocess_grid(sample["input"])
-                            output_tensor = self._preprocess_grid(sample["output"])
-                            # Yield individual samples
-                            yield input_tensor, output_tensor
-                except json.JSONDecodeError as e:
-                    logger.error(f"Error decoding JSON from file {file_path}: {e}")
-                    continue  # Skip this file and proceed to the next
 
     def _validate_data(self):
         for task in self.data:

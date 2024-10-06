@@ -149,13 +149,13 @@ def main(args):
         train_loader = DataLoader(
             train_data,
             batch_size=config.training.batch_size,  # Use configured batch size
-            num_workers=4,                          # Set number of worker processes
+            num_workers=16,                         # Increased number of worker processes
             pin_memory=True if args.use_gpu else False  # Enable if using GPU
         )
         val_loader = DataLoader(
             val_data,
             batch_size=config.training.batch_size,  # Use configured batch size
-            num_workers=4,                          # Match number of workers in train_loader
+            num_workers=16,                         # Match number of workers in train_loader
             pin_memory=True if args.use_gpu else False
         )
         logger.debug(f"DataLoaders created with batch size {args.batch_size}")
