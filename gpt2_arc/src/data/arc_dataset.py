@@ -333,19 +333,27 @@ class ARCDataset(Dataset):
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
         logger.debug(f"Preprocessing grid with initial type: {type(grid)}")
+        
+        # Convert grid to torch.Tensor if it's a list or numpy array
         if isinstance(grid, list):
-            grid_array = np.array(grid)
+            grid_tensor = torch.tensor(grid, dtype=torch.float32)
+            logger.debug(f"Converted list to tensor with shape: {grid_tensor.shape}")
         elif isinstance(grid, np.ndarray):
-            grid_array = grid
+            grid_tensor = torch.from_numpy(grid).float()
+            logger.debug(f"Converted numpy array to tensor with shape: {grid_tensor.shape}")
+        elif isinstance(grid, torch.Tensor):
+            grid_tensor = grid.float()
+            logger.debug(f"Using existing tensor with shape: {grid_tensor.shape}")
         else:
             raise ValueError(f"Unexpected grid type: {type(grid)}")
-
-        logger.debug(f"Grid shape before padding: {grid_array.shape}")
-        padded_grid = self._pad_grid(grid_array, height=30, width=30)
-
+    
+        logger.debug(f"Grid shape before padding: {grid_tensor.shape}")
+        
+        # Apply padding using PyTorch's built-in functions
+        padded_grid = self._pad_grid_torch(grid_tensor, height=30, width=30)
+    
         logger.debug(f"Grid shape after padding: {padded_grid.shape}")
-        grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
-        return grid_tensor
+        return padded_grid
     def kronecker_scale(self, X, target_height=30, target_width=30):
         print(f"Kronecker scaling input shape: {X.shape}")
         h, w = X.shape
@@ -394,38 +402,28 @@ class ARCDataset(Dataset):
     def _scale_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
         return grid  # No scaling, preserve original size
 
-    def _pad_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
-        h, w = grid.shape
-        logger.debug(f"Grid shape before padding/cropping: (h={h}, w={w}), target: (height={height}, width={width})")
+    def _pad_grid_torch(self, grid: torch.Tensor, height: int, width: int) -> torch.Tensor:
+        """
+        Pads the input grid tensor to the specified height and width using PyTorch's functional padding.
+        
+        Args:
+            grid (torch.Tensor): The input grid tensor with shape [C, H, W].
+            height (int): The target height after padding.
+            width (int): The target width after padding.
+        
+        Returns:
+            torch.Tensor: The padded grid tensor.
+        """
+        _, h, w = grid.shape
+        pad_h = max((height - h) // 2, 0)
+        pad_w = max((width - w) // 2, 0)
 
-        if h > height or w > width:
-            logger.debug("Grid is larger than target size. Cropping the grid.")
-            grid = grid[:height, :width]
-            h, w = grid.shape
-            logger.debug(f"Grid shape after cropping: (h={h}, w={w})")
-
-        pad_h = (height - h) // 2
-        pad_w = (width - w) // 2
-        pad_top = pad_h
-        pad_bottom = height - h - pad_h
-        pad_left = pad_w
-        pad_right = width - w - pad_w
-
-        logger.debug(f"Calculated padding - pad_top: {pad_top}, pad_bottom: {pad_bottom}, pad_left: {pad_left}, pad_right: {pad_right}")
-
-        pad_top = max(0, pad_top)
-        pad_bottom = max(0, pad_bottom)
-        pad_left = max(0, pad_left)
-        pad_right = max(0, pad_right)
-
-        padded_grid = np.pad(
-            grid,
-            ((pad_top, pad_bottom), (pad_left, pad_right)),
-            mode='constant'
-        )
-
-        logger.debug(f"Padded grid shape: {padded_grid.shape}")
-
+        # Calculate padding for top, bottom, left, and right
+        padding = (pad_w, width - w - pad_w, pad_h, height - h - pad_h)  # (left, right, top, bottom)
+        logger.debug(f"Padding applied: left={pad_w}, right={width - w - pad_w}, top={pad_h}, bottom={height - h - pad_h}")
+    
+        # Apply padding using PyTorch's functional pad
+        padded_grid = F.pad(grid, padding, mode='constant', value=0)
         return padded_grid
 
 
