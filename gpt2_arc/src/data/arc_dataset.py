@@ -191,18 +191,6 @@ class ARCDataset(Dataset):
             logger.debug(f"Saved processed data to cache at {cache_path}")
         except Exception as e:
             logger.error(f"Failed to save cache to {cache_path}: {e}")
-        split_key = 'test' if self.is_test else 'train'
-        samples = []
-        task_id = task_data.get('id', f"task_{len(self.data) + 1}")  # Assign a default ID if not present
-        for example in task_data.get(split_key, []):
-            input_grid = self._preprocess_grid(example['input'])
-            output_grid = self._preprocess_grid(example['output'])
-            samples.append({
-                "input": input_grid,
-                "output": output_grid,
-                "task_id": task_id
-            })
-        return samples
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         samples = []
