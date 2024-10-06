@@ -247,13 +247,6 @@ class ARCDataset(Dataset):
 
 
 
-    def _preprocess_grid(self, example: Dict) -> Dict:
-        if isinstance(example, dict) and 'input' in example and 'output' in example:
-            input_grid = torch.tensor(example["input"], dtype=torch.float32).unsqueeze(0)
-            output_grid = torch.tensor(example["output"], dtype=torch.float32).unsqueeze(0)
-        else:
-            raise ValueError(f"Unexpected example format: {example}")
-        return {"input": input_grid, "output": output_grid}
 
     def _process_single_task(self, task_data: Dict) -> List[Tuple[torch.Tensor, torch.Tensor]]:
         split_key = 'test' if self.is_test else 'train'
