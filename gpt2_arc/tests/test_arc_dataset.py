@@ -198,7 +198,38 @@ def test_arc_dataset_synthetic_data(debug_mode):
 
 
 
-def test_arc_dataset_getitem(sample_data):
+def test_data_loader_parameters(sample_data):
+    dataset = ARCDataset(sample_data)
+    num_workers = 4  # Example value
+    prefetch_factor = 2
+    persistent_workers = True
+
+    train_loader = DataLoader(
+        dataset,
+        batch_size=2,
+        num_workers=num_workers,
+        prefetch_factor=prefetch_factor,
+        persistent_workers=persistent_workers
+    )
+
+    assert train_loader.num_workers == num_workers, "num_workers should be set correctly"
+    assert train_loader.prefetch_factor == prefetch_factor, "prefetch_factor should be set correctly"
+    assert train_loader.persistent_workers == persistent_workers, "persistent_workers should be set correctly"
+
+def test_dataloader_loading(sample_data):
+    dataset = ARCDataset(sample_data)
+    data_loader = DataLoader(
+        dataset,
+        batch_size=1,
+        num_workers=2,
+        prefetch_factor=1,
+        persistent_workers=True
+    )
+
+    for batch in data_loader:
+        inputs, outputs, task_ids = batch
+        assert inputs.shape == (1, 1, 30, 30), "Input shape mismatch"
+        assert outputs.shape == (1, 1, 30, 30), "Output shape mismatch"
     dataset = ARCDataset(sample_data)
     input_grid, output_grid, *_ = dataset[0]
 

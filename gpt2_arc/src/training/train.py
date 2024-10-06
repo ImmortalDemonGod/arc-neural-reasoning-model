@@ -1,5 +1,6 @@
 # gpt2_arc/src/training/train.py
 import argparse
+import multiprocessing
 import sys
 import logging
 import os
@@ -31,7 +32,11 @@ from gpt2_arc.src.training.trainer import ARCTrainer
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 
-# Set up logging
+def get_num_workers():
+    try:
+        return multiprocessing.cpu_count() // 2  # Use half of the available CPUs
+    except NotImplementedError:
+        return 4  # Default fallback
 logger = logging.getLogger(__name__)
 
 class ConfigSavingModelCheckpoint(ModelCheckpoint):
@@ -168,15 +173,19 @@ def main(args):
         logger.info("Creating DataLoader instances")
         train_loader = DataLoader(
             train_data,
-            batch_size=config.training.batch_size,  # Use configured batch size
-            num_workers=16,                         # Increased number of worker processes
-            pin_memory=True if args.use_gpu else False  # Enable if using GPU
+            batch_size=config.training.batch_size,
+            num_workers=get_num_workers(),
+            pin_memory=True if args.use_gpu else False,
+            prefetch_factor=config.training.prefetch_factor,
+            persistent_workers=config.training.persistent_workers
         )
         val_loader = DataLoader(
             val_data,
-            batch_size=config.training.batch_size,  # Use configured batch size
-            num_workers=16,                         # Match number of workers in train_loader
-            pin_memory=True if args.use_gpu else False
+            batch_size=config.training.batch_size,
+            num_workers=get_num_workers(),
+            pin_memory=True if args.use_gpu else False,
+            prefetch_factor=config.training.prefetch_factor,
+            persistent_workers=config.training.persistent_workers
         )
         logger.debug(f"DataLoaders created with batch size {args.batch_size}")
 
