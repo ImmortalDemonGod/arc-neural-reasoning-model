@@ -121,6 +121,7 @@ class ARCDataset(Dataset):
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
 
         self.num_samples = len(self.data)
+        self._compute_and_cache_statistics()
         self._save_cache(self.cache_path)
 
         # Add data validation
@@ -193,7 +194,9 @@ class ARCDataset(Dataset):
         if os.path.exists(cache_path):
             try:
                 with open(cache_path, 'rb') as f:
-                    self.data = pickle.load(f)
+                    cache_data = pickle.load(f)
+                self.data = cache_data.get("data", [])
+                self.statistics = cache_data.get("statistics", {})
                 self.num_samples = len(self.data)
                 logger.debug(f"Loaded cached data from {cache_path}")
                 return True
@@ -201,10 +204,30 @@ class ARCDataset(Dataset):
                 logger.error(f"Failed to load cache from {cache_path}: {e}")
         return False
 
-    def _save_cache(self, cache_path: str):
+    def _compute_and_cache_statistics(self):
+        """
+        Computes dataset statistics and caches them alongside the dataset cache.
+        """
+        logger.debug("Computing dataset statistics")
+        grid_size_stats = self._compute_grid_size_stats()
+        symbol_frequencies = self._compute_symbol_frequencies()
+        
+        statistics = {
+            "grid_size_stats": grid_size_stats,
+            "symbol_frequencies": symbol_frequencies
+        }
+        
+        # Update the cache dictionary with statistics
+        self.statistics = statistics
+        self._save_cache(self.cache_path)  # Ensure statistics are saved in the cache
+        logger.debug("Dataset statistics computed and cached successfully")
         try:
             with open(cache_path, 'wb') as f:
-                pickle.dump(self.data, f)
+                cache_data = {
+                    "data": self.data,
+                    "statistics": self.statistics if hasattr(self, 'statistics') else {}
+                }
+                pickle.dump(cache_data, f)
             logger.debug(f"Saved processed data to cache at {cache_path}")
         except Exception as e:
             logger.error(f"Failed to save cache to {cache_path}: {e}")
@@ -296,7 +319,31 @@ class ARCDataset(Dataset):
         return processed_data
 
 
-    def _validate_data(self):
+    def get_grid_size_stats(self) -> Dict[str, Any]:
+        """
+        Returns the precomputed grid size statistics.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing grid size statistics.
+        """
+        if hasattr(self, 'statistics') and 'grid_size_stats' in self.statistics:
+            return self.statistics['grid_size_stats']
+        else:
+            logger.warning("Grid size statistics not available.")
+            return {}
+    
+    def get_symbol_frequencies(self) -> Dict[str, float]:
+        """
+        Returns the precomputed symbol frequencies.
+        
+        Returns:
+            Dict[str, float]: A dictionary mapping symbols to their frequencies.
+        """
+        if hasattr(self, 'statistics') and 'symbol_frequencies' in self.statistics:
+            return self.statistics['symbol_frequencies']
+        else:
+            logger.warning("Symbol frequencies not available.")
+            return {}
         for idx, sample in enumerate(self.data):
             if "input" not in sample:
                 raise KeyError(f"Sample at index {idx} is missing 'input' key")

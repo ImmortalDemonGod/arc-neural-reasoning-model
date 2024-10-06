@@ -126,7 +126,25 @@ def main(args):
             train_data = ARCDataset(train_set)
             val_data = ARCDataset(eval_set)
 
-        try:
+        # Access dataset statistics
+        train_grid_stats = train_data.get_grid_size_stats()
+        train_symbol_freq = train_data.get_symbol_frequencies()
+
+        val_grid_stats = val_data.get_grid_size_stats()
+        val_symbol_freq = val_data.get_symbol_frequencies()
+
+        logger.info(f"Train Grid Size Stats: {train_grid_stats}")
+        logger.info(f"Train Symbol Frequencies: {train_symbol_freq}")
+        logger.info(f"Validation Grid Size Stats: {val_grid_stats}")
+        logger.info(f"Validation Symbol Frequencies: {val_symbol_freq}")
+
+        # Example: Adjust model configuration based on grid size stats
+        max_grid_height = max(train_grid_stats.get("max_height", 30), val_grid_stats.get("max_height", 30))
+        max_grid_width = max(train_grid_stats.get("max_width", 30), val_grid_stats.get("max_width", 30))
+        logger.debug(f"Adjusted max grid size - Height: {max_grid_height}, Width: {max_grid_width}")
+
+        # Initialize model with adjusted grid size if necessary
+        model = GPT2ARC(config=model_config, num_classes=num_classes, input_height=max_grid_height, input_width=max_grid_width)
             num_train_samples = train_data.get_num_samples()
             num_val_samples = val_data.get_num_samples()
             logger.info(f"Number of training examples: {num_train_samples}")

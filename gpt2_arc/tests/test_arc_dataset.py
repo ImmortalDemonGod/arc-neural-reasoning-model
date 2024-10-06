@@ -46,7 +46,52 @@ def mock_taskset():
     mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
-def test_arc_dataset_initialization(sample_data, debug_mode):
+def test_dataset_statistics_computation(sample_data):
+    dataset = ARCDataset(sample_data, debug=True)
+    
+    # Retrieve statistics
+    grid_size_stats = dataset.get_grid_size_stats()
+    symbol_frequencies = dataset.get_symbol_frequencies()
+    
+    # Assertions for grid size statistics
+    assert "max_height" in grid_size_stats, "Grid size stats should include 'max_height'"
+    assert "max_width" in grid_size_stats, "Grid size stats should include 'max_width'"
+    assert grid_size_stats["max_height"] == 2, "Max height should be 2 for sample data"
+    assert grid_size_stats["max_width"] == 2, "Max width should be 2 for sample data"
+    
+    # Assertions for symbol frequencies
+    expected_frequencies = {
+        0: 4 / 8,  # 4 occurrences of symbol '0'
+        1: 4 / 8,  # 4 occurrences of symbol '1'
+        # Assuming num_symbols=10, remaining symbols have frequency 0
+        2: 0.0,
+        3: 0.0,
+        4: 0.0,
+        5: 0.0,
+        6: 0.0,
+        7: 0.0,
+        8: 0.0,
+        9: 0.0
+    }
+    for symbol, freq in expected_frequencies.items():
+        assert symbol_frequencies.get(symbol, 0.0) == freq, f"Frequency for symbol {symbol} should be {freq}"
+
+def test_dataset_statistics_caching(sample_data):
+    dataset = ARCDataset(sample_data, debug=True)
+    
+    # Ensure that statistics are cached
+    assert hasattr(dataset, 'statistics'), "Dataset should have a 'statistics' attribute after caching"
+    assert "grid_size_stats" in dataset.statistics, "Statistics should include 'grid_size_stats'"
+    assert "symbol_frequencies" in dataset.statistics, "Statistics should include 'symbol_frequencies'"
+
+    # Reload the dataset to ensure statistics are loaded from cache
+    dataset_reloaded = ARCDataset(sample_data, debug=True)
+    grid_size_stats = dataset_reloaded.get_grid_size_stats()
+    symbol_frequencies = dataset_reloaded.get_symbol_frequencies()
+    
+    # Assertions to verify consistency
+    assert grid_size_stats == dataset.statistics["grid_size_stats"], "Grid size stats should match after reloading from cache"
+    assert symbol_frequencies == dataset.statistics["symbol_frequencies"], "Symbol frequencies should match after reloading from cache"
     dataset = ARCDataset(sample_data, debug=True)
     logger.debug(f"Dataset length: {len(dataset)}, expected: {len(sample_data)}")
     assert len(dataset) == len(sample_data), "Dataset length mismatch"
