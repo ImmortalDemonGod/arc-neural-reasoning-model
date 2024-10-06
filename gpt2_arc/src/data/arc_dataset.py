@@ -147,6 +147,7 @@ class ARCDataset(Dataset):
         split_key = 'test' if self.is_test else 'train'
         samples = []
         task_id = task_data.get('id', f"task_{len(self.data) + 1}")  # Assign a default ID if not present
+        for example in task_data.get(split_key, []):
             input_grid = self._preprocess_grid(example['input'])
             output_grid = self._preprocess_grid(example['output'])
             samples.append({
