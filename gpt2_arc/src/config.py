@@ -19,11 +19,17 @@ class ModelConfig:
         assert self.n_layer > 0, f"n_layer ({self.n_layer}) must be positive"
         assert self.mamba_ratio >= 0.0, f"mamba_ratio ({self.mamba_ratio}) must be non-negative"
 
+from dataclasses import dataclass, field
+import multiprocessing
+
 @dataclass
 class TrainingConfig:
     batch_size: int = 32
     learning_rate: float = 1e-4
     max_epochs: int = 10
+    num_workers: int = multiprocessing.cpu_count() // 2 if multiprocessing.cpu_count() else 4
+    prefetch_factor: int = 2
+    persistent_workers: bool = True
     use_gpu: bool = True
     log_level: str = "INFO"
     use_synthetic_data: bool = False
