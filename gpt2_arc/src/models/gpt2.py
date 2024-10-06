@@ -138,8 +138,8 @@ class GPT2ARC(pl.LightningModule):
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.model.n_embd, kernel_size=3, padding=1).to(torch.float32)
         # Initialize blocks with interleaved TransformerBlocks and MambaLayer(s)
         self.blocks = nn.ModuleList()
-        num_transformer_blocks = self.config.n_layer
-        total_mamba_layers = int(num_transformer_blocks * self.config.mamba_ratio)
+        num_transformer_blocks = self.config.model.n_layer
+        total_mamba_layers = int(num_transformer_blocks * self.config.model.mamba_ratio)
         
         logger.debug(f"Total TransformerBlocks: {num_transformer_blocks}")
         logger.debug(f"Total MambaLayers to add: {total_mamba_layers}")
@@ -161,10 +161,10 @@ class GPT2ARC(pl.LightningModule):
                 # Add a MambaLayer
                 self.blocks.append(
                     MambaLayer(
-                        n_embd=self.config.n_embd,
-                        d_state=self.config.d_state,
-                        d_conv=self.config.d_conv,
-                        dropout=self.config.dropout
+                        n_embd=self.config.model.n_embd,
+                        d_state=self.config.model.d_state,
+                        d_conv=self.config.model.d_conv,
+                        dropout=self.config.model.dropout
                     )
                 )
                 logger.debug(f"Layer {len(self.blocks)}: Added MambaLayer after TransformerBlock {layer_idx + 1}")
