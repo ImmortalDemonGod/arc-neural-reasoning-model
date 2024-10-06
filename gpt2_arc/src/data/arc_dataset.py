@@ -192,35 +192,28 @@ class ARCDataset(Dataset):
         except Exception as e:
             logger.error(f"Failed to save cache to {cache_path}: {e}")
 
-    def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
-        samples = []
-        for task in taskset.tasks:
-            examples = task.test if self.is_test else task.train
-            for input_grid, output_grid in examples:
-                input_tensor = self._preprocess_grid(input_grid)
-                output_tensor = self._preprocess_grid(output_grid)
-                samples.append({
-                    "input": input_tensor,
-                    "output": output_tensor,
-                    "task_id": task.id
-                })
-        return samples
 
     def _process_list_data(self, data_list: List[Dict]) -> List[Dict]:
-        samples = []
-        for example in data_list:
-            if 'input' in example and 'output' in example:
+        processed_data = []
+        for idx, example in enumerate(data_list):
+            if 'input' in example and 'output' in example and isinstance(example['input'], (list, np.ndarray)) and isinstance(example['output'], (list, np.ndarray)):
+                # Preprocess the grids
                 input_grid = self._preprocess_grid(example['input'])
                 output_grid = self._preprocess_grid(example['output'])
-                task_id = example.get('task_id', f"task_{len(samples) + 1}")  # Assign a default ID if not present
-                samples.append({
+
+                # Assign task_id if not present
+                task_id = example.get('task_id', f"task_{len(processed_data) + 1}")
+
+                processed_data.append({
                     "input": input_grid,
                     "output": output_grid,
                     "task_id": task_id
                 })
             else:
-                logger.warning("Example missing 'input' or 'output' keys.")
-        return samples
+                logger.warning(f"Example at index {idx} missing 'input' or 'output' keys or has incorrect types.")
+                # Optionally, skip or raise an error
+                # raise ValueError("Unexpected item format in data_source.")
+        return processed_data
 
 
     def _combine_data(self, official_data, synthetic_data_path):
@@ -248,14 +241,6 @@ class ARCDataset(Dataset):
 
 
 
-    def _process_single_task(self, task_data: Dict) -> List[Tuple[torch.Tensor, torch.Tensor]]:
-        split_key = 'test' if self.is_test else 'train'
-        samples = []
-        for example in task_data.get(split_key, []):
-            input_grid = self._preprocess_grid(example['input'])
-            output_grid = self._preprocess_grid(example['output'])
-            samples.append((input_grid, output_grid))
-        return samples
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         processed_data = []
@@ -349,16 +334,6 @@ class ARCDataset(Dataset):
         print(f"Kronecker scaled output shape: {X_scaled.shape}")
         return X_scaled
 
-    def pad_grid(self, X, target_height=30, target_width=30):
-        print(f"Padding input shape: {X.shape}")
-        h, w = X.shape
-        pad_h = (target_height - h) // 2
-        pad_w = (target_width - w) // 2
-        padded = np.pad(X, ((pad_h, target_height - h - pad_h), 
-                            (pad_w, target_width - w - pad_w)), 
-                        mode='constant')
-        print(f"Padded output shape: {padded.shape}")
-        return padded
 
     def reverse_scaling(self, X_orig, X_pred):
         print(f"Reverse scaling - Original shape: {X_orig.shape}, Prediction shape: {X_pred.shape}")
@@ -429,20 +404,6 @@ class ARCDataset(Dataset):
         logger.debug(f"Padded grid shape: {padded_grid.shape}")
 
         return padded_grid
-    def _process_list_data(self, data_source):
-        # print(f"DEBUG: Processing {len(data_source)} items")
-        processed_data = []
-        for idx, item in enumerate(data_source):
-            # print(f"DEBUG: Processing item {idx}")
-            # print(f"DEBUG: Item type: {type(item)}")
-            # print(f"DEBUG: Item content: {item}")
-
-            if 'input' in item and 'output' in item and isinstance(item['input'], (list, np.ndarray)) and isinstance(item['output'], (list, np.ndarray)):
-                processed_data.append(item)
-            else:
-                raise ValueError("Unexpected item format in data_source.")
-    
-        return processed_data
 
 
     @staticmethod
