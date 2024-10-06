@@ -65,6 +65,7 @@ class ARCTrainer(pl.LightningModule):
         
         if hasattr(self, 'log'):
             self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.train_losses.append(loss.item())
         self.results_collector.update_train_metrics(self.current_epoch, {"loss": loss.item()})
         
         tb_logger = self.get_tensorboard_logger()
