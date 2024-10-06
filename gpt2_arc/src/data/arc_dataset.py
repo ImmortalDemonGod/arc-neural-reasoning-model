@@ -246,25 +246,37 @@ class ARCDataset(Dataset):
         processed_data = []
         logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
         for task in taskset.tasks:
-            logger.debug(f"Task ID: {task.id}")
-        for task in taskset.tasks:
             logger.debug(f"Processing task: {task.id}")
-            logger.debug(f"Task ID: {task.id}")
             logger.debug(f"Train samples: {len(task.train)}, Test samples: {len(task.test)}")
-            processed_task = {
-                "id": task.id,
-                "train": [
-                    {"input": np.array(ex[0]), "output": np.array(ex[1])}
-                    for ex in task.train
-                ],
-                "test": [
-                    {"input": np.array(ex[0]), "output": np.array(ex[1])}
-                    for ex in task.test
-                ]
-            }
-            processed_data.append(processed_task)
-            logger.debug(f"Processed task {task.id}: Train samples: {len(processed_task['train'])}, Test samples: {len(processed_task['test'])}")
-        logger.debug(f"Processed {len(processed_data)} tasks")
+            # Process training samples
+            for ex in task.train:
+                try:
+                    input_tensor = self._preprocess_grid(ex[0])
+                    output_tensor = self._preprocess_grid(ex[1])
+                    processed_data.append({
+                        "input": input_tensor,
+                        "output": output_tensor,
+                        "task_id": task.id
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing training example in task {task.id}: {e}", exc_info=True)
+            
+            # Process testing samples
+            for ex in task.test:
+                try:
+                    input_tensor = self._preprocess_grid(ex[0])
+                    output_tensor = self._preprocess_grid(ex[1])
+                    processed_data.append({
+                        "input": input_tensor,
+                        "output": output_tensor,
+                        "task_id": task.id
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing testing example in task {task.id}: {e}", exc_info=True)
+            
+            logger.debug(f"Processed task {task.id}: Total samples added: {len(task.train) + len(task.test)}")
+        
+        logger.debug(f"Total samples processed from TaskSet: {len(processed_data)}")
         return processed_data
 
 
