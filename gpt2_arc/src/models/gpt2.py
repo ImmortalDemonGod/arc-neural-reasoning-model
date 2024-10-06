@@ -153,7 +153,7 @@ class GPT2ARC(pl.LightningModule):
         current_mamba_index = 0
         for layer_idx in range(num_transformer_blocks):
             # Add a TransformerBlock
-            self.blocks.append(TransformerBlock(self.config.n_embd, self.config.n_head, self.config.dropout))
+            self.blocks.append(TransformerBlock(self.config.model.n_embd, self.config.model.n_head, self.config.model.dropout))
             logger.debug(f"Layer {len(self.blocks)}: Added TransformerBlock")
 
             # Check if we should add a MambaLayer after this TransformerBlock
@@ -169,7 +169,7 @@ class GPT2ARC(pl.LightningModule):
                 )
                 logger.debug(f"Layer {len(self.blocks)}: Added MambaLayer after TransformerBlock {layer_idx + 1}")
                 current_mamba_index += 1
-        self.ln_f = nn.LayerNorm(self.config.n_embd)
+        self.ln_f = nn.LayerNorm(self.config.model.n_embd)
         self.fc_out = nn.Linear(self.config.n_embd, num_classes)  # Add final linear layer
 
         # Initialize loss function with class weights if needed
