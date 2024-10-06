@@ -87,11 +87,14 @@ class ARCDataset(Dataset):
                     with open(file_path, 'r') as f:
                         task_data = json.load(f)
                     if isinstance(task_data, dict):
-                        samples = self._process_single_task(task_data)
+                        task_id = task_data.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                        samples = self._process_single_task(task_data, task_id=task_id)
                         self.data.extend(samples)
+                        logger.debug(f"Added {len(samples)} samples from file {file_path} with task_id: {task_id}")
                     elif isinstance(task_data, list):
                         samples = self._process_list_data(task_data)
                         self.data.extend(samples)
+                        logger.debug(f"Added {len(samples)} samples from file {file_path} using list processing")
                     else:
                         logger.error(f"Unexpected data format in file {file_path}: {type(task_data)}")
             elif os.path.isfile(data_source):
@@ -123,17 +126,18 @@ class ARCDataset(Dataset):
         # Add data validation
         self._validate_data()
 
-    def _process_single_task(self, task_data: Dict, task_id: str = "default_task") ->  List[Dict]:                                                                              
-        split_key = 'test' if self.is_test else 'train'                                  
-        samples = []                                                                     
-        for example in task_data.get(split_key, []):                                     
-            input_grid = self._preprocess_grid(example['input'])                         
-            output_grid = self._preprocess_grid(example['output'])                       
-            samples.append({                                                             
-                "input": input_grid,                                                     
-                "output": output_grid,                                                   
-                "task_id": task_id                                                       
-            })                                                                           
+    def _process_single_task(self, task_data: Dict, task_id: str = "default_task") -> List[Dict]:
+        split_key = 'test' if self.is_test else 'train'
+        samples = []
+        for example in task_data.get(split_key, []):
+            input_grid = self._preprocess_grid(example['input'])
+            output_grid = self._preprocess_grid(example['output'])
+            samples.append({
+                "input": input_grid,
+                "output": output_grid,
+                "task_id": task_id
+            })
+        logger.debug(f"Processed {len(samples)} samples for task_id: {task_id}")
         return samples
     
     def __len__(self):
@@ -293,26 +297,21 @@ class ARCDataset(Dataset):
 
 
     def _validate_data(self):
-        for task in self.data:
-            for split in ["train", "test"]:
-                if split not in task:
-                    continue
-                for idx, sample in enumerate(task[split]):
-                    if "input" not in sample or "output" not in sample:
-                        raise KeyError(f"Sample {idx} in task {split} set is missing 'input' or 'output' key")
-                    input_data = sample["input"]
-                    output_data = sample["output"]
-                    if not (isinstance(input_data, (list, np.ndarray)) and isinstance(output_data, (list, np.ndarray))):
-                        logger.warning(f"Sample {idx} in task {split} set 'input' or 'output' must be a list or numpy array")
-                        continue
-                    if isinstance(input_data, list):
-                        input_data = np.array(input_data)
-                    if isinstance(output_data, list):
-                        output_data = np.array(output_data)
-                    if input_data.ndim != 2 or output_data.ndim != 2:
-                        raise ValueError(f"Sample {idx} in task {split} set 'input' and 'output' must be 2D lists")
-                    if np.any(input_data >= self.num_symbols) or np.any(output_data >= self.num_symbols):
-                        logger.warning(f"Sample {idx} in task {split} set contains invalid symbols (>= {self.num_symbols})")
+        for idx, sample in enumerate(self.data):
+            if "input" not in sample:
+                raise KeyError(f"Sample at index {idx} is missing 'input' key")
+            if "output" not in sample:
+                raise KeyError(f"Sample at index {idx} is missing 'output' key")
+            if "task_id" not in sample:
+                raise KeyError(f"Sample at index {idx} is missing 'task_id' key")
+            
+            input_data = sample["input"]
+            output_data = sample["output"]
+            
+            if not isinstance(input_data, torch.Tensor):
+                logger.warning(f"Sample {idx} has 'input' that is not a torch.Tensor")
+            if not isinstance(output_data, torch.Tensor):
+                logger.warning(f"Sample {idx} has 'output' that is not a torch.Tensor")
 
     def _compute_grid_size_stats(self):
         max_height, max_width = 0, 0
