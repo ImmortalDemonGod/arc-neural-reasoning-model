@@ -165,7 +165,7 @@ def main(args):
         logger.info(f"Number of classes set to: {num_classes}")
 
         # Initialize model with adjusted grid size if necessary
-        model = GPT2ARC(config=model_config, num_classes=num_classes, input_height=max_grid_height, input_width=max_grid_width)
+        model = GPT2ARC(config=model_config, num_classes=num_classes)
         num_train_samples = train_data.get_num_samples()
         num_val_samples = val_data.get_num_samples()
         logger.info(f"Number of training examples: {num_train_samples}")
