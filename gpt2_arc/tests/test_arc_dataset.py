@@ -308,7 +308,37 @@ def mock_taskset():
     mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
-def test_collate_fn_output():
+def test_experiment_tracker_logs_dataset_statistics(sample_data):
+    # Initialize ARCDataset
+    dataset = ARCDataset(sample_data, debug=True)
+    
+    # Initialize ExperimentTracker with mock config
+    mock_config = {"dummy_key": "dummy_value"}
+    tracker = ExperimentTracker(config=mock_config, project="test_project")
+    
+    # Retrieve dataset statistics
+    train_grid_stats = dataset.get_grid_size_stats()
+    train_symbol_freq = dataset.get_symbol_frequencies()
+    val_grid_stats = dataset.get_grid_size_stats()  # Assuming same dataset for simplicity
+    val_symbol_freq = dataset.get_symbol_frequencies()
+    
+    # Log metrics
+    tracker.log_metric("train_max_grid_height", train_grid_stats.get("max_height", 0))
+    tracker.log_metric("train_max_grid_width", train_grid_stats.get("max_width", 0))
+    tracker.log_metric("train_symbol_frequencies", train_symbol_freq)
+
+    tracker.log_metric("val_max_grid_height", val_grid_stats.get("max_height", 0))
+    tracker.log_metric("val_max_grid_width", val_grid_stats.get("max_width", 0))
+    tracker.log_metric("val_symbol_frequencies", val_symbol_freq)
+    
+    # Assertions to verify metrics are logged correctly
+    assert tracker.metrics["train_max_grid_height"] == train_grid_stats.get("max_height", 0)
+    assert tracker.metrics["train_max_grid_width"] == train_grid_stats.get("max_width", 0)
+    assert tracker.metrics["train_symbol_frequencies"] == train_symbol_freq
+
+    assert tracker.metrics["val_max_grid_height"] == val_grid_stats.get("max_height", 0)
+    assert tracker.metrics["val_max_grid_width"] == val_grid_stats.get("max_width", 0)
+    assert tracker.metrics["val_symbol_frequencies"] == val_symbol_freq
     sample_data = [
         {"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]},
         {"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]},
