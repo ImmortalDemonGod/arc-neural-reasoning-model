@@ -81,19 +81,11 @@ class ARCDataset(Dataset):
                     pass
                 else:
                     raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-                    for sample in processed_task.get(split, []):
-                        input_tensor = self._preprocess_grid(sample["input"])
-                        output_tensor = self._preprocess_grid(sample["output"])
-                        # Store the sample as a tuple
-                        self.data.append((input_tensor, output_tensor))
         except json.JSONDecodeError as e:
-            logger.error(f"Error decoding JSON from file {file_path}: {e}")
-            continue  # Skip this file and proceed to the next
+            logger.error(f"Error decoding JSON: {e}")
 
 # After processing all files, update the sample count
         self.num_samples = len(self.data)
-        logger.error(f"Error initializing ARCDataset: {e}", exc_info=True)
-        raise  # Re-raise the exception to prevent silent failures
 
 
     def __len__(self):
