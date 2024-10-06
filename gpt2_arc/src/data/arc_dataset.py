@@ -382,12 +382,12 @@ class ARCDataset(Dataset):
             mode='constant'
         )
     def _process_list_data(self, data_source):
-        print(f"DEBUG: Processing {len(data_source)} items")
+        # print(f"DEBUG: Processing {len(data_source)} items")
         processed_data = []
         for idx, item in enumerate(data_source):
-            print(f"DEBUG: Processing item {idx}")
-            print(f"DEBUG: Item type: {type(item)}")
-            print(f"DEBUG: Item content: {item}")
+            # print(f"DEBUG: Processing item {idx}")
+            # print(f"DEBUG: Item type: {type(item)}")
+            # print(f"DEBUG: Item content: {item}")
 
             if 'input' in item and 'output' in item and isinstance(item['input'], (list, np.ndarray)) and isinstance(item['output'], (list, np.ndarray)):
                 processed_data.append(item)
