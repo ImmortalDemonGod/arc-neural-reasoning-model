@@ -170,7 +170,7 @@ class GPT2ARC(pl.LightningModule):
                 logger.debug(f"Layer {len(self.blocks)}: Added MambaLayer after TransformerBlock {layer_idx + 1}")
                 current_mamba_index += 1
         self.ln_f = nn.LayerNorm(self.config.model.n_embd)
-        self.fc_out = nn.Linear(self.config.n_embd, num_classes)  # Add final linear layer
+        self.fc_out = nn.Linear(self.config.model.n_embd, num_classes)  # Add final linear layer
 
         # Initialize loss function with class weights if needed
         if config.training.balance_symbols and config.training.balancing_method == "weighting":
