@@ -33,7 +33,7 @@ class TrainingConfig:
     use_gpu: bool = True
     log_level: str = "INFO"
     use_synthetic_data: bool = False
-    balance_symbols: bool = False
+    balance_symbols: bool = True  # Enable balancing
     balancing_method: str = "weighting"  # Options: "weighting", "oversampling"
     synthetic_data_path: Optional[str] = None
 
