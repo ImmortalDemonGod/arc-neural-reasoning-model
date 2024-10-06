@@ -171,7 +171,15 @@ class GPT2ARC(pl.LightningModule):
                 current_mamba_index += 1
         self.ln_f = nn.LayerNorm(self.config.n_embd)
         self.fc_out = nn.Linear(self.config.n_embd, num_classes)  # Add final linear layer
-        
+
+        # Initialize loss function with class weights if needed
+        if config.training.balance_symbols and config.training.balancing_method == "weighting":
+            symbol_freq = ...  # Retrieve symbol frequencies from the dataset or pass as argument
+            class_weights = 1.0 / torch.tensor(list(symbol_freq.values()), dtype=torch.float)
+            self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+        else:
+            self.loss_fn = nn.CrossEntropyLoss()
+
         # Initialize weights
         self.apply(self._init_weights)
 
