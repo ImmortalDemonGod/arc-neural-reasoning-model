@@ -343,20 +343,16 @@ class ARCDataset(Dataset):
 
     def _compute_grid_size_stats(self):
         max_height, max_width = 0, 0
-        for task in self.data:
-            for split in ["train", "test"]:
-                for sample in task[split]:
-                    max_height = max(max_height, sample["input"].shape[0], sample["output"].shape[0])
-                    max_width = max(max_width, sample["input"].shape[1], sample["output"].shape[1])
+        for sample in self.data:
+            max_height = max(max_height, sample["input"].shape[1], sample["output"].shape[1])
+            max_width = max(max_width, sample["input"].shape[2], sample["output"].shape[2])
         self.max_grid_size = (max_height, max_width)
 
     def _compute_symbol_frequencies(self):
         symbol_counts = np.zeros(self.num_symbols, dtype=int)
-        for task in self.data:
-            for split in ["train", "test"]:
-                for sample in task[split]:
-                    symbol_counts += np.bincount(sample["input"].flatten(), minlength=self.num_symbols)
-                    symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
+        for sample in self.data:
+            symbol_counts += np.bincount(sample["input"].flatten(), minlength=self.num_symbols)
+            symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
         return symbol_counts / symbol_counts.sum()
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
