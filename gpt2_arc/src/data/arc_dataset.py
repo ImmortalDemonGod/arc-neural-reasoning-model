@@ -2,7 +2,7 @@
 import os
 import json
 import random
-from typing import Union, List, Dict, Tuple
+from typing import Union, List, Dict, Tuple, Any
 import numpy as np
 import pickle
 import hashlib
@@ -221,16 +221,6 @@ class ARCDataset(Dataset):
         self.statistics = statistics
         self._save_cache(self.cache_path)  # Ensure statistics are saved in the cache
         logger.debug("Dataset statistics computed and cached successfully")
-        try:
-            with open(cache_path, 'wb') as f:
-                cache_data = {
-                    "data": self.data,
-                    "statistics": self.statistics if hasattr(self, 'statistics') else {}
-                }
-                pickle.dump(cache_data, f)
-            logger.debug(f"Saved processed data to cache at {cache_path}")
-        except Exception as e:
-            logger.error(f"Failed to save cache to {cache_path}: {e}")
 
 
     def _process_list_data(self, data_list: List[Dict]) -> List[Dict]:

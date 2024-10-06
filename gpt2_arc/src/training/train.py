@@ -145,10 +145,10 @@ def main(args):
 
         # Initialize model with adjusted grid size if necessary
         model = GPT2ARC(config=model_config, num_classes=num_classes, input_height=max_grid_height, input_width=max_grid_width)
-            num_train_samples = train_data.get_num_samples()
-            num_val_samples = val_data.get_num_samples()
-            logger.info(f"Number of training examples: {num_train_samples}")
-            logger.info(f"Number of validation examples: {num_val_samples}")
+        num_train_samples = train_data.get_num_samples()
+        num_val_samples = val_data.get_num_samples()
+        logger.info(f"Number of training examples: {num_train_samples}")
+        logger.info(f"Number of validation examples: {num_val_samples}")
         except Exception as e:
             logger.error(f"Failed to get number of samples: {e}", exc_info=True)
             sys.exit(1)  # Exit program on critical error
