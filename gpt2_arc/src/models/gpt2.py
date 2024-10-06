@@ -125,17 +125,17 @@ class MambaLayer(nn.Module):
         return output
 
 
-from gpt2_arc.src.config import ModelConfig
+from gpt2_arc.src.config import Config
 
 
 class GPT2ARC(pl.LightningModule):
-    def __init__(self, config: ModelConfig, num_classes: int):
+    def __init__(self, config: Config, num_classes: int):
         # Define an example input array for model summary
         self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
         super().__init__()
         self.config = config
         # Replace token embedding with a convolutional layer
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.n_embd, kernel_size=3, padding=1).to(torch.float32)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.model.n_embd, kernel_size=3, padding=1).to(torch.float32)
         # Initialize blocks with interleaved TransformerBlocks and MambaLayer(s)
         self.blocks = nn.ModuleList()
         num_transformer_blocks = self.config.n_layer
@@ -153,7 +153,7 @@ class GPT2ARC(pl.LightningModule):
         current_mamba_index = 0
         for layer_idx in range(num_transformer_blocks):
             # Add a TransformerBlock
-            self.blocks.append(TransformerBlock(self.config.n_embd, self.config.n_head, self.config.dropout))
+            self.blocks.append(TransformerBlock(self.config.model.n_embd, self.config.model.n_head, self.config.model.dropout))
             logger.debug(f"Layer {len(self.blocks)}: Added TransformerBlock")
 
             # Check if we should add a MambaLayer after this TransformerBlock
@@ -169,11 +169,11 @@ class GPT2ARC(pl.LightningModule):
                 )
                 logger.debug(f"Layer {len(self.blocks)}: Added MambaLayer after TransformerBlock {layer_idx + 1}")
                 current_mamba_index += 1
-        self.ln_f = nn.LayerNorm(self.config.n_embd)
-        self.fc_out = nn.Linear(self.config.n_embd, num_classes)  # Add final linear layer
+        self.ln_f = nn.LayerNorm(self.config.model.n_embd)
+        self.fc_out = nn.Linear(self.config.model.n_embd, num_classes)  # Add final linear layer
 
         # Initialize loss function with class weights if needed
-        if config.training.balance_symbols and config.training.balancing_method == "weighting":
+        if self.config.training.balance_symbols and self.config.training.balancing_method == "weighting":
             symbol_freq = ...  # Retrieve symbol frequencies from the dataset or pass as argument
             class_weights = 1.0 / torch.tensor(list(symbol_freq.values()), dtype=torch.float)
             self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
