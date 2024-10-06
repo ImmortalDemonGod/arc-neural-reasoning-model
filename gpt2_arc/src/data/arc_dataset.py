@@ -6,7 +6,7 @@ from typing import Union, List, Dict, Tuple
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import IterableDataset
+from torch.utils.data import Dataset
 import logging
 from torch.utils.data import get_worker_info
 import math  # Import math module for ceiling division
@@ -39,7 +39,7 @@ def set_debug_mode(debug=False):
         logger.setLevel(logging.ERROR)
         handler.setLevel(logging.ERROR)
 
-class ARCDataset(IterableDataset):
+class ARCDataset(Dataset):
     def __init__(
         self,
         data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
