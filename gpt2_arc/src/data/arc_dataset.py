@@ -4,6 +4,8 @@ import json
 import random
 from typing import Union, List, Dict, Tuple
 import numpy as np
+import pickle
+import hashlib
 import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset
@@ -55,6 +57,16 @@ class ARCDataset(Dataset):
         self.data_source = data_source
         self.num_samples = 0
         self.data = []
+        self.cache_path = self._generate_cache_path(
+            data_source=self.data_source,
+            num_symbols=self.num_symbols,
+            is_test=self.is_test,
+            test_split=self.test_split
+        )
+
+        if self._load_cache(self.cache_path):
+            logger.debug("Data loaded from cache successfully.")
+            return
         set_debug_mode(debug)
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"data_source type: {type(data_source)}")
@@ -105,6 +117,7 @@ class ARCDataset(Dataset):
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
 
         self.num_samples = len(self.data)
+        self._save_cache(self.cache_path)
 
         # Add data validation
         self._validate_data()
@@ -143,7 +156,41 @@ class ARCDataset(Dataset):
         return num_samples
 
 
-    def _process_single_task(self, task_data: Dict) -> List[Dict]:
+    @staticmethod
+    def _generate_cache_path(data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]], num_symbols: int, is_test: bool, test_split: float) -> str:
+        dataset_version = "v1"
+        hash_input = json.dumps({
+            'version': dataset_version,
+            'data_source': data_source if isinstance(data_source, list) else data_source.__str__(),
+            'num_symbols': num_symbols,
+            'is_test': is_test,
+            'test_split': test_split
+        }, sort_keys=True).encode('utf-8')
+        hash_digest = hashlib.md5(hash_input).hexdigest()
+        cache_filename = f"arc_dataset_cache_{hash_digest}.pkl"
+        cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
+        os.makedirs(cache_dir, exist_ok=True)
+        return os.path.join(cache_dir, cache_filename)
+
+    def _load_cache(self, cache_path: str) -> bool:
+        if os.path.exists(cache_path):
+            try:
+                with open(cache_path, 'rb') as f:
+                    self.data = pickle.load(f)
+                self.num_samples = len(self.data)
+                logger.debug(f"Loaded cached data from {cache_path}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to load cache from {cache_path}: {e}")
+        return False
+
+    def _save_cache(self, cache_path: str):
+        try:
+            with open(cache_path, 'wb') as f:
+                pickle.dump(self.data, f)
+            logger.debug(f"Saved processed data to cache at {cache_path}")
+        except Exception as e:
+            logger.error(f"Failed to save cache to {cache_path}: {e}")
         split_key = 'test' if self.is_test else 'train'
         samples = []
         task_id = task_data.get('id', f"task_{len(self.data) + 1}")  # Assign a default ID if not present
