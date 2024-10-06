@@ -98,7 +98,8 @@ class ARCDataset(Dataset):
                 with open(data_source, 'r') as f:
                     task_data = json.load(f)
                 if isinstance(task_data, dict):
-                    samples = self._process_single_task(task_data)
+                    task_id = task_data.get('id', "default_task")
+                    samples = self._process_single_task(task_data, task_id=task_id)
                     self.data.extend(samples)
                 elif isinstance(task_data, list):
                     samples = self._process_list_data(task_data)
@@ -232,9 +233,8 @@ class ARCDataset(Dataset):
                     try:
                         task_data = json.load(f)
                         task_id = os.path.splitext(filename)[0]  # Use the filename (without extension) as the task ID
-                        processed_task = self._process_single_task(task_data)
-                        processed_task["id"] = task_id
-                        self.data.append(processed_task)
+                        processed_samples = self._process_single_task(task_data, task_id=task_id)
+                        self.data.extend(processed_samples)
                     except json.JSONDecodeError as e:
                         logger.error(f"Error decoding JSON from file {file_path}: {e}")
 
