@@ -106,6 +106,9 @@ class ARCDataset(Dataset):
 
         self.num_samples = len(self.data)
 
+        # Add data validation
+        self._validate_data()
+
 
     def __len__(self):
         return len(self.data)
