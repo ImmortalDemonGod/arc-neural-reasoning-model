@@ -8,6 +8,8 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import IterableDataset
 import logging
+from torch.utils.data import get_worker_info
+import math  # Import math module for ceiling division
 
 try:
     from arckit.data import TaskSet, Task
@@ -45,9 +47,7 @@ class ARCDataset(IterableDataset):
         num_symbols: int = 10,
         test_split: float = 0.2,
         debug=False,
-        batch_size=8,  # Default batch size
     ):
-        self.batch_size = batch_size
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
@@ -222,9 +222,21 @@ class ARCDataset(IterableDataset):
         return processed_data
 
     def __iter__(self):
-        batch_inputs = []
-        batch_outputs = []
-        for file_path in self.data_files:
+        worker_info = get_worker_info()
+        if worker_info is None:
+            # Single-process data loading
+            files = self.data_files
+        else:
+            # Multi-process data loading
+            worker_id = worker_info.id
+            num_workers = worker_info.num_workers
+            per_worker = int(math.ceil(len(self.data_files) / float(num_workers)))
+            # Calculate the start and end indices of files for this worker
+            start = worker_id * per_worker
+            end = min(start + per_worker, len(self.data_files))
+            files = self.data_files[start:end]
+
+        for file_path in files:
             with open(file_path, 'r') as f:
                 try:
                     task_data = json.load(f)
@@ -237,18 +249,11 @@ class ARCDataset(IterableDataset):
                         for sample in processed_task.get(split, []):
                             input_tensor = self._preprocess_grid(sample["input"])
                             output_tensor = self._preprocess_grid(sample["output"])
-                            batch_inputs.append(input_tensor)
-                            batch_outputs.append(output_tensor)
-                            if len(batch_inputs) == self.batch_size:
-                                yield torch.stack(batch_inputs), torch.stack(batch_outputs)
-                                batch_inputs = []
-                                batch_outputs = []
+                            # Yield individual samples
+                            yield input_tensor, output_tensor
                 except json.JSONDecodeError as e:
                     logger.error(f"Error decoding JSON from file {file_path}: {e}")
                     continue  # Skip this file and proceed to the next
-        # Yield any remaining samples
-        if batch_inputs:
-            yield torch.stack(batch_inputs), torch.stack(batch_outputs)
 
     def _validate_data(self):
         for task in self.data:
