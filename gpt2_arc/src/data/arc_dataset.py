@@ -74,13 +74,25 @@ class ARCDataset(Dataset):
                 for file_path in self.data_files:
                     with open(file_path, 'r') as f:
                         task_data = json.load(f)
+                    if isinstance(task_data, dict):
                         samples = self._process_single_task(task_data)
                         self.data.extend(samples)
+                    elif isinstance(task_data, list):
+                        samples = self._process_list_data(task_data)
+                        self.data.extend(samples)
+                    else:
+                        logger.error(f"Unexpected data format in file {file_path}: {type(task_data)}")
             elif os.path.isfile(data_source):
                 with open(data_source, 'r') as f:
                     task_data = json.load(f)
+                if isinstance(task_data, dict):
                     samples = self._process_single_task(task_data)
                     self.data.extend(samples)
+                elif isinstance(task_data, list):
+                    samples = self._process_list_data(task_data)
+                    self.data.extend(samples)
+                else:
+                    logger.error(f"Unexpected data format in file {data_source}: {type(task_data)}")
             else:
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
         elif TaskSet is not None and isinstance(data_source, TaskSet):
