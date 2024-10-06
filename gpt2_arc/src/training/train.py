@@ -238,14 +238,10 @@ def main(args):
 
         # Train the model
         logger.info("Starting model training")
-        with profiler.profile(record_shapes=True, profile_memory=True) as prof:
-            pl_trainer.fit(trainer, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        pl_trainer.fit(trainer, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
         # Log memory usage after training
         logger.info(f"Memory usage after training: {torch.cuda.memory_allocated()} bytes")
-
-        # After training, print profiler results
-        print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
 
         # After training, run test
         logger.info("Running model evaluation")

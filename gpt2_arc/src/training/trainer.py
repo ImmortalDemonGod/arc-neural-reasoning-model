@@ -171,7 +171,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: Test step result: {result}")
 
         # Append the result to self.test_outputs
-        self.test_outputs.append(result)
+        self.test_outputs.append({key: value.item() if isinstance(value, torch.Tensor) else value for key, value in result.items()})
 
         return result
 
