@@ -340,6 +340,7 @@ def test_experiment_tracker_logs_dataset_statistics(sample_data):
     assert tracker.metrics["val_max_grid_height"] == val_grid_stats.get("max_height", 0)
     assert tracker.metrics["val_max_grid_width"] == val_grid_stats.get("max_width", 0)
     assert tracker.metrics["val_symbol_frequencies"] == val_symbol_freq
+def test_collate_fn_output(): 
     sample_data = [
         {"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]},
         {"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]},
