@@ -123,7 +123,19 @@ class ARCDataset(Dataset):
         # Add data validation
         self._validate_data()
 
-
+    def _process_single_task(self, task_data: Dict, task_id: str = "default_task") ->  List[Dict]:                                                                              
+        split_key = 'test' if self.is_test else 'train'                                  
+        samples = []                                                                     
+        for example in task_data.get(split_key, []):                                     
+            input_grid = self._preprocess_grid(example['input'])                         
+            output_grid = self._preprocess_grid(example['output'])                       
+            samples.append({                                                             
+                "input": input_grid,                                                     
+                "output": output_grid,                                                   
+                "task_id": task_id                                                       
+            })                                                                           
+        return samples
+    
     def __len__(self):
         return len(self.data)
 
