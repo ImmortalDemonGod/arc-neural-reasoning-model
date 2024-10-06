@@ -129,7 +129,7 @@ from gpt2_arc.src.config import Config
 
 
 class GPT2ARC(pl.LightningModule):
-    def __init__(self, config: Config, num_classes: int):
+    def __init__(self, config: Config, num_classes: int, symbol_freq: Dict[str, float] = None):
         # Define an example input array for model summary
         self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
         super().__init__()
@@ -174,7 +174,9 @@ class GPT2ARC(pl.LightningModule):
 
         # Initialize loss function with class weights if needed
         if self.config.training.balance_symbols and self.config.training.balancing_method == "weighting":
-            symbol_freq = ...  # Retrieve symbol frequencies from the dataset or pass as argument
+            symbol_freq = symbol_freq or {}
+            if not symbol_freq:
+                raise ValueError("symbol_freq must be provided when balance_symbols is True and balancing_method is 'weighting'")
             class_weights = 1.0 / torch.tensor(list(symbol_freq.values()), dtype=torch.float)
             self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
         else:
