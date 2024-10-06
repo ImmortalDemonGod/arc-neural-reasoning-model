@@ -164,8 +164,6 @@ def main(args):
         num_classes = 10
         logger.info(f"Number of classes set to: {num_classes}")
 
-        # Initialize model with adjusted grid size if necessary
-        model = GPT2ARC(config=config, num_classes=num_classes)
         num_train_samples = train_data.get_num_samples()
         num_val_samples = val_data.get_num_samples()
         logger.info(f"Number of training examples: {num_train_samples}")
@@ -183,58 +181,59 @@ def main(args):
 
         # Create DataLoader instances
         logger.info("Creating DataLoader instances")
+        # Create DataLoader instances
+        logger.info("Creating DataLoader instances")
         if config.training.balance_symbols:
             if config.training.balancing_method == "weighting":
-                class_weights = 1.0 / torch.tensor(list(train_symbol_freq.values()), dtype=torch.float)
-                sample_weights = [class_weights[sample['symbol']] for sample in train_data.data]
+                # Compute class weights (inverse of frequencies)
+                class_weights = 1.0 / torch.tensor(list(symbol_freq_dict.values()), dtype=torch.float)
+                # Assign weights to each sample based on its class
+                sample_weights = [class_weights[str(sample['symbol'])] for sample in train_data.data]
+                # Convert sample_weights to a tensor
+                sample_weights = torch.tensor(sample_weights)
+                # Initialize WeightedRandomSampler
                 sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
+                # Initialize DataLoader with the sampler
                 train_loader = DataLoader(
                     train_data,
                     batch_size=config.training.batch_size,
                     sampler=sampler,
+                    shuffle=False,  # Disable shuffle when using sampler
+                    pin_memory=True if args.use_gpu else False,
+                    prefetch_factor=config.training.prefetch_factor,
+                    persistent_workers=config.training.persistent_workers
+                )
+                logger.debug("WeightedRandomSampler applied for balancing.")
+            elif config.training.balancing_method == "oversampling":
+                # Placeholder for oversampling implementation
+                logger.info("Oversampling method selected, but not yet implemented.")
+                # Implement oversampling logic here if desired
+                train_loader = DataLoader(
+                    train_data,
+                    batch_size=config.training.batch_size,
+                    num_workers=get_num_workers(),
+                    shuffle=True,  # Enable shuffle if not using a sampler
                     pin_memory=True if args.use_gpu else False,
                     prefetch_factor=config.training.prefetch_factor,
                     persistent_workers=config.training.persistent_workers
                 )
             else:
                 logger.warning(f"Unknown balancing method: {config.training.balancing_method}. Skipping balancing.")
-                if config.training.balance_symbols:
-                    if config.training.balancing_method == "weighting":
-                        class_weights = 1.0 / torch.tensor(list(train_symbol_freq.values()), dtype=torch.float)
-                        sample_weights = [class_weights[sample['symbol']] for sample in train_data.data]
-                        sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
-                        train_loader = DataLoader(
-                            train_data,
-                            batch_size=config.training.batch_size,
-                            sampler=sampler,
-                            pin_memory=True if args.use_gpu else False,
-                            prefetch_factor=config.training.prefetch_factor,
-                            persistent_workers=config.training.persistent_workers
-                        )
-                    else:
-                        logger.warning(f"Unknown balancing method: {config.training.balancing_method}. Skipping balancing.")
-                        train_loader = DataLoader(
-                            train_data,
-                            batch_size=config.training.batch_size,
-                            num_workers=get_num_workers(),
-                            pin_memory=True if args.use_gpu else False,
-                            prefetch_factor=config.training.prefetch_factor,
-                            persistent_workers=config.training.persistent_workers
-                        )
-                else:
-                    train_loader = DataLoader(
-                        train_data,
-                        batch_size=config.training.batch_size,
-                        num_workers=get_num_workers(),
-                        pin_memory=True if args.use_gpu else False,
-                        prefetch_factor=config.training.prefetch_factor,
-                        persistent_workers=config.training.persistent_workers
-                    )
+                train_loader = DataLoader(
+                    train_data,
+                    batch_size=config.training.batch_size,
+                    num_workers=get_num_workers(),
+                    shuffle=True,  # Enable shuffle
+                    pin_memory=True if args.use_gpu else False,
+                    prefetch_factor=config.training.prefetch_factor,
+                    persistent_workers=config.training.persistent_workers
+                )
         else:
             train_loader = DataLoader(
                 train_data,
                 batch_size=config.training.batch_size,
                 num_workers=get_num_workers(),
+                shuffle=True,  # Enable shuffle
                 pin_memory=True if args.use_gpu else False,
                 prefetch_factor=config.training.prefetch_factor,
                 persistent_workers=config.training.persistent_workers
