@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch import nn
+from typing import Dict
 import torch.nn.init as init
 
 from zeta.nn import MambaBlock
