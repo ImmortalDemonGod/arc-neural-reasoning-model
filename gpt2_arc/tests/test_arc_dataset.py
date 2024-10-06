@@ -250,6 +250,8 @@ def test_symbol_frequency_balancing(sample_data):
     for symbol in expected_freq_normalized:
         assert abs(sampled_freq_normalized.get(symbol, 0) - expected_freq_normalized[symbol]) < 0.05, \
             f"Symbol {symbol} frequency imbalance: expected {expected_freq_normalized[symbol]}, got {sampled_freq_normalized.get(symbol, 0)}"
+
+def test_data_loader_parameters(sample_data):                         
     dataset = ARCDataset(sample_data)
     num_workers = 4  # Example value
     prefetch_factor = 2
