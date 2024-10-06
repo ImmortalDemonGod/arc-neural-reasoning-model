@@ -183,14 +183,38 @@ def main(args):
 
         # Create DataLoader instances
         logger.info("Creating DataLoader instances")
-        train_loader = DataLoader(
-            train_data,
-            batch_size=config.training.batch_size,
-            num_workers=get_num_workers(),
-            pin_memory=True if args.use_gpu else False,
-            prefetch_factor=config.training.prefetch_factor,
-            persistent_workers=config.training.persistent_workers
-        )
+        if config.training.balance_symbols:
+            if config.training.balancing_method == "weighting":
+                class_weights = 1.0 / torch.tensor(list(train_symbol_freq.values()), dtype=torch.float)
+                sample_weights = [class_weights[sample['symbol']] for sample in train_data.data]
+                sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
+                train_loader = DataLoader(
+                    train_data,
+                    batch_size=config.training.batch_size,
+                    sampler=sampler,
+                    pin_memory=True if args.use_gpu else False,
+                    prefetch_factor=config.training.prefetch_factor,
+                    persistent_workers=config.training.persistent_workers
+                )
+            else:
+                logger.warning(f"Unknown balancing method: {config.training.balancing_method}. Skipping balancing.")
+                train_loader = DataLoader(
+                    train_data,
+                    batch_size=config.training.batch_size,
+                    num_workers=get_num_workers(),
+                    pin_memory=True if args.use_gpu else False,
+                    prefetch_factor=config.training.prefetch_factor,
+                    persistent_workers=config.training.persistent_workers
+                )
+        else:
+            train_loader = DataLoader(
+                train_data,
+                batch_size=config.training.batch_size,
+                num_workers=get_num_workers(),
+                pin_memory=True if args.use_gpu else False,
+                prefetch_factor=config.training.prefetch_factor,
+                persistent_workers=config.training.persistent_workers
+            )
         val_loader = DataLoader(
             val_data,
             batch_size=config.training.batch_size,

@@ -127,16 +127,21 @@ class ARCDataset(Dataset):
         # Add data validation
         self._validate_data()
 
-    def _process_single_task(self, task_data: Dict, task_id: str = "default_task") -> List[Dict]:
+    def _derive_symbol(self, task_id: str) -> int:
+        # Implement logic to derive symbol based on task_id or other attributes
+        # This is a placeholder implementation
+        return int(task_id.split('_')[-1]) % self.num_symbols
         split_key = 'test' if self.is_test else 'train'
         samples = []
         for example in task_data.get(split_key, []):
             input_grid = self._preprocess_grid(example['input'])
             output_grid = self._preprocess_grid(example['output'])
+            symbol = self._derive_symbol(task_id)  # Implement this method to derive the symbol
             samples.append({
                 "input": input_grid,
                 "output": output_grid,
-                "task_id": task_id
+                "task_id": task_id,
+                "symbol": symbol  # Newly added key
             })
         logger.debug(f"Processed {len(samples)} samples for task_id: {task_id}")
         return samples
