@@ -5,7 +5,7 @@ import os
 
 # Adjust the import path as necessary
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
-from optimize_hyperparameters import run_optimization
+from gpt2_arc.src.optimize_hyperparameters import run_optimization
 
 class TestHyperparameterOptimization(unittest.TestCase):
     @patch('optuna.create_study')
