@@ -124,7 +124,14 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: test_step input - batch: {batch}, batch_idx: {batch_idx}")
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
-        inputs, outputs, task_ids = batch
+        # Unpack batch
+        if len(batch) == 3:
+            inputs, outputs, task_ids = batch
+        elif len(batch) == 2:
+            inputs, outputs = batch
+            task_ids = None  # Set to None or a default value
+        else:
+            raise ValueError(f"Unexpected batch format with length {len(batch)}")
         logger.debug(f"DEBUG: Task IDs in batch: {task_ids}")
 
         inputs = inputs.float()
