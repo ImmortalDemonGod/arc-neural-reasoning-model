@@ -53,38 +53,45 @@ class ARCDataset(Dataset):
         self.num_symbols = num_symbols
         self.data_files = []  # Initialize data_files as an empty list
         self.data_source = data_source
-        self.num_samples = 0  # Initialize num_samples
-        self.data = []  # Initialize an empty list to store all samples
-        set_debug_mode(debug)  # Set debug mode based on parameter
+        self.num_samples = 0
+        self.data = []
+        set_debug_mode(debug)
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"data_source type: {type(data_source)}")
         logger.debug(f"data_source content: {data_source}")
         logger.debug(f"self.test_split is set to: {self.test_split}")
-        
-        logger.debug(f"Data files found: {self.data_files[:5]}... (total {len(self.data_files)})")
-        logger.debug(f"Initializing ARCDataset with data_source: {data_source}")
 
-        try:
-            if isinstance(data_source, str):
-                if os.path.isdir(data_source):
-                    logger.debug("Initializing dataset with data from directory")
-                    self.data_dir = data_source
-                    self.data_files = [
-                        os.path.join(data_source, f)
-                        for f in os.listdir(data_source)
-                        if f.endswith('.json')
-                    ]
-                    random.shuffle(self.data_files)  # Optional shuffling for randomness
-                    self.num_samples = self._count_samples_in_directory(data_source)
-                elif os.path.isfile(data_source):
-                    # Handle single file case if necessary
-                    pass
-                else:
-                    raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-        except json.JSONDecodeError as e:
-            logger.error(f"Error decoding JSON: {e}")
+        if isinstance(data_source, str):
+            if os.path.isdir(data_source):
+                logger.debug("Initializing dataset with data from directory")
+                self.data_dir = data_source
+                self.data_files = [
+                    os.path.join(data_source, f)
+                    for f in os.listdir(data_source)
+                    if f.endswith('.json')
+                ]
+                random.shuffle(self.data_files)
+                for file_path in self.data_files:
+                    with open(file_path, 'r') as f:
+                        task_data = json.load(f)
+                        samples = self._process_single_task(task_data)
+                        self.data.extend(samples)
+            elif os.path.isfile(data_source):
+                with open(data_source, 'r') as f:
+                    task_data = json.load(f)
+                    samples = self._process_single_task(task_data)
+                    self.data.extend(samples)
+            else:
+                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
+        elif TaskSet is not None and isinstance(data_source, TaskSet):
+            samples = self._process_arckit_data(data_source)
+            self.data.extend(samples)
+        elif isinstance(data_source, list):
+            samples = self._process_list_data(data_source)
+            self.data.extend(samples)
+        else:
+            raise ValueError(f"Unsupported data_source type: {type(data_source)}")
 
-# After processing all files, update the sample count
         self.num_samples = len(self.data)
 
 
@@ -120,33 +127,35 @@ class ARCDataset(Dataset):
         return num_samples
 
 
-    def _process_json_data(self, raw_data: List[Dict]) -> List[Dict]:
-        print(f"DEBUG: Processing {len(raw_data)} items")
-        processed_data = []
-        for idx, item in enumerate(raw_data):
-            print(f"DEBUG: Processing item {idx}")
-            print(f"DEBUG: Item type: {type(item)}")
-            print(f"DEBUG: Item content: {item}")
-        for task in raw_data:
-            logger.debug(f"Processing task: {task}")
-            processed_task = {
-                "train": [
-                    {"input": np.array(example["input"]), "output": np.array(example["output"])}
-                    for example in task["train"]
-                ],
-                "test": [
-                    {"input": np.array(example["input"]), "output": np.array(example["output"])}
-                    for example in task["test"]
-                ]
-            }
-            processed_data.append(processed_task)
-        # Flatten the data structure
-        flattened_data = []
-        for task in processed_data:
-            flattened_data.extend(task['train'])
-            flattened_data.extend(task['test'])
-        
-        return flattened_data
+    def _process_single_task(self, task_data: Dict) -> List[Tuple[torch.Tensor, torch.Tensor]]:
+        split_key = 'test' if self.is_test else 'train'
+        samples = []
+        for example in task_data.get(split_key, []):
+            input_grid = self._preprocess_grid(example['input'])
+            output_grid = self._preprocess_grid(example['output'])
+            samples.append((input_grid, output_grid))
+        return samples
+
+    def _process_arckit_data(self, taskset: 'TaskSet') -> List[Tuple[torch.Tensor, torch.Tensor]]:
+        samples = []
+        for task in taskset.tasks:
+            examples = task.test if self.is_test else task.train
+            for input_grid, output_grid in examples:
+                input_tensor = self._preprocess_grid(input_grid)
+                output_tensor = self._preprocess_grid(output_grid)
+                samples.append((input_tensor, output_tensor))
+        return samples
+
+    def _process_list_data(self, data_list: List[Dict]) -> List[Tuple[torch.Tensor, torch.Tensor]]:
+        samples = []
+        for example in data_list:
+            if 'input' in example and 'output' in example:
+                input_grid = self._preprocess_grid(example['input'])
+                output_grid = self._preprocess_grid(example['output'])
+                samples.append((input_grid, output_grid))
+            else:
+                logger.warning("Example missing 'input' or 'output' keys.")
+        return samples
 
 
     def _combine_data(self, official_data, synthetic_data_path):
