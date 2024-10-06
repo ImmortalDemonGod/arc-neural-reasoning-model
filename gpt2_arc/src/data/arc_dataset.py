@@ -389,11 +389,19 @@ class ARCDataset(Dataset):
         else:
             raise ValueError(f"Unexpected grid type: {type(grid)}")
     
+        # Ensure grid_tensor has three dimensions [C, H, W]
+        if grid_tensor.ndim == 2:
+            logger.debug("Grid tensor is 2D. Adding channel dimension.")
+            grid_tensor = grid_tensor.unsqueeze(0)  # Add channel dimension
+            logger.debug(f"Grid tensor shape after unsqueeze: {grid_tensor.shape}")
+        elif grid_tensor.ndim != 3:
+            raise ValueError(f"Unexpected grid tensor dimensions: {grid_tensor.ndim}. Expected 2D or 3D tensor.")
+
         logger.debug(f"Grid shape before padding: {grid_tensor.shape}")
-        
+
         # Apply padding using PyTorch's built-in functions
         padded_grid = self._pad_grid_torch(grid_tensor, height=30, width=30)
-    
+
         logger.debug(f"Grid shape after padding: {padded_grid.shape}")
         return padded_grid
     def kronecker_scale(self, X, target_height=30, target_width=30):
