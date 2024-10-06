@@ -135,10 +135,10 @@ class GPT2ARC(pl.LightningModule):
         super().__init__()
         self.config = config
         # Replace token embedding with a convolutional layer
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.model.n_embd, kernel_size=3, padding=1).to(torch.float32)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.n_embd, kernel_size=3, padding=1).to(torch.float32)
         # Initialize blocks with interleaved TransformerBlocks and MambaLayer(s)
         self.blocks = nn.ModuleList()
-        num_transformer_blocks = self.config.model.n_layer
+        num_transformer_blocks = self.config.n_layer
         total_mamba_layers = int(num_transformer_blocks * self.config.mamba_ratio)
         
         logger.debug(f"Total TransformerBlocks: {num_transformer_blocks}")
@@ -153,7 +153,7 @@ class GPT2ARC(pl.LightningModule):
         current_mamba_index = 0
         for layer_idx in range(num_transformer_blocks):
             # Add a TransformerBlock
-            self.blocks.append(TransformerBlock(self.config.model.n_embd, self.config.model.n_head, self.config.model.dropout))
+            self.blocks.append(TransformerBlock(self.config.n_embd, self.config.n_head, self.config.dropout))
             logger.debug(f"Layer {len(self.blocks)}: Added TransformerBlock")
 
             # Check if we should add a MambaLayer after this TransformerBlock
@@ -161,16 +161,16 @@ class GPT2ARC(pl.LightningModule):
                 # Add a MambaLayer
                 self.blocks.append(
                     MambaLayer(
-                        n_embd=self.config.model.n_embd,
-                        d_state=self.config.model.d_state,
-                        d_conv=self.config.model.d_conv,
-                        dropout=self.config.model.dropout
+                        n_embd=self.config.n_embd,
+                        d_state=self.config.d_state,
+                        d_conv=self.config.d_conv,
+                        dropout=self.config.dropout
                     )
                 )
                 logger.debug(f"Layer {len(self.blocks)}: Added MambaLayer after TransformerBlock {layer_idx + 1}")
                 current_mamba_index += 1
-        self.ln_f = nn.LayerNorm(self.config.model.n_embd)
-        self.fc_out = nn.Linear(self.config.model.n_embd, num_classes)  # Add final linear layer
+        self.ln_f = nn.LayerNorm(self.config.n_embd)
+        self.fc_out = nn.Linear(self.config.n_embd, num_classes)  # Add final linear layer
 
         # Initialize loss function with class weights if needed
         if config.training.balance_symbols and config.training.balancing_method == "weighting":
