@@ -344,6 +344,7 @@ class ARCDataset(Dataset):
     def _compute_grid_size_stats(self):
         max_height, max_width = 0, 0
         for sample in self.data:
+            # Assuming sample["input"] and sample["output"] have shape [C, H, W]
             max_height = max(max_height, sample["input"].shape[1], sample["output"].shape[1])
             max_width = max(max_width, sample["input"].shape[2], sample["output"].shape[2])
         self.max_grid_size = (max_height, max_width)
