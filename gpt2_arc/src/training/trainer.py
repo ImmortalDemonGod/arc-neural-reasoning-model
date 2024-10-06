@@ -161,11 +161,12 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: Test loss: {result['test_loss']}, Avg accuracy: {result['test_accuracy']}, Avg diff accuracy: {result['test_diff_accuracy']}")
 
         # Log task-specific metrics
-        for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
-            result[f"{task_id}_test_accuracy"] = accuracy
-            result[f"{task_id}_test_diff_accuracy"] = diff_accuracy
-            self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-            self.log(f"{task_id}_test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        if task_ids is not None:
+            for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
+                result[f"{task_id}_test_accuracy"] = accuracy
+                result[f"{task_id}_test_diff_accuracy"] = diff_accuracy
+                self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+                self.log(f"{task_id}_test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
         try:
             self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)
