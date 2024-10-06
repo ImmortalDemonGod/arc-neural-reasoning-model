@@ -161,7 +161,7 @@ class ARCDataset(Dataset):
         samples = []
         for task in taskset.tasks:
             examples = task.test if self.is_test else task.train
-            for example in examples:
+            for input_grid, output_grid in examples:
                 input_tensor = self._preprocess_grid(input_grid)
                 output_tensor = self._preprocess_grid(output_grid)
                 samples.append({
