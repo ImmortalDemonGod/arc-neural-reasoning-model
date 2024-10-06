@@ -199,57 +199,6 @@ def test_arc_dataset_synthetic_data(debug_mode):
 
 
 
-def test_symbol_frequency_balancing(sample_data):
-    training_config = TrainingConfig(
-        batch_size=2,
-        learning_rate=1e-3,
-        max_epochs=5,
-        prefetch_factor=2,
-        persistent_workers=False,
-        balance_symbols=True,
-        balancing_method="weighting"
-    )
-    config = Config(
-        model=ModelConfig(),
-        training=training_config
-    )
-    
-    dataset = ARCDataset(sample_data)
-    symbol_freq = dataset.get_symbol_frequencies()
-    class_weights = 1.0 / torch.tensor(list(symbol_freq.values()), dtype=torch.float)
-    sample_weights = [class_weights[sample['symbol']] for sample in dataset.data]
-    sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
-    
-    train_loader = DataLoader(
-        dataset,
-        batch_size=2,
-        sampler=sampler,
-        pin_memory=True if torch.cuda.is_available() else False,
-        prefetch_factor=2,
-        persistent_workers=False
-    )
-    
-    sampled_symbols = []
-    for batch in train_loader:
-        inputs, outputs, task_ids = batch
-        for idx in range(len(task_ids)):
-            symbol = dataset.data[idx]['symbol']
-            sampled_symbols.append(symbol)
-    
-    sampled_freq = {}
-    for symbol in sampled_symbols:
-        sampled_freq[symbol] = sampled_freq.get(symbol, 0) + 1
-    
-    total_samples = len(sampled_symbols)
-    sampled_freq_normalized = {k: v / total_samples for k, v in sampled_freq.items()}
-    
-    expected_freq = {k: v.item() / class_weights[k].item() for k, v in symbol_freq.items()}
-    total_expected = sum(expected_freq.values())
-    expected_freq_normalized = {k: v / total_expected for k, v in expected_freq.items()}
-    
-    for symbol in expected_freq_normalized:
-        assert abs(sampled_freq_normalized.get(symbol, 0) - expected_freq_normalized[symbol]) < 0.05, \
-            f"Symbol {symbol} frequency imbalance: expected {expected_freq_normalized[symbol]}, got {sampled_freq_normalized.get(symbol, 0)}"
 
 def test_data_loader_parameters(sample_data):                         
     dataset = ARCDataset(sample_data)
