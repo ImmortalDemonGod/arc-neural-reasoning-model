@@ -343,21 +343,6 @@ class ARCDataset(Dataset):
         else:
             logger.warning("Symbol frequencies not available.")
             return {}
-        for idx, sample in enumerate(self.data):
-            if "input" not in sample:
-                raise KeyError(f"Sample at index {idx} is missing 'input' key")
-            if "output" not in sample:
-                raise KeyError(f"Sample at index {idx} is missing 'output' key")
-            if "task_id" not in sample:
-                raise KeyError(f"Sample at index {idx} is missing 'task_id' key")
-            
-            input_data = sample["input"]
-            output_data = sample["output"]
-            
-            if not isinstance(input_data, torch.Tensor):
-                logger.warning(f"Sample {idx} has 'input' that is not a torch.Tensor")
-            if not isinstance(output_data, torch.Tensor):
-                logger.warning(f"Sample {idx} has 'output' that is not a torch.Tensor")
 
     def _compute_grid_size_stats(self):
         max_height, max_width = 0, 0
