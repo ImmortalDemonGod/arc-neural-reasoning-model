@@ -91,9 +91,9 @@ class ARCDataset(Dataset):
             continue  # Skip this file and proceed to the next
 
 # After processing all files, update the sample count
-self.num_samples = len(self.data)
-            logger.error(f"Error initializing ARCDataset: {e}", exc_info=True)
-            raise  # Re-raise the exception to prevent silent failures
+        self.num_samples = len(self.data)
+        logger.error(f"Error initializing ARCDataset: {e}", exc_info=True)
+        raise  # Re-raise the exception to prevent silent failures
 
 
     def __len__(self):
