@@ -116,7 +116,8 @@ class ARCDataset(Dataset):
     def get_num_samples(self):
         return self.num_samples
     def __getitem__(self, idx):
-        return self.data[idx]
+        sample = self.data[idx]
+        return sample["input"], sample["output"], sample["task_id"]
 
     def _count_samples_in_directory(self, directory: str):
         num_samples = 0
@@ -142,32 +143,45 @@ class ARCDataset(Dataset):
         return num_samples
 
 
-    def _process_single_task(self, task_data: Dict) -> List[Tuple[torch.Tensor, torch.Tensor]]:
+    def _process_single_task(self, task_data: Dict) -> List[Dict]:
         split_key = 'test' if self.is_test else 'train'
         samples = []
-        for example in task_data.get(split_key, []):
+        task_id = task_data.get('id', f"task_{len(self.data) + 1}")  # Assign a default ID if not present
             input_grid = self._preprocess_grid(example['input'])
             output_grid = self._preprocess_grid(example['output'])
-            samples.append((input_grid, output_grid))
+            samples.append({
+                "input": input_grid,
+                "output": output_grid,
+                "task_id": task_id
+            })
         return samples
 
-    def _process_arckit_data(self, taskset: 'TaskSet') -> List[Tuple[torch.Tensor, torch.Tensor]]:
+    def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         samples = []
         for task in taskset.tasks:
             examples = task.test if self.is_test else task.train
-            for input_grid, output_grid in examples:
+            for example in examples:
                 input_tensor = self._preprocess_grid(input_grid)
                 output_tensor = self._preprocess_grid(output_grid)
-                samples.append((input_tensor, output_tensor))
+                samples.append({
+                    "input": input_tensor,
+                    "output": output_tensor,
+                    "task_id": task.id
+                })
         return samples
 
-    def _process_list_data(self, data_list: List[Dict]) -> List[Tuple[torch.Tensor, torch.Tensor]]:
+    def _process_list_data(self, data_list: List[Dict]) -> List[Dict]:
         samples = []
         for example in data_list:
             if 'input' in example and 'output' in example:
                 input_grid = self._preprocess_grid(example['input'])
                 output_grid = self._preprocess_grid(example['output'])
-                samples.append((input_grid, output_grid))
+                task_id = example.get('task_id', f"task_{len(samples) + 1}")  # Assign a default ID if not present
+                samples.append({
+                    "input": input_grid,
+                    "output": output_grid,
+                    "task_id": task_id
+                })
             else:
                 logger.warning("Example missing 'input' or 'output' keys.")
         return samples
@@ -405,21 +419,21 @@ class ARCDataset(Dataset):
     @staticmethod
     def collate_fn(batch):
         # Debugging: Check batch size
-        print(f"Collating batch of size: {len(batch)}")
+        logger.debug(f"Collating batch of size: {len(batch)}")
         
         if not batch:
-            print("Warning: Empty batch received")
-            return torch.tensor([]), torch.tensor([])
+            logger.warning("Empty batch received")
+            return torch.tensor([]), torch.tensor([]), []
 
-        inputs, outputs = zip(*batch)
+        inputs, outputs, task_ids = zip(*batch)
 
         # Find maximum dimensions in the batch
         max_h = max(input_tensor.size(1) for input_tensor in inputs)
         max_w = max(input_tensor.size(2) for input_tensor in outputs)
 
         # Debugging: Print maximum dimensions
-        print(f"Maximum height in batch: {max_h}")
-        print(f"Maximum width in batch: {max_w}")
+        logger.debug(f"Maximum height in batch: {max_h}")
+        logger.debug(f"Maximum width in batch: {max_w}")
 
         # Pad inputs and outputs to the maximum size
         padded_inputs = torch.stack([
@@ -436,4 +450,4 @@ class ARCDataset(Dataset):
         print(f"Padded inputs shape: {padded_inputs.shape}")
         print(f"Padded outputs shape: {padded_outputs.shape}")
 
-        return padded_inputs, padded_outputs
+        return padded_inputs, padded_outputs, list(task_ids)
