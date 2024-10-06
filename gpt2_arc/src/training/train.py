@@ -251,7 +251,7 @@ def main(args):
 
         # Initialize model
         logger.info("Initializing model")
-        model = GPT2ARC(config=model_config, num_classes=num_classes)
+        model = GPT2ARC(config=config, num_classes=num_classes)
         logger.debug(f"Model initialized with config: {model_config}")
 
         # Load the checkpoint if specified
