@@ -135,7 +135,7 @@ class GPT2ARC(pl.LightningModule):
         super().__init__()
         self.config = config
         # Replace token embedding with a convolutional layer
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.n_embd, kernel_size=3, padding=1).to(torch.float32)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.model.n_embd, kernel_size=3, padding=1).to(torch.float32)
         # Initialize blocks with interleaved TransformerBlocks and MambaLayer(s)
         self.blocks = nn.ModuleList()
         num_transformer_blocks = self.config.n_layer
