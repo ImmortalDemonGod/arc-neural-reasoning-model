@@ -278,17 +278,17 @@ class ARCDataset(Dataset):
         return symbol_counts / symbol_counts.sum()
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
-        if isinstance(grid, list):
+        logger.debug(f"Preprocessing grid with initial type: {type(grid)}")
             grid_array = np.array(grid)
         elif isinstance(grid, np.ndarray):
             grid_array = grid
         else:
             raise ValueError(f"Unexpected grid type: {type(grid)}")
 
-        # Pad the grid to 30x30
+        logger.debug(f"Grid shape before padding: {grid_array.shape}")
         padded_grid = self._pad_grid(grid_array, height=30, width=30)
 
-        # Convert to tensor and add channel dimension
+        logger.debug(f"Grid shape after padding: {padded_grid.shape}")
         grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
         return grid_tensor
     def kronecker_scale(self, X, target_height=30, target_width=30):
@@ -351,14 +351,13 @@ class ARCDataset(Dataset):
 
     def _pad_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
         h, w = grid.shape
-        # print(f"DEBUG: Grid shape before padding: (h={h}, w={w}), target: (height={height}, width={width})")
+        logger.debug(f"Grid shape before padding/cropping: (h={h}, w={w}), target: (height={height}, width={width})")
 
-        # Handle grids larger than target dimensions
         if h > height or w > width:
-            # print(f"DEBUG: Grid is larger than target size. Cropping the grid.")
-            # Crop the grid to the target size
+            logger.debug("Grid is larger than target size. Cropping the grid.")
             grid = grid[:height, :width]
-            h, w = grid.shape  # Update dimensions after cropping
+            h, w = grid.shape
+            logger.debug(f"Grid shape after cropping: (h={h}, w={w})")
 
         pad_h = (height - h) // 2
         pad_w = (width - w) // 2
@@ -367,20 +366,22 @@ class ARCDataset(Dataset):
         pad_left = pad_w
         pad_right = width - w - pad_w
 
-        # print(f"DEBUG: Calculated padding - pad_top: {pad_top}, pad_bottom: {pad_bottom}, pad_left: {pad_left}, pad_right: {pad_right}")
+        logger.debug(f"Calculated padding - pad_top: {pad_top}, pad_bottom: {pad_bottom}, pad_left: {pad_left}, pad_right: {pad_right}")
 
-        # Ensure padding values are non-negative
         pad_top = max(0, pad_top)
         pad_bottom = max(0, pad_bottom)
         pad_left = max(0, pad_left)
         pad_right = max(0, pad_right)
 
-        # Apply padding
-        return np.pad(
+        padded_grid = np.pad(
             grid,
             ((pad_top, pad_bottom), (pad_left, pad_right)),
             mode='constant'
         )
+
+        logger.debug(f"Padded grid shape: {padded_grid.shape}")
+
+        return padded_grid
     def _process_list_data(self, data_source):
         # print(f"DEBUG: Processing {len(data_source)} items")
         processed_data = []
