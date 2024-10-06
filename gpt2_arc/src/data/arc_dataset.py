@@ -144,8 +144,34 @@ class ARCDataset(Dataset):
 
         # Add data validation
         self._validate_data()
+        self._validate_data()
 
-    def _derive_symbol(self, task_id: str) -> int:
+    def _validate_data(self):
+        """
+        Validates the dataset to ensure each sample contains the required keys and correct data types.
+        Raises:
+            ValueError: If any sample is missing required keys or has incorrect types.
+        """
+        required_keys = {"input", "output", "task_id"}
+        for idx, sample in enumerate(self.data):
+            # Check for required keys
+            if not required_keys.issubset(sample.keys()):
+                missing = required_keys - sample.keys()
+                raise KeyError(f"Sample at index {idx} is missing keys: {missing}")
+            
+            # Validate 'input' and 'output' types
+            for key in ["input", "output"]:
+                if not isinstance(sample[key], torch.Tensor):
+                    raise TypeError(f"Sample at index {idx} has '{key}' of type {type(sample[key])}, expected torch.Tensor.")
+                
+                if sample[key].ndimension() != 3 or sample[key].shape[0] != 1:
+                    raise ValueError(f"Sample at index {idx} has '{key}' with shape {sample[key].shape}, expected shape (1, H, W).")
+            
+            # Validate 'task_id' type
+            if not isinstance(sample["task_id"], str):
+                raise TypeError(f"Sample at index {idx} has 'task_id' of type {type(sample['task_id'])}, expected str.")
+        
+        logger.debug("All samples passed validation.")
         # Implement logic to derive symbol based on task_id or other attributes
         # This is a placeholder implementation
         return int(task_id.split('_')[-1]) % self.num_symbols
