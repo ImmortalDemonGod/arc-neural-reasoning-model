@@ -190,29 +190,14 @@ class ARCDataset(Dataset):
             raise ValueError(f"Unexpected example format: {example}")
         return {"input": input_grid, "output": output_grid}
 
-    def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
-        logger.debug(f"Inside _process_single_task, self.test_split is: {self.test_split}")
-        logger.debug(f"Task data type: {type(task_data)}")
-        logger.debug(f"Task data content: {task_data}")
-    
-        if isinstance(task_data, dict):
-            train_examples = task_data.get("train", [])
-            test_examples = task_data.get("test", [])
-            logger.debug(f"Dict task data - Train examples: {len(train_examples)}, Test examples: {len(test_examples)}")
-        elif isinstance(task_data, list):
-            split_idx = int(len(task_data) * (1 - self.test_split))
-            train_examples = task_data[:split_idx]
-            test_examples = task_data[split_idx:]
-            logger.debug(f"List task data - Train examples: {len(train_examples)}, Test examples: {len(test_examples)}")
-        else:
-            error_msg = f"Task data must be either a dictionary or a list. Got {type(task_data)}"
-            logger.error(error_msg)
-            raise ValueError(error_msg)
-
-        return {
-            "train": train_examples,
-            "test": test_examples
-        }
+    def _process_single_task(self, task_data: Dict) -> List[Tuple[torch.Tensor, torch.Tensor]]:
+        split_key = 'test' if self.is_test else 'train'
+        samples = []
+        for example in task_data.get(split_key, []):
+            input_grid = self._preprocess_grid(example['input'])
+            output_grid = self._preprocess_grid(example['output'])
+            samples.append((input_grid, output_grid))
+        return samples
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         processed_data = []
@@ -281,39 +266,18 @@ class ARCDataset(Dataset):
         return symbol_counts / symbol_counts.sum()
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
-        logger.debug(f"Grid type: {type(grid)}")
-        # print(f"Grid type: {type(grid)}")
-    
-        if isinstance(grid, dict):
-            input_grid = np.array(grid['input'])
-        elif isinstance(grid, list):
-            input_grid = np.array(grid)
+        if isinstance(grid, list):
+            grid_array = np.array(grid)
         elif isinstance(grid, np.ndarray):
-            input_grid = grid
-        elif isinstance(grid, torch.Tensor):
-            input_grid = grid.numpy()
+            grid_array = grid
         else:
             raise ValueError(f"Unexpected grid type: {type(grid)}")
-    
-        logger.debug(f"Input grid shape before processing: {input_grid.shape}")
-        # print(f"Input grid shape before processing: {input_grid.shape}")
-    
-        # Ensure input_grid is 2D
-        if input_grid.ndim > 2:
-            input_grid = np.squeeze(input_grid)
-            logger.debug(f"Input grid shape after squeezing: {input_grid.shape}")
-    
+
         # Pad the grid to 30x30
-        padded_grid = self._pad_grid(input_grid, height=30, width=30)
-    
+        padded_grid = self._pad_grid(grid_array, height=30, width=30)
+
         # Convert to tensor and add channel dimension
         grid_tensor = torch.tensor(padded_grid, dtype=torch.float32).unsqueeze(0)
-    
-        logger.debug(f"Preprocessed grid shape: {grid_tensor.shape}")
-        logger.debug(f"Preprocessed grid content:\n{grid_tensor}")
-        # print(f"Preprocessed grid shape: {grid_tensor.shape}")
-        # print(f"Preprocessed grid content:\n{grid_tensor}")
-    
         return grid_tensor
     def kronecker_scale(self, X, target_height=30, target_width=30):
         print(f"Kronecker scaling input shape: {X.shape}")
@@ -423,20 +387,7 @@ class ARCDataset(Dataset):
 
     @staticmethod
     def collate_fn(batch):
-        if not batch:
-            return torch.tensor([]), torch.tensor([])
-
-        try:
-            inputs, outputs = zip(*batch)
-        except ValueError as e:
-            print(f"Error unpacking batch: {e}")
-            print(f"Batch content: {batch}")
-            return torch.tensor([]), torch.tensor([])
-
-        max_h = max(i.size(1) for i in inputs)
-        max_w = max(i.size(2) for i in inputs)
-
-        padded_inputs = torch.stack([F.pad(i, (0, max_w - i.size(2), 0, max_h - i.size(1))) for i in inputs])
-        padded_outputs = torch.stack([F.pad(o, (0, max_w - o.size(2), 0, max_h - o.size(1))) for o in outputs])
-
-        return padded_inputs, padded_outputs
+        inputs, outputs = zip(*batch)
+        inputs = torch.stack(inputs)
+        outputs = torch.stack(outputs)
+        return inputs, outputs
