@@ -279,6 +279,7 @@ class ARCDataset(Dataset):
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
         logger.debug(f"Preprocessing grid with initial type: {type(grid)}")
+        if isinstance(grid, list):
             grid_array = np.array(grid)
         elif isinstance(grid, np.ndarray):
             grid_array = grid
