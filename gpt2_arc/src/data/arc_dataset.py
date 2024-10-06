@@ -124,6 +124,24 @@ class ARCDataset(Dataset):
         self._compute_and_cache_statistics()
         self._save_cache(self.cache_path)
 
+    def _save_cache(self, cache_path: str):
+        """
+        Saves the dataset and its statistics to the specified cache path using pickle.
+        
+        Args:
+            cache_path (str): The file path where the cache will be saved.
+        """
+        try:
+            cache_data = {
+                "data": self.data,
+                "statistics": self.statistics
+            }
+            with open(cache_path, 'wb') as f:
+                pickle.dump(cache_data, f)
+            logger.debug(f"Saved cache to {cache_path}")
+        except Exception as e:
+            logger.error(f"Failed to save cache to {cache_path}: {e}")
+
         # Add data validation
         self._validate_data()
 
