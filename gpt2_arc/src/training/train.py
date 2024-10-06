@@ -143,6 +143,9 @@ def main(args):
         logger.info(f"Validation Grid Size Stats: {val_grid_stats}")
         logger.info(f"Validation Symbol Frequencies: {val_symbol_freq}")
 
+        # Initialize experiment tracker
+        tracker = ExperimentTracker(config, project=args.project)
+
         # Log dataset statistics to ExperimentTracker
         tracker.log_metric("train_max_grid_height", train_grid_stats.get("max_height", 0))
         tracker.log_metric("train_max_grid_width", train_grid_stats.get("max_width", 0))
