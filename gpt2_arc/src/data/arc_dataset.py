@@ -399,7 +399,36 @@ class ARCDataset(Dataset):
 
     @staticmethod
     def collate_fn(batch):
+        # Debugging: Check batch size
+        print(f"Collating batch of size: {len(batch)}")
+        
+        if not batch:
+            print("Warning: Empty batch received")
+            return torch.tensor([]), torch.tensor([])
+
         inputs, outputs = zip(*batch)
-        inputs = torch.stack(inputs)
-        outputs = torch.stack(outputs)
-        return inputs, outputs
+
+        # Find maximum dimensions in the batch
+        max_h = max(input_tensor.size(1) for input_tensor in inputs)
+        max_w = max(input_tensor.size(2) for input_tensor in outputs)
+
+        # Debugging: Print maximum dimensions
+        print(f"Maximum height in batch: {max_h}")
+        print(f"Maximum width in batch: {max_w}")
+
+        # Pad inputs and outputs to the maximum size
+        padded_inputs = torch.stack([
+            F.pad(input_tensor, (0, max_w - input_tensor.size(2), 0, max_h - input_tensor.size(1)))
+            for input_tensor in inputs
+        ])
+
+        padded_outputs = torch.stack([
+            F.pad(output_tensor, (0, max_w - output_tensor.size(2), 0, max_h - output_tensor.size(1)))
+            for output_tensor in outputs
+        ])
+
+        # Debugging: Verify shapes after padding
+        print(f"Padded inputs shape: {padded_inputs.shape}")
+        print(f"Padded outputs shape: {padded_outputs.shape}")
+
+        return padded_inputs, padded_outputs
