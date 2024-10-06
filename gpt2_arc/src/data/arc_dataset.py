@@ -172,9 +172,6 @@ class ARCDataset(Dataset):
                 raise TypeError(f"Sample at index {idx} has 'task_id' of type {type(sample['task_id'])}, expected str.")
         
         logger.debug("All samples passed validation.")
-        # Implement logic to derive symbol based on task_id or other attributes
-        # This is a placeholder implementation
-        return int(task_id.split('_')[-1]) % self.num_symbols
     
     def __len__(self):
         return len(self.data)
