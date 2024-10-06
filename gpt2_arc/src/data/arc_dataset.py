@@ -373,7 +373,9 @@ class ARCDataset(Dataset):
             # Assuming sample["input"] and sample["output"] have shape [C, H, W]
             max_height = max(max_height, sample["input"].shape[1], sample["output"].shape[1])
             max_width = max(max_width, sample["input"].shape[2], sample["output"].shape[2])
+        grid_size_stats = {"max_height": max_height, "max_width": max_width}
         self.max_grid_size = (max_height, max_width)
+        return grid_size_stats
 
     def _compute_symbol_frequencies(self):
         symbol_counts = np.zeros(self.num_symbols, dtype=int)
