@@ -62,7 +62,7 @@ def main(args):
         filename=args.profiler_filename,
         line_count_restriction=args.line_count_restriction,
         dump_stats=args.dump_stats
-    ) if args.use_profiler else None
+    ) if args.use_profiler and not args.fast_dev_run else None
     
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
     
