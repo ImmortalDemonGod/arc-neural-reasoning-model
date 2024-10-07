@@ -426,4 +426,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args)
 
-# Synthetic data tests have been moved to gpt2_arc/tests/test_synthetic_data.py
