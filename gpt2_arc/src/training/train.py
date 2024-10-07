@@ -58,9 +58,10 @@ def main(args):
     )
 
     profiler = AdvancedProfiler(
-        record_shapes=True,
-        profile_memory=True,
-        with_stack=True
+        dirpath=args.profiler_dirpath,
+        filename=args.profiler_filename,
+        line_count_restriction=args.line_count_restriction,
+        dump_stats=args.dump_stats
     ) if args.use_profiler else None
     
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
@@ -441,6 +442,29 @@ if __name__ == "__main__":
     parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
     parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
     parser.add_argument("--use-profiler", action="store_true", help="Enable PyTorch profiler")
+    parser.add_argument(
+        "--profiler-dirpath",
+        type=str,
+        default="./profiler_logs",
+        help="Directory path for profiler output files."
+    )
+    parser.add_argument(
+        "--profiler-filename",
+        type=str,
+        default="profile",
+        help="Filename for profiler output."
+    )
+    parser.add_argument(
+        "--line-count-restriction",
+        type=float,
+        default=1.0,
+        help="Restriction on the number of lines in profiler summary."
+    )
+    parser.add_argument(
+        "--dump-stats",
+        action="store_true",
+        help="Whether to dump raw profiler statistics."
+    )
     
     args = parser.parse_args()
     main(args)
