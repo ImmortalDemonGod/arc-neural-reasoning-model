@@ -66,7 +66,7 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
     logger.debug("Hyperparameters validated successfully")
     return True
 
-def calculate_symbol_freq(dataset):
+def objective(trial):
     """Calculate the frequency of each symbol in the dataset."""
     symbol_counts = {}
     total_symbols = 0
@@ -82,7 +82,6 @@ def calculate_symbol_freq(dataset):
     # Calculate normalized frequencies
     symbol_freq = {symbol: count / total_symbols for symbol, count in symbol_counts.items()}
     return symbol_freq
-    logger.info(f"Starting trial {trial.number}")
 
     try:
         # Suggest n_head as a power of 2
@@ -352,6 +351,10 @@ if __name__ == "__main__":
     parser.add_argument("--use_synthetic_data", action="store_true", help="Flag to indicate whether to use synthetic data for training.")
     parser.add_argument("--synthetic_data_path", type=str, default="", help="Path to synthetic data for training.")
     parser.add_argument("--log_level", type=str, default="INFO", help="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL).")
+
+    # Define the objective function for Optuna
+    def objective(trial):
+        # Your existing code for the objective function goes here
     args = parser.parse_args()
 
     # Ensure the storage_name has the correct SQLite prefix
