@@ -167,7 +167,7 @@ def objective(trial):
         # Create model and trainer
         logger.debug("Creating model and trainer")
         num_classes = 10  # Set this to the appropriate number of classes for your task
-        model = GPT2ARC(config.model, num_classes=num_classes)
+        model = GPT2ARC(config, num_classes=num_classes)
         
         # Generate model summary
         print("DEBUG: Attempting to generate model summary")
@@ -272,8 +272,7 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
         else:
             print("DEBUG: No model summary found for the best trial")
     else:
-        print("DEBUG: No successful trials found")
-    if study.best_trial:
+        logger.warning("No successful trials found. Please check the trial configurations and constraints.")
         logger.info(f"Best trial: {study.best_trial.number}")
         logger.info(f"Best value: {study.best_value}")
         
@@ -335,7 +334,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Ensure the storage_name has the correct SQLite prefix
+    import os  # Ensure os is imported at the top of the file
+
     if not args.storage.startswith("sqlite:///"):
-        args.storage = f"sqlite:///{args.storage}"
+        if os.path.isabs(args.storage):
+            args.storage = f"sqlite:///{args.storage}"
+        else:
+            args.storage = f"sqlite:///{os.path.abspath(args.storage)}"
     
     run_optimization(n_trials=args.n_trials, storage_name=args.storage, n_jobs=args.n_jobs)
