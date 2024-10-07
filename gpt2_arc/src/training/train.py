@@ -10,7 +10,7 @@ import optuna
 import arckit
 import numpy as np
 import torch
-from pytorch_lightning.profiler import PyTorchProfiler
+from pytorch_lightning.callbacks.profiler import PyTorchProfiler
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
 # Define the base directory for the arc-neural-reasoning-model
@@ -63,7 +63,7 @@ def main(args):
         record_shapes=True,
         profile_memory=True,
         with_stack=True
-    )
+    ) if args.use_profiler else None
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
     
     logger.info("Starting main function")
@@ -441,6 +441,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-synthetic-data", action="store_true", help="Use synthetic data for training")
     parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
     parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
+    parser.add_argument("--use-profiler", action="store_true", help="Enable PyTorch profiler")
     
     args = parser.parse_args()
     main(args)
