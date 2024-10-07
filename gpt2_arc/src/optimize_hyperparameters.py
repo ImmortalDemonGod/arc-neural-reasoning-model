@@ -197,7 +197,6 @@ def objective(trial):
 
         # Initialize ARCDataset for the validation set without passing symbol_freq
         val_data = ARCDataset(eval_set)
-        val_data = ARCDataset(eval_set, symbol_freq=symbol_freq)
         logger.debug(f"Data loaded. Train set size: {len(train_data)}, Validation set size: {len(val_data)}")
 
         # Create model and trainer
