@@ -138,6 +138,9 @@ def main(args):
         val_grid_stats = val_data.get_grid_size_stats()
         val_symbol_freq = val_data.get_symbol_frequencies()
 
+        # Convert train_symbol_freq from numpy array to dictionary with string keys
+        train_symbol_freq_dict = {str(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
+
         logger.info(f"Train Grid Size Stats: {train_grid_stats}")
         logger.info(f"Train Symbol Frequencies: {train_symbol_freq}")
         logger.info(f"Validation Grid Size Stats: {val_grid_stats}")
@@ -244,7 +247,7 @@ def main(args):
 
         # Initialize model
         logger.info("Initializing model")
-        model = GPT2ARC(config=config, num_classes=num_classes)
+        model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=train_symbol_freq_dict)
         logger.debug(f"Model initialized with config: {model_config}")
 
         # Load the checkpoint if specified
