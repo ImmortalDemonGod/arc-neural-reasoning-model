@@ -10,7 +10,7 @@ import optuna
 import arckit
 import numpy as np
 import torch
-from pytorch_lightning.callbacks.profiler import PyTorchProfiler
+from pytorch_lightning.profiler import PyTorchProfiler
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
 # Define the base directory for the arc-neural-reasoning-model
@@ -322,7 +322,7 @@ def main(args):
             callbacks=callbacks if callbacks else None,
             enable_checkpointing=not args.no_checkpointing,
             enable_progress_bar=not args.no_progress_bar,
-            fast_dev_run=args.fast_dev_run,
+            fast_dev_run=True,
             gradient_clip_val=1.0,
             accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu',
             devices=1,
