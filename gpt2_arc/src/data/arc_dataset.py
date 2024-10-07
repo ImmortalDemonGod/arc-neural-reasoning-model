@@ -92,9 +92,10 @@ class ARCDataset(Dataset):
                         self.data.extend(samples)
                         logger.debug(f"Added {len(samples)} samples from file {file_path} with task_id: {task_id}")
                     elif isinstance(task_data, list):
+                        task_id = os.path.splitext(os.path.basename(file_path))[0]
                         samples = self._process_list_data(task_data, task_id=task_id)
                         self.data.extend(samples)
-                        logger.debug(f"Added {len(samples)} samples from file {file_path} using list processing")
+                        logger.debug(f"Assigned task_id '{task_id}' to list samples from file {file_path}")
                     else:
                         logger.error(f"Unexpected data format in file {file_path}: {type(task_data)}")
             elif os.path.isfile(data_source):
