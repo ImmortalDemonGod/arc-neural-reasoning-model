@@ -10,7 +10,7 @@ import optuna
 import arckit
 import numpy as np
 import torch
-from lightning.pytorch.profilers import AdvancedProfiler
+from lightning.pytorch.profilers import PyTorchProfiler
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
 # Define the base directory for the arc-neural-reasoning-model
@@ -57,11 +57,12 @@ def main(args):
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-    profiler = AdvancedProfiler(
+    profiler = PyTorchProfiler(
         dirpath=args.profiler_dirpath,
         filename=args.profiler_filename,
-        line_count_restriction=args.line_count_restriction,
-        dump_stats=args.dump_stats
+        activities=['cpu'],  # Specify the activities you want to profile
+        record_shapes=True,   # Optionally record tensor shapes
+        with_stack=True       # Optionally include stack information
     ) if args.use_profiler else None
     
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
