@@ -92,7 +92,7 @@ class ARCDataset(Dataset):
                         self.data.extend(samples)
                         logger.debug(f"Added {len(samples)} samples from file {file_path} with task_id: {task_id}")
                     elif isinstance(task_data, list):
-                        samples = self._process_list_data(task_data)
+                        samples = self._process_list_data(task_data, task_id=task_id)
                         self.data.extend(samples)
                         logger.debug(f"Added {len(samples)} samples from file {file_path} using list processing")
                     else:
