@@ -211,7 +211,7 @@ def objective(trial):
         # Create model and trainer
         logger.debug("Creating model and trainer")
         num_classes = 10  # Set this to the appropriate number of classes for your task
-        model = GPT2ARC(config, num_classes=num_classes)
+        model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
         
         # Generate model summary
         print("DEBUG: Attempting to generate model summary")
