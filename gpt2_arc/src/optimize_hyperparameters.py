@@ -181,10 +181,11 @@ def objective(trial):
 
         # Load data
         logger.debug("Loading data")
+        logger.debug("Loading data")
         train_set, eval_set = arckit.load_data()
-        # Calculate symbol frequencies
+        logger.debug(f"Trial {trial.number}: Loading training and evaluation data")
         logger.debug("Calculating symbol frequencies for training set")
-        symbol_freq = calculate_symbol_freq(train_set)
+        symbol_freq = calculate_symbol_freq(train_set.dataset)
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
         train_data = ARCDataset(train_set, symbol_freq=symbol_freq)
@@ -365,7 +366,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Ensure the storage_name has the correct SQLite prefix
+    # Ensure the storage_name has the correct SQLite prefix and handle relative paths
     import os  # Ensure os is imported at the top of the file
 
     if not args.storage.startswith("sqlite:///"):
@@ -374,4 +375,5 @@ if __name__ == "__main__":
         else:
             args.storage = f"sqlite:///{os.path.abspath(args.storage)}"
     
+    logger.debug(f"Optuna storage URL set to: {args.storage}")
     run_optimization(n_trials=args.n_trials, storage_name=args.storage, n_jobs=args.n_jobs)
