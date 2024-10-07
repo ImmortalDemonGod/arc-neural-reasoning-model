@@ -192,8 +192,11 @@ def objective(trial):
         symbol_freq = train_data.get_symbol_frequencies()
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
-        # Initialize ARCDataset for the validation set with the computed symbol_freq
-        val_data = ARCDataset(eval_set, symbol_freq=symbol_freq)
+        # Assign the computed symbol_freq to the training configuration
+        config.training.symbol_freq = symbol_freq
+
+        # Initialize ARCDataset for the validation set without passing symbol_freq
+        val_data = ARCDataset(eval_set)
         val_data = ARCDataset(eval_set, symbol_freq=symbol_freq)
         logger.debug(f"Data loaded. Train set size: {len(train_data)}, Validation set size: {len(val_data)}")
 
