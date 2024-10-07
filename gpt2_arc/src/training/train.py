@@ -21,7 +21,7 @@ project_root = arc_model_dir
 sys.path.insert(0, project_root)
 
 import pytorch_lightning as pl
-import torch.autograd.profiler as profiler
+#import torch.autograd.profiler as profiler
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
