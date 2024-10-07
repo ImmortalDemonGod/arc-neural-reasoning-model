@@ -11,6 +11,7 @@ import arckit
 import numpy as np
 import torch
 from lightning.pytorch.profilers import PyTorchProfiler
+from torch.profiler import ProfilerActivity
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
 # Define the base directory for the arc-neural-reasoning-model
@@ -60,9 +61,9 @@ def main(args):
     profiler = PyTorchProfiler(
         dirpath=args.profiler_dirpath,
         filename=args.profiler_filename,
-        activities=['cpu'],  # Specify the activities you want to profile
-        record_shapes=True,   # Optionally record tensor shapes
-        with_stack=True       # Optionally include stack information
+        activities=[ProfilerActivity.CPU],  # Use ProfilerActivity enums
+        record_shapes=True,
+        with_stack=True
     ) if args.use_profiler else None
     
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
@@ -456,17 +457,6 @@ if __name__ == "__main__":
         type=str,
         default="profile",
         help="Filename for profiler output."
-    )
-    parser.add_argument(
-        "--line-count-restriction",
-        type=float,
-        default=1.0,
-        help="Restriction on the number of lines in profiler summary."
-    )
-    parser.add_argument(
-        "--dump-stats",
-        action="store_true",
-        help="Whether to dump raw profiler statistics."
     )
     
     args = parser.parse_args()
