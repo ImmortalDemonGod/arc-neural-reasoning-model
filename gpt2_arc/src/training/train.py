@@ -186,7 +186,7 @@ def main(args):
         if config.training.balance_symbols:
             if config.training.balancing_method == "weighting":
                 # Compute class weights (inverse of frequencies)
-                class_weights = 1.0 / torch.tensor(list(train_symbol_freq.values()), dtype=torch.float)
+                class_weights = 1.0 / torch.tensor(train_symbol_freq, dtype=torch.float)
                 # Assign weights to each sample based on its class
                 sample_weights = [class_weights[str(sample['symbol'])] for sample in train_data.data]
                 # Convert sample_weights to a tensor
