@@ -10,6 +10,7 @@ import optuna
 import arckit
 import numpy as np
 import torch
+from pytorch_lightning.profiler import PyTorchProfiler
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
 # Define the base directory for the arc-neural-reasoning-model
@@ -54,6 +55,14 @@ def main(args):
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    profiler = PyTorchProfiler(
+        schedule=torch.profiler.schedule(wait=1, warmup=1, active=2),
+        on_trace_ready=torch.profiler.tensorboard_trace_handler("tb_logs"),
+        record_shapes=True,
+        profile_memory=True,
+        with_stack=True
     )
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
     
@@ -317,7 +326,8 @@ def main(args):
             gradient_clip_val=1.0,
             accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu',
             devices=1,
-            reload_dataloaders_every_n_epochs=1
+            reload_dataloaders_every_n_epochs=1,
+            profiler=profiler
         )
 
         if tb_logger:
@@ -409,10 +419,10 @@ if __name__ == "__main__":
     parser.add_argument("--use-optuna", action="store_true", help="Use best hyperparameters from Optuna study")
     parser.add_argument("--optuna-study-name", type=str, default="gpt2_arc_optimization", help="Name of the Optuna study to load")
     parser.add_argument("--optuna-storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
-    parser.add_argument("--n-embd", type=int, default=16, help="Embedding dimension")
-    parser.add_argument("--n-head", type=int, default=1, help="Number of attention heads")
-    parser.add_argument("--n-layer", type=int, default=1, help="Number of transformer layers")
-    parser.add_argument("--batch-size", type=int, default=2, help="Batch size for training")
+    parser.add_argument("--n-embd", type=int, default=4, help="Embedding dimension for profiling")
+    parser.add_argument("--n-head", type=int, default=1, help="Number of attention heads for profiling")
+    parser.add_argument("--n-layer", type=int, default=1, help="Number of transformer layers for profiling")
+    parser.add_argument("--batch-size", type=int, default=1, help="Batch size for profiling")
     parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
     parser.add_argument("--mamba-ratio", type=int, default=0, help="Number of Mamba layers per Transformer layer")
