@@ -264,7 +264,7 @@ class ARCDataset(Dataset):
                 output_grid = self._preprocess_grid(example['output'])
 
                 # Assign task_id if not present
-                task_id = example.get('task_id', f"task_{len(processed_data) + 1}")
+                task_id = example.get('task_id', os.path.splitext(os.path.basename(file_path))[0])
 
                 processed_data.append({
                     "input": input_grid,
