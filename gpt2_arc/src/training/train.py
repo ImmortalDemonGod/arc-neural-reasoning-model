@@ -322,7 +322,7 @@ def main(args):
             callbacks=callbacks if callbacks else None,
             enable_checkpointing=not args.no_checkpointing,
             enable_progress_bar=not args.no_progress_bar,
-            fast_dev_run=args.fast_dev_run,
+            fast_dev_run=args.fast_dev_run,  # Use the command-line argument
             gradient_clip_val=1.0,
             accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu',
             devices=1,
@@ -436,7 +436,6 @@ if __name__ == "__main__":
     parser.add_argument("--no-logging", action="store_true", help="Disable logging")
     parser.add_argument("--no-checkpointing", action="store_true", help="Disable checkpointing")
     parser.add_argument("--no-progress-bar", action="store_true", help="Disable progress bar")
-    parser.add_argument("--fast-dev-run", action="store_true", help="Run a fast development test")
     parser.add_argument("--model_checkpoint", type=str, help="Path to the model checkpoint to resume training")
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
     parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
@@ -444,7 +443,6 @@ if __name__ == "__main__":
     parser.add_argument("--use-synthetic-data", action="store_true", help="Use synthetic data for training")
     parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
     parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
-    parser.add_argument("--use-profiler", action="store_true", help="Enable PyTorch profiler")
     parser.add_argument(
         "--profiler-dirpath",
         type=str,
