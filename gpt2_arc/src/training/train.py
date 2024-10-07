@@ -63,7 +63,7 @@ def main(args):
         filename=args.profiler_filename,
         activities=[ProfilerActivity.CPU],  # Use ProfilerActivity enums
         record_shapes=True,
-        with_stack=True
+        with_stack=False
     ) if args.use_profiler else None
     
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
