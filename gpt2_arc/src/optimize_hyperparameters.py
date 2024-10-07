@@ -71,8 +71,11 @@ def calculate_symbol_freq(dataset):
     """Calculate the frequency of each symbol in the dataset."""
     symbol_counts = {}
     total_symbols = 0
-    for data_point in dataset:
-        symbols = data_point.get('symbols', [])  # Adjust the key based on your dataset structure
+    for input_tensor, output_tensor, task_id in dataset:
+        # Assuming symbols are represented as integers in the tensors
+        input_symbols = input_tensor.flatten().tolist()
+        output_symbols = output_tensor.flatten().tolist()
+        symbols = input_symbols + output_symbols
         for symbol in symbols:
             symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
             total_symbols += 1
