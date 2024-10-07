@@ -257,7 +257,7 @@ class ARCDataset(Dataset):
         logger.debug("Dataset statistics computed and cached successfully")
 
 
-    def _process_list_data(self, data_list: List[Dict], default_task_id: str = "default_task") -> List[Dict]:
+    def _process_list_data(self, data_list: List[Dict], task_id: str) -> List[Dict]:
         processed_data = []
         for idx, example in enumerate(data_list):
             if 'input' in example and 'output' in example and isinstance(example['input'], (list, np.ndarray)) and isinstance(example['output'], (list, np.ndarray)):
@@ -266,7 +266,7 @@ class ARCDataset(Dataset):
                 output_grid = self._preprocess_grid(example['output'])
 
                 # Assign task_id if not present
-                task_id = example.get('task_id', default_task_id)
+                # Assign task_id from parameter, overriding any existing task_id in the data
 
                 processed_data.append({
                     "input": input_grid,
