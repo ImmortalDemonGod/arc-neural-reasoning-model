@@ -187,23 +187,17 @@ def main(args):
             if config.training.balancing_method == "weighting":
                 # Compute class weights (inverse of frequencies)
                 class_weights = 1.0 / torch.tensor(train_symbol_freq, dtype=torch.float)
-                # Assign weights to each sample based on its class
-                sample_weights = [class_weights[str(sample['symbol'])] for sample in train_data.data]
-                # Convert sample_weights to a tensor
-                sample_weights = torch.tensor(sample_weights)
-                # Initialize WeightedRandomSampler
-                sampler = WeightedRandomSampler(weights=sample_weights, num_samples=len(sample_weights), replacement=True)
-                # Initialize DataLoader with the sampler
+                # Removed WeightedRandomSampler as it is not appropriate for multi-class samples
                 train_loader = DataLoader(
                     train_data,
                     batch_size=config.training.batch_size,
-                    sampler=sampler,
-                    shuffle=False,  # Disable shuffle when using sampler
+                    num_workers=get_num_workers(),
+                    shuffle=True,  # Enable shuffle
                     pin_memory=True if args.use_gpu else False,
                     prefetch_factor=config.training.prefetch_factor,
                     persistent_workers=config.training.persistent_workers
                 )
-                logger.debug("WeightedRandomSampler applied for balancing.")
+                logger.debug("Class weights applied in loss function. WeightedRandomSampler removed.")
             elif config.training.balancing_method == "oversampling":
                 # Placeholder for oversampling implementation
                 logger.info("Oversampling method selected, but not yet implemented.")
