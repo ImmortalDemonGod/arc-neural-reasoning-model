@@ -52,7 +52,7 @@ class ResultsCollector:
         if not isinstance(self.results["train"], dict):
             raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
         self._log_results_type("Before setting default")
-        print(f"DEBUG: Before setting default, self.results['train'] is of type {type(self.results['train'])}")
+        # print(f"DEBUG: Before setting default, self.results['train'] is of type {type(self.results['train'])}")
         self.results["train"].setdefault(epoch, {})
         self._log_results_type("After setting default")
         print(f"DEBUG: After setting default, self.results['train'] is of type {type(self.results['train'])}")
