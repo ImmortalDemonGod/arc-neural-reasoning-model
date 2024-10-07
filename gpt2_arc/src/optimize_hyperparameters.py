@@ -144,10 +144,11 @@ def objective(trial):
         )
         available_memory = get_available_memory()
 
-        logger.info(f"Trial {trial.number}: Estimated memory usage: {estimated_memory:.2f} GB")
-        logger.info(f"Trial {trial.number}: Available memory: {available_memory:.2f} GB")
+        logger.debug(f"Trial {trial.number}: Estimated memory usage: {estimated_memory:.2f} GB")
+        logger.debug(f"Trial {trial.number}: Available memory: {available_memory:.2f} GB")
 
-        if not can_fit_model(estimated_memory, available_memory):
+        # Prune the trial if estimated memory exceeds 80% of available memory
+        if not can_fit_model(estimated_memory, available_memory * 0.8):
             logger.warning(f"Trial {trial.number}: Model too large for available memory. Skipping.")
             raise optuna.exceptions.TrialPruned()
 
@@ -292,7 +293,7 @@ def objective(trial):
 
 
 def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1):
-    study_name = "gpt2_arc_optimization"
+    study_name = "gpt2_arc_optimization_v2"
 
     pruner = PercentilePruner(percentile=25, n_startup_trials=5, n_warmup_steps=2, interval_steps=1)
     sampler = TPESampler(n_startup_trials=5)
