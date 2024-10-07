@@ -43,7 +43,7 @@ class ResultsCollector:
     def _log_results_type(self, context: str):
         """Log the type of self.results['train'] for debugging."""
     def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
-        print(f"DEBUG: self.results['train'] is of type {type(self.results['train'])}")
+        # print(f"DEBUG: self.results['train'] is of type {type(self.results['train'])}")
         """Update training metrics for a specific epoch."""
         self._log_results_type("Before checking 'train' in results")
         if "train" not in self.results:
