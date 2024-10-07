@@ -62,7 +62,7 @@ def main(args):
         filename=args.profiler_filename,
         line_count_restriction=args.line_count_restriction,
         dump_stats=args.dump_stats
-    ) if args.use_profiler and not args.fast_dev_run else None
+    ) if args.use_profiler else None
     
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
     
@@ -322,7 +322,7 @@ def main(args):
             callbacks=callbacks if callbacks else None,
             enable_checkpointing=not args.no_checkpointing,
             enable_progress_bar=not args.no_progress_bar,
-            fast_dev_run=True,
+            fast_dev_run=args.fast_dev_run,
             gradient_clip_val=1.0,
             accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu',
             devices=1,
@@ -416,7 +416,10 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
-    parser.add_argument("--use-optuna", action="store_true", help="Use best hyperparameters from Optuna study")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--use-profiler", action="store_true", help="Enable the custom profiler")
+    group.add_argument("--fast-dev-run", action="store_true", help="Run a fast development test")
+    
     parser.add_argument("--optuna-study-name", type=str, default="gpt2_arc_optimization", help="Name of the Optuna study to load")
     parser.add_argument("--optuna-storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
     parser.add_argument("--n-embd", type=int, default=4, help="Embedding dimension for profiling")
