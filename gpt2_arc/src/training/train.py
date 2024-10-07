@@ -10,7 +10,7 @@ import optuna
 import arckit
 import numpy as np
 import torch
-from pytorch_lightning.profiler import PyTorchProfiler
+from lightning.pytorch.profilers import AdvancedProfiler
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
 # Define the base directory for the arc-neural-reasoning-model
@@ -57,7 +57,7 @@ def main(args):
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-    profiler = PyTorchProfiler(
+    profiler = AdvancedProfiler(
         schedule=torch.profiler.schedule(wait=1, warmup=1, active=2),
         on_trace_ready=torch.profiler.tensorboard_trace_handler("tb_logs"),
         record_shapes=True,
