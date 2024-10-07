@@ -55,7 +55,7 @@ class ResultsCollector:
         # print(f"DEBUG: Before setting default, self.results['train'] is of type {type(self.results['train'])}")
         self.results["train"].setdefault(epoch, {})
         self._log_results_type("After setting default")
-        print(f"DEBUG: After setting default, self.results['train'] is of type {type(self.results['train'])}")
+        # print(f"DEBUG: After setting default, self.results['train'] is of type {type(self.results['train'])}")
         self.results["train"][epoch].update(metrics)
 
     def update_val_metrics(self, epoch: int, metrics: Dict[str, float]):
