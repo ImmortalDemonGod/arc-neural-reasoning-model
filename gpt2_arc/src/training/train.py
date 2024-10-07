@@ -141,8 +141,14 @@ def main(args):
         # Convert train_symbol_freq from numpy array to dictionary with string keys
         train_symbol_freq_dict = {str(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
 
+        # Convert train_symbol_freq from numpy array to dictionary with string keys
+        train_symbol_freq_dict = {str(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
+        
+        # Update the TrainingConfig with the symbol_freq dictionary
+        training_config.symbol_freq = train_symbol_freq_dict
+
         logger.info(f"Train Grid Size Stats: {train_grid_stats}")
-        logger.info(f"Train Symbol Frequencies: {train_symbol_freq}")
+        logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
         logger.info(f"Validation Grid Size Stats: {val_grid_stats}")
         logger.info(f"Validation Symbol Frequencies: {val_symbol_freq}")
 
