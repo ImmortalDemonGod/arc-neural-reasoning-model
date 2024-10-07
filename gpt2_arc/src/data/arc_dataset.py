@@ -112,6 +112,8 @@ class ARCDataset(Dataset):
             else:
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
         elif TaskSet is not None and isinstance(data_source, TaskSet):
+            logger.debug(f"TaskSet attributes before access: {dir(data_source)}")
+            logger.debug(f"Does TaskSet have 'dataset' attribute? {hasattr(data_source, 'dataset')}")
             samples = self._process_arckit_data(data_source)
             self.data.extend(samples)
         elif isinstance(data_source, list):
