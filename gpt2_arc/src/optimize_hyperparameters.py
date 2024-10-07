@@ -359,7 +359,7 @@ if __name__ == "__main__":
 
     if not args.storage.startswith("sqlite:///"):
         if os.path.isabs(args.storage):
-            args.storage = f"sqlite:///{args.storage}"
+            args.storage = f"sqlite:////{args.storage}"
         else:
             args.storage = f"sqlite:///{os.path.abspath(args.storage)}"
     
