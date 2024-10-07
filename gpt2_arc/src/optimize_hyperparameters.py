@@ -110,7 +110,7 @@ def objective(trial):
         # Suggest Mamba-specific hyperparameters
         mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
         d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
-        d_conv = trial.suggest_int("d_conv", args.d_conv_min, args.d_conv_max)
+        d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
 
         # Suggest dropout rate
         dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
@@ -120,6 +120,18 @@ def objective(trial):
         batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
         learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
         max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
+
+        # Ensure hyperparameters are within the new limits
+        n_head = min(n_head, 2 ** args.n_head_exp_max)
+        n_embd = min(n_embd, 2 ** int(np.log2(args.n_embd_multiplier_max * n_head)))
+        n_layer = min(n_layer, args.n_layer_max)
+        mamba_ratio = min(mamba_ratio, args.mamba_ratio_max)
+        d_state = min(d_state, args.d_state_max)
+        d_conv = min(d_conv, args.d_conv_max)
+        batch_size = min(batch_size, args.batch_size_max)
+        # Optionally, log the clamped values
+        logger.debug(f"Clamped hyperparameters: n_head={n_head}, n_embd={n_embd}, n_layer={n_layer}, \
+            mamba_ratio={mamba_ratio}, d_state={d_state}, d_conv={d_conv}, batch_size={batch_size}")
 
         # Check if the model will fit in memory
         # Adjust the total number of layers to include Mamba layers
