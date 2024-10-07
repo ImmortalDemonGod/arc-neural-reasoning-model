@@ -35,6 +35,11 @@ class ARCTrainer(pl.LightningModule):
         self.best_epoch = 0
         self.results_collector = results_collector if results_collector else ResultsCollector(config)
         self.writer = SummaryWriter(f"runs/experiment_{self.results_collector.experiment_id}")
+        
+        if hasattr(self.model, 'loss_fn') and hasattr(self.model.loss_fn, 'weight'):
+            logger.debug(f"Trainer's loss function class weights: {self.model.loss_fn.weight}")
+        else:
+            logger.debug("Trainer's loss function does not have class weights.")
 
     def get_tensorboard_logger(self):
         for logger in self.trainer.loggers:
@@ -281,9 +286,12 @@ class ARCTrainer(pl.LightningModule):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=4)
 
     def compute_loss(self, outputs, labels):
-        return nn.CrossEntropyLoss()(
+        loss = nn.CrossEntropyLoss()(
             outputs.view(-1, outputs.size(-1)), labels.view(-1)
         )
+
+        logger.debug(f"Computed loss: {loss.item()}")
+        return loss
 
     def forward(self, input_ids, attention_mask=None):
         return self.model(input_ids, attention_mask)
