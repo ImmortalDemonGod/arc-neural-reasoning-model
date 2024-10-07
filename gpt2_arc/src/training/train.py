@@ -58,7 +58,6 @@ def main(args):
     )
 
     profiler = AdvancedProfiler(
-        schedule=torch.profiler.schedule(wait=1, warmup=1, active=2),
         on_trace_ready=torch.profiler.tensorboard_trace_handler("tb_logs"),
         record_shapes=True,
         profile_memory=True,
