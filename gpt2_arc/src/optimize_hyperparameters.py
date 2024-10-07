@@ -184,11 +184,16 @@ def objective(trial):
         logger.debug("Loading data")
         train_set, eval_set = arckit.load_data()
         logger.debug(f"Trial {trial.number}: Loading training and evaluation data")
+        # Initialize ARCDataset for the training set without symbol_freq
+        train_data = ARCDataset(train_set)
         logger.debug("Calculating symbol frequencies for training set")
-        symbol_freq = calculate_symbol_freq(train_set.dataset)
+        
+        # Retrieve symbol frequencies using ARCDataset's method
+        symbol_freq = train_data.get_symbol_frequencies()
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
-        train_data = ARCDataset(train_set, symbol_freq=symbol_freq)
+        # Initialize ARCDataset for the validation set with the computed symbol_freq
+        val_data = ARCDataset(eval_set, symbol_freq=symbol_freq)
         val_data = ARCDataset(eval_set, symbol_freq=symbol_freq)
         logger.debug(f"Data loaded. Train set size: {len(train_data)}, Validation set size: {len(val_data)}")
 
