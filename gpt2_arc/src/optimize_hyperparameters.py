@@ -290,8 +290,6 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
         logger.info("Best hyperparameters:")
         for key, value in study.best_params.items():
             logger.info(f"  {key}: {value}")
-    else:
-        logger.warning("No successful trials found.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
