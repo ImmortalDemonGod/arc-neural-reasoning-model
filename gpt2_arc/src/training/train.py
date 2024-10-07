@@ -58,7 +58,6 @@ def main(args):
     )
 
     profiler = AdvancedProfiler(
-        on_trace_ready=torch.profiler.tensorboard_trace_handler("tb_logs"),
         record_shapes=True,
         profile_memory=True,
         with_stack=True
