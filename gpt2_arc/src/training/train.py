@@ -10,7 +10,7 @@ import optuna
 import arckit
 import numpy as np
 import torch
-from pytorch_lightning.callbacks.profiler import PyTorchProfiler
+from pytorch_lightning.profiler import PyTorchProfiler
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
 # Define the base directory for the arc-neural-reasoning-model
