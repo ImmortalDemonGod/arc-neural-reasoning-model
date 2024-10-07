@@ -66,7 +66,22 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
     logger.debug("Hyperparameters validated successfully")
     return True
 
-def objective(trial):
+def calculate_symbol_freq(dataset):
+    """Calculate the frequency of each symbol in the dataset."""
+    symbol_counts = {}
+    total_symbols = 0
+    for data_point in dataset:
+        symbols = data_point.get('symbols', [])  # Adjust the key based on your dataset structure
+        for symbol in symbols:
+            symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
+            total_symbols += 1
+    
+    if total_symbols == 0:
+        raise ValueError("The dataset contains no symbols to calculate frequencies.")
+    
+    # Calculate normalized frequencies
+    symbol_freq = {symbol: count / total_symbols for symbol, count in symbol_counts.items()}
+    return symbol_freq
     logger.info(f"Starting trial {trial.number}")
 
     try:
@@ -160,8 +175,13 @@ def objective(trial):
         # Load data
         logger.debug("Loading data")
         train_set, eval_set = arckit.load_data()
-        train_data = ARCDataset(train_set)
-        val_data = ARCDataset(eval_set)
+        # Calculate symbol frequencies
+        logger.debug("Calculating symbol frequencies for training set")
+        symbol_freq = calculate_symbol_freq(train_set)
+        logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+
+        train_data = ARCDataset(train_set, symbol_freq=symbol_freq)
+        val_data = ARCDataset(eval_set, symbol_freq=symbol_freq)
         logger.debug(f"Data loaded. Train set size: {len(train_data)}, Validation set size: {len(val_data)}")
 
         # Create model and trainer
@@ -239,7 +259,10 @@ def objective(trial):
             logger.error(f"Trial {trial.number}: A runtime error occurred: {str(e)}", exc_info=True)
             raise RuntimeError(f"Trial {trial.number}: A runtime error occurred: {str(e)}")
     except Exception as e:
-        logger.error(f"Trial {trial.number}: An unexpected error occurred: {str(e)}", exc_info=True)
+        if "symbol_freq" in str(e):
+            logger.error(f"Trial {trial.number}: 'symbol_freq' is missing. Ensure it is calculated and passed correctly.", exc_info=True)
+        else:
+            logger.error(f"Trial {trial.number}: An unexpected error occurred: {str(e)}", exc_info=True)
         raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: An unexpected error occurred: {str(e)}")
 
 def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1):

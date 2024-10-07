@@ -28,6 +28,7 @@ class TrainingConfig:
     learning_rate: float = 1e-4
     max_epochs: int = 10
     num_workers: int = multiprocessing.cpu_count() // 2 if multiprocessing.cpu_count() else 4
+    symbol_freq: Optional[dict] = None
     prefetch_factor: int = 2
     persistent_workers: bool = True
     use_gpu: bool = True
