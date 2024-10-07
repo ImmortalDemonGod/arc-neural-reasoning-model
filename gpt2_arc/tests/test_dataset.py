@@ -7,7 +7,17 @@ class TestARCDataset(unittest.TestCase):
         # Initialize dataset with a mock data source
         self.dataset = ARCDataset(data_source="path/to/mock_data")
 
-    def test_dataset_loading_from_directory(self):
+    def test_task_ids_loaded_from_filenames(self):
+        # Mock the os.listdir to return predefined filenames
+        synthetic_filenames = ['task_alpha.json', 'task_beta.json']
+        with patch('os.listdir', return_value=synthetic_filenames):
+            # Mock the open function to return empty JSON data
+            mock_data = json.dumps({'train': [], 'test': []})
+            with patch('builtins.open', mock_open(read_data=mock_data)):
+                dataset = ARCDataset(data_source='path/to/synthetic_data', debug=True)
+                expected_task_ids = ['task_alpha', 'task_beta']
+                actual_task_ids = [sample['task_id'] for sample in dataset.data]
+                self.assertEqual(actual_task_ids, expected_task_ids, "Task IDs do not match filenames.")
         # Initialize dataset with a mock directory
         dataset = ARCDataset(data_source="path/to/mock_directory")
         self.assertGreater(len(dataset), 0, "Dataset should contain samples loaded from the directory.")

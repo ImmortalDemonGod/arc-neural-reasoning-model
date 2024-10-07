@@ -293,7 +293,8 @@ class ARCDataset(Dataset):
                 with open(file_path, 'r') as f:
                     try:
                         task_data = json.load(f)
-                        task_id = os.path.splitext(filename)[0]  # Use the filename (without extension) as the task ID
+                        # Assign task_id from filename
+                        task_id = os.path.splitext(filename)[0]
                         processed_samples = self._process_single_task(task_data, task_id=task_id)
                         self.data.extend(processed_samples)
                     except json.JSONDecodeError as e:
