@@ -66,7 +66,8 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
     logger.debug("Hyperparameters validated successfully")
     return True
 
-def objective(trial):
+
+def calculate_symbol_freq(dataset):
     """Calculate the frequency of each symbol in the dataset."""
     symbol_counts = {}
     total_symbols = 0
@@ -83,6 +84,10 @@ def objective(trial):
     symbol_freq = {symbol: count / total_symbols for symbol, count in symbol_counts.items()}
     return symbol_freq
 
+
+
+def objective(trial):
+    logger.info(f"Starting trial {trial.number}")
     try:
         # Suggest n_head as a power of 2
         n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
@@ -264,6 +269,8 @@ def objective(trial):
             logger.error(f"Trial {trial.number}: An unexpected error occurred: {str(e)}", exc_info=True)
         raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: An unexpected error occurred: {str(e)}")
 
+
+
 def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1):
     study_name = "gpt2_arc_optimization"
 
@@ -352,10 +359,6 @@ if __name__ == "__main__":
     parser.add_argument("--synthetic_data_path", type=str, default="", help="Path to synthetic data for training.")
     parser.add_argument("--log_level", type=str, default="INFO", help="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL).")
 
-    # Define the objective function for Optuna
-    def objective(trial):
-        # Your existing code for the objective function goes here
-        pass
 
     args = parser.parse_args()
 
