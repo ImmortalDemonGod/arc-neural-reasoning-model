@@ -443,6 +443,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-synthetic-data", action="store_true", help="Use synthetic data for training")
     parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
     parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
+    parser.add_argument("--use-optuna", action="store_true", help="Use best hyperparameters from Optuna study")
     parser.add_argument(
         "--profiler-dirpath",
         type=str,
