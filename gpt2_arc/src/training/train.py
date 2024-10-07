@@ -64,6 +64,7 @@ def main(args):
         profile_memory=True,
         with_stack=True
     ) if args.use_profiler else None
+    
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
     
     logger.info("Starting main function")
