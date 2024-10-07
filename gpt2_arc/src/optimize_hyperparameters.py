@@ -192,8 +192,17 @@ def objective(trial):
         symbol_freq = train_data.get_symbol_frequencies()
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
-        # Assign the computed symbol_freq to the training configuration
-        config.training.symbol_freq = symbol_freq
+        # Convert symbol_freq from NumPy array to dictionary
+        symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
+        logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
+
+        # Assign the converted symbol_freq to the training configuration
+        config.training.symbol_freq = symbol_freq_dict
+
+        # Validate that symbol_freq_dict is not empty
+        if not symbol_freq_dict:
+            logger.error("symbol_freq_dict is empty. Cannot proceed with balance_symbols=True and balancing_method='weighting'.")
+            raise ValueError("symbol_freq must be provided and non-empty when balance_symbols is True and balancing_method is 'weighting'.")
 
         # Initialize ARCDataset for the validation set without passing symbol_freq
         val_data = ARCDataset(eval_set)

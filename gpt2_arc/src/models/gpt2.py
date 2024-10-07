@@ -175,8 +175,8 @@ class GPT2ARC(pl.LightningModule):
 
         # Initialize loss function with class weights if needed
         if self.config.training.balance_symbols and self.config.training.balancing_method == "weighting":
-            symbol_freq = symbol_freq or {}
-            if not symbol_freq:
+            self.symbol_freq = symbol_freq or config.training.symbol_freq
+            if not self.symbol_freq:
                 raise ValueError("symbol_freq must be provided when balance_symbols is True and balancing_method is 'weighting'")
             class_weights = 1.0 / torch.tensor(list(symbol_freq.values()), dtype=torch.float)
             self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
