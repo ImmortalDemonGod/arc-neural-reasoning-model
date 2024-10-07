@@ -355,6 +355,8 @@ if __name__ == "__main__":
     # Define the objective function for Optuna
     def objective(trial):
         # Your existing code for the objective function goes here
+        pass
+
     args = parser.parse_args()
 
     # Ensure the storage_name has the correct SQLite prefix
