@@ -3,7 +3,7 @@ import torch
 import math
 import psutil
 
-def calculate_params(n_layers, n_heads, d_model, mamba_ratio=0, d_state=16, d_conv=4):
+def calculate_params(n_layers, n_heads, d_model, mamba_ratio=0, d_state=16, d_conv=4, mamba_depth=1, mamba_expand=2):
     # Parameters per Transformer layer
     transformer_params_per_layer = (
         12 * d_model * d_model + 13 * d_model
