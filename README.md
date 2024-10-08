@@ -17,7 +17,7 @@ pip install -e .
 For development, install the extra dependencies:
 
 ```bash
-pip install -r /workspaces/arc-neural-reasoning-model/gpt2_arc/requirements.txt
+pip install -r  gpt2_arc/requirements.txt
 ```
 
 ## Usage
