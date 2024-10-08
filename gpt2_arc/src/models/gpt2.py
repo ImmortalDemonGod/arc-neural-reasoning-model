@@ -125,9 +125,7 @@ class MambaLayer(nn.Module):
             logger.debug(f"MambaLayer output shape: {output.shape}")
         return output
 
-
 from gpt2_arc.src.config import Config
-
 
 class GPT2ARC(pl.LightningModule):
     def __init__(self, config: Config, num_classes: int, symbol_freq: Dict[str, float] = None):
@@ -137,7 +135,12 @@ class GPT2ARC(pl.LightningModule):
         self.config = config
         self.symbol_freq = symbol_freq
         # Replace token embedding with a convolutional layer
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=self.config.model.n_embd, kernel_size=3, padding=1).to(torch.float32)
+        self.conv1 = nn.Conv2d(
+            in_channels=1,
+            out_channels=self.config.model.n_embd,  # Accessing the 'model' attribute within Config
+            kernel_size=3,
+            padding=1
+        ).to(torch.float32)
         # Initialize blocks with interleaved TransformerBlocks and MambaLayer(s)
         self.blocks = nn.ModuleList()
         num_transformer_blocks = self.config.model.n_layer
