@@ -8,6 +8,20 @@ def calculate_params(n_layers, n_heads, d_model, mamba_ratio=0, d_state=16, d_co
     transformer_params_per_layer = (
         12 * d_model * d_model + 13 * d_model
     )
+    
+    # Calculate the number of Mamba layers
+    total_mamba_layers = int(n_layers * mamba_ratio)
+    
+    # Calculate parameters for Mamba layers
+    # Assuming MambaBlock has parameters based on d_state, d_conv, depth, and expand
+    mamba_params_per_layer = (
+        d_state * d_conv * mamba_expand * mamba_depth  # Example calculation
+    )
+    total_mamba_params = total_mamba_layers * mamba_params_per_layer
+    
+    # Total parameters
+    total_params = transformer_params + total_mamba_params
+    return total_params
     total_transformer_params = n_layers * transformer_params_per_layer
     
     # Parameters per Mamba layer
