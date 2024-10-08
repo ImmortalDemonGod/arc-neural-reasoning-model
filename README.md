@@ -36,8 +36,9 @@ pytest -v
 
 [Add contribution guidelines here]
 
+aider --weak-model gpt-4o-mini --auto-lint --model o1-mini --architect  --editor-model gpt-4o --pretty
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-aider --weak-model gpt-4o-mini --auto-lint --model o1-mini --architect  --editor-model gpt-4o --pretty
