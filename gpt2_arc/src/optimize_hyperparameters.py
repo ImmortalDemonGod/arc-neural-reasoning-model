@@ -116,7 +116,23 @@ def objective(trial):
         dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
         validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
 
-        # Suggest training hyperparameters
+        # Suggest Grokfast-specific hyperparameters
+        trial.suggest_categorical("use_grokfast", [True, False])
+        if trial.params["use_grokfast"]:
+            grokfast_type = trial.suggest_categorical("grokfast_type", ["ema", "ma"])
+            if grokfast_type == "ema":
+                grokfast_alpha = trial.suggest_float("grokfast_alpha", 0.90, 0.99, step=0.01)
+                grokfast_lamb = trial.suggest_float("grokfast_lamb", 1.0, 3.0, step=0.1)
+                grokfast_window_size = None  # Not used for EMA
+            else:
+                grokfast_alpha = None  # Not used for MA
+                grokfast_lamb = trial.suggest_float("grokfast_lamb", 1.0, 3.0, step=0.1)
+                grokfast_window_size = trial.suggest_int("grokfast_window_size", 50, 200, step=10)
+        else:
+            grokfast_type = None
+            grokfast_alpha = None
+            grokfast_lamb = None
+            grokfast_window_size = None
         batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
         learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
         max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
@@ -177,7 +193,16 @@ def objective(trial):
         )
         logger.debug(f"Model config: {model_config}")
 
+        # Create TrainingConfig with Grokfast parameters
         training_config = TrainingConfig(
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            max_epochs=max_epochs,
+            use_grokfast=trial.params["use_grokfast"],
+            grokfast_type=grokfast_type,
+            grokfast_alpha=grokfast_alpha,
+            grokfast_lamb=grokfast_lamb,
+            grokfast_window_size=grokfast_window_size
             batch_size=batch_size,
             learning_rate=learning_rate,
             max_epochs=max_epochs

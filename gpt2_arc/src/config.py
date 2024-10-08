@@ -2,6 +2,7 @@ from typing import Optional
 # gpt2_arc/src/config.py
 from dataclasses import dataclass, asdict, field
 from typing import Optional
+import multiprocessing
 
 @dataclass
 class ModelConfig:
@@ -24,6 +25,12 @@ import multiprocessing
 
 @dataclass
 class TrainingConfig:
+    # Grokfast-specific parameters
+    use_grokfast: bool = False
+    grokfast_type: Optional[str] = field(default=None)  # 'ema' or 'ma'
+    grokfast_alpha: float = field(default=0.98)
+    grokfast_lamb: float = field(default=2.0)
+    grokfast_window_size: Optional[int] = field(default=100)  # Only relevant if grokfast_type == 'ma'
     batch_size: int = 32
     learning_rate: float = 1e-4
     max_epochs: int = 10
