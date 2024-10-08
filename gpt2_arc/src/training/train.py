@@ -295,7 +295,21 @@ def main(args):
         )
         trainer.log_hyperparameters()
 
-        # Set up PyTorch Lightning trainer
+        # Initialize GrokfastCallback if enabled
+        if config.training.use_grokfast:
+            grokfast_callback = GrokfastCallback(
+                filter_type=config.training.grokfast_type,  # 'ema' or 'ma'
+                alpha=config.training.grokfast_alpha,
+                lamb=config.training.grokfast_lamb,
+                window_size=config.training.grokfast_window_size if config.training.grokfast_type == 'ma' else 100,  # default for ma
+                warmup=True,
+                trigger=False
+            )
+            callbacks = [grokfast_callback]
+            logger.info("GrokfastCallback added to the training callbacks.")
+        else:
+            callbacks = []
+            logger.info("Grokfast is disabled; no callback added.")
         logger.info("Setting up PyTorch Lightning trainer")
         callbacks = []
         if not args.no_checkpointing:
