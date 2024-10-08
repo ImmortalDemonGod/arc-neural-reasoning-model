@@ -168,7 +168,7 @@ def objective(trial, args):
         total_layers = n_layer + total_mamba_layers
 
         # Recalculate total parameters based on total_layers
-        total_params = model_memory_estimator.calculate_params(
+        total_params = calculate_params(
             n_layers=total_layers,
             n_heads=n_head,
             d_model=n_embd,
