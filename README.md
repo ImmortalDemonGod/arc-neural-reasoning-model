@@ -29,7 +29,7 @@ pip install -r  gpt2_arc/requirements.txt
 Run the tests using pytest:
 
 ```bash
-pytest
+pytest -v
 ```
 
 ## Contributing
@@ -40,4 +40,4 @@ pytest
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-aider --cache-prompts --no-stream
+aider --weak-model gpt-4o-mini --auto-lint --model o1-mini --architect  --editor-model gpt-4o --pretty
