@@ -133,7 +133,9 @@ def main(args):
     _, test_set = arckit.load_data()
     test_data = ARCDataset(test_set)
 
-    # Load the checkpoint with map_location='cpu'
+    # Compute symbol frequencies from the test dataset
+    symbol_freq_array = test_data.get_symbol_frequencies()
+    symbol_freq = {str(i): float(freq) for i, freq in enumerate(symbol_freq_array)}
     checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
 
     # Extract and convert the model configuration from the checkpoint
@@ -144,26 +146,11 @@ def main(args):
     else:
         raise ValueError("Model configuration not found in checkpoint")
 
-    # Initialize the model with the checkpoint configuration
-    # Instantiate the full Config object before initializing the model
-    config = Config(
-        model=model_config,
-        training=TrainingConfig(),
-        evaluation=EvaluationConfig()
-    )
-    def find_max_label(task_set):
-        max_label = 0
-        for task in task_set.tasks:
-            for sample in task.train + task.test:
-                input_grid, output_grid = sample
-                max_label = max(max_label, np.max(input_grid), np.max(output_grid))
-        return max_label
+    # Pass symbol_freq to the Config's training configuration
+    config.training.symbol_freq = symbol_freq
 
-    # Determine the number of classes from the test dataset
-    max_label_test = find_max_label(test_set)
-    num_classes = max_label_test + 1  # Add 1 because labels start from 0
-
-    model = GPT2ARC(config, num_classes=num_classes)
+    # Initialize the model with the complete Config object and symbol frequencies
+    model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq)
     try:
         # Remove the "model." prefix from state dict keys
         state_dict = {k.replace('model.', ''): v for k, v in checkpoint['state_dict'].items()}
