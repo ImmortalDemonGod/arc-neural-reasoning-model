@@ -44,7 +44,7 @@ def get_num_workers():
 logger = logging.getLogger(__name__)
 
 class ConfigSavingModelCheckpoint(ModelCheckpoint):
-    def __init__(self, config, trial_num, task_id, iter_num, *args, **kwargs):
+    def __init__(self, config, trial_num='NA', task_id='NA', iter_num='NA', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.config = config
         self.trial_num = trial_num
