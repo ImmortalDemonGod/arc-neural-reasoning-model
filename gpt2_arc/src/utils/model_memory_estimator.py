@@ -20,18 +20,7 @@ def calculate_params(n_layers, n_heads, d_model, mamba_ratio=0, d_state=16, d_co
     total_mamba_params = total_mamba_layers * mamba_params_per_layer
     
     # Total parameters
-    total_params = transformer_params + total_mamba_params
-    return total_params
-    total_transformer_params = n_layers * transformer_params_per_layer
-    
-    # Parameters per Mamba layer
-    mamba_params_per_layer = (
-        4 * d_model * d_model + d_state * d_model + d_conv * d_model
-    )
-    total_mamba_params = n_layers * mamba_ratio * mamba_params_per_layer
-    
-    # Total parameters
-    total_params = total_transformer_params + total_mamba_params
+    total_params = n_layers * transformer_params_per_layer + total_mamba_params
     return total_params
 
 def estimate_memory_usage(total_params, batch_size, height, width, d_model, dtype_size=4):
