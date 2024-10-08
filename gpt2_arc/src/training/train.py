@@ -71,7 +71,7 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
             task_id=self.task_id,
             iter_num=self.iter_num,
             val_loss=metrics.get("val_loss", 0.0),
-            epoch=self.epoch,
+            epoch=metrics.get("epoch", 0),
             timestamp=self.timestamp
         )
 
