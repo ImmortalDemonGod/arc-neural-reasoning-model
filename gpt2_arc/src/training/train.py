@@ -5,7 +5,7 @@ import sys
 import logging
 import os
 import json
-from unittest.mock import MagicMock, patch, patch
+from unittest.mock import MagicMock, patch
 import optuna
 import arckit
 import numpy as np
@@ -33,6 +33,7 @@ from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
 from gpt2_arc.src.training.trainer import ARCTrainer
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
+from gpt2_arc.src.utils import GrokfastCallback
 
 def get_num_workers():
     try:
@@ -435,6 +436,32 @@ if __name__ == "__main__":
     parser.add_argument("--d-state", type=int, default=4, help="Mamba state dimension")
     parser.add_argument("--d-conv", type=int, default=1, help="Mamba convolution dimension")
     parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
+    parser.add_argument("--use-grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
+    parser.add_argument(
+        "--grokfast-type",
+        type=str,
+        default="ema",
+        choices=["ema", "ma"],
+        help="Type of Grokfast filter to use: 'ema' or 'ma'."
+    )
+    parser.add_argument(
+        "--grokfast-alpha",
+        type=float,
+        default=0.98,
+        help="Alpha parameter for Grokfast-EMA."
+    )
+    parser.add_argument(
+        "--grokfast-lamb",
+        type=float,
+        default=2.0,
+        help="Lambda parameter for Grokfast filters."
+    )
+    parser.add_argument(
+        "--grokfast-window_size",
+        type=int,
+        default=100,
+        help="Window size for Grokfast-MA."
+    )
     parser.add_argument("--no-logging", action="store_true", help="Disable logging")
     parser.add_argument("--no-checkpointing", action="store_true", help="Disable checkpointing")
     parser.add_argument("--no-progress-bar", action="store_true", help="Disable progress bar")

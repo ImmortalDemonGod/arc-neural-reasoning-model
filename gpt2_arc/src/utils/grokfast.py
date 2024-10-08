@@ -18,7 +18,7 @@ def gradfilter_ma(
 
     for n, p in m.named_parameters():
         if p.requires_grad and p.grad is not None:
-            grads[n].append(p.grad.data.detach()) # .cpu())
+            grads[n].append(p.grad.data.detach().clone())
 
             # Modify the gradients.
             if not warmup or len(grads[n]) == window_size and not trigger:
@@ -40,7 +40,7 @@ def gradfilter_ema(
     lamb: float = 2.0,
 ) -> Dict[str, torch.Tensor]:
     if grads is None:
-        grads = {n: p.grad.data.detach() for n, p in m.named_parameters() if p.requires_grad and p.grad is not None}
+        grads = {n: p.grad.data.detach().clone() for n, p in m.named_parameters() if p.requires_grad and p.grad is not None}
 
     for n, p in m.named_parameters():
         if p.requires_grad and p.grad is not None:
