@@ -8,6 +8,7 @@ This project implements a neural reasoning model based on the GPT-2 architecture
 - **Model Architecture**: Implements a `GPT2ARC` model leveraging the pre-trained GPT-2 architecture.
 - **Training**: Includes a `train.py` script for training the model using PyTorch Lightning, with support for logging, checkpointing, and hyperparameter tuning via Optuna.
 - **Evaluation**: Provides an `evaluate.py` script to assess the trained model on test datasets.
+- **Hyperparameter Optimization**: Offers an `optimize_hyperparameters.py` script to automate the search for optimal hyperparameter configurations using Optuna.
 - **Testing**: Comprehensive test suite using `pytest` to ensure model and data integrity.
 - **Experiment Tracking**: Integrates experiment tracking and results collection mechanisms for better experiment management.
 
@@ -157,7 +158,84 @@ python src/evaluate.py \
 - **Utilize W&B for Tracking**: Leverage W&B to monitor evaluation metrics in real-time and maintain experiment logs.
 - **Organize Evaluation Results**: Structure your `output_dir` to systematically store and access evaluation results for easy reference.
 
-## Running Tests
+### Hyperparameter Optimization
+
+The `optimize_hyperparameters.py` script automates the search for optimal hyperparameter configurations using Optuna, enhancing the model's performance by systematically exploring different hyperparameter combinations.
+
+#### **Prerequisites**
+
+- **Python Environment**: Python 3.7 or higher.
+- **Dependencies**: Ensure all required packages are installed.
+    ```bash
+    pip install -e .
+    pip install -e ".[dev]"
+    ```
+- **Data Availability**: Access to the ARC dataset or synthetic data.
+- **Hardware Requirements**: A CUDA-compatible GPU is recommended for faster optimization.
+
+#### **Basic Optimization Command**
+
+Run the hyperparameter optimization loop with default settings:
+
+```bash
+python src/optimize_hyperparameters.py --n_trials 50
+```
+
+#### **Common Command-Line Arguments**
+
+- `--n_trials`: Number of trials for optimization (default: `10`).
+- `--storage`: Storage path for Optuna results (default: `sqlite:///optuna_results.db`).
+- `--n_jobs`: Number of parallel jobs (default: `-1` for all available cores).
+- `--n_embd_min`: Minimum embedding dimension (default: `64`).
+- `--n_embd_max`: Maximum embedding dimension (default: `256`).
+- `--n_head_min`: Minimum number of attention heads (default: `2`).
+- `--n_head_max`: Maximum number of attention heads (default: `16`).
+- `--n_head_exp_min`: Minimum exponent for `n_head` (2^x) (default: `1`).
+- `--n_head_exp_max`: Maximum exponent for `n_head` (2^x) (default: `3`).
+- `--n_embd_multiplier_min`: Minimum multiplier for `n_embd` (default: `16`).
+- `--n_embd_multiplier_max`: Maximum multiplier for `n_embd` (default: `128`).
+- `--n_layer_min`: Minimum number of transformer layers (default: `12`).
+- `--n_layer_max`: Maximum number of transformer layers (default: `48`).
+- `--batch_size_min`: Minimum batch size (default: `64`).
+- `--batch_size_max`: Maximum batch size (default: `256`).
+- `--learning_rate_min`: Minimum learning rate (default: `1e-5`).
+- `--learning_rate_max`: Maximum learning rate (default: `1e-2`).
+- `--max_epochs_min`: Minimum number of training epochs (default: `1`).
+- `--max_epochs_max`: Maximum number of training epochs (default: `20`).
+
+#### **Example Command**
+
+```bash
+python src/optimize_hyperparameters.py \
+  --n_trials 50 \
+  --storage sqlite:///optuna_results.db \
+  --n_jobs 4 \
+  --n_embd_min 64 \
+  --n_embd_max 256 \
+  --n_head_min 2 \
+  --n_head_max 16 \
+  --n_head_exp_min 1 \
+  --n_head_exp_max 3 \
+  --n_embd_multiplier_min 16 \
+  --n_embd_multiplier_max 128 \
+  --n_layer_min 12 \
+  --n_layer_max 48 \
+  --batch_size_min 64 \
+  --batch_size_max 256 \
+  --learning_rate_min 1e-5 \
+  --learning_rate_max 1e-2 \
+  --max_epochs_min 1 \
+  --max_epochs_max 20
+```
+
+#### **Best Practices**
+
+- **Start with Reasonable Boundaries**: Define hyperparameter ranges that are neither too narrow nor too broad.
+- **Monitor Resource Usage**: Ensure sufficient computational resources, especially GPU memory.
+- **Leverage Parallelism**: Utilize multiple CPU cores (`--n_jobs`) to expedite the optimization process.
+- **Analyze Trial Progress**: Regularly check Optuna's dashboard or logs to track optimization progress.
+- **Save and Reuse Studies**: Use the `--storage` argument to save optimization progress for future analysis or continuation.
+- **Incorporate Early Stopping**: Utilize the built-in pruning mechanism to terminate unpromising trials early, saving computational resources.
 
 To run the tests, use the following command:
 
