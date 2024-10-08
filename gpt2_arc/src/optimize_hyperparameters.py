@@ -13,7 +13,7 @@ from optuna.samplers import TPESampler
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 from gpt2_arc.src.training.train import ConfigSavingModelCheckpoint
-from utils.model_memory_estimator import (
+from gpt2_arc.src.utils.model_memory_estimator import (
     calculate_params,
     estimate_memory_usage,
     get_available_memory,
@@ -168,7 +168,7 @@ def objective(trial, args):
         total_layers = n_layer + total_mamba_layers
 
         # Recalculate total parameters based on total_layers
-        total_params = calculate_params(
+        total_params = model_memory_estimator.calculate_params(
             n_layers=total_layers,
             n_heads=n_head,
             d_model=n_embd,
