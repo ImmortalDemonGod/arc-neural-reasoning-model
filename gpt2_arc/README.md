@@ -21,6 +21,12 @@ cd arc-neural-reasoning-model
 pip install -e .
 ```
 
+**Note**: If you plan to use experiment tracking with Weights & Biases (W&B), ensure you have a W&B account and have logged in:
+
+```bash
+wandb login
+```
+
 For development, install the extra dependencies:
 
 ```bash
@@ -107,13 +113,49 @@ python src/training/train.py --max-epochs 10
 
 ### Evaluating the Model
 
-To evaluate a trained model on a test set, use the following command:
+The `evaluate.py` script assesses the performance of the GPT-2 ARC Neural Reasoning Model on a test dataset from the Abstraction and Reasoning Corpus (ARC).
 
-```
-python src/evaluate.py --test_data path/to/test_data --model_checkpoint path/to/model_checkpoint.ckpt --batch_size 32
+#### **Prerequisites**
+
+- **Model Checkpoint**: Ensure you have a trained model checkpoint file (`.ckpt`).
+- **Test Data**: Access to the ARC test dataset compatible with the `ARCDataset` class.
+- **Weights & Biases (W&B)**: *(Optional)* For experiment tracking, ensure you have a W&B account and have logged in using `wandb login`.
+
+#### **Basic Evaluation Command**
+
+Run the following command to evaluate the model:
+
+```bash
+python src/evaluate.py --model_checkpoint path/to/model_checkpoint.ckpt --batch_size 32
 ```
 
-This will output the evaluation metrics for the model on the test dataset.
+#### **Common Command-Line Arguments**
+
+- `--model_checkpoint` (**Required**): Path to the model checkpoint file.
+- `--batch_size`: Batch size for evaluation (default: `32`).
+- `--output_dir`: Directory to save evaluation results (default: `./evaluation_results`).
+- `--log-level`: Logging level (`DEBUG`, `INFO`, etc.; default: `INFO`).
+- `--wandb_project`: W&B project name for experiment tracking (default: `arc-evaluation`).
+- `--wandb_run_name`: W&B run name *(optional)*.
+
+#### **Example Command**
+
+```bash
+python src/evaluate.py \
+  --model_checkpoint path/to/model_checkpoint.ckpt \
+  --batch_size 64 \
+  --output_dir ./my_eval_results \
+  --log-level DEBUG \
+  --wandb_project my_project \
+  --wandb_run_name evaluation_run_01
+```
+
+#### **Best Practices**
+
+- **Consistent Environment**: Use the same Python environment and dependencies as used during training to ensure compatibility.
+- **Verify Checkpoint Integrity**: Ensure the model checkpoint is not corrupted and matches the model architecture.
+- **Utilize W&B for Tracking**: Leverage W&B to monitor evaluation metrics in real-time and maintain experiment logs.
+- **Organize Evaluation Results**: Structure your `output_dir` to systematically store and access evaluation results for easy reference.
 
 ## Running Tests
 
