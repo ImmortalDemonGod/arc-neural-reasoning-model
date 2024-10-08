@@ -341,6 +341,11 @@ def main(args):
 
         logger.info("Setting up PyTorch Lightning trainer")
 
+        # Define trial_num, task_id, and iter_num
+        trial_num = 0  # Initialize to 0 or another appropriate default
+        task_id = "default_task"  # Replace with dynamic task identification if necessary
+        iter_num = 1  # Initialize to 1; increment as needed within your training loop
+
         if not args.no_checkpointing:
             checkpoint_callback = ConfigSavingModelCheckpoint(
                 config=config,
