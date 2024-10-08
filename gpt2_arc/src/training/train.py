@@ -5,6 +5,7 @@ import sys
 import logging
 import os
 import json
+import datetime
 from unittest.mock import MagicMock, patch
 import optuna
 import arckit
@@ -43,13 +44,36 @@ def get_num_workers():
 logger = logging.getLogger(__name__)
 
 class ConfigSavingModelCheckpoint(ModelCheckpoint):
-    def __init__(self, config, *args, **kwargs):
+    def __init__(self, config, trial_num, task_id, iter_num, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.config = config
+        self.trial_num = trial_num
+        self.task_id = task_id
+        self.iter_num = iter_num
+        self.timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")  # e.g., 20240308T153045
 
     def on_save_checkpoint(self, trainer, pl_module, checkpoint):
-        super().on_save_checkpoint(trainer, pl_module, checkpoint)
+        # Add custom metadata to the checkpoint
         checkpoint['model_config'] = self.config.model.__dict__
+        checkpoint['trial_num'] = self.trial_num
+        checkpoint['task_id'] = self.task_id
+        checkpoint['iter_num'] = self.iter_num
+        checkpoint['timestamp'] = self.timestamp
+
+        super().on_save_checkpoint(trainer, pl_module, checkpoint)
+
+    def format_checkpoint_name(self, metrics):
+        """
+        Override the method to include custom placeholders in the filename.
+        """
+        return self.filename.format(
+            trial_num=self.trial_num,
+            task_id=self.task_id,
+            iter_num=self.iter_num,
+            val_loss=metrics.get("val_loss", 0.0),
+            epoch=self.epoch,
+            timestamp=self.timestamp
+        )
 
 def main(args):
     # Set logging level
@@ -320,8 +344,11 @@ def main(args):
         if not args.no_checkpointing:
             checkpoint_callback = ConfigSavingModelCheckpoint(
                 config=config,
+                trial_num=trial_num,          # To be defined in your training loop
+                task_id=task_id,              # To be defined based on your task management
+                iter_num=iter_num,            # To be defined based on your iteration tracking
                 dirpath="checkpoints",
-                filename="arc_model-{epoch:02d}-{val_loss:.2f}",
+                filename="checkpoint_trial{trial_num}_task{task_id}_iter{iter_num}_val_loss{val_loss:.4f}_epoch{epoch}_timestamp{timestamp}.ckpt",
                 save_top_k=3,
                 monitor="val_loss",
                 mode="min",
