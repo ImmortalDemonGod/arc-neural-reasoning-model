@@ -47,6 +47,8 @@ class Config:
     model: ModelConfig = field(default_factory=ModelConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
     evaluation: EvaluationConfig = field(default_factory=EvaluationConfig)
+    estimated_memory: Optional[float] = None
+    available_memory: Optional[float] = None
 
     def to_dict(self):
         return asdict(self)
