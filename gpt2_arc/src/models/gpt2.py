@@ -8,6 +8,7 @@ import pytorch_lightning as pl
 from torch import nn
 from typing import Dict
 import torch.nn.init as init
+from bitnet import BitLinearNew
 
 from zeta.nn import MambaBlock
 
@@ -20,10 +21,10 @@ class Attention(nn.Module):
         super().__init__()
         self.n_head = n_head
         self.n_embd = n_embd
-        self.key = nn.Linear(n_embd, n_embd)
-        self.query = nn.Linear(n_embd, n_embd)
-        self.value = nn.Linear(n_embd, n_embd)
-        self.proj = nn.Linear(n_embd, n_embd)
+        self.key = BitLinearNew(n_embd, n_embd)
+        self.query = BitLinearNew(n_embd, n_embd)
+        self.value = BitLinearNew(n_embd, n_embd)
+        self.proj = BitLinearNew(n_embd, n_embd)
         self.dropout = nn.Dropout(dropout)  # Add this line
         logger.debug(f"Initialized Attention with n_embd={n_embd}, n_head={n_head}")
 
@@ -54,7 +55,7 @@ class FeedForward(nn.Module):
     def __init__(self, n_embd, dropout):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(n_embd, 4 * n_embd), nn.ReLU(), nn.Dropout(dropout), nn.Linear(4 * n_embd, n_embd)
+            BitLinearNew(n_embd, 4 * n_embd), nn.ReLU(), nn.Dropout(dropout), BitLinearNew(4 * n_embd, n_embd)
         )
         logger.debug(f"Initialized FeedForward with n_embd={n_embd}")
 
@@ -177,7 +178,7 @@ class GPT2ARC(pl.LightningModule):
         self.ln_f = nn.LayerNorm(self.config.model.n_embd)
         assert isinstance(self.config.model.n_embd, int), "model.n_embd must be an integer"
         assert isinstance(num_classes, int), "num_classes must be an integer"
-        self.fc_out = nn.Linear(int(self.config.model.n_embd), int(num_classes))  # Add final linear layer
+        self.fc_out = BitLinearNew(int(self.config.model.n_embd), int(num_classes))  # Add final linear layer
 
         # Initialize loss function with class weights if needed
         if self.config.training.balance_symbols and self.config.training.balancing_method == "weighting":
@@ -200,7 +201,7 @@ class GPT2ARC(pl.LightningModule):
             init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
                 init.zeros_(module.bias)
-        elif isinstance(module, nn.Linear):
+        elif isinstance(module, BitLinearNew):
             fan_in = module.in_features
             std = 1.0 / fan_in**0.5
             init.normal_(module.weight, mean=0.0, std=std)
