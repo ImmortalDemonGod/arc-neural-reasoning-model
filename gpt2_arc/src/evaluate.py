@@ -155,7 +155,7 @@ def main(args):
 
     # Determine the number of classes from the test dataset
     max_label_test = max([sample[1].max().item() for sample in test_data])
-    num_classes = max_label_test + 1  # Add 1 because labels start from 0
+    num_classes = int(max_label_test) + 1  # Ensure num_classes is an integer
     config.training.symbol_freq = symbol_freq
 
     # Initialize the model with the complete Config object and symbol frequencies
