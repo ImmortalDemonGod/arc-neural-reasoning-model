@@ -295,6 +295,9 @@ def main(args):
         )
         trainer.log_hyperparameters()
 
+        # Initialize callbacks list
+        callbacks = []
+
         # Initialize GrokfastCallback if enabled
         if config.training.use_grokfast:
             grokfast_callback = GrokfastCallback(
@@ -305,13 +308,13 @@ def main(args):
                 warmup=True,
                 trigger=False
             )
-            callbacks = [grokfast_callback]
+            callbacks.append(grokfast_callback)
             logger.info("GrokfastCallback added to the training callbacks.")
         else:
-            callbacks = []
             logger.info("Grokfast is disabled; no callback added.")
+
         logger.info("Setting up PyTorch Lightning trainer")
-        callbacks = []
+
         if not args.no_checkpointing:
             checkpoint_callback = ConfigSavingModelCheckpoint(
                 config=config,
