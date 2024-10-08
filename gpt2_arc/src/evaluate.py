@@ -163,10 +163,6 @@ def main(args):
     max_label_test = find_max_label(test_set)
     num_classes = max_label_test + 1  # Add 1 because labels start from 0
 
-    # Initialize the model with the complete Config object
-    max_label_test = find_max_label(test_set)
-    num_classes = max_label_test + 1  # Add 1 because labels start from 0
-
     model = GPT2ARC(config, num_classes=num_classes)
     try:
         # Remove the "model." prefix from state dict keys
