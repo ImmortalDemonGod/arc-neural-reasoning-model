@@ -13,6 +13,8 @@ class ModelConfig:
     mamba_ratio: float = 1.0  # Number of Mamba layers per Transformer layer
     d_state: int = 16     # Mamba state dimension
     d_conv: int = 4       # Mamba convolution dimension
+    mamba_depth: int = 1  # Depth of each Mamba layer
+    mamba_expand: int = 2  # Expand factor for each Mamba layer
 
     def __post_init__(self):
         assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"

@@ -109,7 +109,9 @@ def main(args):
                 mamba_ratio=args.mamba_ratio,
                 d_state=args.d_state,
                 d_conv=args.d_conv,
-                dropout=args.dropout
+                dropout=args.dropout,
+                mamba_depth=args.mamba_depth,
+                mamba_expand=args.mamba_expand
             )
             training_config = TrainingConfig(
                 batch_size=args.batch_size,
@@ -452,6 +454,8 @@ if __name__ == "__main__":
     parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
     parser.add_argument("--d-state", type=int, default=4, help="Mamba state dimension")
     parser.add_argument("--d-conv", type=int, default=1, help="Mamba convolution dimension")
+    parser.add_argument("--mamba_depth", type=int, default=1, help="Depth of each Mamba layer")
+    parser.add_argument("--mamba_expand", type=int, default=2, help="Expand factor for each Mamba layer")
     parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
     parser.add_argument("--use-grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
     parser.add_argument(

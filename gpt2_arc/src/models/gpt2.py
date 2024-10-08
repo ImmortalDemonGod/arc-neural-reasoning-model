@@ -98,15 +98,15 @@ class TransformerBlock(nn.Module):
 
 
 class MambaLayer(nn.Module):
-    def __init__(self, n_embd, d_state, d_conv, dropout):
+    def __init__(self, n_embd, d_state, d_conv, dropout, depth, expand):
         super().__init__()
         self.dropout = nn.Dropout(dropout)
         self.mamba_block = MambaBlock(
             dim=n_embd,
-            depth=1,               # You can adjust the depth as needed
+            depth=depth,           # Use depth from config
             d_state=d_state,
             d_conv=d_conv,
-            expand=2,              # Default value
+            expand=expand,         # Use expand from config
             conv_bias=True,        # Default value
             bias=False             # Default value
         )
@@ -170,7 +170,9 @@ class GPT2ARC(pl.LightningModule):
                         n_embd=self.config.model.n_embd,
                         d_state=self.config.model.d_state,
                         d_conv=self.config.model.d_conv,
-                        dropout=self.config.model.dropout
+                        dropout=self.config.model.dropout,
+                        depth=self.config.model.mamba_depth,
+                        expand=self.config.model.mamba_expand
                     )
                 )
                 logger.debug(f"Layer {len(self.blocks)}: Added MambaLayer after TransformerBlock {layer_idx + 1}")

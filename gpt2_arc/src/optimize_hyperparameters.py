@@ -114,6 +114,12 @@ def objective(trial, args):
 
         # Suggest dropout rate
         dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
+        mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
+        logger.debug(f"Suggested mamba_depth: {mamba_depth}")
+
+        mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
+        logger.debug(f"Suggested mamba_expand: {mamba_expand}")
+
         validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
 
         # Suggest whether to use Grokfast
@@ -167,7 +173,9 @@ def objective(trial, args):
             d_model=n_embd,
             mamba_ratio=mamba_ratio,
             d_state=d_state,
-            d_conv=d_conv
+            d_conv=d_conv,
+            mamba_depth=mamba_depth,
+            mamba_expand=mamba_expand
         )
         estimated_memory = estimate_memory_usage(
             total_params=total_params,
@@ -218,6 +226,8 @@ def objective(trial, args):
         trial.set_user_attr("mamba_ratio", mamba_ratio)
         trial.set_user_attr("d_state", d_state)
         trial.set_user_attr("d_conv", d_conv)
+        trial.set_user_attr("mamba_depth", mamba_depth)
+        trial.set_user_attr("mamba_expand", mamba_expand)
         logger.debug(f"Full config: {config}")
 
         # Load data
@@ -415,6 +425,10 @@ if __name__ == "__main__":
     parser.add_argument("--d_conv_max", type=int, default=32, help="Maximum value for d_conv")
 
     parser.add_argument("--dropout_min", type=float, default=0.0, help="Minimum value for dropout")
+    parser.add_argument("--mamba_depth_min", type=int, default=1, help="Minimum value for mamba_depth")
+    parser.add_argument("--mamba_depth_max", type=int, default=3, help="Maximum value for mamba_depth")
+    parser.add_argument("--mamba_expand_min", type=int, default=2, help="Minimum value for mamba_expand")
+    parser.add_argument("--mamba_expand_max", type=int, default=4, help="Maximum value for mamba_expand")
     parser.add_argument("--dropout_max", type=float, default=0.5, help="Maximum value for dropout")
     parser.add_argument("--dropout_step", type=float, default=0.1, help="Step size for dropout")
     parser.add_argument("--use_gpu", action="store_true", help="Flag to indicate whether to use GPU for training.")
