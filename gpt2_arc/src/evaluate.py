@@ -154,7 +154,7 @@ def main(args):
     )
 
     # Determine the number of classes from the test dataset
-    max_label_test = max([np.max(sample[1]) for sample in test_data])
+    max_label_test = max([sample[1].max().item() for sample in test_data])
     num_classes = max_label_test + 1  # Add 1 because labels start from 0
     config.training.symbol_freq = symbol_freq
 
