@@ -89,7 +89,7 @@ def calculate_symbol_freq(dataset):
 
 
 
-def objective(trial):
+def objective(trial, args):
     logger.info(f"Starting trial {trial.number}")
     try:
         # Suggest n_head as a power of 2
@@ -116,23 +116,12 @@ def objective(trial):
         dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
         validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
 
-        # Suggest Grokfast-specific hyperparameters
-        trial.suggest_categorical("use_grokfast", [True, False])
-        if trial.params["use_grokfast"]:
-            grokfast_type = trial.suggest_categorical("grokfast_type", ["ema", "ma"])
-            if grokfast_type == "ema":
-                grokfast_alpha = trial.suggest_float("grokfast_alpha", 0.90, 0.99, step=0.01)
-                grokfast_lamb = trial.suggest_float("grokfast_lamb", 1.0, 3.0, step=0.1)
-                grokfast_window_size = None  # Not used for EMA
-            else:
-                grokfast_alpha = None  # Not used for MA
-                grokfast_lamb = trial.suggest_float("grokfast_lamb", 1.0, 3.0, step=0.1)
-                grokfast_window_size = trial.suggest_int("grokfast_window_size", 50, 200, step=10)
-        else:
-            grokfast_type = None
-            grokfast_alpha = None
-            grokfast_lamb = None
-            grokfast_window_size = None
+        # Set Grokfast parameters from args
+        use_grokfast = args.use_grokfast
+        grokfast_type = args.grokfast_type
+        grokfast_alpha = args.grokfast_alpha
+        grokfast_lamb = args.grokfast_lamb
+        grokfast_window_size = args.grokfast_window_size if grokfast_type == 'ma' else None
         batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
         learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
         max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
@@ -193,19 +182,16 @@ def objective(trial):
         )
         logger.debug(f"Model config: {model_config}")
 
-        # Create TrainingConfig with Grokfast parameters
+        # Create TrainingConfig with Grokfast parameters from args
         training_config = TrainingConfig(
             batch_size=batch_size,
             learning_rate=learning_rate,
             max_epochs=max_epochs,
-            use_grokfast=trial.params["use_grokfast"],
+            use_grokfast=use_grokfast,
             grokfast_type=grokfast_type,
             grokfast_alpha=grokfast_alpha,
             grokfast_lamb=grokfast_lamb,
             grokfast_window_size=grokfast_window_size
-            batch_size=batch_size,
-            learning_rate=learning_rate,
-            max_epochs=max_epochs
         )
 
         config = Config(model=model_config, training=training_config)
@@ -329,7 +315,9 @@ def objective(trial):
 
 
 
-def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1):
+from functools import partial
+
+def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1, args=None):
     study_name = "gpt2_arc_optimization_v2"
 
     pruner = PercentilePruner(percentile=25, n_startup_trials=5, n_warmup_steps=2, interval_steps=1)
@@ -345,7 +333,7 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     )
 
     logger.info(f"Starting optimization with {n_trials} trials using {n_jobs} parallel jobs")
-    study.optimize(objective, n_trials=n_trials, n_jobs=n_jobs)
+    study.optimize(partial(objective, args=args), n_trials=n_trials, n_jobs=n_jobs)
 
     logger.info("Optimization completed")
 
@@ -430,4 +418,4 @@ if __name__ == "__main__":
             args.storage = f"sqlite:///{os.path.abspath(args.storage)}"
     
     logger.debug(f"Optuna storage URL set to: {args.storage}")
-    run_optimization(n_trials=args.n_trials, storage_name=args.storage, n_jobs=args.n_jobs)
+    run_optimization(n_trials=args.n_trials, storage_name=args.storage, n_jobs=args.n_jobs, args=args)
