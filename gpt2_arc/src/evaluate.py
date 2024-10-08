@@ -145,7 +145,12 @@ def main(args):
         raise ValueError("Model configuration not found in checkpoint")
 
     # Initialize the model with the checkpoint configuration
-    # Determine the number of classes from the dataset
+    # Instantiate the full Config object before initializing the model
+    config = Config(
+        model=model_config,
+        training=TrainingConfig(),
+        evaluation=EvaluationConfig()
+    )
     def find_max_label(task_set):
         max_label = 0
         for task in task_set.tasks:
