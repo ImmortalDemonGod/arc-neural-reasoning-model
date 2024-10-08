@@ -146,7 +146,16 @@ def main(args):
     else:
         raise ValueError("Model configuration not found in checkpoint")
 
-    # Pass symbol_freq to the Config's training configuration
+    # Create configuration
+    config = Config(
+        model=model_config,
+        training=TrainingConfig(),
+        evaluation=EvaluationConfig()
+    )
+
+    # Determine the number of classes from the test dataset
+    max_label_test = max([np.max(sample["output"]) for sample in test_data])
+    num_classes = max_label_test + 1  # Add 1 because labels start from 0
     config.training.symbol_freq = symbol_freq
 
     # Initialize the model with the complete Config object and symbol frequencies
