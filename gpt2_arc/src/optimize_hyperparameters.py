@@ -303,11 +303,34 @@ def objective(trial, args):
         tb_logger = TensorBoardLogger(save_dir="runs", name=f"experiment_{experiment_id}")
         print(f"DEBUG: Optuna trial TensorBoard logger initialized. Log dir: {tb_logger.log_dir}")
         
+        # Extract trial number
+        trial_num = trial.number
+
+        # Define task_id (assuming a single task; modify as needed for multiple tasks)
+        task_id = "main_task"  # Replace with dynamic task identification if necessary
+
+        # Define iter_num (e.g., based on trial.number or another tracking mechanism)
+        iter_num = 1  # Initialize to 1; increment as needed within your optimization loop
+
+        # Initialize the checkpoint callback with descriptive filename
+        checkpoint_callback = ConfigSavingModelCheckpoint(
+            config=config,
+            trial_num=trial_num,
+            task_id=task_id,
+            iter_num=iter_num,
+            dirpath="checkpoints",
+            filename="checkpoint_trial{trial_num}_task{task_id}_iter{iter_num}_val_loss{val_loss:.4f}_epoch{epoch}_timestamp{timestamp}.ckpt",
+            save_top_k=3,
+            monitor="val_loss",
+            mode="min",
+        )
+
+        # Initialize PyTorch Lightning Trainer with the checkpoint callback
         trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
-            callbacks=[pruning_callback, early_stop_callback],
+            callbacks=[pruning_callback, early_stop_callback, checkpoint_callback],
             logger=tb_logger,
-            enable_checkpointing=False,
+            enable_checkpointing=True,
             accelerator='gpu' if torch.cuda.is_available() else 'cpu',
             devices=1,
         )
@@ -318,7 +341,10 @@ def objective(trial, args):
         logger.debug("Starting training")
         trainer.fit(arc_trainer)
 
-        # Get the best validation loss
+        # Update iter_num if needed (e.g., if multiple iterations per trial)
+        iter_num += 1
+
+        # Retrieve the best validation loss for optimization
         best_val_loss = trainer.callback_metrics.get("val_loss").item()
         logger.info(f"Trial {trial.number} completed. Best validation loss: {best_val_loss}")
 
