@@ -116,12 +116,29 @@ def objective(trial, args):
         dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
         validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
 
-        # Set Grokfast parameters from args
-        use_grokfast = args.use_grokfast
-        grokfast_type = args.grokfast_type
-        grokfast_alpha = args.grokfast_alpha
-        grokfast_lamb = args.grokfast_lamb
-        grokfast_window_size = args.grokfast_window_size if grokfast_type == 'ma' else None
+        # Suggest whether to use Grokfast
+        use_grokfast = trial.suggest_categorical("use_grokfast", [True, False])
+
+        if use_grokfast:
+            # Suggest Grokfast type based on command-line choices
+            grokfast_type = trial.suggest_categorical("grokfast_type", args.grokfast_type_choices)
+
+            # Suggest Grokfast alpha within specified range
+            grokfast_alpha = trial.suggest_float("grokfast_alpha", args.grokfast_alpha_min, args.grokfast_alpha_max)
+
+            # Suggest Grokfast lambda within specified range
+            grokfast_lamb = trial.suggest_float("grokfast_lamb", args.grokfast_lamb_min, args.grokfast_lamb_max)
+
+            # If using 'ma', suggest window_size within specified range
+            if grokfast_type == "ma":
+                grokfast_window_size = trial.suggest_int("grokfast_window_size", args.grokfast_window_size_min, args.grokfast_window_size_max)
+            else:
+                grokfast_window_size = None
+        else:
+            grokfast_type = None
+            grokfast_alpha = None
+            grokfast_lamb = None
+            grokfast_window_size = None
         batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
         learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
         max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
@@ -404,6 +421,15 @@ if __name__ == "__main__":
     parser.add_argument("--use_synthetic_data", action="store_true", help="Flag to indicate whether to use synthetic data for training.")
     parser.add_argument("--synthetic_data_path", type=str, default="", help="Path to synthetic data for training.")
     parser.add_argument("--log_level", type=str, default="INFO", help="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL).")
+
+    # Grokfast parameter ranges
+    parser.add_argument("--grokfast_alpha_min", type=float, default=0.9, help="Minimum value for grokfast_alpha.")
+    parser.add_argument("--grokfast_alpha_max", type=float, default=0.99, help="Maximum value for grokfast_alpha.")
+    parser.add_argument("--grokfast_lamb_min", type=float, default=1.0, help="Minimum value for grokfast_lamb.")
+    parser.add_argument("--grokfast_lamb_max", type=float, default=3.0, help="Maximum value for grokfast_lamb.")
+    parser.add_argument("--grokfast_window_size_min", type=int, default=50, help="Minimum value for grokfast_window_size.")
+    parser.add_argument("--grokfast_window_size_max", type=int, default=200, help="Maximum value for grokfast_window_size.")
+    parser.add_argument("--grokfast_type_choices", type=str, nargs='+', default=["ema", "ma"], choices=["ema", "ma"], help="List of Grokfast types to consider during tuning.")
 
 
     args = parser.parse_args()
