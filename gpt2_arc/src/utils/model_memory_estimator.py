@@ -4,6 +4,7 @@ import math
 import psutil
 
 def calculate_params(n_layers, n_heads, d_model, mamba_ratio, d_state=16, d_conv=4, mamba_depth=1, mamba_expand=2):
+    print("Executing updated calculate_params with mamba_ratio =", mamba_ratio)
     print("DEBUG: Called calculate_params with mamba_ratio =", mamba_ratio)
     transformer_params_per_layer = (
         12 * d_model * d_model + 13 * d_model
