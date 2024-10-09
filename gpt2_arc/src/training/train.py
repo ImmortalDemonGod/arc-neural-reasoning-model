@@ -182,9 +182,6 @@ def main(args):
         # Convert train_symbol_freq from numpy array to dictionary with string keys
         train_symbol_freq_dict = {str(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
 
-        # Convert train_symbol_freq from numpy array to dictionary with string keys
-        train_symbol_freq_dict = {str(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
-        
         # Update the TrainingConfig with the symbol_freq dictionary
         training_config.symbol_freq = train_symbol_freq_dict
 
@@ -361,7 +358,7 @@ def main(args):
                 monitor="val_loss",
                 mode="min",
             )
-            callbacks.append(checkpoint_callback)
+            #callbacks.append(checkpoint_callback)
 
         if not args.no_logging:
             tb_logger = TensorBoardLogger(
