@@ -12,6 +12,7 @@ import arckit
 import numpy as np
 import torch
 from lightning.pytorch.profilers import PyTorchProfiler
+from pytorch_lightning.callbacks import Callback
 from torch.profiler import ProfilerActivity
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
@@ -78,7 +79,13 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
             timestamp=self.timestamp
         )
 
-def main(args):
+class ModelConfigSaver(Callback):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+
+    def on_save_checkpoint(self, trainer, pl_module, checkpoint):
+        checkpoint['model_config'] = self.config.model.__dict__
     # Set logging level
     log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'DEBUG', logging.DEBUG)
     logging.basicConfig(
@@ -372,6 +379,11 @@ def main(args):
                 mode="min",
             )
             callbacks.append(checkpoint_callback)
+
+            # Instantiate and add the ModelConfigSaver callback
+            model_config_saver = ModelConfigSaver(config)
+            callbacks.append(model_config_saver)
+            logger.info("ModelConfigSaver callback added to the training callbacks.")
 
 
 
