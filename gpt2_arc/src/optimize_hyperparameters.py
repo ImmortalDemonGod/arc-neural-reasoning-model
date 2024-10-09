@@ -354,6 +354,8 @@ def objective(trial, args):
             max_epochs=config.training.max_epochs,
             callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback, checkpoint_callback, model_config_saver],
             logger=tb_logger,
+            gradient_clip_val=1.0,    # Add gradient clipping
+            precision=16,             # Enable Automatic Mixed Precision
             enable_checkpointing=True,
             accelerator=accelerator,
             devices=devices,

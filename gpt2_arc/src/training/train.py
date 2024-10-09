@@ -428,7 +428,8 @@ def main(args):
             enable_checkpointing=not args.no_checkpointing,
             enable_progress_bar=not args.no_progress_bar,
             fast_dev_run=args.fast_dev_run,  # Use the command-line argument
-            gradient_clip_val=1.0,
+            gradient_clip_val=1.0,    # Add gradient clipping
+            precision=16,             # Enable Automatic Mixed Precision
             accelerator=accelerator,
             devices=devices,
             strategy=strategy,
