@@ -552,7 +552,7 @@ if __name__ == "__main__":
         type=str,
         default="gpu",
         choices=["cpu", "gpu", "tpu"],
-        help="Accelerator to use for training: 'cpu', 'gpu', or 'tpu'."
+        help="Accelerator to use for training: 'cpu', 'gpu', or 'tpu'. Defaults to 'gpu'."
     )
     parser.add_argument(
         "--profiler-dirpath",
