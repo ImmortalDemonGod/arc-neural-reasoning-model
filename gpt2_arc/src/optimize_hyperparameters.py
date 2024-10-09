@@ -63,7 +63,6 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
     assert n_embd % n_head == 0, f"n_embd ({n_embd}) must be divisible by n_head ({n_head})"
     assert n_embd >= n_head, f"n_embd ({n_embd}) must be greater than or equal to n_head ({n_head})"
     assert n_layer > 0, f"n_layer ({n_layer}) must be positive"
-    assert 0.0 <= mamba_ratio <= 8.0, f"mamba_ratio ({mamba_ratio}) must be between 0.0 and 8.0"
     assert d_state > 0, f"d_state ({d_state}) must be positive"
     assert d_conv > 0, f"d_conv ({d_conv}) must be positive"
     assert 0.0 <= dropout <= 1.0, f"dropout ({dropout}) must be between 0.0 and 1.0"
