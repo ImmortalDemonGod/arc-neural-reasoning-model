@@ -41,4 +41,3 @@ bitnet
 torchsummary
 torch 
 torchvision 
-torch_xla 
