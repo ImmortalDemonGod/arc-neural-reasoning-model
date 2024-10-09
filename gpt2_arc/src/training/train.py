@@ -60,6 +60,9 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
         checkpoint['iter_num'] = self.iter_num
         checkpoint['timestamp'] = self.timestamp
 
+        # Add the current epoch to the checkpoint
+        checkpoint['epoch'] = trainer.current_epoch
+
         super().on_save_checkpoint(trainer, pl_module, checkpoint)
 
     def format_checkpoint_name(self, metrics):
