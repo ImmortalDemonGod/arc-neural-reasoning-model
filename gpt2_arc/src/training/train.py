@@ -327,13 +327,17 @@ def main(args):
             devices = 'xla:1'  # Use 'xla:8' for TPU v3-8 pods
             strategy = 'tpu_spawn'  # Recommended strategy for TPU
         elif args.accelerator == "gpu":
-            accelerator = 'gpu' if torch.cuda.is_available() else 'cpu'
-            devices = 1
-            strategy = None
+            if torch.cuda.is_available():
+                accelerator = 'gpu'
+                devices = 1
+            else:
+                accelerator = 'cpu'
+                devices = 1
+            strategy = 'auto'  # Changed from None to 'auto'
         else:
             accelerator = 'cpu'
             devices = 1
-            strategy = None
+            strategy = 'auto'  # Changed from None to 'auto'
         
         # Initialize callbacks list                                                                                  
         callbacks = []
