@@ -147,7 +147,12 @@ def main(args):
                 use_gpu=args.use_gpu,
                 log_level=args.log_level,
                 use_synthetic_data=args.use_synthetic_data,
-                synthetic_data_path=args.synthetic_data_path
+                synthetic_data_path=args.synthetic_data_path,
+                use_grokfast=args.use_grokfast,
+                grokfast_type=args.grokfast_type,
+                grokfast_alpha=args.grokfast_alpha,
+                grokfast_lamb=args.grokfast_lamb,
+                grokfast_window_size=args.grokfast_window_size
             )
         
         config = Config(model=model_config, training=training_config)
