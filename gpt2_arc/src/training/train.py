@@ -362,6 +362,17 @@ def main(args):
         else:
             logger.info("Grokfast is disabled; no callback added.")
 
+        # Add the standard ModelCheckpoint callback
+        if not args.no_checkpointing:
+            checkpoint_callback = ModelCheckpoint(
+                dirpath="checkpoints",
+                filename="checkpoint-{epoch:02d}-{val_loss:.4f}",
+                save_top_k=3,
+                monitor="val_loss",
+                mode="min",
+            )
+            callbacks.append(checkpoint_callback)
+
 
 
         logger.info("Setting up PyTorch Lightning trainer")
@@ -371,19 +382,7 @@ def main(args):
         task_id = "default_task"  # Replace with dynamic task identification if necessary
         iter_num = 1  # Initialize to 1; increment as needed within your training loop
 
-        if not args.no_checkpointing:
-            checkpoint_callback = ConfigSavingModelCheckpoint(
-                config=config,
-                trial_num=trial_num,          # To be defined in your training loop
-                task_id=task_id,              # To be defined based on your task management
-                iter_num=iter_num,            # To be defined based on your iteration tracking
-                dirpath="checkpoints",
-                filename="checkpoint_trial{trial_num}_task{task_id}_iter{iter_num}_val_loss{val_loss:.4f}_timestamp{timestamp}.ckpt",
-                save_top_k=3,
-                monitor="val_loss",
-                mode="min",
-            )
-            #callbacks.append(checkpoint_callback)
+        # Removed the custom ConfigSavingModelCheckpoint as it's not needed
 
         if not args.no_logging:
             tb_logger = TensorBoardLogger(
@@ -398,7 +397,7 @@ def main(args):
         pl_trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
             logger=tb_logger,
-            callbacks=callbacks if callbacks else None,
+            callbacks=callbacks if callbacks else None,  # This now includes ModelCheckpoint
             enable_checkpointing=not args.no_checkpointing,
             enable_progress_bar=not args.no_progress_bar,
             fast_dev_run=args.fast_dev_run,  # Use the command-line argument
