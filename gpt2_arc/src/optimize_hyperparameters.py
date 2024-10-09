@@ -13,6 +13,7 @@ from optuna.samplers import TPESampler
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from gpt2_arc.src.training.trainer import NanLossPruningCallback
+from gpt2_arc.src.training.train import ModelConfigSaver
 
 from gpt2_arc.src.utils.model_memory_estimator import (
     calculate_params,
@@ -232,6 +233,9 @@ def objective(trial, args):
         trial.set_user_attr("mamba_expand", mamba_expand)
         logger.debug(f"Full config: {config}")
 
+        # Instantiate the ModelConfigSaver callback with the current config
+        model_config_saver = ModelConfigSaver(config)
+
         # Load data
         logger.debug("Loading data")
         logger.debug("Loading data")
@@ -348,7 +352,7 @@ def objective(trial, args):
         # Initialize PyTorch Lightning Trainer with the checkpoint callback
         trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
-            callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback, checkpoint_callback],
+            callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback, checkpoint_callback, model_config_saver],
             logger=tb_logger,
             enable_checkpointing=True,
             accelerator=accelerator,
