@@ -411,7 +411,6 @@ def objective(trial, args):
         # Ensure Proper Cleanup Between Trials
         logger.debug(f"Cleaning up after trial {trial.number}")
         del model
-        del pl_trainer
         del trainer
         del arc_trainer
         gc.collect()
