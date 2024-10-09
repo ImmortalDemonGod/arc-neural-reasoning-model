@@ -339,8 +339,9 @@ def objective(trial, args):
             callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback],
             logger=tb_logger,
             enable_checkpointing=True,
-            accelerator='gpu' if torch.cuda.is_available() else 'cpu',
-            devices=1,
+            accelerator=accelerator,
+            devices=devices,
+            strategy=strategy,
         )
         print("DEBUG: Trainer created for Optuna trial with TensorBoard logger")
         logger.debug(f"Trainer created with config: {trainer.state}")
@@ -469,6 +470,13 @@ if __name__ == "__main__":
     parser.add_argument("--use_synthetic_data", action="store_true", help="Flag to indicate whether to use synthetic data for training.")
     parser.add_argument("--synthetic_data_path", type=str, default="", help="Path to synthetic data for training.")
     parser.add_argument("--log_level", type=str, default="INFO", help="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL).")
+    parser.add_argument(
+        "--accelerator",
+        type=str,
+        default="gpu",
+        choices=["cpu", "gpu", "tpu"],
+        help="Accelerator to use for training: 'cpu', 'gpu', or 'tpu'."
+    )
 
     # Grokfast parameter ranges
     parser.add_argument("--grokfast_alpha_min", type=float, default=0.9, help="Minimum value for grokfast_alpha.")

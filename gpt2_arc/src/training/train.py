@@ -380,8 +380,9 @@ def main(args):
             enable_progress_bar=not args.no_progress_bar,
             fast_dev_run=args.fast_dev_run,  # Use the command-line argument
             gradient_clip_val=1.0,
-            accelerator='gpu' if args.use_gpu and torch.cuda.is_available() else 'cpu',
-            devices=1,
+            accelerator=accelerator,
+            devices=devices,
+            strategy=strategy,
             reload_dataloaders_every_n_epochs=1,
             profiler=profiler
         )
@@ -528,6 +529,13 @@ if __name__ == "__main__":
     parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
     parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
     parser.add_argument("--use-optuna", action="store_true", help="Use best hyperparameters from Optuna study")
+    parser.add_argument(
+        "--accelerator",
+        type=str,
+        default="gpu",
+        choices=["cpu", "gpu", "tpu"],
+        help="Accelerator to use for training: 'cpu', 'gpu', or 'tpu'."
+    )
     parser.add_argument(
         "--profiler-dirpath",
         type=str,
