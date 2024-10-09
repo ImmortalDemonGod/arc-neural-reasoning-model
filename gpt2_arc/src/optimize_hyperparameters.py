@@ -364,6 +364,9 @@ def objective(trial, args):
         print("DEBUG: Trainer created for Optuna trial with TensorBoard logger")
         logger.debug(f"Trainer created with config: {trainer.state}")
 
+        # Ensure model is in train mode before training
+        model.train()
+
         # Train and evaluate
         logger.debug("Starting training")
         trainer.fit(arc_trainer)
