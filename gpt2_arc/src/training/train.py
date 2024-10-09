@@ -337,13 +337,13 @@ def main(args):
             )
             callbacks.append(grokfast_callback)
             logger.info("GrokfastCallback added to the training callbacks.")
-            else:
-                logger.info("Grokfast is disabled; no callback added.")
+        else:
+            logger.info("Grokfast is disabled; no callback added.")
 
-            # Add the NanLossPruningCallback
-            nan_loss_pruning_callback = NanLossPruningCallback()
-            callbacks.append(nan_loss_pruning_callback)
-            logger.info("NanLossPruningCallback added to the training callbacks.")
+        # Add the NanLossPruningCallback
+        nan_loss_pruning_callback = NanLossPruningCallback()
+        callbacks.append(nan_loss_pruning_callback)
+        logger.info("NanLossPruningCallback added to the training callbacks.")
 
         logger.info("Setting up PyTorch Lightning trainer")
 
