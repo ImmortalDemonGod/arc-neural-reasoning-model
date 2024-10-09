@@ -37,4 +37,5 @@ tqdm
 rich
 zetascale
 pyngrok
+bitnet
 torchsummary
