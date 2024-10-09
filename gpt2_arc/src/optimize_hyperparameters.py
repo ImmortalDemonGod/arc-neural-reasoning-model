@@ -320,7 +320,7 @@ def objective(trial, args):
             task_id=task_id,
             iter_num=iter_num,
             dirpath="checkpoints",
-            filename="checkpoint_trial{trial_num}_task{task_id}_iter{iter_num}_val_loss{val_loss:.4f}_epoch{epoch}_timestamp{timestamp}.ckpt",
+            filename="checkpoint_trial{trial_num}_task{task_id}_iter{iter_num}_val_loss{val_loss:.4f}_timestamp{timestamp}.ckpt",
             save_top_k=3,
             monitor="val_loss",
             mode="min",
