@@ -391,8 +391,7 @@ def objective(trial, args):
 
 from functools import partial
 
-def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1, args=None):
-    study_name = "gpt2_arc_optimization_v2"
+def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1, args=None, study_name="gpt2_arc_optimization_v2"):
 
     pruner = PercentilePruner(percentile=25, n_startup_trials=5, n_warmup_steps=2, interval_steps=1)
     sampler = TPESampler(n_startup_trials=5)
@@ -445,6 +444,12 @@ if __name__ == "__main__":
     parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
     parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
+    parser.add_argument(
+        "--study-name",
+        type=str,
+        default="gpt2_arc_optimization_v2",
+        help="Name of the Optuna study."
+    )
 
     parser.add_argument("--n_embd_min", type=int, default=4, help="Minimum value for n_embd")
     parser.add_argument("--n_embd_max", type=int, default=8, help="Maximum value for n_embd")
@@ -512,4 +517,10 @@ if __name__ == "__main__":
             args.storage = f"sqlite:///{os.path.abspath(args.storage)}"
     
     logger.debug(f"Optuna storage URL set to: {args.storage}")
-    run_optimization(n_trials=args.n_trials, storage_name=args.storage, n_jobs=args.n_jobs, args=args)
+    run_optimization(
+        n_trials=args.n_trials,
+        storage_name=args.storage,
+        n_jobs=args.n_jobs,
+        args=args,
+        study_name=args.study_name
+    )
