@@ -144,7 +144,8 @@ def main(args):
         # Convert dict to ModelConfig object
         model_config = ModelConfig(**model_config_dict)
     else:
-        raise ValueError("Model configuration not found in checkpoint")
+        logger.error("Model configuration not found in checkpoint. Please ensure the checkpoint includes 'model_config'.")
+        raise ValueError("Model configuration not found in checkpoint. Ensure that the training process includes the ModelConfigSaver callback.")
 
     # Create configuration
     config = Config(
