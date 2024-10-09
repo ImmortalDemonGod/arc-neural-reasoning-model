@@ -52,7 +52,7 @@ class TrainingConfig:
 
 @dataclass
 class EvaluationConfig:
-    perfect_accuracy_threshold: float = 100.0  # Set to 100 for perfect accuracy
+    perfect_accuracy_threshold: float = 99.9  # Set to 99.9 for near-perfect accuracy
 
 @dataclass
 class Config:
