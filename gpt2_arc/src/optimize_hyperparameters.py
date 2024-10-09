@@ -12,6 +12,8 @@ from optuna.pruners import PercentilePruner
 from optuna.samplers import TPESampler
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
+from gpt2_arc.src.training.trainer import NanLossPruningCallback
+
 from gpt2_arc.src.training.train import ConfigSavingModelCheckpoint
 from gpt2_arc.src.utils.model_memory_estimator import (
     calculate_params,
@@ -300,6 +302,10 @@ def objective(trial, args):
         # Set up PyTorch Lightning trainer with custom pruning callback
         pruning_callback = CustomPruningCallback(trial, monitor="val_loss")
         early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=3, verbose=False, mode="min")
+        # Add the NanLossPruningCallback
+        nan_loss_pruning_callback = NanLossPruningCallback()
+        #callbacks.append(nan_loss_pruning_callback)
+        logger.info("NanLossPruningCallback added to the training callbacks.")
         experiment_id = f"optuna_trial_{trial.number}"
         tb_logger = TensorBoardLogger(save_dir="runs", name=f"experiment_{experiment_id}")
         print(f"DEBUG: Optuna trial TensorBoard logger initialized. Log dir: {tb_logger.log_dir}")
@@ -325,17 +331,18 @@ def objective(trial, args):
             monitor="val_loss",
             mode="min",
         )
+        print(f"Checkpoint callback is currently not working: {checkpoint_callback}")
 
         # Initialize PyTorch Lightning Trainer with the checkpoint callback
         trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
-            callbacks=[pruning_callback, early_stop_callback, checkpoint_callback],
+            callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback],
             logger=tb_logger,
             enable_checkpointing=True,
             accelerator='gpu' if torch.cuda.is_available() else 'cpu',
             devices=1,
         )
-        print(f"DEBUG: Trainer created for Optuna trial with TensorBoard logger")
+        print("DEBUG: Trainer created for Optuna trial with TensorBoard logger")
         logger.debug(f"Trainer created with config: {trainer.state}")
 
         # Train and evaluate
@@ -424,32 +431,32 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
     parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
-    parser.add_argument("--n_jobs", type=int, default=-1, help="Number of parallel jobs. -1 means using all available cores.")
+    parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
 
-    parser.add_argument("--n_embd_min", type=int, default=64, help="Minimum value for n_embd")
-    parser.add_argument("--n_embd_max", type=int, default=256, help="Maximum value for n_embd")
+    parser.add_argument("--n_embd_min", type=int, default=4, help="Minimum value for n_embd")
+    parser.add_argument("--n_embd_max", type=int, default=8, help="Maximum value for n_embd")
     parser.add_argument("--n_head_min", type=int, default=2, help="Minimum value for n_head")
     parser.add_argument("--n_head_max", type=int, default=16, help="Maximum value for n_head")
     parser.add_argument("--n_head_exp_min", type=int, default=1, help="Minimum exponent for n_head (2^x)")
     parser.add_argument("--n_head_exp_max", type=int, default=3, help="Maximum exponent for n_head (2^x)")
-    parser.add_argument("--n_embd_multiplier_min", type=int, default=16, help="Minimum multiplier for n_embd")
-    parser.add_argument("--n_embd_multiplier_max", type=int, default=128, help="Maximum multiplier for n_embd")
-    parser.add_argument("--n_layer_min", type=int, default=12, help="Minimum value for n_layer")
-    parser.add_argument("--n_layer_max", type=int, default=48, help="Maximum value for n_layer")
-    parser.add_argument("--batch_size_min", type=int, default=64, help="Minimum value for batch_size")
-    parser.add_argument("--batch_size_max", type=int, default=256, help="Maximum value for batch_size")
+    parser.add_argument("--n_embd_multiplier_min", type=int, default=1, help="Minimum multiplier for n_embd")
+    parser.add_argument("--n_embd_multiplier_max", type=int, default=2, help="Maximum multiplier for n_embd")
+    parser.add_argument("--n_layer_min", type=int, default=4, help="Minimum value for n_layer")
+    parser.add_argument("--n_layer_max", type=int, default=8, help="Maximum value for n_layer")
+    parser.add_argument("--batch_size_min", type=int, default=1, help="Minimum value for batch_size")
+    parser.add_argument("--batch_size_max", type=int, default=32, help="Maximum value for batch_size")
     parser.add_argument("--learning_rate_min", type=float, default=1e-5, help="Minimum value for learning_rate")
     parser.add_argument("--learning_rate_max", type=float, default=1e-2, help="Maximum value for learning_rate")
     parser.add_argument("--max_epochs_min", type=int, default=1, help="Minimum value for max_epochs")
     parser.add_argument("--max_epochs_max", type=int, default=20, help="Maximum value for max_epochs")
 
     parser.add_argument("--mamba_ratio_min", type=float, default=0.0, help="Minimum value for mamba_ratio")
-    parser.add_argument("--mamba_ratio_max", type=float, default=2.0, help="Maximum value for mamba_ratio")
+    parser.add_argument("--mamba_ratio_max", type=float, default=8.0, help="Maximum value for mamba_ratio")
     parser.add_argument("--mamba_ratio_step", type=float, default=0.25, help="Step size for mamba_ratio")
-    parser.add_argument("--d_state_min", type=int, default=16, help="Minimum value for d_state")
-    parser.add_argument("--d_state_max", type=int, default=128, help="Maximum value for d_state")
-    parser.add_argument("--d_conv_min", type=int, default=4, help="Minimum value for d_conv")
-    parser.add_argument("--d_conv_max", type=int, default=32, help="Maximum value for d_conv")
+    parser.add_argument("--d_state_min", type=int, default=1, help="Minimum value for d_state")
+    parser.add_argument("--d_state_max", type=int, default=2, help="Maximum value for d_state")
+    parser.add_argument("--d_conv_min", type=int, default=1, help="Minimum value for d_conv")
+    parser.add_argument("--d_conv_max", type=int, default=2, help="Maximum value for d_conv")
 
     parser.add_argument("--dropout_min", type=float, default=0.0, help="Minimum value for dropout")
     parser.add_argument("--mamba_depth_min", type=int, default=1, help="Minimum value for mamba_depth")
