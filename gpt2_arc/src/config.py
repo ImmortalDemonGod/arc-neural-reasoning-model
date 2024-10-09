@@ -20,7 +20,11 @@ class ModelConfig:
         assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
         assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
         assert self.n_layer > 0, f"n_layer ({self.n_layer}) must be positive"
-        assert self.mamba_ratio >= 0.0, f"mamba_ratio ({self.mamba_ratio}) must be non-negative"
+        assert self.mamba_ratio >= 0.0 and self.mamba_ratio <= 8.0, f"mamba_ratio ({self.mamba_ratio}) must be between 0.0 and 8.0"
+        assert self.d_state >= 1, f"d_state ({self.d_state}) must be at least 1"
+        assert self.d_conv >= 1, f"d_conv ({self.d_conv}) must be at least 1"
+        assert self.mamba_depth >= 1, f"mamba_depth ({self.mamba_depth}) must be at least 1"
+        assert self.mamba_expand >= 2, f"mamba_expand ({self.mamba_expand}) must be at least 2"
 
 from dataclasses import dataclass, field
 import multiprocessing
