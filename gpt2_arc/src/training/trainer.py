@@ -14,8 +14,20 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from pytorch_lightning.loggers import TensorBoardLogger
 import os
+from optuna.exceptions import TrialPruned
+from pytorch_lightning.callbacks import Callback
+import torch
 
 logger = logging.getLogger(__name__)
+
+class NanLossPruningCallback(Callback):
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
+        # Extract loss from outputs
+        loss = outputs.get('loss') if isinstance(outputs, dict) else outputs
+        if loss is not None:
+            if torch.isnan(loss):
+                logger.warning("NaN loss detected. Pruning the trial.")
+                raise TrialPruned("NaN loss encountered, pruning this trial.")
 
 
 class ARCTrainer(pl.LightningModule):

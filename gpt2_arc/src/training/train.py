@@ -35,6 +35,7 @@ from gpt2_arc.src.training.trainer import ARCTrainer
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 from gpt2_arc.src.utils import GrokfastCallback
+from gpt2_arc.src.training.trainer import NanLossPruningCallback
 
 def get_num_workers():
     try:
@@ -336,8 +337,13 @@ def main(args):
             )
             callbacks.append(grokfast_callback)
             logger.info("GrokfastCallback added to the training callbacks.")
-        else:
-            logger.info("Grokfast is disabled; no callback added.")
+            else:
+                logger.info("Grokfast is disabled; no callback added.")
+
+            # Add the NanLossPruningCallback
+            nan_loss_pruning_callback = NanLossPruningCallback()
+            callbacks.append(nan_loss_pruning_callback)
+            logger.info("NanLossPruningCallback added to the training callbacks.")
 
         logger.info("Setting up PyTorch Lightning trainer")
 
