@@ -302,7 +302,19 @@ def objective(trial, args):
         # Set up PyTorch Lightning trainer with custom pruning callback
         pruning_callback = CustomPruningCallback(trial, monitor="val_loss")
         early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=3, verbose=False, mode="min")
-        # Add the NanLossPruningCallback
+        # Determine accelerator parameters based on the --accelerator argument
+        if args.accelerator == "tpu":
+            accelerator = 'tpu'
+            devices = 'xla:1'  # Use 'xla:8' for TPU v3-8 pods
+            strategy = 'tpu_spawn'  # Recommended strategy for TPU
+        elif args.accelerator == "gpu":
+            accelerator = 'gpu' if torch.cuda.is_available() else 'cpu'
+            devices = 1
+            strategy = None
+        else:
+            accelerator = 'cpu'
+            devices = 1
+            strategy = None
         nan_loss_pruning_callback = NanLossPruningCallback()
         #callbacks.append(nan_loss_pruning_callback)
         logger.info("NanLossPruningCallback added to the training callbacks.")

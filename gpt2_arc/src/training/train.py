@@ -321,7 +321,19 @@ def main(args):
         )
         trainer.log_hyperparameters()
 
-        # Initialize callbacks list
+        # Determine accelerator parameters based on the --accelerator argument
+        if args.accelerator == "tpu":
+            accelerator = 'tpu'
+            devices = 'xla:1'  # Use 'xla:8' for TPU v3-8 pods
+            strategy = 'tpu_spawn'  # Recommended strategy for TPU
+        elif args.accelerator == "gpu":
+            accelerator = 'gpu' if torch.cuda.is_available() else 'cpu'
+            devices = 1
+            strategy = None
+        else:
+            accelerator = 'cpu'
+            devices = 1
+            strategy = None
         callbacks = []
 
         # Initialize GrokfastCallback if enabled
