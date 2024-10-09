@@ -10,11 +10,10 @@ import numpy as np
 from pytorch_lightning.utilities.model_summary import ModelSummary
 from optuna.pruners import PercentilePruner
 from optuna.samplers import TPESampler
-from pytorch_lightning.callbacks import EarlyStopping
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from gpt2_arc.src.training.trainer import NanLossPruningCallback
 
-from gpt2_arc.src.training.train import ConfigSavingModelCheckpoint
 from gpt2_arc.src.utils.model_memory_estimator import (
     calculate_params,
     estimate_memory_usage,
@@ -337,23 +336,19 @@ def objective(trial, args):
         iter_num = 1  # Initialize to 1; increment as needed within your optimization loop
 
         # Initialize the checkpoint callback with descriptive filename
-        checkpoint_callback = ConfigSavingModelCheckpoint(
-            config=config,
-            trial_num=trial_num,
-            task_id=task_id,
-            iter_num=iter_num,
+        checkpoint_callback = ModelCheckpoint(
             dirpath="checkpoints",
-            filename="checkpoint_trial{trial_num}_task{task_id}_iter{iter_num}_val_loss{val_loss:.4f}_timestamp{timestamp}.ckpt",
+            filename="trial{trial_num}-epoch{epoch:02d}-val_loss{val_loss:.4f}",
             save_top_k=3,
             monitor="val_loss",
             mode="min",
         )
-        print(f"Checkpoint callback is currently not working: {checkpoint_callback}")
+        logger.info("Standard ModelCheckpoint callback added to the training callbacks.")
 
         # Initialize PyTorch Lightning Trainer with the checkpoint callback
         trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
-            callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback],
+            callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback, checkpoint_callback],
             logger=tb_logger,
             enable_checkpointing=True,
             accelerator=accelerator,
