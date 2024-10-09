@@ -405,7 +405,6 @@ def main(args):
             accelerator=accelerator,
             devices=devices,
             strategy=strategy,
-            reload_dataloaders_every_n_epochs=1,
             profiler=profiler
         )
 
