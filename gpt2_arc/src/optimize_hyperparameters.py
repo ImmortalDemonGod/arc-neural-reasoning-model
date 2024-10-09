@@ -310,11 +310,12 @@ def objective(trial, args):
         elif args.accelerator == "gpu":
             accelerator = 'gpu' if torch.cuda.is_available() else 'cpu'
             devices = 1
-            strategy = None
+            strategy = "auto"
         else:
             accelerator = 'cpu'
             devices = 1
-            strategy = None
+            strategy = "auto"
+            
         nan_loss_pruning_callback = NanLossPruningCallback()
         #callbacks.append(nan_loss_pruning_callback)
         logger.info("NanLossPruningCallback added to the training callbacks.")
