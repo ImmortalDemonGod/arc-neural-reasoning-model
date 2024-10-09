@@ -505,7 +505,7 @@ if __name__ == "__main__":
     parser.add_argument("--n-embd", type=int, default=4, help="Embedding dimension for profiling")
     parser.add_argument("--n-head", type=int, default=1, help="Number of attention heads for profiling")
     parser.add_argument("--n-layer", type=int, default=1, help="Number of transformer layers for profiling")
-    parser.add_argument("--batch-size", type=int, default=1, help="Batch size for profiling")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for profiling")
     parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
     parser.add_argument("--mamba-ratio", type=int, default=0, help="Number of Mamba layers per Transformer layer")
