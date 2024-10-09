@@ -441,14 +441,18 @@ def main(args):
             logger.debug(f"TensorBoard log path set in results collector: {tb_logger.log_dir}")
 
         # Log initial memory usage
-        logger.info(f"Initial memory usage: {torch.cuda.memory_allocated()} bytes")
+        if args.use_gpu and torch.cuda.is_available():
+            logger.info(f"Initial CUDA memory allocated: {torch.cuda.memory_allocated()} bytes")
+            logger.info(f"Initial CUDA memory reserved: {torch.cuda.memory_reserved()} bytes")
 
         # Train the model
         logger.info("Starting model training")
         pl_trainer.fit(trainer, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
         # Log memory usage after training
-        logger.info(f"Memory usage after training: {torch.cuda.memory_allocated()} bytes")
+        if args.use_gpu and torch.cuda.is_available():
+            logger.info(f"CUDA memory allocated after training: {torch.cuda.memory_allocated()} bytes")
+            logger.info(f"CUDA memory reserved after training: {torch.cuda.memory_reserved()} bytes")
 
         # After training, run test
         logger.info("Running model evaluation")

@@ -5,6 +5,7 @@ import logging
 import sys
 import os
 import torch
+import gc
 import pytorch_lightning as pl
 import numpy as np
 from pytorch_lightning.utilities.model_summary import ModelSummary
@@ -62,7 +63,7 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
     assert n_embd % n_head == 0, f"n_embd ({n_embd}) must be divisible by n_head ({n_head})"
     assert n_embd >= n_head, f"n_embd ({n_embd}) must be greater than or equal to n_head ({n_head})"
     assert n_layer > 0, f"n_layer ({n_layer}) must be positive"
-    assert mamba_ratio >= 0.0, f"mamba_ratio ({mamba_ratio}) must be non-negative"
+    assert 0.0 <= mamba_ratio <= 8.0, f"mamba_ratio ({mamba_ratio}) must be between 0.0 and 8.0"
     assert d_state > 0, f"d_state ({d_state}) must be positive"
     assert d_conv > 0, f"d_conv ({d_conv}) must be positive"
     assert 0.0 <= dropout <= 1.0, f"dropout ({dropout}) must be between 0.0 and 1.0"
@@ -366,10 +367,21 @@ def objective(trial, args):
 
         # Ensure model is in train mode before training
         model.train()
+        logger.debug("Model set to train mode before training")
+
+        # Enhanced Logging: Log model mode before training
+        logger.info("Before training:")
+        for name, module in model.named_modules():
+            logger.debug(f"{name}: {'train' if module.training else 'eval'}")
 
         # Train and evaluate
         logger.debug("Starting training")
         trainer.fit(arc_trainer)
+
+        # Enhanced Logging: Log model mode after training
+        logger.info("After training:")
+        for name, module in model.named_modules():
+            logger.debug(f"{name}: {'train' if module.training else 'eval'}")
 
         # Update iter_num if needed (e.g., if multiple iterations per trial)
         iter_num += 1
@@ -395,6 +407,16 @@ def objective(trial, args):
         else:
             logger.error(f"Trial {trial.number}: An unexpected error occurred: {str(e)}", exc_info=True)
         raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: An unexpected error occurred: {str(e)}")
+    finally:
+        # Ensure Proper Cleanup Between Trials
+        logger.debug(f"Cleaning up after trial {trial.number}")
+        del model
+        del pl_trainer
+        del trainer
+        del arc_trainer
+        gc.collect()
+        torch.cuda.empty_cache()
+        logger.debug(f"Cleanup completed for trial {trial.number}")
 
 
 
