@@ -334,6 +334,8 @@ def main(args):
             accelerator = 'cpu'
             devices = 1
             strategy = None
+        
+        # Initialize callbacks list                                                                                  
         callbacks = []
 
         # Initialize GrokfastCallback if enabled
