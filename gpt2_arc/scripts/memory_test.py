@@ -7,7 +7,15 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 # Add the project root to the Python path
 sys.path.insert(0, project_root)
 
-import torch
+import sys
+import os
+
+# Determine the absolute path to the project root
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+# Add the project root to the Python path
+sys.path.insert(0, project_root)
+
 from torch.utils.data import DataLoader
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 import psutil
@@ -20,11 +28,6 @@ def get_system_memory_usage():
     mem_bytes = process.memory_info().rss  # Resident Set Size
     mem_mb = mem_bytes / (1024 ** 2)  # Convert to MB
     return mem_mb
-
-def get_gpu_memory_usage():
-    if torch.cuda.is_available():
-        return torch.cuda.memory_allocated() / (1024 ** 2)  # Convert to MB
-    return 0.0
 
 def initialize_dataset():
     # Load data using arckit.load_data() as in training.py
@@ -45,8 +48,8 @@ def test_memory_usage(dataset, batch_size, num_batches=10):
         dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=4,  # Adjust based on your CPU cores
-        pin_memory=True if torch.cuda.is_available() else False
+        num_workers=2,  # Adjust based on your CPU cores
+        pin_memory=False  # Disable pin_memory for CPU
     )
 
     memory_records = []
@@ -57,35 +60,35 @@ def test_memory_usage(dataset, batch_size, num_batches=10):
 
         # Garbage collect to get accurate measurements
         gc.collect()
-        torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
         # Measure memory before loading the batch
         mem_before = get_system_memory_usage()
-        gpu_before = get_gpu_memory_usage()
 
         inputs, outputs, task_ids = batch  # Unpack the batch
 
-        # Force GPU synchronization if using CUDA
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
+        # Validate batch contents
+        if not isinstance(inputs, torch.Tensor) or not isinstance(outputs, torch.Tensor):
+            print(f"Batch {i+1}: Inputs or outputs are not tensors.")
+            continue
+
+        # Optionally, check tensor shapes
+        print(f"Batch {i+1}: Inputs shape: {inputs.shape}, Outputs shape: {outputs.shape}")
 
         # Measure memory after loading the batch
         mem_after = get_system_memory_usage()
-        gpu_after = get_gpu_memory_usage()
 
         # Calculate memory used by the batch
         mem_used = mem_after - mem_before
-        gpu_used = gpu_after - gpu_before
 
         memory_records.append({
             "batch_number": i + 1,
             "batch_size": batch_size,
             "system_memory_mb": mem_used,
-            "gpu_memory_mb": gpu_used
+            "gpu_memory_mb": 0.0  # Since we're on CPU
         })
 
         print(f"Batch {i+1}/{num_batches} | Batch Size: {batch_size} | "
-              f"System Memory Used: {mem_used:.2f} MB | GPU Memory Used: {gpu_used:.2f} MB")
+              f"System Memory Used: {mem_used:.2f} MB | GPU Memory Used: 0.00 MB")
 
     return memory_records
 
