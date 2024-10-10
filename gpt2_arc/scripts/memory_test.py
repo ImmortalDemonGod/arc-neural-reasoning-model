@@ -9,7 +9,7 @@ sys.path.insert(0, project_root)
 
 import torch
 from torch.utils.data import DataLoader
-from src.data.arc_dataset import ARCDataset  # Adjust the import path if necessary
+from gpt2_arc.src.data.arc_dataset import ARCDataset
 import psutil
 from arckit import load_data
 import gc
