@@ -44,73 +44,44 @@ def initialize_dataset():
     )
     return dataset
 
-def test_memory_usage(dataset, batch_size, num_batches=10):
-    dataloader = DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=2,  # Adjust based on your CPU cores
-        pin_memory=False  # Disable pin_memory for CPU
-    )
-
-    memory_records = []
-
-    for i, batch in enumerate(dataloader):
-        if i >= num_batches:
-            break
-
-        # Garbage collect to get accurate measurements
-        gc.collect()
-
-        # Measure memory before loading the batch
-        mem_before = get_system_memory_usage()
-
-        inputs, outputs, task_ids = batch  # Unpack the batch
-
-        # Validate batch contents
-        if not isinstance(inputs, torch.Tensor) or not isinstance(outputs, torch.Tensor):
-            print(f"Batch {i+1}: Inputs or outputs are not tensors.")
-            continue
-
-        # Optionally, check tensor shapes
-        print(f"Batch {i+1}: Inputs shape: {inputs.shape}, Outputs shape: {outputs.shape}")
-
-        # Measure memory after loading the batch
-        mem_after = get_system_memory_usage()
-
-        # Calculate memory used by the batch
-        mem_used = mem_after - mem_before
-
-        memory_records.append({
-            "batch_number": i + 1,
-            "batch_size": batch_size,
-            "system_memory_mb": mem_used,
-            "gpu_memory_mb": 0.0  # Since we're on CPU
-        })
-
-        print(f"Batch {i+1}/{num_batches} | Batch Size: {batch_size} | "
-              f"System Memory Used: {mem_used:.2f} MB | GPU Memory Used: 0.00 MB")
-
-    return memory_records
-
 def main():
+    # Perform garbage collection to ensure accurate measurements
+    gc.collect()
+
+    # Measure memory before loading the dataset
+    mem_before = get_system_memory_usage()
+    print(f"Memory before loading dataset: {mem_before:.2f} MB")
+
+    # Initialize the dataset
     dataset = initialize_dataset()
 
-    # Define the range of batch sizes to test
-    batch_sizes = [1, 2, 4, 8, 16, 32]  # Extend as needed
+    # Measure memory after loading the dataset
+    mem_after = get_system_memory_usage()
+    print(f"Memory after loading dataset: {mem_after:.2f} MB")
 
-    all_memory_data = []
+    # Calculate memory used by the dataset
+    mem_used = mem_after - mem_before
+    print(f"Total Memory Used by Dataset: {mem_used:.2f} MB")
 
-    for batch_size in batch_sizes:
-        print(f"\nTesting with Batch Size: {batch_size}")
-        memory_data = test_memory_usage(dataset, batch_size)
-        all_memory_data.extend(memory_data)
+    # Calculate per-example memory usage
+    total_samples = len(dataset)
+    if total_samples == 0:
+        print("Dataset is empty.")
+        return
+
+    per_example_mem = mem_used / total_samples
+    print(f"Estimated Memory Usage per Example: {per_example_mem:.2f} KB")
 
     # Save the memory usage data to a JSON file
+    memory_data = {
+        "total_memory_mb": mem_used,
+        "total_samples": total_samples,
+        "memory_per_example_kb": per_example_mem
+    }
     output_path = os.path.join("gpt2_arc", "memory_usage_results.json")
     with open(output_path, 'w') as f:
-        json.dump(all_memory_data, f, indent=4)
-    
+        json.dump(memory_data, f, indent=4)
+
     print(f"\nMemory usage data saved to {output_path}")
 
 if __name__ == "__main__":
