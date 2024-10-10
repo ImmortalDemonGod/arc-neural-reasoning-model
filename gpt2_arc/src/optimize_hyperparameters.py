@@ -242,16 +242,38 @@ def objective(trial, args):
         model_config_saver = ModelConfigSaver(config)
 
         # Load data
-        logger.debug("Loading data")
-        logger.debug("Loading data")
-        train_set, eval_set = arckit.load_data()
-        logger.debug(f"Trial {trial.number}: Loading training and evaluation data")
-        # Initialize ARCDataset for the training set without symbol_freq
-        train_data = ARCDataset(train_set)
-        logger.debug("Calculating symbol frequencies for training set")
-        
-        # Retrieve symbol frequencies using ARCDataset's method
-        symbol_freq = train_data.get_symbol_frequencies()
+        if args.use_synthetic_data:
+            if not args.synthetic_data_path:
+                raise ValueError("Synthetic data path not provided")
+            logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
+            train_data = ARCDataset(
+                data_source=args.synthetic_data_path,
+                is_test=False,
+                num_symbols=config.model.n_embd
+            )
+            val_data = ARCDataset(
+                data_source=args.synthetic_data_path,
+                is_test=True,
+                num_symbols=config.model.n_embd
+            )
+            logger.debug(f"Synthetic training data size: {len(train_data)}")
+            logger.debug(f"Synthetic validation data size: {len(val_data)}")
+        else:
+            logger.info("Loading ARC dataset")
+            train_set, eval_set = arckit.load_data()
+            train_data = ARCDataset(train_set)
+            val_data = ARCDataset(eval_set)
+            logger.debug(f"ARC training data size: {len(train_data)}")
+            logger.debug(f"ARC validation data size: {len(val_data)}")
+
+        # Calculate Symbol Frequencies
+        if args.use_synthetic_data:
+            logger.debug("Calculating symbol frequencies for synthetic training set")
+            symbol_freq = train_data.get_symbol_frequencies()
+        else:
+            logger.debug("Calculating symbol frequencies for ARC training set")
+            symbol_freq = train_data.get_symbol_frequencies()
+
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
         # Convert symbol_freq from NumPy array to dictionary
@@ -265,10 +287,6 @@ def objective(trial, args):
         if not symbol_freq_dict:
             logger.error("symbol_freq_dict is empty. Cannot proceed with balance_symbols=True and balancing_method='weighting'.")
             raise ValueError("symbol_freq must be provided and non-empty when balance_symbols is True and balancing_method is 'weighting'.")
-
-        # Initialize ARCDataset for the validation set without passing symbol_freq
-        val_data = ARCDataset(eval_set)
-        logger.debug(f"Data loaded. Train set size: {len(train_data)}, Validation set size: {len(val_data)}")
 
         # Create model and trainer
         logger.debug("Creating model and trainer")
