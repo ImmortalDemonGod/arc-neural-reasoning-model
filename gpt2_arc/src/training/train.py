@@ -584,9 +584,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--matmul-precision",
         type=str,
-        default="highest",
+        default="medium",
         choices=["highest", "high", "medium"],
-        help="Set the internal precision of float32 matrix multiplications. Options: 'highest', 'high', 'medium'. Defaults to 'highest'."
+        help="Set the internal precision of float32 matrix multiplications. Options: 'highest', 'high', 'medium'. Defaults to 'medium'."
     )
     parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
     parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
