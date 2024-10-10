@@ -93,6 +93,9 @@ def calculate_symbol_freq(dataset):
 
 
 def objective(trial, args):
+    model = None
+    trainer = None
+    arc_trainer = None
     logger.info(f"Starting trial {trial.number}")
     try:
         # Suggest n_head as a power of 2
@@ -409,9 +412,12 @@ def objective(trial, args):
     finally:
         # Ensure Proper Cleanup Between Trials
         logger.debug(f"Cleaning up after trial {trial.number}")
-        del model
-        del trainer
-        del arc_trainer
+        if model is not None:
+            del model
+        if trainer is not None:
+            del trainer
+        if arc_trainer is not None:
+            del arc_trainer
         gc.collect()
         torch.cuda.empty_cache()
         logger.debug(f"Cleanup completed for trial {trial.number}")
