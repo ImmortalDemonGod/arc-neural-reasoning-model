@@ -81,7 +81,7 @@ def main():
             dataset,
             batch_size=batch_size,
             shuffle=False,
-            num_workers=2,  # Adjust based on your CPU cores
+            num_workers=0,  # Set to 0 for main process data loading
             pin_memory=False  # Disable pin_memory for CPU
         )
 
