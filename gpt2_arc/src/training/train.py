@@ -540,7 +540,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size for profiling")
     parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
-    parser.add_argument("--mamba-ratio", type=int, default=0, help="Number of Mamba layers per Transformer layer")
+    parser.add_argument("--mamba-ratio", type=float, default=0.0, help="Mamba ratio (float value)")
     parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
     parser.add_argument("--d-state", type=int, default=4, help="Mamba state dimension")
     parser.add_argument("--d-conv", type=int, default=1, help="Mamba convolution dimension")
