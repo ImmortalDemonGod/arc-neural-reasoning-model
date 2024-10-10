@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from src.data.arc_dataset import ARCDataset  # Adjust the import path if necessary
 import psutil
+from arckit import load_data
 import gc
 import json
 
@@ -18,9 +19,12 @@ def get_gpu_memory_usage():
     return 0.0
 
 def initialize_dataset():
-    data_source = "path/to/your/data"  # Replace with your actual data source
+    # Load data using arckit.load_data() as in training.py
+    train_set, eval_set = load_data()
+    
+    # Initialize ARCDataset with the training set
     dataset = ARCDataset(
-        data_source=data_source,
+        data_source=train_set,
         is_test=False,
         num_symbols=10,
         test_split=0.2,
