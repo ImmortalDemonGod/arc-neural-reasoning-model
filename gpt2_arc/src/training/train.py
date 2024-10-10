@@ -101,7 +101,9 @@ class ModelConfigSaver(Callback):
         """
         checkpoint['model_config'] = self.config.model.__dict__
 def main(args):
-    # Set logging level
+    # Set float32 matrix multiplication precision
+    torch.set_float32_matmul_precision(args.matmul_precision)
+    logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
     log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'DEBUG', logging.DEBUG)
     logging.basicConfig(
         level=log_level,
@@ -579,6 +581,13 @@ if __name__ == "__main__":
     parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
     parser.add_argument("--run-name", type=str, default="default_run", help="Name of the run for saving results")
     parser.add_argument("--use-synthetic-data", action="store_true", help="Use synthetic data for training")
+    parser.add_argument(
+        "--matmul-precision",
+        type=str,
+        default="highest",
+        choices=["highest", "high", "medium"],
+        help="Set the internal precision of float32 matrix multiplications. Options: 'highest', 'high', 'medium'. Defaults to 'highest'."
+    )
     parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
     parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
     parser.add_argument("--use-optuna", action="store_true", help="Use best hyperparameters from Optuna study")
