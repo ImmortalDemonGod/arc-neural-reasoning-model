@@ -545,8 +545,8 @@ if __name__ == "__main__":
     parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
     parser.add_argument("--d-state", type=int, default=4, help="Mamba state dimension")
     parser.add_argument("--d-conv", type=int, default=1, help="Mamba convolution dimension")
-    parser.add_argument("--mamba_depth", type=int, default=1, help="Depth of each Mamba layer")
-    parser.add_argument("--mamba_expand", type=int, default=2, help="Expand factor for each Mamba layer")
+    parser.add_argument("--mamba-depth", type=int, default=1, help="Depth of each Mamba layer")
+    parser.add_argument("--mamba-expand", type=int, default=2, help="Expand factor for each Mamba layer")
     parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
     parser.add_argument("--use-grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
     parser.add_argument(
