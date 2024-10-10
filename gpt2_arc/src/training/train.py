@@ -542,10 +542,6 @@ if __name__ == "__main__":
     parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
     parser.add_argument("--mamba-ratio", type=float, default=0.0, help="Mamba ratio (float value)")
 
-    # Validate mamba_ratio
-    if args.mamba_ratio < 0.0:
-        logger.error("Invalid value for --mamba-ratio: must be non-negative.")
-        sys.exit(1)
     parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
     parser.add_argument("--d-state", type=int, default=4, help="Mamba state dimension")
     parser.add_argument("--d-conv", type=int, default=1, help="Mamba convolution dimension")
@@ -617,5 +613,10 @@ if __name__ == "__main__":
     )
     
     args = parser.parse_args()
+
+    # Validate mamba_ratio
+    if args.mamba_ratio < 0.0:
+        logger.error("Invalid value for --mamba-ratio: must be non-negative.")
+        sys.exit(1)
     main(args)
 
