@@ -91,7 +91,7 @@ class ARCDataset(Dataset):
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
         elif TaskSet is not None and isinstance(data_source, TaskSet):
             logger.debug("Initializing dataset with TaskSet data")
-            self.file_samples_count = self._process_arckit_data_indices(data_source)
+            self.data = self._process_arckit_data(data_source)
         elif isinstance(data_source, list):
             logger.debug("Initializing dataset with list data")
             self.data_files = []
