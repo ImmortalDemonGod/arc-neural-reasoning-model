@@ -216,9 +216,6 @@ def main(args):
         config = Config(model=model_config, training=training_config)
         logger.debug(f"Configuration: {config}")
 
-        # Load data and log the number of tasks
-        logger.info(f"Number of tasks in train_set: {len(train_set.tasks)}")
-        logger.info(f"Number of tasks in eval_set: {len(eval_set.tasks)}")
         logger.info("Loading data")
         if args.use_synthetic_data:
             if not args.synthetic_data_path:
@@ -231,11 +228,17 @@ def main(args):
             synthetic_files = os.listdir(args.synthetic_data_path)
             logger.debug(f"Listing files in synthetic data path for validation: {synthetic_files[:5]}... (total {len(synthetic_files)})")
             val_data = ARCDataset(args.synthetic_data_path, is_test=True)
+            logger.info(f"Number of training examples: {len(train_data)}")
+            logger.info(f"Number of validation examples: {len(val_data)}")
         else:
             logger.info("Loading ARC dataset")
             train_set, eval_set = arckit.load_data()
+            logger.info(f"Number of tasks in train_set: {len(train_set.tasks)}")
+            logger.info(f"Number of tasks in eval_set: {len(eval_set.tasks)}")
             train_data = ARCDataset(train_set, is_test=False)
             val_data = ARCDataset(eval_set, is_test=True)
+            logger.info(f"Number of training examples: {len(train_data)}")
+            logger.info(f"Number of validation examples: {len(val_data)}")
 
         # Access dataset statistics
         train_grid_stats = train_data.get_grid_size_stats()
