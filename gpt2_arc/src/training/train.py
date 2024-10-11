@@ -170,12 +170,16 @@ def main(args):
                 if arg_value is not None and arg_value != default_value:
                     best_params[param] = arg_value
 
-            n_head = 2 ** best_params['n_head_exp']
-            n_embd = n_head * best_params['n_embd_multiplier']
+            n_head_exp = best_params.get('n_head_exp', 2)
+            n_head = 2 ** n_head_exp
+
+            n_embd_multiplier = best_params.get('n_embd_multiplier', 4)
+            n_embd = n_head * n_embd_multiplier
             n_embd = 2 ** int(np.log2(n_embd))
+
             model_config = ModelConfig(
-                n_embd=best_params['n_embd'],
-                n_head=best_params['n_head'],
+                n_embd=n_embd,
+                n_head=n_head,
                 n_layer=best_params['n_layer'],
                 dropout=best_params['dropout']
             )
