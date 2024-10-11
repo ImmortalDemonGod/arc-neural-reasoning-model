@@ -615,7 +615,7 @@ if __name__ == "__main__":
         help="Lambda parameter for Grokfast filters."
     )
     parser.add_argument(
-        "--grokfast-window_size",
+        "--grokfast-window-size",
         type=int,
         default=100,
         help="Window size for Grokfast-MA."
