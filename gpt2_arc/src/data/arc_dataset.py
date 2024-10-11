@@ -100,6 +100,17 @@ class ARCDataset(Dataset):
         elif isinstance(data_source, list):
             logger.debug("Initializing dataset with list data")
             self._process_list_data_indices(data_source)
+
+    def _process_list_data_indices(self, data_list: List[Dict]):
+        """
+        Processes a list of data dictionaries and builds the index mapping.
+        
+        Args:
+            data_list (List[Dict]): List of data samples, each as a dictionary with 'input' and 'output' keys.
+        """
+        self.index_mapping = list(range(len(data_list)))
+        self.num_samples = len(self.index_mapping)
+        logger.debug(f"Processed {self.num_samples} samples from list data source.")
             self.num_samples = len(self.index_mapping)
         else:
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
