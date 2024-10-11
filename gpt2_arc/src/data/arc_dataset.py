@@ -58,6 +58,13 @@ class ARCDataset(Dataset):
         self.index_mapping = []
         self.file_samples_count = {}
 
+        self.cache_path = self._generate_cache_path(
+            data_source=self.data_source,
+            num_symbols=self.num_symbols,
+            is_test=self.is_test,
+            test_split=self.test_split
+        )
+        
         if self._load_cache(self.cache_path):
             logger.debug("Data index loaded from cache successfully.")
             return
