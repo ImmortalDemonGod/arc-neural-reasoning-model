@@ -53,16 +53,13 @@ class ARCDataset(Dataset):
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
-        self.data_files = []  # Initialize data_files as an empty list
+        self.data_files = []
         self.data_source = data_source
-        self.num_samples = 0
-        # Initialize index mapping
-        self.index_mapping = []  # List of tuples: (file_path, sample_index_within_file)
-        self.file_samples_count = {}  # Dict to store number of samples per file
+        self.index_mapping = []
+        self.file_samples_count = {}
 
         if self._load_cache(self.cache_path):
             logger.debug("Data index loaded from cache successfully.")
-            self._compute_total_samples()
             return
 
         set_debug_mode(debug)
@@ -81,21 +78,8 @@ class ARCDataset(Dataset):
                 self._build_index_from_files(self.data_files)
             elif os.path.isfile(data_source):
                 logger.debug("Initializing dataset with single file")
-                with open(data_source, 'r') as f:
-                    task_data = json.load(f)
-                if isinstance(task_data, dict):
-                    task_id = task_data.get('id', "default_task")
-                    self.data_files = [data_source]
-                    self.file_samples_count[data_source] = len(task_data.get('train', [])) if not self.is_test else len(task_data.get('test', []))
-                    for sample_idx in range(self.file_samples_count[data_source]):
-                        self.index_mapping.append((data_source, sample_idx))
-                elif isinstance(task_data, list):
-                    self.data_files = [data_source]
-                    self.file_samples_count[data_source] = len(task_data)
-                    for sample_idx in range(self.file_samples_count[data_source]):
-                        self.index_mapping.append((data_source, sample_idx))
-                else:
-                    logger.error(f"Unexpected data format in file {data_source}: {type(task_data)}")
+                self.data_files = [data_source]
+                self._build_index_from_files(self.data_files)
             else:
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
         elif TaskSet is not None and isinstance(data_source, TaskSet):
@@ -112,52 +96,19 @@ class ARCDataset(Dataset):
 
     def _save_cache(self, cache_path: str):
         """
-        Saves the dataset and its statistics to the specified cache path using pickle.
-        
-        Args:
-            cache_path (str): The file path where the cache will be saved.
+        Saves the dataset index and statistics to the specified cache path using pickle.
         """
         try:
             cache_data = {
-                "data": self.data,
-                "statistics": self.statistics
+                "index_mapping": self.index_mapping,
+                "file_samples_count": self.file_samples_count,
+                "statistics": self.statistics if hasattr(self, 'statistics') else {}
             }
             with open(cache_path, 'wb') as f:
                 pickle.dump(cache_data, f)
             logger.debug(f"Saved cache to {cache_path}")
         except Exception as e:
             logger.error(f"Failed to save cache to {cache_path}: {e}")
-
-        # Add data validation
-        self._validate_data()
-        self._validate_data()
-
-    def _validate_data(self):
-        """
-        Validates the dataset to ensure each sample contains the required keys and correct data types.
-        Raises:
-            ValueError: If any sample is missing required keys or has incorrect types.
-        """
-        required_keys = {"input", "output", "task_id"}
-        for idx, sample in enumerate(self.data):
-            # Check for required keys
-            if not required_keys.issubset(sample.keys()):
-                missing = required_keys - sample.keys()
-                raise KeyError(f"Sample at index {idx} is missing keys: {missing}")
-            
-            # Validate 'input' and 'output' types
-            for key in ["input", "output"]:
-                if not isinstance(sample[key], torch.Tensor):
-                    raise TypeError(f"Sample at index {idx} has '{key}' of type {type(sample[key])}, expected torch.Tensor.")
-                
-                if sample[key].ndimension() != 3 or sample[key].shape[0] != 1:
-                    raise ValueError(f"Sample at index {idx} has '{key}' with shape {sample[key].shape}, expected shape (1, H, W).")
-            
-            # Validate 'task_id' type
-            if not isinstance(sample["task_id"], str):
-                raise TypeError(f"Sample at index {idx} has 'task_id' of type {type(sample['task_id'])}, expected str.")
-        
-        logger.debug("All samples passed validation.")
     
     def __len__(self):
         return len(self.data)
@@ -244,10 +195,10 @@ class ARCDataset(Dataset):
             try:
                 with open(cache_path, 'rb') as f:
                     cache_data = pickle.load(f)
-                self.data = cache_data.get("data", [])
+                self.index_mapping = cache_data.get("index_mapping", [])
+                self.file_samples_count = cache_data.get("file_samples_count", {})
                 self.statistics = cache_data.get("statistics", {})
-                self.num_samples = len(self.data)
-                logger.debug(f"Loaded cached data from {cache_path}")
+                logger.debug(f"Loaded cached index from {cache_path}")
                 return True
             except Exception as e:
                 logger.error(f"Failed to load cache from {cache_path}: {e}")
@@ -361,29 +312,124 @@ class ARCDataset(Dataset):
 
     def get_grid_size_stats(self) -> Dict[str, Any]:
         """
-        Returns the precomputed grid size statistics.
-        
+        Computes grid size statistics by iterating over samples on-the-fly.
         Returns:
             Dict[str, Any]: A dictionary containing grid size statistics.
         """
-        if hasattr(self, 'statistics') and 'grid_size_stats' in self.statistics:
-            return self.statistics['grid_size_stats']
-        else:
-            logger.warning("Grid size statistics not available.")
-            return {}
-    
+        max_height, max_width = 0, 0
+        for file_path, sample_idx in self.index_mapping:
+            if file_path is None:
+                sample = self.data_source[sample_idx]
+                input_shape = self._get_grid_shape(sample['input'])
+                output_shape = self._get_grid_shape(sample['output'])
+            else:
+                try:
+                    with open(file_path, 'r') as f:
+                        task_data = json.load(f)
+                    if isinstance(task_data, dict):
+                        samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
+                        sample = samples[sample_idx]
+                        input_shape = self._get_grid_shape(sample['input'])
+                        output_shape = self._get_grid_shape(sample['output'])
+                    elif isinstance(task_data, list):
+                        sample = task_data[sample_idx]
+                        input_shape = self._get_grid_shape(sample['input'])
+                        output_shape = self._get_grid_shape(sample['output'])
+                    else:
+                        raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                except Exception as e:
+                    logger.error(f"Error processing sample {sample_idx} from file {file_path}: {e}", exc_info=True)
+                    continue  # Skip this sample
+
+            max_height = max(max_height, input_shape[1], output_shape[1])
+            max_width = max(max_width, input_shape[2], output_shape[2])
+
+        grid_size_stats = {"max_height": max_height, "max_width": max_width}
+        logger.debug(f"Computed grid size stats: {grid_size_stats}")
+        return grid_size_stats
+
     def get_symbol_frequencies(self) -> Dict[str, float]:
         """
-        Returns the precomputed symbol frequencies.
-        
+        Computes symbol frequencies by iterating over samples on-the-fly.
         Returns:
             Dict[str, float]: A dictionary mapping symbols to their frequencies.
         """
-        if hasattr(self, 'statistics') and 'symbol_frequencies' in self.statistics:
-            return self.statistics['symbol_frequencies']
-        else:
-            logger.warning("Symbol frequencies not available.")
+        symbol_counts = np.zeros(self.num_symbols, dtype=int)
+        total_symbols = 0
+
+        for file_path, sample_idx in self.index_mapping:
+            if file_path is None:
+                sample = self.data_source[sample_idx]
+                input_symbols = self._get_symbols(sample['input'])
+                output_symbols = self._get_symbols(sample['output'])
+            else:
+                try:
+                    with open(file_path, 'r') as f:
+                        task_data = json.load(f)
+                    if isinstance(task_data, dict):
+                        samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
+                        sample = samples[sample_idx]
+                        input_symbols = self._get_symbols(sample['input'])
+                        output_symbols = self._get_symbols(sample['output'])
+                    elif isinstance(task_data, list):
+                        sample = task_data[sample_idx]
+                        input_symbols = self._get_symbols(sample['input'])
+                        output_symbols = self._get_symbols(sample['output'])
+                    else:
+                        raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                except Exception as e:
+                    logger.error(f"Error processing sample {sample_idx} from file {file_path}: {e}", exc_info=True)
+                    continue  # Skip this sample
+
+            symbol_counts += np.bincount(input_symbols.flatten(), minlength=self.num_symbols)
+            symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
+            total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
+
+        if total_symbols == 0:
+            logger.warning("No symbols found in the dataset.")
             return {}
+
+        symbol_freq = {str(symbol): float(count) / total_symbols for symbol, count in enumerate(symbol_counts)}
+        logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+        return symbol_freq
+
+    def _get_grid_shape(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> Tuple[int, int, int]:
+        """
+        Retrieves the shape of the grid without preprocessing.
+        Returns:
+            Tuple[int, int, int]: Shape in [C, H, W]
+        """
+        if isinstance(grid, list):
+            grid_tensor = torch.tensor(grid, dtype=torch.float32)
+        elif isinstance(grid, np.ndarray):
+            grid_tensor = torch.from_numpy(grid).float()
+        elif isinstance(grid, torch.Tensor):
+            grid_tensor = grid.float()
+        else:
+            raise ValueError(f"Unexpected grid type: {type(grid)}")
+
+        if grid_tensor.ndim == 2:
+            grid_tensor = grid_tensor.unsqueeze(0)  # Add channel dimension
+
+        return grid_tensor.shape  # [C, H, W]
+
+    def _get_symbols(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
+        """
+        Retrieves symbol tensor without preprocessing.
+        """
+        if isinstance(grid, list):
+            grid_tensor = torch.tensor(grid, dtype=torch.int64)
+        elif isinstance(grid, np.ndarray):
+            grid_tensor = torch.from_numpy(grid).long()
+        elif isinstance(grid, torch.Tensor):
+            grid_tensor = grid.long()
+        else:
+            raise ValueError(f"Unexpected grid type: {type(grid)}")
+        
+        if grid_tensor.ndim == 2:
+            grid_tensor = grid_tensor.unsqueeze(0)  # Add channel dimension
+
+        return grid_tensor
 
     def _compute_grid_size_stats(self):
         max_height, max_width = 0, 0
