@@ -101,7 +101,14 @@ class ModelConfigSaver(Callback):
         """
         checkpoint['model_config'] = self.config.model.__dict__
 def main(args):
-    # Set float32 matrix multiplication precision
+    # Ensure n_embd is divisible by n_head
+    if args.n_embd % args.n_head != 0:
+        adjusted_n_embd = ((args.n_embd + args.n_head - 1) // args.n_head) * args.n_head
+        logger.warning(
+            f"n_embd ({args.n_embd}) is not divisible by n_head ({args.n_head}). "
+            f"Adjusting n_embd to the nearest higher multiple: {adjusted_n_embd}."
+        )
+        args.n_embd = adjusted_n_embd
     torch.set_float32_matmul_precision(args.matmul_precision)
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
     log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'DEBUG', logging.DEBUG)
@@ -551,7 +558,7 @@ if __name__ == "__main__":
         help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
     )
     parser.add_argument("--optuna_storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
-    parser.add_argument("--n_embd", type=int, default=204, help="Embedding dimension. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--n_embd", type=int, default=208, help="Embedding dimension. Must be divisible by n_head. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--n_head", type=int, default=8, help="Number of attention heads. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--n_layer", type=int, default=12, help="Number of transformer layers. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training. Overrides Optuna's suggested value if provided.")
