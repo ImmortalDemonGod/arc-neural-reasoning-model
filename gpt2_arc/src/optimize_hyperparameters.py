@@ -332,36 +332,36 @@ def objective(trial, args):
         logger.debug("Creating model and trainer")
         num_classes = 10  # Set this to the appropriate number of classes for your task
         model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
-        
-                # Generate model summary
-                logger.debug("Attempting to generate model summary")
-                try:
-                    model_summary = str(ModelSummary(model, max_depth=-1))
-                    logger.debug("Model summary generated successfully")
-                except Exception as e:
-                    logger.error(f"Error generating model summary: {str(e)}", exc_info=True)
-                    model_summary = "Error generating model summary"
 
-                # Save model summary to trial user attributes
-                logger.debug("Attempting to save model summary to trial user attributes")
-                try:
-                    trial.set_user_attr("model_summary", model_summary)
-                    logger.debug("Model summary saved to trial user attributes")
-                except Exception as e:
-                    logger.error(f"Error saving model summary to trial: {str(e)}", exc_info=True)
+        # Generate model summary
+        logger.debug("Attempting to generate model summary")
+        try:
+            model_summary = str(ModelSummary(model, max_depth=-1))
+            logger.debug("Model summary generated successfully")
+        except Exception as e:
+            logger.error(f"Error generating model summary: {str(e)}", exc_info=True)
+            model_summary = "Error generating model summary"
 
-                logger.debug("Model summary:")
-                logger.debug(model_summary)
+        # Save model summary to trial user attributes
+        logger.debug("Attempting to save model summary to trial user attributes")
+        try:
+            trial.set_user_attr("model_summary", model_summary)
+            logger.debug("Model summary saved to trial user attributes")
+        except Exception as e:
+            logger.error(f"Error saving model summary to trial: {str(e)}", exc_info=True)
 
-                # Calculate Mamba efficiency metrics
-                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-                logger.debug("Calculating Mamba efficiency metrics")
-                sample_input = torch.randn(1, 1, 6, 6).to(device)
-                model.to(device)
-                mamba_metrics = calculate_mamba_efficiency(model, sample_input)
-                for key, value in mamba_metrics.items():
-                    trial.set_user_attr(key, value)
-                    logger.info(f"Mamba metric - {key}: {value}")
+        logger.debug("Model summary:")
+        logger.debug(model_summary)
+
+        # Calculate Mamba efficiency metrics
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        logger.debug("Calculating Mamba efficiency metrics")
+        sample_input = torch.randn(1, 1, 6, 6).to(device)
+        model.to(device)
+        mamba_metrics = calculate_mamba_efficiency(model, sample_input)
+        for key, value in mamba_metrics.items():
+            trial.set_user_attr(key, value)
+            logger.info(f"Mamba metric - {key}: {value}")
 
         arc_trainer = ARCTrainer(model, train_data, val_data, config)
 
