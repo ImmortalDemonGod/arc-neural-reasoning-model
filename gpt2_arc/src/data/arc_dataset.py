@@ -56,22 +56,17 @@ class ARCDataset(Dataset):
         self.data_files = []  # Initialize data_files as an empty list
         self.data_source = data_source
         self.num_samples = 0
-        self.data = []
-        self.cache_path = self._generate_cache_path(
-            data_source=self.data_source,
-            num_symbols=self.num_symbols,
-            is_test=self.is_test,
-            test_split=self.test_split
-        )
+        # Initialize index mapping
+        self.index_mapping = []  # List of tuples: (file_path, sample_index_within_file)
+        self.file_samples_count = {}  # Dict to store number of samples per file
 
         if self._load_cache(self.cache_path):
-            logger.debug("Data loaded from cache successfully.")
+            logger.debug("Data index loaded from cache successfully.")
+            self._compute_total_samples()
             return
+
         set_debug_mode(debug)
-        logger.debug("Starting ARCDataset initialization")
-        logger.debug(f"data_source type: {type(data_source)}")
-        logger.debug(f"data_source content: {data_source}")
-        logger.debug(f"self.test_split is set to: {self.test_split}")
+        logger.debug("Starting ARCDataset initialization with lazy loading")
 
         if isinstance(data_source, str):
             if os.path.isdir(data_source):
@@ -83,48 +78,36 @@ class ARCDataset(Dataset):
                     if f.endswith('.json')
                 ]
                 random.shuffle(self.data_files)
-                for file_path in self.data_files:
-                    with open(file_path, 'r') as f:
-                        task_data = json.load(f)
-                    if isinstance(task_data, dict):
-                        task_id = task_data.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                        samples = self._process_single_task(task_data, task_id=task_id)
-                        self.data.extend(samples)
-                        logger.debug(f"Added {len(samples)} samples from file {file_path} with task_id: {task_id}")
-                    elif isinstance(task_data, list):
-                        task_id = os.path.splitext(os.path.basename(file_path))[0]
-                        samples = self._process_list_data(task_data, task_id=task_id)
-                        self.data.extend(samples)
-                        logger.debug(f"Assigned task_id '{task_id}' to list samples from file {file_path}")
-                    else:
-                        logger.error(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                self._build_index_from_files(self.data_files)
             elif os.path.isfile(data_source):
+                logger.debug("Initializing dataset with single file")
                 with open(data_source, 'r') as f:
                     task_data = json.load(f)
                 if isinstance(task_data, dict):
                     task_id = task_data.get('id', "default_task")
-                    samples = self._process_single_task(task_data, task_id=task_id)
-                    self.data.extend(samples)
+                    self.data_files = [data_source]
+                    self.file_samples_count[data_source] = len(task_data.get('train', [])) if not self.is_test else len(task_data.get('test', []))
+                    for sample_idx in range(self.file_samples_count[data_source]):
+                        self.index_mapping.append((data_source, sample_idx))
                 elif isinstance(task_data, list):
-                    samples = self._process_list_data(task_data)
-                    self.data.extend(samples)
+                    self.data_files = [data_source]
+                    self.file_samples_count[data_source] = len(task_data)
+                    for sample_idx in range(self.file_samples_count[data_source]):
+                        self.index_mapping.append((data_source, sample_idx))
                 else:
                     logger.error(f"Unexpected data format in file {data_source}: {type(task_data)}")
             else:
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
         elif TaskSet is not None and isinstance(data_source, TaskSet):
-            logger.debug(f"TaskSet attributes before access: {dir(data_source)}")
-            logger.debug(f"Does TaskSet have 'dataset' attribute? {hasattr(data_source, 'dataset')}")
-            samples = self._process_arckit_data(data_source)
-            self.data.extend(samples)
+            logger.debug("Initializing dataset with TaskSet data")
+            self.file_samples_count = self._process_arckit_data_indices(data_source)
         elif isinstance(data_source, list):
-            samples = self._process_list_data(data_source)
-            self.data.extend(samples)
+            logger.debug("Initializing dataset with list data")
+            self.data_files = []
+            self._process_list_data_indices(data_source)
         else:
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
 
-        self.num_samples = len(self.data)
-        self._compute_and_cache_statistics()
         self._save_cache(self.cache_path)
 
     def _save_cache(self, cache_path: str):
@@ -182,8 +165,39 @@ class ARCDataset(Dataset):
     def get_num_samples(self):
         return self.num_samples
     def __getitem__(self, idx):
-        sample = self.data[idx]
-        return sample["input"], sample["output"], sample["task_id"]
+        if idx < 0 or idx >= len(self):
+            raise IndexError(f"Index {idx} out of bounds for dataset of size {len(self)}")
+
+        file_path, sample_idx = self.index_mapping[idx]
+
+        if file_path is None:
+            # In-memory list data
+            sample = self.data_source[sample_idx]
+            input_tensor = self._preprocess_grid(sample['input'])
+            output_tensor = self._preprocess_grid(sample['output'])
+            task_id = sample.get('task_id', "default_task")
+        else:
+            try:
+                with open(file_path, 'r') as f:
+                    task_data = json.load(f)
+                if isinstance(task_data, dict):
+                    samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
+                    sample = samples[sample_idx]
+                    task_id = task_data.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                elif isinstance(task_data, list):
+                    sample = task_data[sample_idx]
+                    task_id = os.path.splitext(os.path.basename(file_path))[0]
+                else:
+                    raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                
+                input_tensor = self._preprocess_grid(sample['input'])
+                output_tensor = self._preprocess_grid(sample['output'])
+            except Exception as e:
+                logger.error(f"Error loading sample {sample_idx} from file {file_path}: {e}", exc_info=True)
+                # Optionally, you can skip this sample or return a default value
+                raise e
+
+        return input_tensor, output_tensor, task_id
 
     def _count_samples_in_directory(self, directory: str):
         num_samples = 0
