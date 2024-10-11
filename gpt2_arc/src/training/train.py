@@ -195,7 +195,6 @@ def main(args):
         else:
             logger.info("Using provided or default hyperparameters")
             # Ensure that n_embd and n_head are not None
-            assert args.n_embd is not None, "Error: --n_embd must be provided."
             assert args.n_head is not None, "Error: --n_head must be provided."
             assert args.n_layer is not None, "Error: --n_layer must be provided."
             assert args.batch_size is not None, "Error: --batch_size must be provided."
@@ -552,7 +551,7 @@ if __name__ == "__main__":
         help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
     )
     parser.add_argument("--optuna_storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
-    parser.add_argument("--n_embd", type=int, default=256, help="Embedding dimension. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--n_embd", type=int, default=204, help="Embedding dimension. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--n_head", type=int, default=8, help="Number of attention heads. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--n_layer", type=int, default=12, help="Number of transformer layers. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training. Overrides Optuna's suggested value if provided.")
