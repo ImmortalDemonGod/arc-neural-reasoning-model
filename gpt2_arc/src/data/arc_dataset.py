@@ -341,9 +341,14 @@ class ARCDataset(Dataset):
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         processed_data = []
+        total_samples = 0  # For debugging
         for task in taskset.tasks:
-            # Process training samples
-            for ex in task.train:
+            if self.is_test:
+                samples = task.test
+            else:
+                samples = task.train
+            total_samples += len(samples)
+            for ex in samples:
                 input_tensor = self._preprocess_grid(ex[0])
                 output_tensor = self._preprocess_grid(ex[1])
                 processed_data.append({
@@ -351,15 +356,7 @@ class ARCDataset(Dataset):
                     "output": output_tensor,
                     "task_id": task.id
                 })
-            # Process testing samples
-            for ex in task.test:
-                input_tensor = self._preprocess_grid(ex[0])
-                output_tensor = self._preprocess_grid(ex[1])
-                processed_data.append({
-                    "input": input_tensor,
-                    "output": output_tensor,
-                    "task_id": task.id
-                })
+        logger.debug(f"Total samples processed: {total_samples}")
         return processed_data
 
 
