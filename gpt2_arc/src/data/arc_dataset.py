@@ -175,8 +175,24 @@ class ARCDataset(Dataset):
 
         if hasattr(self, 'index_mapping') and self.index_mapping:
             file_path, sample_idx = self.index_mapping[idx]
-            # Existing logic for lazy loading
-            # ...
+            try:
+                with open(file_path, 'r') as f:
+                    task_data = json.load(f)
+
+                if isinstance(task_data, dict):
+                    samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
+                    sample = samples[sample_idx]
+                elif isinstance(task_data, list):
+                    sample = task_data[sample_idx]
+                else:
+                    raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+
+                input_tensor = self._preprocess_grid(sample['input'])
+                output_tensor = self._preprocess_grid(sample['output'])
+                task_id = sample.get('task_id', "default_task")
+            except Exception as e:
+                logger.error(f"Error loading sample {sample_idx} from file {file_path}: {e}", exc_info=True)
+                raise IndexError(f"Failed to load sample {sample_idx} from file {file_path}")
         elif hasattr(self, 'data') and self.data:
             sample = self.data[idx]
             input_tensor = sample["input"]
@@ -184,6 +200,8 @@ class ARCDataset(Dataset):
             task_id = sample.get('task_id', "default_task")
         else:
             raise IndexError("No data available in ARCDataset.")
+
+        return input_tensor, output_tensor, task_id
    
         return input_tensor, output_tensor, task_id
 
