@@ -196,11 +196,14 @@ def objective(trial, args):
 
         logger.debug(f"Trial {trial.number}: Estimated memory usage: {estimated_memory:.2f} GB")
         logger.debug(f"Trial {trial.number}: Available memory: {available_memory:.2f} GB")
+        logger.info(f"Trial {trial.number}: Evaluating if the model can fit into the available memory.")
 
         # Prune the trial if estimated memory exceeds 80% of available memory
         if not can_fit_model(estimated_memory, available_memory * 0.8):
             logger.warning(f"Trial {trial.number}: Model too large for available memory. Skipping.")
             raise optuna.exceptions.TrialPruned()
+        else:
+            logger.info(f"Trial {trial.number}: Memory check passed. Proceeding with model training.")
 
         logger.debug(f"Suggested dropout rate: {dropout}")
 
@@ -258,6 +261,23 @@ def objective(trial, args):
             )
             logger.debug(f"Synthetic training data size: {len(train_data)}")
             logger.debug(f"Synthetic validation data size: {len(val_data)}")
+            # List all files in the synthetic data directory
+            try:
+                synthetic_files = os.listdir(args.synthetic_data_path)
+                logger.debug(f"Total files in synthetic data path: {len(synthetic_files)}")
+                logger.debug(f"Sample files: {synthetic_files[:5]}... (total {len(synthetic_files)})")
+            except Exception as e:
+                logger.error(f"Failed to list files in {args.synthetic_data_path}: {str(e)}")
+        
+            # Log detailed statistics about the loaded data
+            logger.info("Calculating symbol frequencies for synthetic data")
+            symbol_freq = train_data.get_symbol_frequencies()
+            logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+            symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
+            logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
+            logger.info(f"Symbol frequencies: {symbol_freq_dict}")
+            for symbol, freq in symbol_freq_dict.items():
+                logger.debug(f"Symbol {symbol}: Frequency {freq}")
         else:
             logger.info("Loading ARC dataset")
             train_set, eval_set = arckit.load_data()
@@ -265,6 +285,26 @@ def objective(trial, args):
             val_data = ARCDataset(eval_set)
             logger.debug(f"ARC training data size: {len(train_data)}")
             logger.debug(f"ARC validation data size: {len(val_data)}")
+            # List all files in the ARC dataset directories if applicable
+            try:
+                arc_train_files = os.listdir(arckit.get_train_data_path())
+                arc_eval_files = os.listdir(arckit.get_eval_data_path())
+                logger.debug(f"Total training files in ARC dataset: {len(arc_train_files)}")
+                logger.debug(f"Sample training files: {arc_train_files[:5]}... (total {len(arc_train_files)})")
+                logger.debug(f"Total evaluation files in ARC dataset: {len(arc_eval_files)}")
+                logger.debug(f"Sample evaluation files: {arc_eval_files[:5]}... (total {len(arc_eval_files)})")
+            except Exception as e:
+                logger.error(f"Failed to list ARC dataset files: {str(e)}")
+    
+            # Log detailed statistics about the loaded ARC data
+            logger.info("Calculating symbol frequencies for ARC data")
+            symbol_freq = train_data.get_symbol_frequencies()
+            logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+            symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
+            logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
+            logger.info(f"Symbol frequencies: {symbol_freq_dict}")
+            for symbol, freq in symbol_freq_dict.items():
+                logger.debug(f"Symbol {symbol}: Frequency {freq}")
 
         # Calculate Symbol Frequencies
         if args.use_synthetic_data:
@@ -293,35 +333,35 @@ def objective(trial, args):
         num_classes = 10  # Set this to the appropriate number of classes for your task
         model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
         
-        # Generate model summary
-        print("DEBUG: Attempting to generate model summary")
-        try:
-            model_summary = str(ModelSummary(model, max_depth=-1))
-            print("DEBUG: Model summary generated successfully")
-        except Exception as e:
-            print(f"DEBUG: Error generating model summary - {str(e)}")
-            model_summary = "Error generating model summary"
+                # Generate model summary
+                logger.debug("Attempting to generate model summary")
+                try:
+                    model_summary = str(ModelSummary(model, max_depth=-1))
+                    logger.debug("Model summary generated successfully")
+                except Exception as e:
+                    logger.error(f"Error generating model summary: {str(e)}", exc_info=True)
+                    model_summary = "Error generating model summary"
 
-        # Save model summary to trial user attributes
-        print("DEBUG: Attempting to save model summary to trial user attributes")
-        try:
-            trial.set_user_attr("model_summary", model_summary)
-            print("DEBUG: Model summary saved to trial user attributes")
-        except Exception as e:
-            print(f"DEBUG: Error saving model summary to trial - {str(e)}")
+                # Save model summary to trial user attributes
+                logger.debug("Attempting to save model summary to trial user attributes")
+                try:
+                    trial.set_user_attr("model_summary", model_summary)
+                    logger.debug("Model summary saved to trial user attributes")
+                except Exception as e:
+                    logger.error(f"Error saving model summary to trial: {str(e)}", exc_info=True)
 
-        print("DEBUG: Model summary:")
-        print(model_summary)
+                logger.debug("Model summary:")
+                logger.debug(model_summary)
 
-        # Calculate Mamba efficiency metrics
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        logger.debug("Calculating Mamba efficiency metrics")
-        sample_input = torch.randn(1, 1, 6, 6).to(device)
-        model.to(device)
-        mamba_metrics = calculate_mamba_efficiency(model, sample_input)
-        for key, value in mamba_metrics.items():
-            trial.set_user_attr(key, value)
-            logger.debug(f"Mamba metric - {key}: {value}")
+                # Calculate Mamba efficiency metrics
+                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+                logger.debug("Calculating Mamba efficiency metrics")
+                sample_input = torch.randn(1, 1, 6, 6).to(device)
+                model.to(device)
+                mamba_metrics = calculate_mamba_efficiency(model, sample_input)
+                for key, value in mamba_metrics.items():
+                    trial.set_user_attr(key, value)
+                    logger.info(f"Mamba metric - {key}: {value}")
 
         arc_trainer = ARCTrainer(model, train_data, val_data, config)
 
@@ -430,17 +470,22 @@ def objective(trial, args):
             logger.error(f"Trial {trial.number}: An unexpected error occurred: {str(e)}", exc_info=True)
         raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: An unexpected error occurred: {str(e)}")
     finally:
-        # Ensure Proper Cleanup Between Trials
-        logger.debug(f"Cleaning up after trial {trial.number}")
-        if model is not None:
-            del model
-        if trainer is not None:
-            del trainer
-        if arc_trainer is not None:
-            del arc_trainer
-        gc.collect()
-        torch.cuda.empty_cache()
-        logger.debug(f"Cleanup completed for trial {trial.number}")
+            # Ensure Proper Cleanup Between Trials
+            logger.debug(f"Cleaning up after trial {trial.number}")
+            if model is not None:
+                del model
+                logger.debug("Deleted model instance")
+            if trainer is not None:
+                del trainer
+                logger.debug("Deleted trainer instance")
+            if arc_trainer is not None:
+                del arc_trainer
+                logger.debug("Deleted ARCTrainer instance")
+            gc.collect()
+            logger.debug("Garbage collection completed")
+            torch.cuda.empty_cache()
+            logger.debug("CUDA cache emptied")
+            logger.debug(f"Cleanup completed for trial {trial.number}")
 
 
 
