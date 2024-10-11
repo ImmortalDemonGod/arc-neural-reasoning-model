@@ -111,9 +111,6 @@ class ARCDataset(Dataset):
         self.index_mapping = list(range(len(data_list)))
         self.num_samples = len(self.index_mapping)
         logger.debug(f"Processed {self.num_samples} samples from list data source.")
-            self.num_samples = len(self.index_mapping)
-        else:
-            raise ValueError(f"Unsupported data_source type: {type(data_source)}")
 
         logger.debug(f"ARCDataset initialized with {self.num_samples} samples")
 
