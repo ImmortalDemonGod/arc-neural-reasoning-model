@@ -13,6 +13,7 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 import psutil
 from arckit import load_data
 import gc
+from memory_profiler import profile
 import json
 
 def get_system_memory_usage():
@@ -21,6 +22,7 @@ def get_system_memory_usage():
     mem_mb = mem_bytes / (1024 ** 2)  # Convert to MB
     return mem_mb
 
+@profile
 def initialize_dataset():
     # Load data using arckit.load_data() as in training.py
     train_set, eval_set = load_data()
@@ -35,6 +37,7 @@ def initialize_dataset():
     )
     return dataset
 
+@profile
 def main():
     # Perform garbage collection to ensure accurate measurements
     gc.collect()
@@ -81,7 +84,7 @@ def main():
             dataset,
             batch_size=batch_size,
             shuffle=False,
-            num_workers=0,  # Set to 0 for main process data loading
+            num_workers=0,  # Ensure main process data loading
             pin_memory=False  # Disable pin_memory for CPU
         )
 
