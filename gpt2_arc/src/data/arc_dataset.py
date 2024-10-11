@@ -329,6 +329,8 @@ class ARCDataset(Dataset):
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         processed_data = []
+        processed_data = []
+        errors = []
         logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
         for task in taskset.tasks:
             logger.debug(f"Processing task: {task.id}")
@@ -352,7 +354,14 @@ class ARCDataset(Dataset):
                     })
                 except Exception as e:
                     logger.error(f"Error processing {sample_type} example in task {task.id}: {e}", exc_info=True)
+            except Exception as e:
+                logger.error(f"Error processing {sample_type} example in task {task.id}: {e}", exc_info=True)
+                errors.append((task.id, e))
             logger.debug(f"Processed task {task.id}: Total samples added: {len(samples)}")
+        if errors:
+            logger.error(f"Encountered errors in {len(errors)} examples:")
+            for task_id, error in errors:
+                logger.error(f"Task {task_id}: {error}")
         logger.debug(f"Total samples processed from TaskSet: {len(processed_data)}")
         return processed_data
 
