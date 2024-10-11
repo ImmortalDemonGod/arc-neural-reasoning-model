@@ -234,6 +234,12 @@ def main(args):
             logger.info("Loading ARC dataset")
             train_set, eval_set = arckit.load_data()
             logger.info(f"Number of tasks in train_set: {len(train_set.tasks)}")
+            for task in train_set.tasks[:5]:  # Inspect the first 5 tasks
+                logger.info(f"Task {task.id} - Train samples: {len(task.train)}, Test samples: {len(task.test)}")
+
+            logger.info(f"Number of tasks in eval_set: {len(eval_set.tasks)}")
+            for task in eval_set.tasks[:5]:  # Inspect the first 5 tasks
+                logger.info(f"Task {task.id} - Train samples: {len(task.train)}, Test samples: {len(task.test)}")
             logger.info(f"Number of tasks in eval_set: {len(eval_set.tasks)}")
             num_symbols = 10  # Adjust num_symbols as needed based on your dataset
 
