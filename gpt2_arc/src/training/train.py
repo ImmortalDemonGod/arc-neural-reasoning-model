@@ -113,9 +113,9 @@ def main(args):
     profiler = PyTorchProfiler(
         dirpath=args.profiler_dirpath,
         filename=args.profiler_filename,
-        activities=[ProfilerActivity.CPU],  # Use ProfilerActivity enums
+        activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],  # Include CUDA activities
         record_shapes=True,
-        with_stack=False
+        with_stack=True  # Enable stack tracing
     ) if args.use_profiler else None
     
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
