@@ -70,9 +70,13 @@ class ARCDataset(Dataset):
         set_debug_mode(debug)
         logger.debug("Starting ARCDataset initialization with lazy loading")
 
+        set_debug_mode(debug)
+        logger.debug("Starting ARCDataset initialization")
+
         if isinstance(data_source, str):
+            logger.debug(f"Initializing dataset with data_source of type: str")
             if os.path.isdir(data_source):
-                logger.debug("Initializing dataset with data from directory")
+                logger.debug(f"Data source is a directory: {data_source}")
                 self.data_dir = data_source
                 self.data_files = [
                     os.path.join(data_source, f)
@@ -81,26 +85,26 @@ class ARCDataset(Dataset):
                 ]
                 random.shuffle(self.data_files)
                 self._build_index_from_files(self.data_files)
+                self.num_samples = len(self.index_mapping)
             elif os.path.isfile(data_source):
-                logger.debug("Initializing dataset with single file")
+                logger.debug(f"Data source is a file: {data_source}")
                 self.data_files = [data_source]
                 self._build_index_from_files(self.data_files)
                 self.num_samples = len(self.index_mapping)
             else:
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-        logger.debug(f"ARCDataset initialized with data_source of type: {type(data_source)}")
-        if isinstance(data_source, TaskSet):
+        elif isinstance(data_source, TaskSet):
             logger.debug("Initializing dataset with TaskSet data")
             self.data = self._process_arckit_data(data_source)
             self.num_samples = len(self.data)
         elif isinstance(data_source, list):
             logger.debug("Initializing dataset with list data")
-            self.data_files = []
             self._process_list_data_indices(data_source)
             self.num_samples = len(self.index_mapping)
         else:
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
-        self._save_cache(self.cache_path)
+
+        logger.debug(f"ARCDataset initialized with {self.num_samples} samples")
 
     def _build_index_from_files(self, data_files: List[str]):
         """

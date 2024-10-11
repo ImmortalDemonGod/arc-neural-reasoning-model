@@ -235,8 +235,10 @@ def main(args):
             train_set, eval_set = arckit.load_data()
             logger.info(f"Number of tasks in train_set: {len(train_set.tasks)}")
             logger.info(f"Number of tasks in eval_set: {len(eval_set.tasks)}")
-            train_data = ARCDataset(train_set, is_test=False, debug=True)
-            val_data = ARCDataset(eval_set, is_test=True, debug=True)
+            num_symbols = 10  # Adjust num_symbols as needed based on your dataset
+
+            train_data = ARCDataset(train_set, is_test=False, num_symbols=num_symbols, debug=True)
+            val_data = ARCDataset(eval_set, is_test=True, num_symbols=num_symbols, debug=True)
             logger.info(f"Number of training examples: {len(train_data)}")
             logger.info(f"Number of validation examples: {len(val_data)}")
 
