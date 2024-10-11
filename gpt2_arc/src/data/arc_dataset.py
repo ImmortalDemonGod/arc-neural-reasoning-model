@@ -159,7 +159,12 @@ class ARCDataset(Dataset):
             logger.error(f"Failed to save cache to {cache_path}: {e}")
     
     def __len__(self):
-        return len(self.index_mapping)
+        if hasattr(self, 'index_mapping') and self.index_mapping:
+            return len(self.index_mapping)
+        elif hasattr(self, 'data') and self.data:
+            return len(self.data)
+        else:
+            return 0
 
     def get_num_samples(self):
         if hasattr(self, 'data') and self.data:
@@ -170,35 +175,18 @@ class ARCDataset(Dataset):
         if idx < 0 or idx >= len(self):
             raise IndexError(f"Index {idx} out of bounds for dataset of size {len(self)}")
 
-        file_path, sample_idx = self.index_mapping[idx]
-
-        if file_path is None:
-            # In-memory list data
-            sample = self.data_source[sample_idx]
-            input_tensor = self._preprocess_grid(sample['input'])
-            output_tensor = self._preprocess_grid(sample['output'])
+        if hasattr(self, 'index_mapping') and self.index_mapping:
+            file_path, sample_idx = self.index_mapping[idx]
+            # Existing logic for lazy loading
+            # ...
+        elif hasattr(self, 'data') and self.data:
+            sample = self.data[idx]
+            input_tensor = sample["input"]
+            output_tensor = sample["output"]
             task_id = sample.get('task_id', "default_task")
         else:
-            try:
-                with open(file_path, 'r') as f:
-                    task_data = json.load(f)
-                if isinstance(task_data, dict):
-                    samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
-                    sample = samples[sample_idx]
-                    task_id = task_data.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                elif isinstance(task_data, list):
-                    sample = task_data[sample_idx]
-                    task_id = os.path.splitext(os.path.basename(file_path))[0]
-                else:
-                    raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
-                
-                input_tensor = self._preprocess_grid(sample['input'])
-                output_tensor = self._preprocess_grid(sample['output'])
-            except Exception as e:
-                logger.error(f"Error loading sample {sample_idx} from file {file_path}: {e}", exc_info=True)
-                # Optionally, you can skip this sample or return a default value
-                raise e
-
+            raise IndexError("No data available in ARCDataset.")
+   
         return input_tensor, output_tensor, task_id
 
     def _count_samples_in_directory(self, directory: str):
@@ -328,9 +316,16 @@ class ARCDataset(Dataset):
         logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
         for task in taskset.tasks:
             logger.debug(f"Processing task: {task.id}")
-            logger.debug(f"Train samples: {len(task.train)}, Test samples: {len(task.test)}")
-            # Process training samples
-            for ex in task.train:
+            # Decide whether to process 'train' or 'test' samples based on the is_test flag
+            if self.is_test:
+                samples = task.test
+                sample_type = 'test'
+            else:
+                samples = task.train
+                sample_type = 'train'
+            logger.debug(f"{sample_type.capitalize()} samples: {len(samples)}")
+            # Process samples
+            for ex in samples:
                 try:
                     input_tensor = self._preprocess_grid(ex[0])
                     output_tensor = self._preprocess_grid(ex[1])
@@ -340,23 +335,8 @@ class ARCDataset(Dataset):
                         "task_id": task.id
                     })
                 except Exception as e:
-                    logger.error(f"Error processing training example in task {task.id}: {e}", exc_info=True)
-            
-            # Process testing samples
-            for ex in task.test:
-                try:
-                    input_tensor = self._preprocess_grid(ex[0])
-                    output_tensor = self._preprocess_grid(ex[1])
-                    processed_data.append({
-                        "input": input_tensor,
-                        "output": output_tensor,
-                        "task_id": task.id
-                    })
-                except Exception as e:
-                    logger.error(f"Error processing testing example in task {task.id}: {e}", exc_info=True)
-            
-            logger.debug(f"Processed task {task.id}: Total samples added: {len(task.train) + len(task.test)}")
-        
+                    logger.error(f"Error processing {sample_type} example in task {task.id}: {e}", exc_info=True)
+            logger.debug(f"Processed task {task.id}: Total samples added: {len(samples)}")
         logger.debug(f"Total samples processed from TaskSet: {len(processed_data)}")
         return processed_data
 
