@@ -574,70 +574,70 @@ if __name__ == "__main__":
     group.add_argument("--fast-dev-run", action="store_true", help="Run a fast development test")
     
     parser.add_argument(
-        "--optuna-study-name",
+        "--optuna_study_name",
         type=str,
         default=None,
         help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
     )
-    parser.add_argument("--optuna-storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
-    parser.add_argument("--n-embd", type=int, default=None, help="Embedding dimension for profiling. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--n-head", type=int, default=None, help="Number of attention heads for profiling. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--n-layer", type=int, default=None, help="Number of transformer layers for profiling. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--batch-size", type=int, default=None, help="Batch size for profiling. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--learning-rate", type=float, default=None, help="Learning rate. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
-    parser.add_argument("--mamba-ratio", type=float, default=None, help="Mamba ratio (float value). Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--optuna_storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
+    parser.add_argument("--n_embd", type=int, default=None, help="Embedding dimension for profiling. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--n_head", type=int, default=None, help="Number of attention heads for profiling. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--n_layer", type=int, default=None, help="Number of transformer layers for profiling. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--batch_size", type=int, default=None, help="Batch size for profiling. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--learning_rate", type=float, default=None, help="Learning rate. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--max_epochs", type=int, required=True, help="Maximum number of epochs")
+    parser.add_argument("--mamba_ratio", type=float, default=None, help="Mamba ratio (float value). Overrides Optuna's suggested value if provided.")
 
     parser.add_argument("--dropout", type=float, default=None, help="Dropout rate. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--d-state", type=int, default=None, help="Mamba state dimension. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--d-conv", type=int, default=None, help="Mamba convolution dimension. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--mamba-depth", type=int, default=None, help="Depth of each Mamba layer. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--mamba-expand", type=int, default=None, help="Expand factor for each Mamba layer. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
-    parser.add_argument("--use-grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
+    parser.add_argument("--d_state", type=int, default=None, help="Mamba state dimension. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--d_conv", type=int, default=None, help="Mamba convolution dimension. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--mamba_depth", type=int, default=None, help="Depth of each Mamba layer. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--mamba_expand", type=int, default=None, help="Expand factor for each Mamba layer. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--use_gpu", action="store_true", help="Use GPU for training if available")
+    parser.add_argument("--use_grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
     parser.add_argument(
-        "--grokfast-type",
+        "--grokfast_type",
         type=str,
         default="ema",
         choices=["ema", "ma"],
         help="Type of Grokfast filter to use: 'ema' or 'ma'."
     )
     parser.add_argument(
-        "--grokfast-alpha",
+        "--grokfast_alpha",
         type=float,
         default=0.98,
         help="Alpha parameter for Grokfast-EMA."
     )
     parser.add_argument(
-        "--grokfast-lamb",
+        "--grokfast_lamb",
         type=float,
         default=2.0,
         help="Lambda parameter for Grokfast filters."
     )
     parser.add_argument(
-        "--grokfast-window-size",
+        "--grokfast_window_size",
         type=int,
         default=100,
         help="Window size for Grokfast-MA."
     )
-    parser.add_argument("--no-logging", action="store_true", help="Disable logging")
-    parser.add_argument("--no-checkpointing", action="store_true", help="Disable checkpointing")
-    parser.add_argument("--no-progress-bar", action="store_true", help="Disable progress bar")
+    parser.add_argument("--no_logging", action="store_true", help="Disable logging")
+    parser.add_argument("--no_checkpointing", action="store_true", help="Disable checkpointing")
+    parser.add_argument("--no_progress_bar", action="store_true", help="Disable progress bar")
     parser.add_argument("--model_checkpoint", type=str, help="Path to the model checkpoint to resume training")
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
-    parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
-    parser.add_argument("--run-name", type=str, default="default_run", help="Name of the run for saving results")
-    parser.add_argument("--use-synthetic-data", action="store_true", help="Use synthetic data for training")
+    parser.add_argument("--results_dir", type=str, default="./results", help="Directory to save results")
+    parser.add_argument("--run_name", type=str, default="default_run", help="Name of the run for saving results")
+    parser.add_argument("--use_synthetic_data", action="store_true", help="Use synthetic data for training")
     parser.add_argument(
-        "--matmul-precision",
+        "--matmul_precision",
         type=str,
         default="medium",
         choices=["highest", "high", "medium"],
         help="Set the internal precision of float32 matrix multiplications. Options: 'highest', 'high', 'medium'. Defaults to 'medium'."
     )
-    parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
-    parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
-    parser.add_argument("--use-optuna", action="store_true", help="Use best hyperparameters from Optuna study")
+    parser.add_argument("--synthetic_data_path", type=str, help="Path to synthetic data directory")
+    parser.add_argument("--log_level", type=str, default="INFO", help="Logging level")
+    parser.add_argument("--use_optuna", action="store_true", help="Use best hyperparameters from Optuna study")
     parser.add_argument(
         "--accelerator",
         type=str,
@@ -646,13 +646,13 @@ if __name__ == "__main__":
         help="Accelerator to use for training: 'cpu', 'gpu', or 'tpu'. Defaults to 'gpu'."
     )
     parser.add_argument(
-        "--profiler-dirpath",
+        "--profiler_dirpath",
         type=str,
         default="./profiler_logs",
         help="Directory path for profiler output files."
     )
     parser.add_argument(
-        "--profiler-filename",
+        "--profiler_filename",
         type=str,
         default="profile",
         help="Filename for profiler output."
