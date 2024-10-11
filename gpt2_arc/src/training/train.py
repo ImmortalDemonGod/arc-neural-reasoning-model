@@ -194,6 +194,17 @@ def main(args):
             )
         else:
             logger.info("Using provided or default hyperparameters")
+            # Ensure that n_embd and n_head are not None
+            assert args.n_embd is not None, "Error: --n_embd must be provided."
+            assert args.n_head is not None, "Error: --n_head must be provided."
+            assert args.n_layer is not None, "Error: --n_layer must be provided."
+            assert args.batch_size is not None, "Error: --batch_size must be provided."
+            assert args.learning_rate is not None, "Error: --learning_rate must be provided."
+            assert args.mamba_ratio is not None, "Error: --mamba_ratio must be provided."
+            assert args.dropout is not None, "Error: --dropout must be provided."
+            assert args.d_state is not None, "Error: --d_state must be provided."
+            assert args.d_conv is not None, "Error: --d_conv must be provided."
+
             model_config = ModelConfig(
                 n_embd=args.n_embd,
                 n_head=args.n_head,
