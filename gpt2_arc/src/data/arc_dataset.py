@@ -159,12 +159,7 @@ class ARCDataset(Dataset):
             logger.error(f"Failed to save cache to {cache_path}: {e}")
     
     def __len__(self):
-        if hasattr(self, 'index_mapping') and self.index_mapping:
-            return len(self.index_mapping)
-        elif hasattr(self, 'data') and self.data:
-            return len(self.data)
-        else:
-            return 0
+        return len(self.index_mapping)
 
     def get_num_samples(self):
         if hasattr(self, 'data') and self.data:
