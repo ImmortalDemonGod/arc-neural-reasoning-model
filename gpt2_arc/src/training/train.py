@@ -149,12 +149,33 @@ def main(args):
             best_params = study.best_params
             logger.debug(f"Loaded best parameters: {best_params}")
             
+            # Override best_params with user-passed arguments if they are provided
+            hyperparams = [
+                'n_embd',
+                'n_head',
+                'n_layer',
+                'dropout',
+                'batch_size',
+                'learning_rate',
+                'mamba_ratio',
+                'd_state',
+                'd_conv',
+                'mamba_depth',
+                'mamba_expand',
+            ]
+
+            for param in hyperparams:
+                arg_value = getattr(args, param.replace('-', '_'), None)
+                default_value = parser.get_default(param.replace('-', '_'))
+                if arg_value is not None and arg_value != default_value:
+                    best_params[param] = arg_value
+
             n_head = 2 ** best_params['n_head_exp']
             n_embd = n_head * best_params['n_embd_multiplier']
             n_embd = 2 ** int(np.log2(n_embd))
             model_config = ModelConfig(
-                n_embd=n_embd,
-                n_head=n_head,
+                n_embd=best_params['n_embd'],
+                n_head=best_params['n_head'],
                 n_layer=best_params['n_layer'],
                 dropout=best_params['dropout']
             )
@@ -166,11 +187,6 @@ def main(args):
                 log_level=args.log_level,
                 use_synthetic_data=args.use_synthetic_data,
                 synthetic_data_path=args.synthetic_data_path
-            )
-            training_config = TrainingConfig(
-                batch_size=best_params['batch_size'],
-                learning_rate=best_params['learning_rate'],
-                max_epochs=args.max_epochs  # Always use the user-provided max_epochs
             )
         else:
             logger.info("Using provided or default hyperparameters")
@@ -560,19 +576,19 @@ if __name__ == "__main__":
         help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
     )
     parser.add_argument("--optuna-storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
-    parser.add_argument("--n-embd", type=int, default=4, help="Embedding dimension for profiling")
-    parser.add_argument("--n-head", type=int, default=1, help="Number of attention heads for profiling")
-    parser.add_argument("--n-layer", type=int, default=1, help="Number of transformer layers for profiling")
-    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for profiling")
-    parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("--n-embd", type=int, default=None, help="Embedding dimension for profiling. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--n-head", type=int, default=None, help="Number of attention heads for profiling. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--n-layer", type=int, default=None, help="Number of transformer layers for profiling. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--batch-size", type=int, default=None, help="Batch size for profiling. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--learning-rate", type=float, default=None, help="Learning rate. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
-    parser.add_argument("--mamba-ratio", type=float, default=0.0, help="Mamba ratio (float value)")
+    parser.add_argument("--mamba-ratio", type=float, default=None, help="Mamba ratio (float value). Overrides Optuna's suggested value if provided.")
 
-    parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
-    parser.add_argument("--d-state", type=int, default=4, help="Mamba state dimension")
-    parser.add_argument("--d-conv", type=int, default=1, help="Mamba convolution dimension")
-    parser.add_argument("--mamba-depth", type=int, default=1, help="Depth of each Mamba layer")
-    parser.add_argument("--mamba-expand", type=int, default=2, help="Expand factor for each Mamba layer")
+    parser.add_argument("--dropout", type=float, default=None, help="Dropout rate. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--d-state", type=int, default=None, help="Mamba state dimension. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--d-conv", type=int, default=None, help="Mamba convolution dimension. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--mamba-depth", type=int, default=None, help="Depth of each Mamba layer. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--mamba-expand", type=int, default=None, help="Expand factor for each Mamba layer. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
     parser.add_argument("--use-grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
     parser.add_argument(
