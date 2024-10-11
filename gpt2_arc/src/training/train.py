@@ -216,7 +216,9 @@ def main(args):
         config = Config(model=model_config, training=training_config)
         logger.debug(f"Configuration: {config}")
 
-        # Load data
+        # Load data and log the number of tasks
+        logger.info(f"Number of tasks in train_set: {len(train_set.tasks)}")
+        logger.info(f"Number of tasks in eval_set: {len(eval_set.tasks)}")
         logger.info("Loading data")
         if args.use_synthetic_data:
             if not args.synthetic_data_path:

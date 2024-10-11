@@ -13,10 +13,7 @@ import logging
 from torch.utils.data import get_worker_info
 import math  # Import math module for ceiling division
 
-try:
-    from arckit.data import TaskSet, Task
-except ImportError:
-    TaskSet = None
+from arckit.data import TaskSet, Task
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)  # Set to ERROR by default
