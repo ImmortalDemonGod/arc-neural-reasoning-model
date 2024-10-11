@@ -341,37 +341,25 @@ class ARCDataset(Dataset):
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         processed_data = []
-        processed_data = []
-        errors = []
-        logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
         for task in taskset.tasks:
-            logger.debug(f"Processing task: {task.id}")
-            # Decide whether to process 'train' or 'test' samples based on the is_test flag
-            if self.is_test:
-                samples = task.test
-                sample_type = 'test'
-            else:
-                samples = task.train
-                sample_type = 'train'
-            logger.debug(f"{sample_type.capitalize()} samples: {len(samples)}")
-            # Process samples
-            for ex in samples:
-                try:
-                    input_tensor = self._preprocess_grid(ex[0])
-                    output_tensor = self._preprocess_grid(ex[1])
-                    processed_data.append({
-                        "input": input_tensor,
-                        "output": output_tensor,
-                        "task_id": task.id
-                    })
-                except Exception as e:
-                    logger.error(f"Error processing {sample_type} example in task {task.id}: {e}", exc_info=True)
-            logger.debug(f"Processed task {task.id}: Total samples added: {len(samples)}")
-        if errors:
-            logger.error(f"Encountered errors in {len(errors)} examples:")
-            for task_id, error in errors:
-                logger.error(f"Task {task_id}: {error}")
-        logger.debug(f"Total samples processed from TaskSet: {len(processed_data)}")
+            # Process training samples
+            for ex in task.train:
+                input_tensor = self._preprocess_grid(ex[0])
+                output_tensor = self._preprocess_grid(ex[1])
+                processed_data.append({
+                    "input": input_tensor,
+                    "output": output_tensor,
+                    "task_id": task.id
+                })
+            # Process testing samples
+            for ex in task.test:
+                input_tensor = self._preprocess_grid(ex[0])
+                output_tensor = self._preprocess_grid(ex[1])
+                processed_data.append({
+                    "input": input_tensor,
+                    "output": output_tensor,
+                    "task_id": task.id
+                })
         return processed_data
 
 
