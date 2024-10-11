@@ -603,13 +603,13 @@ if __name__ == "__main__":
     )
 
     # Grokfast parameter ranges
-    parser.add_argument("--grokfast_alpha_min", type=float, default=0.9, help="Minimum value for grokfast_alpha.")
-    parser.add_argument("--grokfast_alpha_max", type=float, default=0.99, help="Maximum value for grokfast_alpha.")
-    parser.add_argument("--grokfast_lamb_min", type=float, default=1.0, help="Minimum value for grokfast_lamb.")
-    parser.add_argument("--grokfast_lamb_max", type=float, default=3.0, help="Maximum value for grokfast_lamb.")
-    parser.add_argument("--grokfast_window_size_min", type=int, default=50, help="Minimum value for grokfast_window_size.")
-    parser.add_argument("--grokfast_window_size_max", type=int, default=200, help="Maximum value for grokfast_window_size.")
-    parser.add_argument("--grokfast_type_choices", type=str, nargs='+', default=["ema", "ma"], choices=["ema", "ma"], help="List of Grokfast types to consider during tuning.")
+    parser.add_argument("--grokfast-alpha-min", type=float, default=0.9, help="Minimum value for grokfast_alpha.")
+    parser.add_argument("--grokfast-alpha-max", type=float, default=0.99, help="Maximum value for grokfast_alpha.")
+    parser.add_argument("--grokfast-lamb-min", type=float, default=1.0, help="Minimum value for grokfast_lamb.")
+    parser.add_argument("--grokfast-lamb-max", type=float, default=3.0, help="Maximum value for grokfast_lamb.")
+    parser.add_argument("--grokfast-window-size-min", type=int, default=50, help="Minimum value for grokfast_window_size.")
+    parser.add_argument("--grokfast-window-size-max", type=int, default=200, help="Maximum value for grokfast_window_size.")
+    parser.add_argument("--grokfast-type-choices", type=str, nargs='+', default=["ema", "ma"], choices=["ema", "ma"], help="List of Grokfast types to consider during tuning.")
 
 
     args = parser.parse_args()
