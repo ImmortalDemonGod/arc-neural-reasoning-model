@@ -156,14 +156,7 @@ def main(args):
                 n_embd=n_embd,
                 n_head=n_head,
                 n_layer=best_params['n_layer'],
-                dropout=best_params['dropout'],
-                use_gpu=args.use_gpu,
-                log_level=args.log_level,
-                use_synthetic_data=args.use_synthetic_data,
-                synthetic_data_path=args.synthetic_data_path,
-                use_gpu=args.use_gpu,
-                log_level=args.log_level,
-                use_synthetic_data=args.use_synthetic_data
+                dropout=best_params['dropout']
             )
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
