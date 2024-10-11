@@ -128,7 +128,24 @@ def main(args):
     try:
         if args.use_optuna:
             logger.info("Loading best hyperparameters from Optuna study")
-            study = optuna.load_study(study_name=args.optuna_study_name, storage=args.optuna_storage)
+            study_name = args.optuna_study_name
+
+            if study_name is None:
+                # Retrieve all study summaries from the storage
+                study_summaries = optuna.get_all_study_summaries(storage=args.optuna_storage)
+                study_names = [summary.study_name for summary in study_summaries]
+                
+                if len(study_names) == 1:
+                    study_name = study_names[0]
+                    logger.info(f"Automatically selected the only available study: {study_name}")
+                elif len(study_names) == 0:
+                    logger.error("No studies found in the specified Optuna storage.")
+                    sys.exit(1)
+                else:
+                    logger.error("Multiple studies found in the specified Optuna storage. Please specify the study name using --optuna-study-name.")
+                    sys.exit(1)
+
+            study = optuna.load_study(study_name=study_name, storage=args.optuna_storage)
             best_params = study.best_params
             logger.debug(f"Loaded best parameters: {best_params}")
             
@@ -532,7 +549,12 @@ if __name__ == "__main__":
     group.add_argument("--use-profiler", action="store_true", help="Enable the custom profiler")
     group.add_argument("--fast-dev-run", action="store_true", help="Run a fast development test")
     
-    parser.add_argument("--optuna-study-name", type=str, default="gpt2_arc_optimization", help="Name of the Optuna study to load")
+    parser.add_argument(
+        "--optuna-study-name",
+        type=str,
+        default=None,
+        help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
+    )
     parser.add_argument("--optuna-storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
     parser.add_argument("--n-embd", type=int, default=4, help="Embedding dimension for profiling")
     parser.add_argument("--n-head", type=int, default=1, help="Number of attention heads for profiling")
