@@ -93,7 +93,7 @@ def main(args):
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
     log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'DEBUG', logging.DEBUG)
     logging.basicConfig(
-        level=log_level,
+        level=logging.DEBUG,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
@@ -234,8 +234,15 @@ def main(args):
             logger.info("Loading ARC dataset")
             train_set, eval_set = arckit.load_data()
             logger.info(f"Number of tasks in train_set: {len(train_set.tasks)}")
-            for task in train_set.tasks[:5]:  # Inspect the first 5 tasks
-                logger.info(f"Task {task.id} - Train samples: {len(task.train)}, Test samples: {len(task.test)}")
+            for task in train_set.tasks[:1]:  # Checking the first task
+                logger.debug(f"Task ID: {task.id}")
+                logger.debug(f"Number of train samples: {len(task.train)}")
+                if task.train:
+                    sample_input, sample_output = task.train[0]
+                    logger.debug(f"Sample input type: {type(sample_input)}, value: {sample_input}")
+                    logger.debug(f"Sample output type: {type(sample_output)}, value: {sample_output}")
+                else:
+                    logger.warning(f"Task {task.id} has no training samples.")
 
             logger.info(f"Number of tasks in eval_set: {len(eval_set.tasks)}")
             for task in eval_set.tasks[:5]:  # Inspect the first 5 tasks

@@ -97,6 +97,7 @@ class ARCDataset(Dataset):
             logger.debug("Initializing dataset with TaskSet data")
             self.data = self._process_arckit_data(data_source)
             self.num_samples = len(self.data)
+            logger.debug(f"Number of samples in self.data: {self.num_samples}")
         elif isinstance(data_source, list):
             logger.debug("Initializing dataset with list data")
             self._process_list_data_indices(data_source)
@@ -169,12 +170,7 @@ class ARCDataset(Dataset):
             logger.error(f"Failed to save cache to {cache_path}: {e}")
     
     def __len__(self):
-        if hasattr(self, 'index_mapping') and self.index_mapping:
-            return len(self.index_mapping)
-        elif hasattr(self, 'data') and self.data:
-            return len(self.data)
-        else:
-            return 0
+        return self.num_samples
 
     def get_num_samples(self):
         if hasattr(self, 'data') and self.data:
@@ -347,16 +343,21 @@ class ARCDataset(Dataset):
                 samples = task.test
             else:
                 samples = task.train
-            total_samples += len(samples)
+            sample_count = len(samples)
+            total_samples += sample_count
+            logger.debug(f"Processing task {task.id} with {sample_count} samples")
             for ex in samples:
-                input_tensor = self._preprocess_grid(ex[0])
-                output_tensor = self._preprocess_grid(ex[1])
-                processed_data.append({
-                    "input": input_tensor,
-                    "output": output_tensor,
-                    "task_id": task.id
-                })
-        logger.debug(f"Total samples processed: {total_samples}")
+                try:
+                    input_tensor = self._preprocess_grid(ex[0])
+                    output_tensor = self._preprocess_grid(ex[1])
+                    processed_data.append({
+                        "input": input_tensor,
+                        "output": output_tensor,
+                        "task_id": task.id
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing sample in task {task.id}: {e}", exc_info=True)
+        logger.debug(f"Total samples processed: {len(processed_data)}")
         return processed_data
 
 
@@ -500,11 +501,20 @@ class ARCDataset(Dataset):
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
         logger.debug(f"Preprocessing grid with initial type: {type(grid)}")
-        
-        # Convert grid to torch.Tensor if it's a list or numpy array
+        logger.debug(f"Grid content: {grid}")
+
+        if grid is None:
+            logger.error("Received None as grid input.")
+            raise ValueError("Grid input is None.")
+
         if isinstance(grid, list):
-            grid_tensor = torch.tensor(grid, dtype=torch.float32)
-            logger.debug(f"Converted list to tensor with shape: {grid_tensor.shape}")
+            # Ensure the grid is a list of lists
+            if all(isinstance(row, list) for row in grid):
+                grid_tensor = torch.tensor(grid, dtype=torch.float32)
+                logger.debug(f"Converted list to tensor with shape: {grid_tensor.shape}")
+            else:
+                logger.error("Grid is a list but does not contain lists of lists.")
+                raise ValueError("Expected grid to be a list of lists.")
         elif isinstance(grid, np.ndarray):
             grid_tensor = torch.from_numpy(grid).float()
             logger.debug(f"Converted numpy array to tensor with shape: {grid_tensor.shape}")
@@ -512,8 +522,9 @@ class ARCDataset(Dataset):
             grid_tensor = grid.float()
             logger.debug(f"Using existing tensor with shape: {grid_tensor.shape}")
         else:
+            logger.error(f"Unexpected grid type: {type(grid)}")
             raise ValueError(f"Unexpected grid type: {type(grid)}")
-    
+
         # Ensure grid_tensor has three dimensions [C, H, W]
         if grid_tensor.ndim == 2:
             logger.debug("Grid tensor is 2D. Adding channel dimension.")
