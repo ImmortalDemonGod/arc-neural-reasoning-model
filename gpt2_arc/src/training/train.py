@@ -202,8 +202,8 @@ def main(args):
                 d_state=args.d_state,
                 d_conv=args.d_conv,
                 dropout=args.dropout,
-                mamba_depth=args.mamba_depth,
-                mamba_expand=args.mamba_expand
+                mamba_depth=args.mamba_depth if args.mamba_depth is not None else 1,
+                mamba_expand=args.mamba_expand if args.mamba_expand is not None else 2
             )
             training_config = TrainingConfig(
                 batch_size=args.batch_size,
@@ -591,8 +591,8 @@ if __name__ == "__main__":
     parser.add_argument("--dropout", type=float, default=None, help="Dropout rate. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--d_state", type=int, default=None, help="Mamba state dimension. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--d_conv", type=int, default=None, help="Mamba convolution dimension. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--mamba_depth", type=int, default=None, help="Depth of each Mamba layer. Overrides Optuna's suggested value if provided.")
-    parser.add_argument("--mamba_expand", type=int, default=None, help="Expand factor for each Mamba layer. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--mamba_depth", type=int, default=1, help="Depth of each Mamba layer. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--mamba_expand", type=int, default=2, help="Expand factor for each Mamba layer. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--use_gpu", action="store_true", help="Use GPU for training if available")
     parser.add_argument("--use_grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
     parser.add_argument(
