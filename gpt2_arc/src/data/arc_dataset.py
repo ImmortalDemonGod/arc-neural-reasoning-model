@@ -88,19 +88,20 @@ class ARCDataset(Dataset):
                 logger.debug("Initializing dataset with single file")
                 self.data_files = [data_source]
                 self._build_index_from_files(self.data_files)
+                self.num_samples = len(self.index_mapping)
             else:
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
         elif TaskSet is not None and isinstance(data_source, TaskSet):
             logger.debug("Initializing dataset with TaskSet data")
             self.data = self._process_arckit_data(data_source)
+            self.num_samples = len(self.data)
         elif isinstance(data_source, list):
             logger.debug("Initializing dataset with list data")
             self.data_files = []
             self._process_list_data_indices(data_source)
+            self.num_samples = len(self.index_mapping)
         else:
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
-
-        self.num_samples = len(self.index_mapping)
         self._save_cache(self.cache_path)
 
     def _build_index_from_files(self, data_files: List[str]):
@@ -161,7 +162,10 @@ class ARCDataset(Dataset):
         return len(self.data)
 
     def get_num_samples(self):
-        return self.num_samples
+        if hasattr(self, 'data') and self.data:
+            return len(self.data)
+        else:
+            return self.num_samples
     def __getitem__(self, idx):
         if idx < 0 or idx >= len(self):
             raise IndexError(f"Index {idx} out of bounds for dataset of size {len(self)}")
