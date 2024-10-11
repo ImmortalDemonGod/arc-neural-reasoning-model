@@ -660,9 +660,5 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    # Validate mamba_ratio
-    if args.mamba_ratio < 0.0:
-        logger.error("Invalid value for --mamba-ratio: must be non-negative.")
-        sys.exit(1)
     main(args)
 
