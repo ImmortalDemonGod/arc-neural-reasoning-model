@@ -89,7 +89,7 @@ class ARCDataset(Dataset):
             else:
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
         logger.debug(f"ARCDataset initialized with data_source of type: {type(data_source)}")
-        elif isinstance(data_source, TaskSet):
+        if isinstance(data_source, TaskSet):
             logger.debug("Initializing dataset with TaskSet data")
             self.data = self._process_arckit_data(data_source)
             self.num_samples = len(self.data)
