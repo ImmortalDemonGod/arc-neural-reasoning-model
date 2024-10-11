@@ -67,6 +67,7 @@ class ARCDataset(Dataset):
         
         if self._load_cache(self.cache_path):
             logger.debug("Data index loaded from cache successfully.")
+            self.num_samples = len(self.index_mapping)
             return
 
         set_debug_mode(debug)
@@ -99,6 +100,7 @@ class ARCDataset(Dataset):
         else:
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
 
+        self.num_samples = len(self.index_mapping)
         self._save_cache(self.cache_path)
 
     def _build_index_from_files(self, data_files: List[str]):
