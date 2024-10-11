@@ -152,12 +152,23 @@ def main(args):
             n_head = 2 ** best_params['n_head_exp']
             n_embd = n_head * best_params['n_embd_multiplier']
             n_embd = 2 ** int(np.log2(n_embd))
-            
             model_config = ModelConfig(
                 n_embd=n_embd,
                 n_head=n_head,
                 n_layer=best_params['n_layer'],
                 dropout=best_params['dropout'],
+                use_gpu=args.use_gpu,
+                log_level=args.log_level,
+                use_synthetic_data=args.use_synthetic_data,
+                synthetic_data_path=args.synthetic_data_path,
+                use_gpu=args.use_gpu,
+                log_level=args.log_level,
+                use_synthetic_data=args.use_synthetic_data
+            )
+            training_config = TrainingConfig(
+                batch_size=best_params['batch_size'],
+                learning_rate=best_params['learning_rate'],
+                max_epochs=args.max_epochs,
                 use_gpu=args.use_gpu,
                 log_level=args.log_level,
                 use_synthetic_data=args.use_synthetic_data,
