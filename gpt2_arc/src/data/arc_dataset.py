@@ -101,6 +101,44 @@ class ARCDataset(Dataset):
 
         self._save_cache(self.cache_path)
 
+    def _build_index_from_files(self, data_files: List[str]):
+        """
+        Builds the index mapping and file samples count from the provided list of data files.
+        
+        Args:
+            data_files (List[str]): List of file paths to process.
+        """
+        self.index_mapping = []
+        self.file_samples_count = {}
+
+        logger.debug("Building index from files")
+        
+        for file_path in data_files:
+            try:
+                with open(file_path, 'r') as f:
+                    task_data = json.load(f)
+                
+                if isinstance(task_data, dict):
+                    samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
+                elif isinstance(task_data, list):
+                    samples = task_data
+                else:
+                    raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                
+                num_samples = len(samples)
+                self.file_samples_count[file_path] = num_samples
+                
+                for sample_idx in range(num_samples):
+                    self.index_mapping.append((file_path, sample_idx))
+                
+                logger.debug(f"Processed {num_samples} samples from {file_path}")
+            
+            except Exception as e:
+                logger.error(f"Error processing file {file_path}: {e}", exc_info=True)
+                continue  # Skip problematic files and continue with others
+
+        logger.debug(f"Total indexed samples: {len(self.index_mapping)}")
+
     def _save_cache(self, cache_path: str):
         """
         Saves the dataset index and statistics to the specified cache path using pickle.
