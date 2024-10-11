@@ -370,7 +370,7 @@ def main(args):
             checkpoint = torch.load(args.model_checkpoint)
             if 'model_config' in checkpoint:
                 model_config = ModelConfig(**checkpoint['model_config'])
-                model = GPT2ARC(config=model_config)
+                model = GPT2ARC(config=model_config, num_classes=10)
             model.load_state_dict(checkpoint['state_dict'])
 
         # Initialize results collector
