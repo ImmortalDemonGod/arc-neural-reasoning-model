@@ -14,7 +14,7 @@ from optuna.samplers import TPESampler
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from gpt2_arc.src.training.trainer import NanLossPruningCallback
-from gpt2_arc.src.training.train import ModelConfigSaver
+from gpt2_arc.src.training.callbacks import ModelConfigSaver
 
 from gpt2_arc.src.utils.model_memory_estimator import (
     calculate_params,

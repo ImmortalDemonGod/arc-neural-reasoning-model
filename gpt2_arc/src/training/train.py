@@ -36,6 +36,7 @@ from gpt2_arc.src.training.trainer import ARCTrainer
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 from gpt2_arc.src.utils import GrokfastCallback
+from gpt2_arc.src.training.callbacks import ModelConfigSaver
 
 def get_num_workers():
     try:
@@ -79,27 +80,6 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
             timestamp=self.timestamp
         )
 
-class ModelConfigSaver(Callback):
-    def __init__(self, config):
-        """
-        Initialize the ModelConfigSaver callback with the current configuration.
-
-        Args:
-            config (Config): The configuration object containing model parameters.
-        """
-        super().__init__()
-        self.config = config
-
-    def on_save_checkpoint(self, trainer, pl_module, checkpoint):
-        """
-        Override the checkpoint saving to include the model configuration.
-
-        Args:
-            trainer (pl.Trainer): The Trainer instance.
-            pl_module (pl.LightningModule): The LightningModule being trained.
-            checkpoint (dict): The checkpoint dictionary to be modified.
-        """
-        checkpoint['model_config'] = self.config.model.__dict__
 def main(args):
     # Ensure n_embd is divisible by n_head
     if args.n_embd % args.n_head != 0:
