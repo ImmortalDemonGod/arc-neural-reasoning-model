@@ -354,9 +354,6 @@ class ARCDataset(Dataset):
                     })
                 except Exception as e:
                     logger.error(f"Error processing {sample_type} example in task {task.id}: {e}", exc_info=True)
-            except Exception as e:
-                logger.error(f"Error processing {sample_type} example in task {task.id}: {e}", exc_info=True)
-                errors.append((task.id, e))
             logger.debug(f"Processed task {task.id}: Total samples added: {len(samples)}")
         if errors:
             logger.error(f"Encountered errors in {len(errors)} examples:")
