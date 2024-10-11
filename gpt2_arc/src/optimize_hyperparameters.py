@@ -496,9 +496,9 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
-    parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
+    parser.add_argument("--n-trials", type=int, default=10, help="Number of trials for optimization.")
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
-    parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
+    parser.add_argument("--n-jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
     parser.add_argument(
         "--study-name",
         type=str,
@@ -506,39 +506,39 @@ if __name__ == "__main__":
         help="Name of the Optuna study."
     )
 
-    parser.add_argument("--n_embd_min", type=int, default=4, help="Minimum value for n_embd")
-    parser.add_argument("--n_embd_max", type=int, default=8, help="Maximum value for n_embd")
-    parser.add_argument("--n_head_min", type=int, default=2, help="Minimum value for n_head")
-    parser.add_argument("--n_head_max", type=int, default=16, help="Maximum value for n_head")
-    parser.add_argument("--n_head_exp_min", type=int, default=1, help="Minimum exponent for n_head (2^x)")
-    parser.add_argument("--n_head_exp_max", type=int, default=3, help="Maximum exponent for n_head (2^x)")
-    parser.add_argument("--n_embd_multiplier_min", type=int, default=1, help="Minimum multiplier for n_embd")
-    parser.add_argument("--n_embd_multiplier_max", type=int, default=2, help="Maximum multiplier for n_embd")
-    parser.add_argument("--n_layer_min", type=int, default=4, help="Minimum value for n_layer")
-    parser.add_argument("--n_layer_max", type=int, default=8, help="Maximum value for n_layer")
-    parser.add_argument("--batch_size_min", type=int, default=32, help="Minimum value for batch_size")
-    parser.add_argument("--batch_size_max", type=int, default=128, help="Maximum value for batch_size")
-    parser.add_argument("--learning_rate_min", type=float, default=1e-5, help="Minimum value for learning_rate")
-    parser.add_argument("--learning_rate_max", type=float, default=1e-2, help="Maximum value for learning_rate")
-    parser.add_argument("--max_epochs_min", type=int, default=1, help="Minimum value for max_epochs")
-    parser.add_argument("--max_epochs_max", type=int, default=20, help="Maximum value for max_epochs")
+    parser.add_argument("--n-embd-min", type=int, default=4, help="Minimum value for n_embd")
+    parser.add_argument("--n-embd-max", type=int, default=8, help="Maximum value for n_embd")
+    parser.add_argument("--n-head-min", type=int, default=2, help="Minimum value for n_head")
+    parser.add_argument("--n-head-max", type=int, default=16, help="Maximum value for n_head")
+    parser.add_argument("--n-head-exp-min", type=int, default=1, help="Minimum exponent for n_head (2^x)")
+    parser.add_argument("--n-head-exp-max", type=int, default=3, help="Maximum exponent for n_head (2^x)")
+    parser.add_argument("--n-embd-multiplier-min", type=int, default=1, help="Minimum multiplier for n_embd")
+    parser.add_argument("--n-embd-multiplier-max", type=int, default=2, help="Maximum multiplier for n_embd")
+    parser.add_argument("--n-layer-min", type=int, default=4, help="Minimum value for n_layer")
+    parser.add_argument("--n-layer-max", type=int, default=8, help="Maximum value for n_layer")
+    parser.add_argument("--batch-size-min", type=int, default=32, help="Minimum value for batch_size")
+    parser.add_argument("--batch-size-max", type=int, default=128, help="Maximum value for batch_size")
+    parser.add_argument("--learning-rate-min", type=float, default=1e-5, help="Minimum value for learning_rate")
+    parser.add_argument("--learning-rate-max", type=float, default=1e-2, help="Maximum value for learning_rate")
+    parser.add_argument("--max-epochs-min", type=int, default=1, help="Minimum value for max_epochs")
+    parser.add_argument("--max-epochs-max", type=int, default=20, help="Maximum value for max_epochs")
 
-    parser.add_argument("--mamba_ratio_min", type=float, default=0.0, help="Minimum value for mamba_ratio")
-    parser.add_argument("--mamba_ratio_max", type=float, default=8.0, help="Maximum value for mamba_ratio")
-    parser.add_argument("--mamba_ratio_step", type=float, default=0.25, help="Step size for mamba_ratio")
-    parser.add_argument("--d_state_min", type=int, default=1, help="Minimum value for d_state")
-    parser.add_argument("--d_state_max", type=int, default=2, help="Maximum value for d_state")
-    parser.add_argument("--d_conv_min", type=int, default=1, help="Minimum value for d_conv")
-    parser.add_argument("--d_conv_max", type=int, default=2, help="Maximum value for d_conv")
+    parser.add_argument("--mamba-ratio-min", type=float, default=0.0, help="Minimum value for mamba_ratio")
+    parser.add_argument("--mamba-ratio-max", type=float, default=8.0, help="Maximum value for mamba_ratio")
+    parser.add_argument("--mamba-ratio-step", type=float, default=0.25, help="Step size for mamba_ratio")
+    parser.add_argument("--d-state-min", type=int, default=1, help="Minimum value for d_state")
+    parser.add_argument("--d-state-max", type=int, default=2, help="Maximum value for d_state")
+    parser.add_argument("--d-conv-min", type=int, default=1, help="Minimum value for d_conv")
+    parser.add_argument("--d-conv-max", type=int, default=2, help="Maximum value for d_conv")
 
-    parser.add_argument("--dropout_min", type=float, default=0.0, help="Minimum value for dropout")
-    parser.add_argument("--mamba_depth_min", type=int, default=1, help="Minimum value for mamba_depth")
-    parser.add_argument("--mamba_depth_max", type=int, default=3, help="Maximum value for mamba_depth")
-    parser.add_argument("--mamba_expand_min", type=int, default=2, help="Minimum value for mamba_expand")
-    parser.add_argument("--mamba_expand_max", type=int, default=4, help="Maximum value for mamba_expand")
-    parser.add_argument("--dropout_max", type=float, default=0.5, help="Maximum value for dropout")
-    parser.add_argument("--dropout_step", type=float, default=0.1, help="Step size for dropout")
-    parser.add_argument("--use_gpu", action="store_true", help="Flag to indicate whether to use GPU for training.")
+    parser.add_argument("--dropout-min", type=float, default=0.0, help="Minimum value for dropout")
+    parser.add_argument("--mamba-depth-min", type=int, default=1, help="Minimum value for mamba_depth")
+    parser.add_argument("--mamba-depth-max", type=int, default=3, help="Maximum value for mamba_depth")
+    parser.add_argument("--mamba-expand-min", type=int, default=2, help="Minimum value for mamba_expand")
+    parser.add_argument("--mamba-expand-max", type=int, default=4, help="Maximum value for mamba_expand")
+    parser.add_argument("--dropout-max", type=float, default=0.5, help="Maximum value for dropout")
+    parser.add_argument("--dropout-step", type=float, default=0.1, help="Step size for dropout")
+    parser.add_argument("--use-gpu", action="store_true", help="Flag to indicate whether to use GPU for training.")
     parser.add_argument("--use-synthetic-data", action="store_true", help="Flag to indicate whether to use synthetic data for training.")
     parser.add_argument(
         "--matmul-precision",
@@ -547,8 +547,8 @@ if __name__ == "__main__":
         choices=["highest", "high", "medium"],
         help="Set the internal precision of float32 matrix multiplications for optimization trials. Options: 'highest', 'high', 'medium'. Defaults to 'medium'."
     )
-    parser.add_argument("--synthetic_data_path", type=str, default="", help="Path to synthetic data for training.")
-    parser.add_argument("--log_level", type=str, default="INFO", help="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL).")
+    parser.add_argument("--synthetic-data-path", type=str, default="", help="Path to synthetic data for training.")
+    parser.add_argument("--log-level", type=str, default="INFO", help="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL).")
     parser.add_argument(
         "--accelerator",
         type=str,
