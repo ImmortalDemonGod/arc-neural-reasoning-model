@@ -524,8 +524,6 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     )
 
     logger.info(f"Starting optimization with {n_trials} trials using {n_jobs} parallel jobs")
-    trial.set_user_attr("disable_gridstats", args.disable_gridstats)
-    trial.set_user_attr("disable_symbolfreq", args.disable_symbolfreq)
 
     # Optionally, log these attributes
     logger.debug(f"disable_gridstats set to: {args.disable_gridstats}")
