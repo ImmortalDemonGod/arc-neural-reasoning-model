@@ -98,6 +98,7 @@ class ARCDataset(Dataset):
 
             # Set self.num_samples based on the processed TaskSet data
             self.num_samples = sum(len(task.test) if self.is_test else len(task.train) for task in self.data_source.tasks)
+            self.data = self._process_arckit_data(self.data_source)
             logger.debug(f"Number of samples loaded from TaskSet: {self.num_samples}")
         
         # After data initialization
