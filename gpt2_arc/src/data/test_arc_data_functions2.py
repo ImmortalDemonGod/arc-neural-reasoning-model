@@ -70,7 +70,12 @@ class TestARCDatasetIndexing(unittest.TestCase):
                 file_path = os.path.join(DATA_DIR, filename)
                 with open(file_path, 'r') as f:
                     task_data = json.load(f)
-                    num_samples = len(task_data.get('train', []))
+                    if isinstance(task_data, dict):
+                        num_samples = len(task_data.get('train', []))
+                    elif isinstance(task_data, list):
+                        num_samples = len(task_data)
+                    else:
+                        num_samples = 0
                     expected_num_samples += num_samples
 
         actual_num_samples = len(dataset)

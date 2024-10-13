@@ -245,6 +245,10 @@ class ARCDataset(Dataset):
         logger.debug(f"Task data content: {task_data}")
     
         if isinstance(task_data, dict):
+            if 'train' not in task_data and 'test' not in task_data:
+                error_msg = f"Task data for task_id '{task_id}' must contain at least 'train' or 'test' keys."
+                logger.error(error_msg)
+                raise ValueError(error_msg)
             train_examples = task_data.get("train", [])
             test_examples = task_data.get("test", [])
             logger.debug(f"Dict task data - Train examples: {len(train_examples)}, Test examples: {len(test_examples)}")
@@ -346,7 +350,7 @@ class ARCDataset(Dataset):
         Computes dataset statistics and caches them alongside the dataset cache.
         """
         logger.debug("Computing dataset statistics")
-        grid_size_stats = self._compute_grid_size_stats()
+        grid_size_stats = self.get_grid_size_stats()
         symbol_frequencies = self._compute_symbol_frequencies()
         
         statistics = {
