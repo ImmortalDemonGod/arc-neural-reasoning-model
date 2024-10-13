@@ -225,7 +225,8 @@ def main(args):
                 grokfast_type=args.grokfast_type,
                 grokfast_alpha=args.grokfast_alpha,
                 grokfast_lamb=args.grokfast_lamb,
-                grokfast_window_size=args.grokfast_window_size
+                grokfast_window_size=args.grokfast_window_size,
+                balance_symbols=not args.disable_symbolfreq
             )
         
         config = Config(model=model_config, training=training_config)

@@ -133,10 +133,9 @@ class ARCDataset(Dataset):
                 logger.debug(f"Number of samples (str - directory): {self.num_samples}")
             elif self.collect_symbol_freq:
                 logger.debug("Processing symbol frequencies.")
-                # Symbol frequency computation logic would go here if needed
-                # For example, ensure get_symbol_frequencies is called later
-                logger.debug("Grid size statistics collection is disabled.")
-                self.statistics = {}
+                self.symbol_frequencies = self.get_symbol_frequencies()
+                logger.debug(f"Computed symbol frequencies: {self.symbol_frequencies}")
+                self.statistics = {"symbol_frequencies": self.symbol_frequencies}
             return
         
 
