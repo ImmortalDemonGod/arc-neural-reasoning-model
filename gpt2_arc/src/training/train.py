@@ -65,6 +65,8 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
             epoch=metrics.get("epoch", 0),
             timestamp=self.timestamp,
             collect_grid_stats=not args.disable_gridstats   # Pass the flag
+            collect_symbol_freq=not args.disable_symbolfreq  # Pass the flag
+            collect_symbol_freq=not args.disable_symbolfreq  # Pass the flag
         )
 
 import pytorch_lightning as pl
@@ -288,34 +290,43 @@ def main(args):
             logger.info(f"Number of training examples: {len(train_data)}")
             logger.info(f"Number of validation examples: {len(val_data)}")
 
-        if not args.disable_gridstats:
-            # Access dataset statistics
-            logger.debug("Calling train_data.get_grid_size_stats()")
-            train_grid_stats = train_data.get_grid_size_stats()
-            logger.debug("Completed train_data.get_grid_size_stats()")
-            logger.debug("Calling train_data.get_symbol_frequencies()")
-            train_symbol_freq = train_data.get_symbol_frequencies()
-            logger.debug("Completed train_data.get_symbol_frequencies()")
-    
-            val_grid_stats = val_data.get_grid_size_stats()
-            val_symbol_freq = val_data.get_symbol_frequencies()
-    
-            # Convert train_symbol_freq from numpy array to dictionary with integer keys
-            train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
-    
-            # Update the TrainingConfig with the symbol_freq dictionary
+        if not args.disable_symbolfreq:
+            if not args.disable_gridstats:
+                logger.debug("Calling train_data.get_grid_size_stats()")
+                train_grid_stats = train_data.get_grid_size_stats()
+                logger.debug("Completed train_data.get_grid_size_stats()")
+                val_grid_stats = val_data.get_grid_size_stats()
+            else:
+                train_grid_stats, val_grid_stats = None, None
+
+            if hasattr(train_data, 'statistics'):
+                train_symbol_freq = train_data.statistics.get("symbol_frequencies", {})
+                val_symbol_freq = val_data.statistics.get("symbol_frequencies", {})
+            else:
+                train_symbol_freq = {}
+                val_symbol_freq = {}
+
+            if not train_symbol_freq:
+                logger.error("Training symbol frequencies are empty. Cannot initialize GPT2ARC.")
+                sys.exit(1)
+
+            train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in train_symbol_freq.items()}
             training_config.symbol_freq = train_symbol_freq_dict
-    
+
             logger.info(f"Train Grid Size Stats: {train_grid_stats}")
             logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
             logger.info(f"Validation Grid Size Stats: {val_grid_stats}")
             logger.info(f"Validation Symbol Frequencies: {val_symbol_freq}")
         else:
-            logger.info("Grid size statistics computation is disabled.")
+            logger.info("Symbol frequency computation is disabled.")
+            training_config.symbol_freq = {}
             train_symbol_freq_dict = {}
-            training_config.symbol_freq = train_symbol_freq_dict
-            train_grid_stats, val_grid_stats = None, None
             val_symbol_freq = {}
+            if not args.disable_gridstats:
+                train_grid_stats = train_data.get_grid_size_stats()
+                val_grid_stats = val_data.get_grid_size_stats()
+            else:
+                train_grid_stats, val_grid_stats = None, None
 
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
@@ -383,14 +394,20 @@ def main(args):
         )
         logger.debug(f"DataLoaders created with batch size {args.batch_size}")
 
-        # Ensure symbol_freq is non-empty
-        if not train_symbol_freq_dict:
+        if not args.disable_symbolfreq and not training_config.symbol_freq:
             logger.error("Training symbol frequencies are empty. Cannot initialize GPT2ARC.")
             sys.exit(1)
 
-        # Initialize model with symbol_freq
-        logger.info("Initializing model")
-        model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=train_symbol_freq_dict)
+        if training_config.symbol_freq:
+            logger.info("Initializing model with symbol frequencies.")
+        else:
+            logger.info("Initializing model without symbol frequencies.")
+
+        model = GPT2ARC(
+            config=config,
+            num_classes=num_classes,
+            symbol_freq=train_symbol_freq_dict if not args.disable_symbolfreq else None
+        )
         logger.debug(f"Model initialized with config: {model_config}")
 
         # Load the checkpoint if specified
@@ -624,7 +641,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Disable the computation of grid size statistics."
     )
-    parser.add_argument("--n_embd", type=int, default=208, help="Embedding dimension. Must be divisible by n_head. Overrides Optuna's suggested value if provided.")
+    parser.add_argument(
+        "--disable_symbolfreq",
+        action="store_true",
+        help="Disable the computation of symbol frequencies."
+    )
     parser.add_argument("--n_head", type=int, default=8, help="Number of attention heads. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--n_layer", type=int, default=12, help="Number of transformer layers. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training. Overrides Optuna's suggested value if provided.")

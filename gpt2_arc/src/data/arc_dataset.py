@@ -49,7 +49,9 @@ class ARCDataset(Dataset):
         use_cache: bool = True,  # Ensure this line exists
         debug: bool = False,      # Added debug parameter
         collect_grid_stats: bool = True,   # Added parameter to control gridstats
+        collect_symbol_freq: bool = True,  # Added parameter to control symbol frequencies
     ):
+        self.collect_symbol_freq = collect_symbol_freq  # Initialize the new attribute
         self.debug = debug  # Initialize debug attribute
         self.collect_grid_stats = collect_grid_stats  # Initialize the new attribute
         self.data = []  # Initialize self.data to ensure it's always defined
@@ -74,6 +76,8 @@ class ARCDataset(Dataset):
         )
         
         if self.use_cache and self._load_cache(self.cache_path):
+            if not self.collect_symbol_freq:
+                self.symbol_frequencies = {}
             logger.debug("Data index loaded from cache successfully.")
             logger.debug(f"Number of samples after loading cache: {self.num_samples}")
             if self.num_samples == 0:
@@ -127,7 +131,10 @@ class ARCDataset(Dataset):
                 self.num_samples = len(self.index_mapping)
                 logger.debug(f"Number of samples (str - file): {self.num_samples}")
                 logger.debug(f"Number of samples (str - directory): {self.num_samples}")
-            else:
+            elif self.collect_symbol_freq:
+                logger.debug("Processing symbol frequencies.")
+                # Symbol frequency computation logic would go here if needed
+                # For example, ensure get_symbol_frequencies is called later
                 logger.debug("Grid size statistics collection is disabled.")
                 self.statistics = {}
             return
@@ -166,10 +173,43 @@ class ARCDataset(Dataset):
             logger.debug(f"Number of samples (list): {self.num_samples}")
 
         if self.use_cache:
-            # Compute and cache dataset statistics after data initialization
             self._compute_and_cache_statistics()
         else:
             logger.debug("Caching is disabled. Skipping cache computation and saving.")
+
+    def _compute_and_cache_statistics(self):
+        if not self.collect_grid_stats and not self.collect_symbol_freq:
+            logger.debug("Both grid size statistics and symbol frequency collection are disabled. Skipping statistics computation.")
+            return
+
+        if self.collect_grid_stats:
+            try:
+                grid_size_stats = self.get_grid_size_stats()
+                logger.debug(f"Computed grid size stats: {grid_size_stats}")
+            except Exception as e:
+                logger.error(f"Error computing grid size stats: {e}", exc_info=True)
+                grid_size_stats = {}
+        else:
+            grid_size_stats = {}
+
+        if self.collect_symbol_freq:
+            try:
+                symbol_frequencies = self.get_symbol_frequencies()
+                logger.debug(f"Computed symbol frequencies: {symbol_frequencies}")
+            except Exception as e:
+                logger.error(f"Error computing symbol frequencies: {e}", exc_info=True)
+                symbol_frequencies = {}
+        else:
+            symbol_frequencies = {}
+
+        statistics = {
+            "grid_size_stats": grid_size_stats,
+            "symbol_frequencies": symbol_frequencies
+        }
+        
+        self.statistics = statistics
+        self._save_cache(self.cache_path)
+        logger.debug("Dataset statistics computed and cached successfully.")
 
     def _process_list_data_indices(self, data_list: List[Dict]):
         """
