@@ -61,8 +61,10 @@ def main(args):
     logger.info(f"Inspecting the first {num_train_samples_to_inspect} training samples:")
     for i in range(num_train_samples_to_inspect):
         try:
-            input_tensor, output_tensor, task_id = train_dataset[i]
+            sample = train_dataset[i]
+            input_tensor, output_tensor, task_id = sample
             logger.debug(f"Training Sample {i + 1}:")
+            logger.debug(f"  Sample Keys: {sample.keys()}")
             logger.debug(f"  Task ID: {task_id}")
             logger.debug(f"  Input Tensor Shape: {input_tensor.shape}")
             logger.debug(f"  Output Tensor Shape: {output_tensor.shape}")
@@ -74,8 +76,10 @@ def main(args):
     logger.info(f"Inspecting the first {num_eval_samples_to_inspect} evaluation samples:")
     for i in range(num_eval_samples_to_inspect):
         try:
-            input_tensor, output_tensor, task_id = eval_dataset[i]
+            sample = eval_dataset[i]
+            input_tensor, output_tensor, task_id = sample
             logger.debug(f"Evaluation Sample {i + 1}:")
+            logger.debug(f"  Sample Keys: {sample.keys()}")
             logger.debug(f"  Task ID: {task_id}")
             logger.debug(f"  Input Tensor Shape: {input_tensor.shape}")
             logger.debug(f"  Output Tensor Shape: {output_tensor.shape}")
@@ -92,7 +96,15 @@ def main(args):
     for i in range(num_synthetic_samples_to_inspect):
         try:
             sample = synthetic_dataset[i]
-            logger.debug(f"Synthetic Training Sample {i}: Task ID: {sample[2]}, Input Shape: {sample[0].shape}, Output Shape: {sample[1].shape}")
+            if isinstance(sample, tuple) and len(sample) == 3:
+                input_tensor, output_tensor, task_id = sample
+                logger.debug(f"Synthetic Training Sample {i + 1}:")
+                logger.debug(f"  Sample Keys: {ARCDataset.__getitem__.__doc__}")  # Optional: Print method docstring
+                logger.debug(f"  Task ID: {task_id}")
+                logger.debug(f"  Input Tensor Shape: {input_tensor.shape}")
+                logger.debug(f"  Output Tensor Shape: {output_tensor.shape}")
+            else:
+                logger.warning(f"Synthetic Sample {i + 1} has unexpected format: {type(sample)} with content: {sample}")
         except Exception as e:
             logger.error(f"Error accessing synthetic training sample {i}: {e}")
     
