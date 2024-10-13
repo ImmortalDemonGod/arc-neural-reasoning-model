@@ -30,14 +30,6 @@ handler.setFormatter(formatter)
 # Add the handler to the logger
 logger.addHandler(handler)
 
-# Function to set debug mode
-def set_debug_mode(debug=False):
-    if debug:
-        logger.setLevel(logging.DEBUG)
-        handler.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.ERROR)
-        handler.setLevel(logging.ERROR)
 
 class ARCDataset(Dataset):
     def __init__(
@@ -46,7 +38,6 @@ class ARCDataset(Dataset):
         is_test: bool = False,
         num_symbols: int = 10,
         test_split: float = 0.2,
-        debug=False,
         use_cache: bool = True,  # Ensure this line exists
     ):
         self.data = []  # Initialize self.data to ensure it's always defined
@@ -58,7 +49,6 @@ class ARCDataset(Dataset):
         self.index_mapping = []
         self.file_samples_count = {}
 
-        print(f"[DEBUG] Initializing ARCDataset with use_cache={use_cache}")  # Debug statement
         self.use_cache = use_cache
 
         self.cache_path = self._generate_cache_path(
@@ -77,11 +67,6 @@ class ARCDataset(Dataset):
         else:
             logger.debug("Caching is disabled. Proceeding to load data without cache.")
         
-        set_debug_mode(debug)
-        logger.debug("Starting ARCDataset initialization with lazy loading")
-
-        set_debug_mode(debug)
-        logger.debug("Starting ARCDataset initialization")
 
         if isinstance(data_source, str):
             logger.debug(f"Initializing dataset with data_source of type: str")

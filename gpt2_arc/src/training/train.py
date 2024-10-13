@@ -105,7 +105,6 @@ def main(args):
         with_stack=True  # Enable stack tracing
     ) if args.use_profiler else None
     
-    logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
     
     logger.info("Starting main function")
     logger.debug(f"Command line arguments: {args}")

@@ -21,7 +21,6 @@ def main(args):
         synthetic_dataset = ARCDataset(
             data_source=args.synthetic_data_path,
             is_test=False,  # Assuming synthetic data is for training; set to True if for testing
-            debug=True,
             use_cache=not args.no_cache  # Pass the use_cache flag
         )
         logger.info("Synthetic ARCDataset initialized successfully.")
@@ -40,7 +39,6 @@ def main(args):
         train_dataset = ARCDataset(
             data_source=train_set,
             is_test=False,
-            debug=True,
             use_cache=not args.no_cache  # Pass the use_cache flag
         )
         logger.info("Train ARCDataset initialized successfully.")
@@ -53,7 +51,6 @@ def main(args):
         eval_dataset = ARCDataset(
             data_source=eval_set,
             is_test=True,
-            debug=True,
             use_cache=not args.no_cache  # Pass the use_cache flag
         )
         logger.info("Eval ARCDataset initialized successfully.")
