@@ -218,7 +218,12 @@ def objective(trial, args):
         )
         logger.debug(f"Model config: {model_config}")
 
-        # Create TrainingConfig with Grokfast parameters from args
+        # Determine whether to collect grid stats and symbol frequencies based on flags
+        collect_grid_stats = not args.disable_gridstats
+        collect_symbol_freq = not args.disable_symbolfreq
+        balance_symbols = not args.disable_symbolfreq  # Disable balancing if symbol frequencies are not collected
+
+        # Create TrainingConfig with the new parameters
         training_config = TrainingConfig(
             batch_size=batch_size,
             learning_rate=learning_rate,
@@ -227,7 +232,11 @@ def objective(trial, args):
             grokfast_type=grokfast_type,
             grokfast_alpha=grokfast_alpha,
             grokfast_lamb=grokfast_lamb,
-            grokfast_window_size=grokfast_window_size
+            grokfast_window_size=grokfast_window_size,
+            collect_grid_stats=collect_grid_stats,
+            collect_symbol_freq=collect_symbol_freq,
+            balance_symbols=balance_symbols,
+            balancing_method="weighting" if balance_symbols else None  # Only set if balancing is enabled
         )
 
         config = Config(model=model_config, training=training_config)
@@ -328,10 +337,19 @@ def objective(trial, args):
             logger.error("symbol_freq_dict is empty. Cannot proceed with balance_symbols=True and balancing_method='weighting'.")
             raise ValueError("symbol_freq must be provided and non-empty when balance_symbols is True and balancing_method is 'weighting'.")
 
-        # Create model and trainer
+        # After defining training_config
+        config = Config(
+            model=model_config,
+            training=training_config
+        )
         logger.debug("Creating model and trainer")
         num_classes = 10  # Set this to the appropriate number of classes for your task
-        model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
+        # Proceed with the rest of the training setup using the updated config
+        model = GPT2ARC(
+            config=config,
+            num_classes=num_classes,
+            symbol_freq=symbol_freq_dict if collect_symbol_freq else None
+        )
 
         # Generate model summary
         logger.debug("Attempting to generate model summary")
@@ -506,6 +524,12 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     )
 
     logger.info(f"Starting optimization with {n_trials} trials using {n_jobs} parallel jobs")
+    trial.set_user_attr("disable_gridstats", args.disable_gridstats)
+    trial.set_user_attr("disable_symbolfreq", args.disable_symbolfreq)
+
+    # Optionally, log these attributes
+    logger.debug(f"disable_gridstats set to: {args.disable_gridstats}")
+    logger.debug(f"disable_symbolfreq set to: {args.disable_symbolfreq}")
     study.optimize(partial(objective, args=args), n_trials=n_trials, n_jobs=n_jobs)
 
     logger.info("Optimization completed")
@@ -610,6 +634,16 @@ if __name__ == "__main__":
     parser.add_argument("--grokfast_window_size_min", type=int, default=50, help="Minimum value for grokfast_window_size.")
     parser.add_argument("--grokfast_window_size_max", type=int, default=200, help="Maximum value for grokfast_window_size.")
     parser.add_argument("--grokfast_type_choices", type=str, nargs='+', default=["ema", "ma"], choices=["ema", "ma"], help="List of Grokfast types to consider during tuning.")
+    parser.add_argument(
+        "--disable_gridstats",
+        action="store_true",
+        help="Disable the computation of grid size statistics during hyperparameter optimization."
+    )
+    parser.add_argument(
+        "--disable_symbolfreq",
+        action="store_true",
+        help="Disable the computation of symbol frequencies during hyperparameter optimization."
+    )
 
 
     args = parser.parse_args()
