@@ -66,6 +66,8 @@ class ARCDataset(Dataset):
         if self._load_cache(self.cache_path):
             logger.debug("Data index loaded from cache successfully.")
             self.num_samples = len(self.index_mapping)
+            logger.debug(f"Number of samples (str - file): {self.num_samples}")
+            logger.debug(f"Number of samples (str - directory): {self.num_samples}")
             return
 
         set_debug_mode(debug)
@@ -98,12 +100,13 @@ class ARCDataset(Dataset):
             logger.debug("Initializing dataset with TaskSet data")
             self.data = self._process_arckit_data(data_source)
             self.num_samples = len(self.data)
-            logger.debug(f"Number of samples in self.data: {self.num_samples}")
+            logger.debug(f"Number of samples (TaskSet): {self.num_samples}")
             logger.debug(f"Data processed from TaskSet with {self.num_samples} samples.")
         elif isinstance(data_source, list):
             logger.debug("Initializing dataset with list data")
             self._process_list_data_indices(data_source)
-            self.data = data_source  # Ensure self.data is defined
+            self.data = data_source
+            logger.debug(f"Number of samples (list): {self.num_samples}")
 
     def _process_list_data_indices(self, data_list: List[Dict]):
         """
