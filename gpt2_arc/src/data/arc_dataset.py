@@ -199,44 +199,52 @@ class ARCDataset(Dataset):
         if idx < 0 or idx >= len(self):
             raise IndexError(f"Index {idx} out of bounds for dataset of size {len(self)}")
 
+        logger.debug(f"Retrieving item at index {idx}")
+        
         if hasattr(self, 'index_mapping') and self.index_mapping:
             file_path, sample_idx = self.index_mapping[idx]
+            logger.debug(f"Index mapping - File: {file_path}, Sample Index: {sample_idx}")
             try:
                 with open(file_path, 'r') as f:
                     task_data = json.load(f)
 
                 if isinstance(task_data, dict):
-                    samples = task_data.get('samples', [])  # Modify 'samples' key as per your data
+                    samples = task_data.get('train', []) if not self.is_test else task_data.get('test', [])
+                    logger.debug(f"Extracted {len(samples)} samples from {'train' if not self.is_test else 'test'} split.")
                     sample = samples[sample_idx]
                 elif isinstance(task_data, list):
                     sample = task_data[sample_idx]
+                    logger.debug(f"Extracted sample {sample_idx} from list data.")
                 else:
                     raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
 
                 input_tensor = self._preprocess_grid(sample['input'])
                 output_tensor = self._preprocess_grid(sample['output'])
                 task_id = sample.get('task_id', "default_task")
+                logger.debug(f"Retrieved sample {idx}: task_id={task_id}")
+                return input_tensor, output_tensor, task_id
             except Exception as e:
                 logger.error(f"Error loading sample {sample_idx} from file {file_path}: {e}", exc_info=True)
-                raise IndexError(f"Failed to load sample {sample_idx} from file {file_path}")
+                raise RuntimeError("Unexpected error in __getitem__") from e
         elif hasattr(self, 'data') and self.data:
             sample = self.data[idx]
             logger.debug(f"Processing sample index {idx}: {sample}")
-            
+
             if not isinstance(sample, dict):
                 logger.error(f"Expected sample to be a dict, but got {type(sample)}. Sample content: {sample}")
                 raise ValueError(f"Invalid sample format at index {idx}")
-            
+
             input_tensor = sample.get("input")
             output_tensor = sample.get("output")
             task_id = sample.get('task_id', "default_task")
-            
+
             if input_tensor is None or output_tensor is None:
                 logger.error(f"Sample at index {idx} has missing 'input' or 'output'.")
                 raise ValueError(f"Missing data in sample at index {idx}")
-            
+
             return input_tensor, output_tensor, task_id
         else:
+            logger.error("No data available in ARCDataset.")
             raise IndexError("No data available in ARCDataset.")
     
     def _process_single_task(self, task_data: Union[Dict, List], task_id: str) -> List[Dict]:
@@ -245,7 +253,10 @@ class ARCDataset(Dataset):
         logger.debug(f"Task data content: {task_data}")
     
         if isinstance(task_data, dict):
-            if 'train' not in task_data and 'test' not in task_data:
+            has_train = 'train' in task_data
+            has_test = 'test' in task_data
+            logger.debug(f"Has train: {has_train}, Has test: {has_test}")
+            if not has_train and not has_test:
                 error_msg = f"Task data for task_id '{task_id}' must contain at least 'train' or 'test' keys."
                 logger.error(error_msg)
                 raise ValueError(error_msg)
