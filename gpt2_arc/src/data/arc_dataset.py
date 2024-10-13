@@ -52,6 +52,7 @@ class ARCDataset(Dataset):
         self.num_symbols = num_symbols
         self.data_files = []
         self.data_source = data_source
+        self.data = []  # Initialize self.data to ensure it's always defined
         self.index_mapping = []
         self.file_samples_count = {}
 
@@ -98,6 +99,7 @@ class ARCDataset(Dataset):
             self.data = self._process_arckit_data(data_source)
             self.num_samples = len(self.data)
             logger.debug(f"Number of samples in self.data: {self.num_samples}")
+            logger.debug(f"Data processed from TaskSet with {self.num_samples} samples.")
         elif isinstance(data_source, list):
             logger.debug("Initializing dataset with list data")
             self._process_list_data_indices(data_source)
@@ -113,7 +115,7 @@ class ARCDataset(Dataset):
         self.num_samples = len(self.index_mapping)
         logger.debug(f"Processed {self.num_samples} samples from list data source.")
 
-        logger.debug(f"ARCDataset initialized with {self.num_samples} samples")
+        logger.debug(f"ARCDataset initialized with {self.num_samples} samples.")
 
     def _build_index_from_files(self, data_files: List[str]):
         """
