@@ -64,6 +64,8 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
             val_loss=metrics.get("val_loss", 0.0),
             epoch=metrics.get("epoch", 0),
             timestamp=self.timestamp
+            collect_grid_stats=not args.disable_gridstats   # Pass the flag
+            collect_grid_stats=not args.disable_gridstats   # Pass the flag
         )
 
 import pytorch_lightning as pl
@@ -312,19 +314,25 @@ def main(args):
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
 
-        # Log dataset statistics to ExperimentTracker
-        tracker.log_metric("train_max_grid_height", train_grid_stats.get("max_height", 0))
-        tracker.log_metric("train_max_grid_width", train_grid_stats.get("max_width", 0))
-        tracker.log_metric("train_symbol_frequencies", train_symbol_freq)
-
-        tracker.log_metric("val_max_grid_height", val_grid_stats.get("max_height", 0))
-        tracker.log_metric("val_max_grid_width", val_grid_stats.get("max_width", 0))
-        tracker.log_metric("val_symbol_frequencies", val_symbol_freq)
+        if not args.disable_gridstats:
+            # Log dataset statistics to ExperimentTracker
+            tracker.log_metric("train_max_grid_height", train_grid_stats.get("max_height", 0))
+            tracker.log_metric("train_max_grid_width", train_grid_stats.get("max_width", 0))
+            tracker.log_metric("train_symbol_frequencies", train_symbol_freq)
+    
+            tracker.log_metric("val_max_grid_height", val_grid_stats.get("max_height", 0))
+            tracker.log_metric("val_max_grid_width", val_grid_stats.get("max_width", 0))
+            tracker.log_metric("val_symbol_frequencies", val_symbol_freq)
+        else:
+            logger.debug("Skipping logging of grid size statistics and symbol frequencies.")
 
         # Example: Adjust model configuration based on grid size stats
-        max_grid_height = max(train_grid_stats.get("max_height", 30), val_grid_stats.get("max_height", 30))
-        max_grid_width = max(train_grid_stats.get("max_width", 30), val_grid_stats.get("max_width", 30))
-        logger.debug(f"Adjusted max grid size - Height: {max_grid_height}, Width: {max_grid_width}")
+        if not args.disable_gridstats:
+            max_grid_height = max(train_grid_stats.get("max_height", 30), val_grid_stats.get("max_height", 30))
+            max_grid_width = max(train_grid_stats.get("max_width", 30), val_grid_stats.get("max_width", 30))
+            logger.debug(f"Adjusted max grid size - Height: {max_grid_height}, Width: {max_grid_width}")
+        else:
+            logger.debug("Grid size statistics are disabled; skipping model configuration adjustments based on grid size.")
 
         # Set the number of classes
         num_classes = 10
@@ -605,6 +613,11 @@ if __name__ == "__main__":
         help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
     )
     parser.add_argument("--optuna_storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
+    parser.add_argument(
+        "--disable_gridstats",
+        action="store_true",
+        help="Disable the computation of grid size statistics."
+    )
     parser.add_argument("--n_embd", type=int, default=208, help="Embedding dimension. Must be divisible by n_head. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--n_head", type=int, default=8, help="Number of attention heads. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--n_layer", type=int, default=12, help="Number of transformer layers. Overrides Optuna's suggested value if provided.")

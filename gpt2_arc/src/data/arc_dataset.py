@@ -48,8 +48,10 @@ class ARCDataset(Dataset):
         test_split: float = 0.2,
         use_cache: bool = True,  # Ensure this line exists
         debug: bool = False,      # Added debug parameter
+        collect_grid_stats: bool = True,   # Added parameter to control gridstats
     ):
         self.debug = debug  # Initialize debug attribute
+        self.collect_grid_stats = collect_grid_stats  # Initialize the new attribute
         self.data = []  # Initialize self.data to ensure it's always defined
         self.test_split = test_split
         self.is_test = is_test
@@ -105,30 +107,29 @@ class ARCDataset(Dataset):
         if self.num_samples == 0:
             logger.error(f"No samples loaded from data source: {self.data_source}. Please verify the data source path and contents.")
         elif isinstance(self.data_source, TaskSet):
-            logger.debug("Processing TaskSet data source for grid size stats.")
-            logger.debug("Processing TaskSet data source for grid size stats from processed data.")
-            max_height, max_width = 0, 0
-            for sample in self.data:
-                try:
-                    if not isinstance(sample, dict):
-                        logger.error(f"Expected sample to be a dict, but got {type(sample)}. Sample content: {sample}")
+            if self.collect_grid_stats:                # Conditionally compute grid size stats
+                logger.debug("Processing TaskSet data source for grid size stats.")
+                max_height, max_width = 0, 0
+                for sample in self.data:
+                    try:
+                        if not isinstance(sample, dict):
+                            logger.error(f"Expected sample to be a dict, but got {type(sample)}. Sample content: {sample}")
+                            continue
+                        input_shape = self._get_grid_shape(sample['input'])
+                        output_shape = self._get_grid_shape(sample['output'])
+                        max_height = max(max_height, input_shape[1], output_shape[1])
+                        max_width = max(max_width, input_shape[2], output_shape[2])
+                    except Exception as e:
+                        logger.error("Error processing sample for grid size stats.", exc_info=True)
                         continue
-                    input_shape = self._get_grid_shape(sample['input'])
-                    output_shape = self._get_grid_shape(sample['output'])
-                    max_height = max(max_height, input_shape[1], output_shape[1])
-                    max_width = max(max_width, input_shape[2], output_shape[2])
-                except Exception as e:
-                    logger.error("Error processing sample for grid size stats.", exc_info=True)
-                    continue
 
-            # Update num_samples based on processed data
-            self.num_samples = len(self.data)
-            logger.debug(f"Number of samples after processing data: {self.num_samples}")
-            logger.debug(f"Number of samples loaded: {self.num_samples}")
-            logger.debug("Data index loaded from cache successfully.")
-            self.num_samples = len(self.index_mapping)
-            logger.debug(f"Number of samples (str - file): {self.num_samples}")
-            logger.debug(f"Number of samples (str - directory): {self.num_samples}")
+                # Update num_samples based on processed data
+                self.num_samples = len(self.index_mapping)
+                logger.debug(f"Number of samples (str - file): {self.num_samples}")
+                logger.debug(f"Number of samples (str - directory): {self.num_samples}")
+            else:
+                logger.debug("Grid size statistics collection is disabled.")
+                self.statistics = {}
             return
         
 
@@ -442,7 +443,9 @@ class ARCDataset(Dataset):
         """
         Computes dataset statistics and caches them alongside the dataset cache.
         """
-        logger.debug("Starting computation of dataset statistics.")
+        if not self.collect_grid_stats:
+            logger.debug("Grid size statistics collection is disabled. Skipping statistics computation.")
+            return
         try:
             grid_size_stats = self.get_grid_size_stats()
             symbol_frequencies = self.get_symbol_frequencies()
