@@ -11,7 +11,7 @@ def main():
     logger = logging.getLogger(__name__)
     
     # Specify the path to your arckit data
-    data_path = '/path/to/arckit/data'  # ➡️ **Replace this with your actual data path**
+    data_path = '/workspaces/arc-neural-reasoning-model/gpt2_arc/src/data/SyntheticARC/task_small'  # ➡️ **Replace this with your actual data path**
     
     # Initialize the ARCDataset
     try:
