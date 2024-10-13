@@ -44,9 +44,9 @@ def main():
     logger.info(f"Total number of evaluation samples in dataset: {eval_total_samples}")
     
     # Basic Verification: Inspect First 5 Training Samples
-    num_train_samples_to_inspect = min(5, train_total_samples)
+    num_train_samples_to_inspect = min(train_total_samples, 5)
     logger.info(f"Inspecting the first {num_train_samples_to_inspect} training samples:")
-    for i in range(3):
+    for i in range(num_train_samples_to_inspect):
         try:
             input_tensor, output_tensor, task_id = train_dataset[i]
             logger.debug(f"Training Sample {i + 1}:")
