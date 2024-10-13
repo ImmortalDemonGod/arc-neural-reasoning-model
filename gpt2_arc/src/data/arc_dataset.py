@@ -394,7 +394,7 @@ class ARCDataset(Dataset):
                         task_id = os.path.splitext(filename)[0]
                         processed_samples = self._process_single_task(task_data, task_id=task_id)
                         self.data.extend(processed_samples)
-                    logger.debug(f"Extended data with {len(processed_samples)} samples from {file_path}")
+                        logger.debug(f"Extended data with {len(processed_samples)} samples from {file_path}")
                     except json.JSONDecodeError as e:
                         logger.error(f"Error decoding JSON from file {file_path}: {e}")
 
