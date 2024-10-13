@@ -233,8 +233,6 @@ def objective(trial, args):
             grokfast_alpha=grokfast_alpha,
             grokfast_lamb=grokfast_lamb,
             grokfast_window_size=grokfast_window_size,
-            collect_grid_stats=collect_grid_stats,
-            collect_symbol_freq=collect_symbol_freq,
             balance_symbols=balance_symbols,
             balancing_method="weighting" if balance_symbols else None  # Only set if balancing is enabled
         )

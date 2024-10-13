@@ -188,8 +188,6 @@ def main(args):
                 n_head=n_head,
                 n_layer=best_params['n_layer'],
                 dropout=best_params['dropout'],
-                collect_grid_stats=not args.disable_gridstats,
-                collect_symbol_freq=not args.disable_symbolfreq
             )
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
