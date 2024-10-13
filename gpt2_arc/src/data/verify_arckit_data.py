@@ -91,11 +91,8 @@ def main(args):
     logger.info(f"Inspecting the first {num_synthetic_samples_to_inspect} synthetic training samples:")
     for i in range(num_synthetic_samples_to_inspect):
         try:
-            input_tensor, output_tensor, task_id = synthetic_dataset[i]
-            logger.debug(f"Synthetic Training Sample {i + 1}:")
-            logger.debug(f"  Task ID: {task_id}")
-            logger.debug(f"  Input Tensor Shape: {input_tensor.shape}")
-            logger.debug(f"  Output Tensor Shape: {output_tensor.shape}")
+            sample = synthetic_dataset[i]
+            logger.debug(f"Synthetic Training Sample {i}: Task ID: {sample[2]}, Input Shape: {sample[0].shape}, Output Shape: {sample[1].shape}")
         except Exception as e:
             logger.error(f"Error accessing synthetic training sample {i}: {e}")
     

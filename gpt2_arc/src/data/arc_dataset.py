@@ -218,13 +218,13 @@ class ARCDataset(Dataset):
         else:
             raise IndexError("No data available in ARCDataset.")
     
-    def _process_single_task(self, task_data: Dict) -> Dict:
-        processed_task = {"train": [], "test": []}
+    def _process_single_task(self, task_data: Dict, task_id: str) -> List[Dict]:
+        processed_task = []
         for split in ["train", "test"]:
             for sample in task_data.get(split, []):
                 input_grid = torch.tensor(sample["input"], dtype=torch.float32).unsqueeze(0)
                 output_grid = torch.tensor(sample["output"], dtype=torch.float32).unsqueeze(0)
-                processed_task[split].append({"input": input_grid, "output": output_grid})
+                processed_task.append({"input": input_grid, "output": output_grid, "task_id": task_id})
         return processed_task
 
 
