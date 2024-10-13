@@ -584,17 +584,6 @@ class ARCDataset(Dataset):
         logger.debug(f"Extracted symbols with shape: {grid_tensor.shape}")
         return grid_tensor
 
-    def _compute_grid_size_stats(self):
-        max_height, max_width = 0, 0
-        for sample in self.data:
-            # Assuming sample["input"] and sample["output"] have shape [C, H, W]
-            input_tensor = self._preprocess_grid(sample["input"])
-            output_tensor = self._preprocess_grid(sample["output"])
-            max_height = max(max_height, input_tensor.shape[1], output_tensor.shape[1])
-            max_width = max(max_width, input_tensor.shape[2], output_tensor.shape[2])
-        grid_size_stats = {"max_height": max_height, "max_width": max_width}
-        self.max_grid_size = (max_height, max_width)
-        return grid_size_stats
 
     def _compute_symbol_frequencies(self):
         symbol_counts = np.zeros(self.num_symbols, dtype=int)

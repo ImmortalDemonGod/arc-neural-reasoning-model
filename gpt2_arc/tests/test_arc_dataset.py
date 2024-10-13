@@ -48,7 +48,7 @@ def mock_taskset():
     mock_taskset.tasks = [mock_task]
     return mock_taskset
 def test_dataset_statistics_computation(sample_data, debug_mode):
-    dataset = ARCDataset(sample_data)
+    dataset = ARCDataset(sample_data, use_cache=False)
     
     # Retrieve statistics
     grid_size_stats = dataset.get_grid_size_stats()
