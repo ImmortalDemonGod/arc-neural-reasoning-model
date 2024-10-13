@@ -579,6 +579,7 @@ if __name__ == "__main__":
         action="store_true",
         help="Enable debug logging."
     )
+    parser.add_argument(
         "--no_cache",
         action="store_true",
         help="Disable caching of the dataset"

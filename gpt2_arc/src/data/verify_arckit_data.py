@@ -180,6 +180,7 @@ if __name__ == "__main__":
         action="store_true",
         help="Enable debug logging."
     )
+    parser.add_argument(
         "--synthetic_data_path",
         type=str,
         default=SYNTHETIC_DATA_PATH,
