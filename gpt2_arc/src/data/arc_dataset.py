@@ -53,6 +53,7 @@ class ARCDataset(Dataset):
         self.data_files = []
         self.data_source = data_source
         self.data = []  # Initialize self.data to ensure it's always defined
+        self.data = []  # Ensure self.data is always initialized
         self.index_mapping = []
         self.file_samples_count = {}
 
@@ -163,7 +164,8 @@ class ARCDataset(Dataset):
             cache_data = {
                 "index_mapping": self.index_mapping,
                 "file_samples_count": self.file_samples_count,
-                "statistics": self.statistics if hasattr(self, 'statistics') else {}
+                "statistics": self.statistics if hasattr(self, 'statistics') else {},
+                "num_samples": self.num_samples  # Include num_samples in cache
             }
             with open(cache_path, 'wb') as f:
                 pickle.dump(cache_data, f)
@@ -175,10 +177,7 @@ class ARCDataset(Dataset):
         return self.num_samples
 
     def get_num_samples(self):
-        if hasattr(self, 'data') and self.data:
-            return len(self.data)
-        else:
-            return self.num_samples
+        return self.num_samples
     
     def __getitem__(self, idx):
         if idx < 0 or idx >= len(self):
@@ -212,9 +211,6 @@ class ARCDataset(Dataset):
         else:
             raise IndexError("No data available in ARCDataset.")
 
-        return input_tensor, output_tensor, task_id
-   
-        return input_tensor, output_tensor, task_id
 
     def _count_samples_in_directory(self, directory: str):
         num_samples = 0
@@ -263,6 +259,7 @@ class ARCDataset(Dataset):
                     cache_data = pickle.load(f)
                 self.index_mapping = cache_data.get("index_mapping", [])
                 self.file_samples_count = cache_data.get("file_samples_count", {})
+                self.num_samples = cache_data.get("num_samples", 0)  # Restore num_samples
                 self.statistics = cache_data.get("statistics", {})
                 logger.debug(f"Loaded cached index from {cache_path}")
                 return True
