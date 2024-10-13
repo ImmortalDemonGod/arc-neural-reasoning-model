@@ -83,10 +83,16 @@ class ARCDataset(Dataset):
             if self.num_samples == 0:
                 logger.error(f"Cache loaded but contains zero samples. Cache path: {self.cache_path}")
             return
-        elif isinstance(self.data_source, TaskSet):
+        if self.use_cache and self._load_cache(self.cache_path):
+            if not self.collect_symbol_freq:
+                self.symbol_frequencies = {}
+            logger.debug("Data index loaded from cache successfully.")
+            logger.debug(f"Number of samples after loading cache: {self.num_samples}")
+            if self.num_samples == 0:
+                logger.error(f"Cache loaded but contains zero samples. Cache path: {self.cache_path}")
+            return
+        else:
             logger.debug("Caching is disabled or cache loading failed. Proceeding to load data without cache.")
-
-            # Initialize self.index_mapping for on-the-fly data loading
             self.index_mapping = []
             max_symbol = 0
             for task_idx, task in enumerate(self.data_source.tasks):
@@ -106,6 +112,11 @@ class ARCDataset(Dataset):
             if max_symbol + 1 > self.num_symbols:
                 logger.debug(f"Increasing num_symbols from {self.num_symbols} to {max_symbol + 1} to accommodate.")
                 self.num_symbols = max_symbol + 1
+
+            # Preload all data samples into memory if use_cache is True
+            if self.use_cache:
+                self.data = [self.__load_sample(idx) for idx in range(self.num_samples)]
+                logger.debug("All data samples preloaded into memory.")
         
         # After data initialization
         if self.num_samples == 0:
@@ -295,6 +306,40 @@ class ARCDataset(Dataset):
     def get_num_samples(self):
         return self.num_samples
     
+
+    def __load_sample(self, idx):
+        if isinstance(self.data_source, TaskSet):
+            task_idx, sample_idx = self.index_mapping[idx]
+            task = self.data_source.tasks[task_idx]
+            samples = task.test if self.is_test else task.train
+            sample = samples[sample_idx]
+            input_tensor = self._preprocess_grid(sample[0])
+            output_tensor = self._preprocess_grid(sample[1])
+            task_id = task.id
+            return input_tensor, output_tensor, task_id
+        elif hasattr(self, 'index_mapping') and self.index_mapping:
+            file_path, sample_idx = self.index_mapping[idx]
+            with open(file_path, 'r') as f:
+                task_data = json.load(f)
+            if isinstance(task_data, dict):
+                samples = task_data.get('train', []) if not self.is_test else task_data.get('test', [])
+                sample = samples[sample_idx]
+            elif isinstance(task_data, list):
+                sample = task_data[sample_idx]
+            else:
+                raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+            input_tensor = self._preprocess_grid(sample['input'])
+            output_tensor = self._preprocess_grid(sample['output'])
+            task_id = sample.get('task_id', "default_task")
+            return input_tensor, output_tensor, task_id
+        elif hasattr(self, 'data') and self.data:
+            sample = self.data[idx]
+            input_tensor = sample.get("input")
+            output_tensor = sample.get("output")
+            task_id = sample.get('task_id', "default_task")
+            return input_tensor, output_tensor, task_id
+        else:
+            raise IndexError("No data available in ARCDataset.")
 
     def __getitem__(self, idx):
         logger.debug(f"Retrieving item at index {idx}")
