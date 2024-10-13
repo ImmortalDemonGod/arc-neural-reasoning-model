@@ -202,7 +202,9 @@ class ARCDataset(Dataset):
             raise IndexError(f"Index {idx} out of bounds for dataset of size {len(self)}")
 
         logger.debug(f"Retrieving item at index {idx}")
-        
+        if idx < 0 or idx >= len(self):
+            logger.error(f"Index {idx} out of bounds for dataset of size {len(self)}")
+            raise IndexError(f"Index {idx} out of bounds for dataset of size {len(self)}")
         if hasattr(self, 'index_mapping') and self.index_mapping:
             file_path, sample_idx = self.index_mapping[idx]
             logger.debug(f"Index mapping - File: {file_path}, Sample Index: {sample_idx}")
@@ -227,7 +229,7 @@ class ARCDataset(Dataset):
                 return input_tensor, output_tensor, task_id
             except Exception as e:
                 logger.error(f"Error loading sample {sample_idx} from file {file_path}: {e}", exc_info=True)
-                raise RuntimeError("Unexpected error in __getitem__") from e
+                raise RuntimeError(f"Unexpected error in __getitem__: {e}") from e
         elif hasattr(self, 'data') and self.data:
             sample = self.data[idx]
             logger.debug(f"Processing sample index {idx}: {sample}")
