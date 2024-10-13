@@ -47,7 +47,9 @@ class ARCDataset(Dataset):
         num_symbols: int = 10,
         test_split: float = 0.2,
         use_cache: bool = True,  # Ensure this line exists
+        debug: bool = False,      # Added debug parameter
     ):
+        self.debug = debug  # Initialize debug attribute
         self.data = []  # Initialize self.data to ensure it's always defined
         self.test_split = test_split
         self.is_test = is_test
