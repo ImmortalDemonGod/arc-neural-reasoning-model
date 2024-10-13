@@ -8,7 +8,7 @@ import multiprocessing
 class ModelConfig:
     n_embd: int = 768
     n_head: int = 12
-    n_layer: int = 12
+    n_layer: int = 2
     dropout: float = 0.1
     mamba_ratio: float = 1.0  # Number of Mamba layers per Transformer layer
     d_state: int = 16     # Mamba state dimension
@@ -19,7 +19,7 @@ class ModelConfig:
     def __post_init__(self):
         assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
         assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
-        assert self.n_layer > 0, f"n_layer ({self.n_layer}) must be positive"
+        assert 1 <= self.n_layer <= 12, f"n_layer ({self.n_layer}) must be between 1 and 12"
         assert self.d_state >= 1, f"d_state ({self.d_state}) must be at least 1"
         assert self.d_conv >= 1, f"d_conv ({self.d_conv}) must be at least 1"
         assert self.mamba_depth >= 1, f"mamba_depth ({self.mamba_depth}) must be at least 1"
