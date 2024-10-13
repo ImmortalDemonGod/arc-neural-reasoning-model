@@ -537,11 +537,17 @@ class ARCDataset(Dataset):
             logger.warning("No symbols found in the dataset.")
             return {}
    
-        # Construct the symbol frequency dictionary with integer keys
+        # Construct the symbol frequency dictionary with integer keys using an explicit loop
+        symbol_freq = {}
+        for symbol, count in enumerate(symbol_counts):
+            symbol_int = int(symbol)
+            frequency = float(count) / total_symbols
+            symbol_freq[symbol_int] = frequency
+            logger.debug(f"Symbol {symbol_int}: frequency {frequency}")
+
         # Debugging: Verify key types
         key_types = {k: type(k).__name__ for k in symbol_freq.keys()}
         logger.debug(f"Symbol frequencies key types: {key_types}")
-        symbol_freq = {int(symbol): float(count) / total_symbols for symbol, count in enumerate(symbol_counts)}
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
         return symbol_freq
 
