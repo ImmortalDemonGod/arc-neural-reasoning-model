@@ -16,11 +16,11 @@ import math  # Import math module for ceiling division
 from arckit.data import TaskSet, Task
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)  # Set to ERROR by default
+logger.setLevel(logging.WARNING)  # Set to WARNING by default
 
 # Create a handler that writes to stderr
 handler = logging.StreamHandler()
-handler.setLevel(logging.ERROR)
+handler.setLevel(logging.WARNING)
 
 # Create a formatting for the logs
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
