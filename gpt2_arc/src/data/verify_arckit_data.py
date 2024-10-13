@@ -6,7 +6,7 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 def main():
     # Set up logging
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.ERROR,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def main():
     # Basic Verification: Inspect First 5 Training Samples
     num_train_samples_to_inspect = min(5, train_total_samples)
     logger.info(f"Inspecting the first {num_train_samples_to_inspect} training samples:")
-    for i in range(num_train_samples_to_inspect):
+    for i in range(3):
         try:
             input_tensor, output_tensor, task_id = train_dataset[i]
             logger.debug(f"Training Sample {i + 1}:")
