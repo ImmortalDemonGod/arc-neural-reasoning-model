@@ -322,6 +322,9 @@ def main(args):
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
 
+        train_grid_stats = train_data.get_grid_size_stats() if not args.disable_gridstats else {}
+        val_grid_stats = val_data.get_grid_size_stats() if not args.disable_gridstats else {}
+
         if not args.disable_gridstats:
             # Log dataset statistics to ExperimentTracker
             tracker.log_metric("train_max_grid_height", train_grid_stats.get("max_height", 0))
