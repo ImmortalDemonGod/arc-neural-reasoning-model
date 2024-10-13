@@ -75,7 +75,7 @@ def test_dataset_statistics_computation(sample_data, debug_mode):
         9: 0.0
     }
     for symbol, freq in expected_frequencies.items():
-        assert symbol_frequencies.get(int(symbol), 0.0) == freq, f"Frequency for symbol {symbol} should be {freq}"
+        assert symbol_frequencies.get(symbol, 0.0) == freq, f"Frequency for symbol {symbol} should be {freq}"
 
 def test_dataset_statistics_caching(sample_data, debug_mode):
     dataset = ARCDataset(sample_data)
