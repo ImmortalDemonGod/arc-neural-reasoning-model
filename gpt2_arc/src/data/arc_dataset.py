@@ -210,6 +210,15 @@ class ARCDataset(Dataset):
             task_id = sample.get('task_id', "default_task")
         else:
             raise IndexError("No data available in ARCDataset.")
+    
+    def _process_single_task(self, task_data: Dict) -> Dict:
+        processed_task = {"train": [], "test": []}
+        for split in ["train", "test"]:
+            for sample in task_data.get(split, []):
+                input_grid = torch.tensor(sample["input"], dtype=torch.float32).unsqueeze(0)
+                output_grid = torch.tensor(sample["output"], dtype=torch.float32).unsqueeze(0)
+                processed_task[split].append({"input": input_grid, "output": output_grid})
+        return processed_task
 
 
     def _count_samples_in_directory(self, directory: str):
