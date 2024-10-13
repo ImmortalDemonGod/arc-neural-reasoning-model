@@ -175,6 +175,7 @@ class ARCDataset(Dataset):
         if not self.use_cache:
             logger.debug("Caching is disabled. Skipping saving cache.")
             return
+        try:
             cache_data = {
                 "index_mapping": self.index_mapping,
                 "file_samples_count": self.file_samples_count,
