@@ -211,6 +211,7 @@ class ARCDataset(Dataset):
             input_tensor = sample["input"]
             output_tensor = sample["output"]
             task_id = sample.get('task_id', "default_task")
+            return input_tensor, output_tensor, task_id
         else:
             raise IndexError("No data available in ARCDataset.")
     
@@ -374,32 +375,43 @@ class ARCDataset(Dataset):
             Dict[str, Any]: A dictionary containing grid size statistics.
         """
         max_height, max_width = 0, 0
-        for file_path, sample_idx in self.index_mapping:
-            if file_path is None:
-                sample = self.data_source[sample_idx]
-                input_shape = self._get_grid_shape(sample['input'])
-                output_shape = self._get_grid_shape(sample['output'])
-            else:
+        if isinstance(self.data_source, list):
+            for sample in self.data:
                 try:
-                    with open(file_path, 'r') as f:
-                        task_data = json.load(f)
-                    if isinstance(task_data, dict):
-                        samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
-                        sample = samples[sample_idx]
-                        input_shape = self._get_grid_shape(sample['input'])
-                        output_shape = self._get_grid_shape(sample['output'])
-                    elif isinstance(task_data, list):
-                        sample = task_data[sample_idx]
-                        input_shape = self._get_grid_shape(sample['input'])
-                        output_shape = self._get_grid_shape(sample['output'])
-                    else:
-                        raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                    input_shape = self._get_grid_shape(sample['input'])
+                    output_shape = self._get_grid_shape(sample['output'])
+                    max_height = max(max_height, input_shape[1], output_shape[1])
+                    max_width = max(max_width, input_shape[2], output_shape[2])
                 except Exception as e:
-                    logger.error(f"Error processing sample {sample_idx} from file {file_path}: {e}", exc_info=True)
-                    continue  # Skip this sample
+                    logger.error(f"Error processing sample index during grid size stats computation: {e}", exc_info=True)
+                    continue
+        else:
+            for file_path, sample_idx in self.index_mapping:
+                if file_path is None:
+                    sample = self.data_source[sample_idx]
+                    input_shape = self._get_grid_shape(sample['input'])
+                    output_shape = self._get_grid_shape(sample['output'])
+                else:
+                    try:
+                        with open(file_path, 'r') as f:
+                            task_data = json.load(f)
+                        if isinstance(task_data, dict):
+                            samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
+                            sample = samples[sample_idx]
+                            input_shape = self._get_grid_shape(sample['input'])
+                            output_shape = self._get_grid_shape(sample['output'])
+                        elif isinstance(task_data, list):
+                            sample = task_data[sample_idx]
+                            input_shape = self._get_grid_shape(sample['input'])
+                            output_shape = self._get_grid_shape(sample['output'])
+                        else:
+                            raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                    except Exception as e:
+                        logger.error(f"Error processing sample {sample_idx} from file {file_path}: {e}", exc_info=True)
+                        continue  # Skip this sample
 
-            max_height = max(max_height, input_shape[1], output_shape[1])
-            max_width = max(max_width, input_shape[2], output_shape[2])
+                max_height = max(max_height, input_shape[1], output_shape[1])
+                max_width = max(max_width, input_shape[2], output_shape[2])
 
         grid_size_stats = {"max_height": max_height, "max_width": max_width}
         logger.debug(f"Computed grid size stats: {grid_size_stats}")
@@ -414,33 +426,45 @@ class ARCDataset(Dataset):
         symbol_counts = np.zeros(self.num_symbols, dtype=int)
         total_symbols = 0
 
-        for file_path, sample_idx in self.index_mapping:
-            if file_path is None:
-                sample = self.data_source[sample_idx]
-                input_symbols = self._get_symbols(sample['input'])
-                output_symbols = self._get_symbols(sample['output'])
-            else:
+        if isinstance(self.data_source, list):
+            for sample in self.data:
                 try:
-                    with open(file_path, 'r') as f:
-                        task_data = json.load(f)
-                    if isinstance(task_data, dict):
-                        samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
-                        sample = samples[sample_idx]
-                        input_symbols = self._get_symbols(sample['input'])
-                        output_symbols = self._get_symbols(sample['output'])
-                    elif isinstance(task_data, list):
-                        sample = task_data[sample_idx]
-                        input_symbols = self._get_symbols(sample['input'])
-                        output_symbols = self._get_symbols(sample['output'])
-                    else:
-                        raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                    input_symbols = self._get_symbols(sample['input'])
+                    output_symbols = self._get_symbols(sample['output'])
+                    symbol_counts += np.bincount(input_symbols.flatten(), minlength=self.num_symbols)
+                    symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
+                    total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
                 except Exception as e:
-                    logger.error(f"Error processing sample {sample_idx} from file {file_path}: {e}", exc_info=True)
-                    continue  # Skip this sample
+                    logger.error(f"Error processing sample index during symbol frequency computation: {e}", exc_info=True)
+                    continue
+        else:
+            for file_path, sample_idx in self.index_mapping:
+                if file_path is None:
+                    sample = self.data_source[sample_idx]
+                    input_symbols = self._get_symbols(sample['input'])
+                    output_symbols = self._get_symbols(sample['output'])
+                else:
+                    try:
+                        with open(file_path, 'r') as f:
+                            task_data = json.load(f)
+                        if isinstance(task_data, dict):
+                            samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
+                            sample = samples[sample_idx]
+                            input_symbols = self._get_symbols(sample['input'])
+                            output_symbols = self._get_symbols(sample['output'])
+                        elif isinstance(task_data, list):
+                            sample = task_data[sample_idx]
+                            input_symbols = self._get_symbols(sample['input'])
+                            output_symbols = self._get_symbols(sample['output'])
+                        else:
+                            raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                    except Exception as e:
+                        logger.error(f"Error processing sample {sample_idx} from file {file_path}: {e}", exc_info=True)
+                        continue  # Skip this sample
 
-            symbol_counts += np.bincount(input_symbols.flatten(), minlength=self.num_symbols)
-            symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
-            total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
+                symbol_counts += np.bincount(input_symbols.flatten(), minlength=self.num_symbols)
+                symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
+                total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
 
         if total_symbols == 0:
             logger.warning("No symbols found in the dataset.")
