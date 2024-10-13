@@ -538,7 +538,7 @@ class ARCDataset(Dataset):
             return {}
    
         # Change the keys from strings to integers
-        symbol_freq = {symbol: float(count) / total_symbols for symbol, count in enumerate(symbol_counts)}
+        symbol_freq = {int(symbol): float(count) / total_symbols for symbol, count in enumerate(symbol_counts)}
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
         return symbol_freq
 
