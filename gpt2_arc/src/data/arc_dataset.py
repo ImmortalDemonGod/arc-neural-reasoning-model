@@ -61,6 +61,9 @@ class ARCDataset(Dataset):
 
         self.use_cache = use_cache
 
+        # Initialize self.num_samples with a default value
+        self.num_samples = 0
+
         self.cache_path = self._generate_cache_path(
             data_source=self.data_source,
             num_symbols=self.num_symbols,
@@ -92,6 +95,10 @@ class ARCDataset(Dataset):
                         logger.error(f"Error processing sample in task {task.id}: {e}", exc_info=True)
                         continue
             logger.debug("Caching is disabled or cache loading failed. Proceeding to load data without cache.")
+
+            # Set self.num_samples based on the processed TaskSet data
+            self.num_samples = sum(len(task.test) if self.is_test else len(task.train) for task in self.data_source.tasks)
+            logger.debug(f"Number of samples loaded from TaskSet: {self.num_samples}")
         
         # After data initialization
         if self.num_samples == 0:
