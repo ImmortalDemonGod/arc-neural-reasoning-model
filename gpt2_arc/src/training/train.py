@@ -649,8 +649,8 @@ if __name__ == "__main__":
         action="store_true",
         help="Disable the computation of symbol frequencies."
     )
-    parser.add_argument("--n_embd", type=int, default=208, help="Embedding size for the model.")
-    parser.add_argument("--n_head", type=int, default=8, help="Number of attention heads. Overrides Optuna's suggested value if provided.")
+    parser.add_argument("--n_embd", type=int, default=8, help="Embedding size for the model.")
+    parser.add_argument("--n_head", type=int, default=2, help="Number of attention heads. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--n_layer", type=int, default=12, help="Number of transformer layers. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training. Overrides Optuna's suggested value if provided.")
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="Learning rate. Overrides Optuna's suggested value if provided.")
