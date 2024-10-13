@@ -225,13 +225,13 @@ def main(args):
             logger.debug(f"Total files in synthetic data path: {len(synthetic_files)}")
             logger.debug(f"Sample files: {synthetic_files[:5]}... (total {len(synthetic_files)})")
             train_data = ARCDataset(
-                args.synthetic_data_path,
+                data_source=args.synthetic_data_path,
                 use_cache=not args.no_cache  # Pass the use_cache flag
             )
             synthetic_files = os.listdir(args.synthetic_data_path)
             logger.debug(f"Listing files in synthetic data path for validation: {synthetic_files[:5]}... (total {len(synthetic_files)})")
             val_data = ARCDataset(
-                args.synthetic_data_path,
+                data_source=args.synthetic_data_path,
                 is_test=True,
                 use_cache=not args.no_cache  # Pass the use_cache flag
             )
@@ -352,7 +352,12 @@ def main(args):
         )
         logger.debug(f"DataLoaders created with batch size {args.batch_size}")
 
-        # Initialize model
+        # Ensure symbol_freq is non-empty
+        if not train_symbol_freq_dict:
+            logger.error("Training symbol frequencies are empty. Cannot initialize GPT2ARC.")
+            sys.exit(1)
+
+        # Initialize model with symbol_freq
         logger.info("Initializing model")
         model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=train_symbol_freq_dict)
         logger.debug(f"Model initialized with config: {model_config}")

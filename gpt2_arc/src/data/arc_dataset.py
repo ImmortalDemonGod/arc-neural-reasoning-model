@@ -57,7 +57,7 @@ class ARCDataset(Dataset):
         self.index_mapping = []
         self.file_samples_count = {}
 
-        print(f"Initializing ARCDataset with use_cache={use_cache}")  # Debug statement
+        print(f"[DEBUG] Initializing ARCDataset with use_cache={use_cache}")  # Debug statement
         self.use_cache = use_cache
 
         self.cache_path = self._generate_cache_path(
@@ -151,7 +151,7 @@ class ARCDataset(Dataset):
                     task_data = json.load(f)
                 
                 if isinstance(task_data, dict):
-                    samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
+                    samples = task_data.get('samples', [])  # Modify 'samples' key as per your data
                 elif isinstance(task_data, list):
                     samples = task_data
                 else:
@@ -208,7 +208,7 @@ class ARCDataset(Dataset):
                     task_data = json.load(f)
 
                 if isinstance(task_data, dict):
-                    samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
+                    samples = task_data.get('samples', [])  # Modify 'samples' key as per your data
                     sample = samples[sample_idx]
                 elif isinstance(task_data, list):
                     sample = task_data[sample_idx]
@@ -394,6 +394,7 @@ class ARCDataset(Dataset):
                         task_id = os.path.splitext(filename)[0]
                         processed_samples = self._process_single_task(task_data, task_id=task_id)
                         self.data.extend(processed_samples)
+                    logger.debug(f"Extended data with {len(processed_samples)} samples from {file_path}")
                     except json.JSONDecodeError as e:
                         logger.error(f"Error decoding JSON from file {file_path}: {e}")
 
