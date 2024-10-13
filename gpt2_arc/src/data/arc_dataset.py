@@ -47,6 +47,7 @@ class ARCDataset(Dataset):
         test_split: float = 0.2,
         debug=False,
     ):
+        self.data = []  # Initialize self.data to ensure it's always defined
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
@@ -103,6 +104,7 @@ class ARCDataset(Dataset):
         elif isinstance(data_source, list):
             logger.debug("Initializing dataset with list data")
             self._process_list_data_indices(data_source)
+            self.data = data_source  # Ensure self.data is defined
 
     def _process_list_data_indices(self, data_list: List[Dict]):
         """
