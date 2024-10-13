@@ -224,10 +224,17 @@ def main(args):
             synthetic_files = os.listdir(args.synthetic_data_path)
             logger.debug(f"Total files in synthetic data path: {len(synthetic_files)}")
             logger.debug(f"Sample files: {synthetic_files[:5]}... (total {len(synthetic_files)})")
-            train_data = ARCDataset(args.synthetic_data_path)
+            train_data = ARCDataset(
+                args.synthetic_data_path,
+                use_cache=not args.no_cache  # Pass the use_cache flag
+            )
             synthetic_files = os.listdir(args.synthetic_data_path)
             logger.debug(f"Listing files in synthetic data path for validation: {synthetic_files[:5]}... (total {len(synthetic_files)})")
-            val_data = ARCDataset(args.synthetic_data_path, is_test=True)
+            val_data = ARCDataset(
+                args.synthetic_data_path,
+                is_test=True,
+                use_cache=not args.no_cache  # Pass the use_cache flag
+            )
             logger.info(f"Number of training examples: {len(train_data)}")
             logger.info(f"Number of validation examples: {len(val_data)}")
         else:
@@ -250,8 +257,20 @@ def main(args):
             logger.info(f"Number of tasks in eval_set: {len(eval_set.tasks)}")
             num_symbols = 10  # Adjust num_symbols as needed based on your dataset
 
-            train_data = ARCDataset(train_set, is_test=False, num_symbols=num_symbols, debug=True)
-            val_data = ARCDataset(eval_set, is_test=True, num_symbols=num_symbols, debug=True)
+            train_data = ARCDataset(
+                train_set,
+                is_test=False,
+                num_symbols=num_symbols,
+                debug=True,
+                use_cache=not args.no_cache  # Pass the use_cache flag
+            )
+            val_data = ARCDataset(
+                eval_set,
+                is_test=True,
+                num_symbols=num_symbols,
+                debug=True,
+                use_cache=not args.no_cache  # Pass the use_cache flag
+            )
             logger.info(f"Number of training examples: {len(train_data)}")
             logger.info(f"Number of validation examples: {len(val_data)}")
 
@@ -547,6 +566,11 @@ if __name__ == "__main__":
     group.add_argument("--use-profiler", action="store_true", help="Enable the custom profiler")
     group.add_argument("--fast-dev-run", action="store_true", help="Run a fast development test")
     
+    parser.add_argument(
+        "--no_cache",
+        action="store_true",
+        help="Disable caching of the dataset"
+    )
     parser.add_argument(
         "--optuna_study_name",
         type=str,

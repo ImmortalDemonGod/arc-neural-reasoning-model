@@ -19,7 +19,8 @@ def main(args):
         synthetic_dataset = ARCDataset(
             data_source=args.synthetic_data_path,
             is_test=False,  # Assuming synthetic data is for training; set to True if for testing
-            debug=True
+            debug=True,
+            use_cache=not args.no_cache  # Pass the use_cache flag
         )
         logger.info("Synthetic ARCDataset initialized successfully.")
     except Exception as e:
@@ -34,7 +35,12 @@ def main(args):
     
     # Initialize training dataset
     try:
-        train_dataset = ARCDataset(data_source=train_set, is_test=False, debug=True)
+        train_dataset = ARCDataset(
+            data_source=train_set,
+            is_test=False,
+            debug=True,
+            use_cache=not args.no_cache  # Pass the use_cache flag
+        )
         logger.info("Train ARCDataset initialized successfully.")
     except Exception as e:
         logger.error(f"Failed to initialize Train ARCDataset: {e}")
@@ -42,7 +48,12 @@ def main(args):
     
     # Initialize evaluation dataset
     try:
-        eval_dataset = ARCDataset(data_source=eval_set, is_test=True, debug=True)
+        eval_dataset = ARCDataset(
+            data_source=eval_set,
+            is_test=True,
+            debug=True,
+            use_cache=not args.no_cache  # Pass the use_cache flag
+        )
         logger.info("Eval ARCDataset initialized successfully.")
     except Exception as e:
         logger.error(f"Failed to initialize Eval ARCDataset: {e}")
@@ -161,6 +172,12 @@ if __name__ == "__main__":
         type=str,
         default=SYNTHETIC_DATA_PATH,
         help="Path to the synthetic data directory"
+    )
+    
+    parser.add_argument(
+        "--no_cache",
+        action="store_true",
+        help="Disable caching of the dataset"
     )
     
     args = parser.parse_args()

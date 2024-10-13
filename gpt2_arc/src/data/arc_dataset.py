@@ -46,6 +46,7 @@ class ARCDataset(Dataset):
         num_symbols: int = 10,
         test_split: float = 0.2,
         debug=False,
+        use_cache: bool = True,  # New parameter to control caching
     ):
         self.data = []  # Initialize self.data to ensure it's always defined
         self.test_split = test_split
@@ -56,6 +57,8 @@ class ARCDataset(Dataset):
         self.index_mapping = []
         self.file_samples_count = {}
 
+        self.use_cache = use_cache  # Store the use_cache flag
+
         self.cache_path = self._generate_cache_path(
             data_source=self.data_source,
             num_symbols=self.num_symbols,
@@ -63,7 +66,7 @@ class ARCDataset(Dataset):
             test_split=self.test_split
         )
         
-        if self._load_cache(self.cache_path):
+        if self.use_cache and self._load_cache(self.cache_path):
             logger.debug("Data index loaded from cache successfully.")
             self.num_samples = len(self.index_mapping)
             logger.debug(f"Number of samples (str - file): {self.num_samples}")
@@ -108,8 +111,11 @@ class ARCDataset(Dataset):
             self.data = data_source
             logger.debug(f"Number of samples (list): {self.num_samples}")
 
-        # Compute and cache dataset statistics after data initialization
-        self._compute_and_cache_statistics()
+        if self.use_cache:
+            # Compute and cache dataset statistics after data initialization
+            self._compute_and_cache_statistics()
+        else:
+            logger.debug("Caching is disabled. Skipping cache computation and saving.")
 
     def _process_list_data_indices(self, data_list: List[Dict]):
         """
@@ -166,7 +172,9 @@ class ARCDataset(Dataset):
         """
         Saves the dataset index and statistics to the specified cache path using pickle.
         """
-        try:
+        if not self.use_cache:
+            logger.debug("Caching is disabled. Skipping saving cache.")
+            return
             cache_data = {
                 "index_mapping": self.index_mapping,
                 "file_samples_count": self.file_samples_count,
