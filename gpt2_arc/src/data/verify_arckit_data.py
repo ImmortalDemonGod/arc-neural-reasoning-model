@@ -8,8 +8,14 @@ SYNTHETIC_DATA_PATH = "/workspaces/arc-neural-reasoning-model/gpt2_arc/src/data/
 
 def main(args):
     # Set up logging
+    # Determine logging level based on --debug flag
+    if args.debug:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.WARNING
+
     logging.basicConfig(
-        level=logging.WARNING,
+        level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     logger = logging.getLogger(__name__)
@@ -170,6 +176,10 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Verify ARC and Synthetic Datasets")
     parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging."
+    )
         "--synthetic_data_path",
         type=str,
         default=SYNTHETIC_DATA_PATH,

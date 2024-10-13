@@ -91,7 +91,11 @@ def main(args):
         args.n_embd = adjusted_n_embd
     torch.set_float32_matmul_precision(args.matmul_precision)
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
-    log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'DEBUG', logging.DEBUG)
+    # Determine logging level based on --debug flag
+    if args.debug:
+        log_level = logging.DEBUG
+    else:
+        log_level = getattr(logging, args.log_level.upper(), logging.INFO)
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -571,6 +575,10 @@ if __name__ == "__main__":
     group.add_argument("--fast-dev-run", action="store_true", help="Run a fast development test")
     
     parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging."
+    )
         "--no_cache",
         action="store_true",
         help="Disable caching of the dataset"

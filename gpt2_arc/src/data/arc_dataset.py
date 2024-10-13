@@ -16,19 +16,7 @@ import math  # Import math module for ceiling division
 from arckit.data import TaskSet, Task
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)  # Set to WARNING by default
-logger.propagate = False  # Prevent logs from propagating to the root logger
-
-# Create a handler that writes to stderr
-handler = logging.StreamHandler()
-handler.setLevel(logging.WARNING)
-
-# Create a formatting for the logs
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-
-# Add the handler to the logger
-logger.addHandler(handler)
+logger.propagate = True  # Allow logs to propagate to the root logger
 
 
 class ARCDataset(Dataset):
