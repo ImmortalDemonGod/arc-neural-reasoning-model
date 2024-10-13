@@ -327,6 +327,10 @@ def main(args):
             else:
                 train_grid_stats, val_grid_stats = None, None
 
+            # Adjust balance_symbols based on disable_symbolfreq flag
+            training_config.balance_symbols = False
+            logger.info("Balancing symbols is disabled due to --disable_symbolfreq flag.")
+
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
 
