@@ -363,25 +363,24 @@ class ARCDataset(Dataset):
                 logger.error(f"Failed to load cache from {cache_path}: {e}")
         return False
 
+
+    def _compute_and_cache_statistics(self):
         """
         Computes dataset statistics and caches them alongside the dataset cache.
         """
         logger.debug("Computing dataset statistics")
         grid_size_stats = self.get_grid_size_stats()
-        symbol_frequencies = self._compute_symbol_frequencies()
-        
+        symbol_frequencies = self.get_symbol_frequencies()
+
         statistics = {
             "grid_size_stats": grid_size_stats,
             "symbol_frequencies": symbol_frequencies
         }
-        
+
         # Update the cache dictionary with statistics
         self.statistics = statistics
         self._save_cache(self.cache_path)  # Ensure statistics are saved in the cache
         logger.debug("Dataset statistics computed and cached successfully")
-
-
-    def _process_list_data(self, data_list: List[Dict], task_id: str) -> List[Dict]:
         logger.debug(f"Starting to process {len(data_list)} tasks.")
         processed_data = []
         for idx, example in enumerate(data_list):
