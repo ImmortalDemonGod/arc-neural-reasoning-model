@@ -242,14 +242,14 @@ def main(args):
             logger.debug(f"Sample files: {synthetic_files[:5]}... (total {len(synthetic_files)})")
             train_data = ARCDataset(
                 data_source=args.synthetic_data_path,
-                use_cache=False  # Disable caching to prevent freezing
+                use_cache=args.preload_data
             )
             synthetic_files = os.listdir(args.synthetic_data_path)
             logger.debug(f"Listing files in synthetic data path for validation: {synthetic_files[:5]}... (total {len(synthetic_files)})")
             val_data = ARCDataset(
                 data_source=args.synthetic_data_path,
                 is_test=True,
-                use_cache=False  # Disable caching to prevent freezing
+                use_cache=args.preload_data
             )
             logger.info(f"Number of training examples: {len(train_data)}")
             logger.info(f"Number of validation examples: {len(val_data)}")
@@ -290,47 +290,34 @@ def main(args):
             logger.info(f"Number of training examples: {len(train_data)}")
             logger.info(f"Number of validation examples: {len(val_data)}")
 
-        if not args.disable_symbolfreq:
-            if not args.disable_gridstats:
-                logger.debug("Calling train_data.get_grid_size_stats()")
-                train_grid_stats = train_data.get_grid_size_stats()
-                logger.debug("Completed train_data.get_grid_size_stats()")
-                val_grid_stats = val_data.get_grid_size_stats()
+    if not args.disable_symbolfreq:
+        logger.info("Symbol frequency computation is enabled.")
+        
+        if args.preload_data:
+            logger.debug("Preloading data and computing symbol frequencies.")
+            if hasattr(train_data, 'symbol_frequencies') and train_data.symbol_frequencies:
+                train_symbol_freq_dict = train_data.symbol_frequencies
+                logger.debug(f"Training symbol frequencies loaded from cache: {train_symbol_freq_dict}")
             else:
-                train_grid_stats, val_grid_stats = None, None
-
-            if hasattr(train_data, 'statistics'):
-                train_symbol_freq = train_data.statistics.get("symbol_frequencies", {})
-                val_symbol_freq = val_data.statistics.get("symbol_frequencies", {})
-            else:
-                train_symbol_freq = {}
-                val_symbol_freq = {}
-
+                logger.error("Symbol frequencies not found in preloaded data.")
+                sys.exit(1)
+        else:
+            logger.debug("Computing symbol frequencies on-the-fly.")
+            train_symbol_freq = train_data.get_symbol_frequencies()
             if not train_symbol_freq:
                 logger.error("Training symbol frequencies are empty. Cannot initialize GPT2ARC.")
                 sys.exit(1)
-
             train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in train_symbol_freq.items()}
             training_config.symbol_freq = train_symbol_freq_dict
-
-            logger.info(f"Train Grid Size Stats: {train_grid_stats}")
             logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
-            logger.info(f"Validation Grid Size Stats: {val_grid_stats}")
-            logger.info(f"Validation Symbol Frequencies: {val_symbol_freq}")
-        else:
-            logger.info("Symbol frequency computation is disabled.")
-            training_config.symbol_freq = {}
-            train_symbol_freq_dict = {}
-            val_symbol_freq = {}
-            if not args.disable_gridstats:
-                train_grid_stats = train_data.get_grid_size_stats()
-                val_grid_stats = val_data.get_grid_size_stats()
-            else:
-                train_grid_stats, val_grid_stats = None, None
-
-            # Adjust balance_symbols based on disable_symbolfreq flag
-            training_config.balance_symbols = False
-            logger.info("Balancing symbols is disabled due to --disable_symbolfreq flag.")
+    else:
+        logger.info("Symbol frequency computation is disabled.")
+        training_config.symbol_freq = {}
+        train_symbol_freq_dict = {}
+        val_symbol_freq = {}
+        balance_symbols = False
+        training_config.balance_symbols = balance_symbols
+        logger.info("Balancing symbols is disabled due to --disable_symbolfreq flag.")
 
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
@@ -708,6 +695,11 @@ if __name__ == "__main__":
     parser.add_argument("--synthetic_data_path", type=str, help="Path to synthetic data directory")
     parser.add_argument("--log_level", type=str, default="INFO", help="Logging level")
     parser.add_argument("--use_optuna", action="store_true", help="Use best hyperparameters from Optuna study")
+    parser.add_argument(
+        "--preload_data",
+        action="store_true",
+        help="Preload all data into memory before training. Enables caching.",
+    )
     parser.add_argument(
         "--accelerator",
         type=str,

@@ -259,12 +259,18 @@ def objective(trial, args):
             train_data = ARCDataset(
                 data_source=args.synthetic_data_path,
                 is_test=False,
-                num_symbols=config.model.n_embd
+                num_symbols=config.model.n_embd,
+                use_cache=args.preload_data,
+                collect_grid_stats=not args.disable_gridstats,
+                collect_symbol_freq=not args.disable_symbolfreq
             )
             val_data = ARCDataset(
                 data_source=args.synthetic_data_path,
                 is_test=True,
-                num_symbols=config.model.n_embd
+                num_symbols=config.model.n_embd,
+                use_cache=args.preload_data,
+                collect_grid_stats=not args.disable_gridstats,
+                collect_symbol_freq=not args.disable_symbolfreq
             )
             logger.debug(f"Synthetic training data size: {len(train_data)}")
             logger.debug(f"Synthetic validation data size: {len(val_data)}")
@@ -313,27 +319,34 @@ def objective(trial, args):
             for symbol, freq in symbol_freq_dict.items():
                 logger.debug(f"Symbol {symbol}: Frequency {freq}")
 
-        # Calculate Symbol Frequencies
-        if args.use_synthetic_data:
-            logger.debug("Calculating symbol frequencies for synthetic training set")
-            symbol_freq = train_data.get_symbol_frequencies()
+    if not args.disable_symbolfreq:
+        logger.info("Symbol frequency computation is enabled.")
+        
+        if args.preload_data:
+            logger.debug("Preloading data and computing symbol frequencies.")
+            if hasattr(train_data, 'symbol_frequencies') and train_data.symbol_frequencies:
+                train_symbol_freq_dict = train_data.symbol_frequencies
+                logger.debug(f"Training symbol frequencies loaded from cache: {train_symbol_freq_dict}")
+            else:
+                logger.error("Symbol frequencies not found in preloaded data.")
+                raise ValueError("Symbol frequencies not found in preloaded data.")
         else:
-            logger.debug("Calculating symbol frequencies for ARC training set")
-            symbol_freq = train_data.get_symbol_frequencies()
-
-        logger.debug(f"Computed symbol frequencies: {symbol_freq}")
-
-        # Convert symbol_freq from NumPy array to dictionary
-        symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
-        logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
-
-        # Assign the converted symbol_freq to the training configuration
-        config.training.symbol_freq = symbol_freq_dict
-
-        # Validate that symbol_freq_dict is not empty
-        if not symbol_freq_dict:
-            logger.error("symbol_freq_dict is empty. Cannot proceed with balance_symbols=True and balancing_method='weighting'.")
-            raise ValueError("symbol_freq must be provided and non-empty when balance_symbols is True and balancing_method is 'weighting'.")
+            logger.debug("Computing symbol frequencies on-the-fly.")
+            train_symbol_freq = train_data.get_symbol_frequencies()
+            if not train_symbol_freq:
+                logger.error("Training symbol frequencies are empty. Cannot initialize GPT2ARC.")
+                raise optuna.exceptions.TrialPruned()
+            train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in train_symbol_freq.items()}
+            training_config.symbol_freq = train_symbol_freq_dict
+            logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
+    else:
+        logger.info("Symbol frequency computation is disabled.")
+        training_config.symbol_freq = {}
+        train_symbol_freq_dict = {}
+        val_symbol_freq = {}
+        balance_symbols = False
+        training_config.balance_symbols = balance_symbols
+        logger.info("Balancing symbols is disabled due to --disable_symbolfreq flag.")
 
         # After defining training_config
         config = Config(
@@ -572,6 +585,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("--n_embd_min", type=int, default=4, help="Minimum value for n_embd")
+    parser.add_argument(
+        "--preload_data",
+        action="store_true",
+        help="Preload all data into memory before optimization trials. Enables caching.",
+    )
     parser.add_argument("--n_embd_max", type=int, default=8, help="Maximum value for n_embd")
     parser.add_argument("--n_head_min", type=int, default=2, help="Minimum value for n_head")
     parser.add_argument("--n_head_max", type=int, default=16, help="Maximum value for n_head")
