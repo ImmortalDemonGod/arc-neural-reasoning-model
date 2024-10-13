@@ -239,14 +239,14 @@ def main(args):
             logger.debug(f"Sample files: {synthetic_files[:5]}... (total {len(synthetic_files)})")
             train_data = ARCDataset(
                 data_source=args.synthetic_data_path,
-                use_cache=not args.no_cache  # Pass the use_cache flag
+                use_cache=False  # Disable caching to prevent freezing
             )
             synthetic_files = os.listdir(args.synthetic_data_path)
             logger.debug(f"Listing files in synthetic data path for validation: {synthetic_files[:5]}... (total {len(synthetic_files)})")
             val_data = ARCDataset(
                 data_source=args.synthetic_data_path,
                 is_test=True,
-                use_cache=not args.no_cache  # Pass the use_cache flag
+                use_cache=False  # Disable caching to prevent freezing
             )
             logger.info(f"Number of training examples: {len(train_data)}")
             logger.info(f"Number of validation examples: {len(val_data)}")
@@ -288,8 +288,12 @@ def main(args):
             logger.info(f"Number of validation examples: {len(val_data)}")
 
         # Access dataset statistics
+        logger.debug("Calling train_data.get_grid_size_stats()")
         train_grid_stats = train_data.get_grid_size_stats()
+        logger.debug("Completed train_data.get_grid_size_stats()")
+        logger.debug("Calling train_data.get_symbol_frequencies()")
         train_symbol_freq = train_data.get_symbol_frequencies()
+        logger.debug("Completed train_data.get_symbol_frequencies()")
 
         val_grid_stats = val_data.get_grid_size_stats()
         val_symbol_freq = val_data.get_symbol_frequencies()
