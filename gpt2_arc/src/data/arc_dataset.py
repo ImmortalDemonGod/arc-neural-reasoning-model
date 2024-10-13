@@ -53,7 +53,6 @@ class ARCDataset(Dataset):
         self.num_symbols = num_symbols
         self.data_files = []
         self.data_source = data_source
-        self.data = []  # Ensure self.data is always initialized
         self.index_mapping = []
         self.file_samples_count = {}
 
