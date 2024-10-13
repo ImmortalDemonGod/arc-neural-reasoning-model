@@ -97,18 +97,19 @@ def main(args):
         log_level = getattr(logging, args.log_level.upper(), logging.INFO)
     logging.basicConfig(
         level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        format='%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s',
         stream=sys.stdout,  # Direct logs to stdout
         force=True          # Override existing logging configurations
     )
     logging.getLogger().setLevel(log_level)  # Ensure root logger is set to log_level
 
     # Optional: Add a StreamHandler to the specific logger
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(log_level)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
+    if not logger.hasHandlers():
+        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler.setLevel(log_level)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
 
     profiler = PyTorchProfiler(
         dirpath=args.profiler_dirpath,
@@ -119,8 +120,6 @@ def main(args):
     ) if args.use_profiler else None
     
     
-    # Add a print statement to confirm that main(args) is being executed
-    print("INFO: Starting main function")
     logger.info("Starting main function")
     logger.debug(f"Command line arguments: {args}")
 
@@ -230,7 +229,7 @@ def main(args):
         config = Config(model=model_config, training=training_config)
         logger.debug(f"Configuration: {config}")
 
-        logger.info("Loading data")
+        logger.info("Entering load_data function: Loading data")
         if args.use_synthetic_data:
             if not args.synthetic_data_path:
                 raise ValueError("Synthetic data path not provided")
@@ -333,7 +332,7 @@ def main(args):
         logger.info(f"Number of validation examples: {num_val_samples}")
         
         if num_train_samples == 0 or num_val_samples == 0:
-            logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
+            logger.error("Dataset is empty in load_data function: Number of training examples: 0")
             return
 
         logger.debug(f"Train data size: {train_data.get_num_samples()}, Validation data size: {val_data.get_num_samples()}")

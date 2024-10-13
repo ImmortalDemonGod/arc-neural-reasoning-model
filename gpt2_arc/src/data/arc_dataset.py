@@ -70,6 +70,19 @@ class ARCDataset(Dataset):
         
         if self.use_cache and self._load_cache(self.cache_path):
             logger.debug("Data index loaded from cache successfully.")
+            logger.debug(f"Number of samples after loading cache: {self.num_samples}")
+            if self.num_samples == 0:
+                logger.error(f"Cache loaded but contains zero samples. Cache path: {self.cache_path}")
+            return
+        else:
+            logger.debug("Caching is disabled or cache loading failed. Proceeding to load data without cache.")
+        
+        # After data initialization
+        if self.num_samples == 0:
+            logger.error(f"No samples loaded from data source: {self.data_source}. Please verify the data source path and contents.")
+        else:
+            logger.debug(f"Number of samples loaded: {self.num_samples}")
+            logger.debug("Data index loaded from cache successfully.")
             self.num_samples = len(self.index_mapping)
             logger.debug(f"Number of samples (str - file): {self.num_samples}")
             logger.debug(f"Number of samples (str - directory): {self.num_samples}")
@@ -139,9 +152,10 @@ class ARCDataset(Dataset):
         self.index_mapping = []
         self.file_samples_count = {}
 
-        logger.debug("Building index from files")
+        logger.debug(f"Building index from {len(data_files)} files.")
         
         for file_path in data_files:
+            logger.debug(f"Processing file: {file_path}")
             try:
                 with open(file_path, 'r') as f:
                     task_data = json.load(f)
@@ -169,7 +183,7 @@ class ARCDataset(Dataset):
                 logger.error(f"Error processing file {file_path}: {e}", exc_info=True)
                 continue  # Skip problematic files and continue with others
 
-        logger.debug(f"Total indexed samples: {len(self.index_mapping)}")
+        logger.debug(f"Total indexed samples after processing files: {len(self.index_mapping)}")
 
     def _save_cache(self, cache_path: str):
         """
@@ -228,6 +242,7 @@ class ARCDataset(Dataset):
                 output_tensor = self._preprocess_grid(sample['output'])
                 task_id = sample.get('task_id', "default_task")
                 logger.debug(f"Retrieved sample {idx}: task_id={task_id}")
+                logger.debug(f"Successfully retrieved sample {idx} from file {file_path}")
                 return input_tensor, output_tensor, task_id
             except Exception as e:
                 logger.error(f"Error loading sample {sample_idx} from file {file_path}: {e}", exc_info=True)
@@ -349,6 +364,7 @@ class ARCDataset(Dataset):
         return os.path.join(cache_dir, cache_filename)
 
     def _load_cache(self, cache_path: str) -> bool:
+        logger.debug(f"Attempting to load cache from: {cache_path}")
         if os.path.exists(cache_path):
             try:
                 with open(cache_path, 'rb') as f:
@@ -358,9 +374,12 @@ class ARCDataset(Dataset):
                 self.num_samples = cache_data.get("num_samples", 0)  # Restore num_samples
                 self.statistics = cache_data.get("statistics", {})
                 logger.debug(f"Loaded cached index from {cache_path}")
+                logger.debug(f"Successfully loaded cache from {cache_path}. Number of samples: {self.num_samples}")
                 return True
             except Exception as e:
                 logger.error(f"Failed to load cache from {cache_path}: {e}")
+        else:
+            logger.warning(f"Cache file does not exist at: {cache_path}")
         return False
 
 
@@ -368,19 +387,23 @@ class ARCDataset(Dataset):
         """
         Computes dataset statistics and caches them alongside the dataset cache.
         """
-        logger.debug("Computing dataset statistics")
-        grid_size_stats = self.get_grid_size_stats()
-        symbol_frequencies = self.get_symbol_frequencies()
-
-        statistics = {
-            "grid_size_stats": grid_size_stats,
-            "symbol_frequencies": symbol_frequencies
-        }
-
-        # Update the cache dictionary with statistics
-        self.statistics = statistics
-        self._save_cache(self.cache_path)  # Ensure statistics are saved in the cache
-        logger.debug("Dataset statistics computed and cached successfully")
+        logger.debug("Starting computation of dataset statistics.")
+        try:
+            grid_size_stats = self.get_grid_size_stats()
+            symbol_frequencies = self.get_symbol_frequencies()
+            logger.debug(f"Computed grid size stats: {grid_size_stats}")
+            logger.debug(f"Computed symbol frequencies: {symbol_frequencies}")
+            
+            statistics = {
+                "grid_size_stats": grid_size_stats,
+                "symbol_frequencies": symbol_frequencies
+            }
+            
+            self.statistics = statistics
+            self._save_cache(self.cache_path)
+            logger.debug("Dataset statistics computed and cached successfully.")
+        except Exception as e:
+            logger.error(f"Error computing dataset statistics: {e}", exc_info=True)
 
 
     def _process_list_data(self, data_list: List[Dict], task_id: str) -> List[Dict]:
