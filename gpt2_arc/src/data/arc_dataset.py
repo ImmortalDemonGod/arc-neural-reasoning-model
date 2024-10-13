@@ -413,7 +413,7 @@ class ARCDataset(Dataset):
         Computes dataset statistics and caches them alongside the dataset cache.
         """
         logger.debug("Computing dataset statistics")
-        grid_size_stats = self.get_grid_size_stats()
+        grid_size_stats = self._compute_grid_size_stats()
         symbol_frequencies = self._compute_symbol_frequencies()
         
         statistics = {
