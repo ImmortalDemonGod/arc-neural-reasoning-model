@@ -66,20 +66,20 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
             timestamp=self.timestamp
         )
 
-def main(args):
-    # Import project-specific modules after logging configuration
-    import pytorch_lightning as pl
-    from pytorch_lightning.callbacks import ModelCheckpoint
-    from pytorch_lightning.loggers import TensorBoardLogger
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
 
-    from gpt2_arc.src.data.arc_dataset import ARCDataset
-    from gpt2_arc.src.models.gpt2 import GPT2ARC
-    from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
-    from gpt2_arc.src.training.trainer import ARCTrainer
-    from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
-    from gpt2_arc.src.utils.results_collector import ResultsCollector
-    from gpt2_arc.src.utils import GrokfastCallback
-    from gpt2_arc.src.training.callbacks import ModelConfigSaver
+from gpt2_arc.src.data.arc_dataset import ARCDataset
+from gpt2_arc.src.models.gpt2 import GPT2ARC
+from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
+from gpt2_arc.src.training.trainer import ARCTrainer
+from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
+from gpt2_arc.src.utils.results_collector import ResultsCollector
+from gpt2_arc.src.utils import GrokfastCallback
+from gpt2_arc.src.training.callbacks import ModelConfigSaver
+
+def main(args):
     if args.n_embd % args.n_head != 0:
         adjusted_n_embd = ((args.n_embd + args.n_head - 1) // args.n_head) * args.n_head
         logger.warning(
