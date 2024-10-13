@@ -701,6 +701,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--preload_data",
         action="store_true",
+        help="Preload all data into memory before training. Enables caching."
+    )
+    parser.add_argument(
+        "--disable_symbolfreq",
+        action="store_true",
+        help="Disable the computation of symbol frequencies."
+    )
+    parser.add_argument(
+        "--disable_gridstats",
+        action="store_true",
+        help="Disable the computation of grid size statistics."
+    )
+    parser.add_argument(
+        "--preload_data",
+        action="store_true",
         help="Preload all data into memory before training. Enables caching.",
     )
     parser.add_argument(
