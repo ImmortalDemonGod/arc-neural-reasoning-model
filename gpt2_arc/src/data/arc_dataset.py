@@ -484,7 +484,7 @@ class ARCDataset(Dataset):
                     symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
                     total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
                 except Exception as e:
-                    logger.error(f"Error processing sample index {idx} during symbol frequency computation: {e}", exc_info=True)
+                    logger.error(f"Error processing sample index {idx} during symbol frequency computation: {e}. Sample content: {sample}", exc_info=True)
                     continue
         else:
             for file_path, sample_idx in self.index_mapping:
@@ -510,7 +510,7 @@ class ARCDataset(Dataset):
                     symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
                     total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
                 except Exception as e:
-                    logger.error(f"Error processing sample {sample_idx} from file {file_path}: {e}", exc_info=True)
+                    logger.error(f"Error processing sample {sample_idx} from file {file_path}: {e}. File content: {task_data}", exc_info=True)
                     continue  # Skip this sample
    
         if total_symbols == 0:
@@ -545,7 +545,7 @@ class ARCDataset(Dataset):
         """
         Retrieves symbol tensor without preprocessing.
         """
-        logger.debug(f"Extracting symbols from grid with type: {type(grid)}.")
+        logger.debug(f"Extracting symbols from grid with type: {type(grid)} and content: {grid}.")
        
         if isinstance(grid, list):
             grid_tensor = torch.tensor(grid, dtype=torch.int64)
