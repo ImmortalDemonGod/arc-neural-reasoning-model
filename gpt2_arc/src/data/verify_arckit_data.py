@@ -19,8 +19,6 @@ def main(args):
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.WARNING)
-    logger.propagate = False  # Prevent logs from propagating to the root logger
     
     # Load synthetic dataset
     try:
