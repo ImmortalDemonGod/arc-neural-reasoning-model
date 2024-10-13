@@ -8,7 +8,7 @@ import random
 import logging
 import arckit
 from torch.utils.data import DataLoader
-from src.data.arc_dataset import ARCDataset, set_debug_mode
+from gpt2_arc.src.data.arc_dataset import ARCDataset, set_debug_mode
 from src.utils.experiment_tracker import ExperimentTracker
 
 # Set up logging for tests

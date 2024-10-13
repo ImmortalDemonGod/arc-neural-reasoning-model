@@ -18,6 +18,26 @@ from arckit.data import TaskSet, Task
 logger = logging.getLogger(__name__)
 logger.propagate = True  # Allow logs to propagate to the root logger
 
+# Add the global debug flag
+_debug_mode = False
+
+def set_debug_mode(mode: bool):
+    """
+    Enables or disables debug mode for the ARCDataset module.
+
+    Args:
+        mode (bool): If True, sets the logger to DEBUG level. Otherwise, sets it to WARNING.
+    """
+    global _debug_mode
+    _debug_mode = mode
+    if _debug_mode:
+        logger.setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.DEBUG)  # Ensure root logger is also set
+    else:
+        logger.setLevel(logging.WARNING)
+        logging.getLogger().setLevel(logging.WARNING)  # Ensure root logger is also set
+logger.propagate = True  # Allow logs to propagate to the root logger
+
 
 class ARCDataset(Dataset):
     def __init__(
