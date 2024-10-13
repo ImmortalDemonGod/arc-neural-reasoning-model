@@ -264,9 +264,7 @@ class ARCDataset(Dataset):
                 error_msg = f"Task data for task_id '{task_id}' must contain at least 'train' or 'test' keys."
                 logger.error(error_msg)
                 raise ValueError(error_msg)
-                error_msg = f"Task data for task_id '{task_id}' must contain at least 'train' or 'test' keys."
-                logger.error(error_msg)
-                raise ValueError(error_msg)
+
             train_examples = task_data.get("train", [])
             test_examples = task_data.get("test", [])
             logger.debug(f"Dict task data - Train examples: {len(train_examples)}, Test examples: {len(test_examples)}")
@@ -381,6 +379,10 @@ class ARCDataset(Dataset):
         self.statistics = statistics
         self._save_cache(self.cache_path)  # Ensure statistics are saved in the cache
         logger.debug("Dataset statistics computed and cached successfully")
+
+
+    def _process_list_data(self, data_list: List[Dict], task_id: str) -> List[Dict]:
+
         logger.debug(f"Starting to process {len(data_list)} tasks.")
         processed_data = []
         for idx, example in enumerate(data_list):
