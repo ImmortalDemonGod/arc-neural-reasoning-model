@@ -658,11 +658,6 @@ if __name__ == "__main__":
         action="store_true",
         help="Disable the computation of symbol frequencies during hyperparameter optimization."
     )
-
-
-    args = parser.parse_args()
-
-    # Ensure the storage_name has the correct SQLite prefix and handle relative paths
     import os  # Ensure os is imported at the top of the file
 
     if not args.storage.startswith("sqlite:///"):
