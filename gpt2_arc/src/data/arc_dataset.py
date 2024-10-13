@@ -177,6 +177,7 @@ class ARCDataset(Dataset):
             return len(self.data)
         else:
             return self.num_samples
+    
     def __getitem__(self, idx):
         if idx < 0 or idx >= len(self):
             raise IndexError(f"Index {idx} out of bounds for dataset of size {len(self)}")
@@ -330,9 +331,6 @@ class ARCDataset(Dataset):
                         self.data.extend(processed_samples)
                     except json.JSONDecodeError as e:
                         logger.error(f"Error decoding JSON from file {file_path}: {e}")
-
-
-
 
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
@@ -540,6 +538,7 @@ class ARCDataset(Dataset):
 
         logger.debug(f"Grid shape after padding: {padded_grid.shape}")
         return padded_grid
+    
     def kronecker_scale(self, X, target_height=30, target_width=30):
         print(f"Kronecker scaling input shape: {X.shape}")
         h, w = X.shape
