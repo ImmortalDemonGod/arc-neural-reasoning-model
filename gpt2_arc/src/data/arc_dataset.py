@@ -348,10 +348,7 @@ class ARCDataset(Dataset):
         processed_data = []
         total_samples = 0  # For debugging
         for task in taskset.tasks:
-            if self.is_test:
-                samples = task.test
-            else:
-                samples = task.train
+            samples = task.test if self.is_test else task.train
             sample_count = len(samples)
             total_samples += sample_count
             logger.debug(f"Processing task {task.id} with {sample_count} samples")
