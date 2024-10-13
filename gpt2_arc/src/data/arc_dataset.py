@@ -105,17 +105,23 @@ class ARCDataset(Dataset):
             logger.error(f"No samples loaded from data source: {self.data_source}. Please verify the data source path and contents.")
         elif isinstance(self.data_source, TaskSet):
             logger.debug("Processing TaskSet data source for grid size stats.")
-            for task in self.data_source.tasks:
-                samples = task.test if self.is_test else task.train
-                for ex in samples:
-                    try:
-                        input_shape = self._get_grid_shape(ex['input'])
-                        output_shape = self._get_grid_shape(ex['output'])
-                        max_height = max(max_height, input_shape[1], output_shape[1])
-                        max_width = max(max_width, input_shape[2], output_shape[2])
-                    except Exception as e:
-                        logger.error(f"Error processing sample in task {task.id}: {e}", exc_info=True)
+            logger.debug("Processing TaskSet data source for grid size stats from processed data.")
+            for sample in self.data:
+                try:
+                    if not isinstance(sample, dict):
+                        logger.error(f"Expected sample to be a dict, but got {type(sample)}. Sample content: {sample}")
                         continue
+                    input_shape = self._get_grid_shape(sample['input'])
+                    output_shape = self._get_grid_shape(sample['output'])
+                    max_height = max(max_height, input_shape[1], output_shape[1])
+                    max_width = max(max_width, input_shape[2], output_shape[2])
+                except Exception as e:
+                    logger.error("Error processing sample for grid size stats.", exc_info=True)
+                    continue
+
+            # Update num_samples based on processed data
+            self.num_samples = len(self.data)
+            logger.debug(f"Number of samples after processing data: {self.num_samples}")
             logger.debug(f"Number of samples loaded: {self.num_samples}")
             logger.debug("Data index loaded from cache successfully.")
             self.num_samples = len(self.index_mapping)
