@@ -61,7 +61,21 @@ from src.config import Config, ModelConfig, TrainingConfig
 @pytest.fixture
 def model():
     config = Config(model=ModelConfig(), training=TrainingConfig())
-    return GPT2ARC(config, num_classes=10)
+    # Define a mock symbol_freq dictionary
+    symbol_freq = {
+        "0": 1.0,
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 1.0,
+        "5": 1.0,
+        "6": 1.0,
+        "7": 1.0,
+        "8": 1.0,
+        "9": 1.0
+    }
+    
+    return GPT2ARC(config, num_classes=10, symbol_freq=symbol_freq)
 
 
 @pytest.fixture
