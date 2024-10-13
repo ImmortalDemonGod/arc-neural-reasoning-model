@@ -300,7 +300,7 @@ class ARCDataset(Dataset):
 
 
     def _process_list_data(self, data_list: List[Dict], task_id: str) -> List[Dict]:
-        logger.debug(f"Starting to process {len(taskset.tasks)} tasks.")
+        logger.debug(f"Starting to process {len(data_list)} tasks.")
         processed_data = []
         for idx, example in enumerate(data_list):
             if 'input' in example and 'output' in example and isinstance(example['input'], (list, np.ndarray)) and isinstance(example['output'], (list, np.ndarray)):
