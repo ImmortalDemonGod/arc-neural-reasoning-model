@@ -218,15 +218,29 @@ class ARCDataset(Dataset):
         else:
             raise IndexError("No data available in ARCDataset.")
     
-    def _process_single_task(self, task_data: Dict, task_id: str) -> List[Dict]:
-        processed_task = []
-        for split in ["train", "test"]:
-            for sample in task_data.get(split, []):
-                input_grid = torch.tensor(sample["input"], dtype=torch.float32).unsqueeze(0)
-                output_grid = torch.tensor(sample["output"], dtype=torch.float32).unsqueeze(0)
-                processed_task.append({"input": input_grid, "output": output_grid, "task_id": task_id})
-        return processed_task
+    def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
+        logger.debug(f"Inside _process_single_task, self.test_split is: {self.test_split}")
+        logger.debug(f"Task data type: {type(task_data)}")
+        logger.debug(f"Task data content: {task_data}")
+    
+        if isinstance(task_data, dict):
+            train_examples = task_data.get("train", [])
+            test_examples = task_data.get("test", [])
+            logger.debug(f"Dict task data - Train examples: {len(train_examples)}, Test examples: {len(test_examples)}")
+        elif isinstance(task_data, list):
+            split_idx = int(len(task_data) * (1 - self.test_split))
+            train_examples = task_data[:split_idx]
+            test_examples = task_data[split_idx:]
+            logger.debug(f"List task data - Train examples: {len(train_examples)}, Test examples: {len(test_examples)}")
+        else:
+            error_msg = f"Task data must be either a dictionary or a list. Got {type(task_data)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
+        return {
+            "train": train_examples,
+            "test": test_examples
+        }
 
     def _count_samples_in_directory(self, directory: str):
         num_samples = 0
