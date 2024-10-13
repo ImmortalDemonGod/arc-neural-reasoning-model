@@ -137,11 +137,15 @@ class ARCDataset(Dataset):
                     task_data = json.load(f)
                 
                 if isinstance(task_data, dict):
-                    samples = task_data.get('samples', [])  # Modify 'samples' key as per your data
+                    samples = task_data.get('train', []) if not self.is_test else task_data.get('test', [])
+                    logger.debug(f"Extracted {len(samples)} samples from {'train' if not self.is_test else 'test'} split.")
                 elif isinstance(task_data, list):
                     samples = task_data
+                    logger.debug(f"Extracted {len(samples)} samples from list data.")
                 else:
-                    raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                    error_msg = f"Unexpected data format in file {file_path}: {type(task_data)}"
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
                 
                 num_samples = len(samples)
                 self.file_samples_count[file_path] = num_samples
@@ -209,9 +213,20 @@ class ARCDataset(Dataset):
                 raise IndexError(f"Failed to load sample {sample_idx} from file {file_path}")
         elif hasattr(self, 'data') and self.data:
             sample = self.data[idx]
-            input_tensor = sample["input"]
-            output_tensor = sample["output"]
+            logger.debug(f"Processing sample index {idx}: {sample}")
+            
+            if not isinstance(sample, dict):
+                logger.error(f"Expected sample to be a dict, but got {type(sample)}. Sample content: {sample}")
+                raise ValueError(f"Invalid sample format at index {idx}")
+            
+            input_tensor = sample.get("input")
+            output_tensor = sample.get("output")
             task_id = sample.get('task_id', "default_task")
+            
+            if input_tensor is None or output_tensor is None:
+                logger.error(f"Sample at index {idx} has missing 'input' or 'output'.")
+                raise ValueError(f"Missing data in sample at index {idx}")
+            
             return input_tensor, output_tensor, task_id
         else:
             raise IndexError("No data available in ARCDataset.")
@@ -469,50 +484,51 @@ class ARCDataset(Dataset):
         symbol_counts = np.zeros(self.num_symbols, dtype=int)
         total_symbols = 0
 
+        logger.debug("Starting computation of symbol frequencies.")
+       
         if isinstance(self.data_source, list):
-            for sample in self.data:
+            for idx, sample in enumerate(self.data):
                 try:
+                    logger.debug(f"Processing sample index {idx}.")
                     input_symbols = self._get_symbols(sample['input'])
                     output_symbols = self._get_symbols(sample['output'])
                     symbol_counts += np.bincount(input_symbols.flatten(), minlength=self.num_symbols)
                     symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
                     total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
                 except Exception as e:
-                    logger.error(f"Error processing sample index during symbol frequency computation: {e}", exc_info=True)
+                    logger.error(f"Error processing sample index {idx} during symbol frequency computation: {e}", exc_info=True)
                     continue
         else:
             for file_path, sample_idx in self.index_mapping:
-                if file_path is None:
-                    sample = self.data_source[sample_idx]
-                    input_symbols = self._get_symbols(sample['input'])
-                    output_symbols = self._get_symbols(sample['output'])
-                else:
-                    try:
+                try:
+                    if file_path is None:
+                        sample = self.data_source[sample_idx]
+                    else:
                         with open(file_path, 'r') as f:
                             task_data = json.load(f)
                         if isinstance(task_data, dict):
-                            samples = task_data.get('test', []) if self.is_test else task_data.get('train', [])
+                            samples = task_data.get('train', []) if not self.is_test else task_data.get('test', [])
                             sample = samples[sample_idx]
-                            input_symbols = self._get_symbols(sample['input'])
-                            output_symbols = self._get_symbols(sample['output'])
                         elif isinstance(task_data, list):
                             sample = task_data[sample_idx]
-                            input_symbols = self._get_symbols(sample['input'])
-                            output_symbols = self._get_symbols(sample['output'])
                         else:
                             raise ValueError(f"Unexpected data format in file {file_path}: {type(task_data)}")
-                    except Exception as e:
-                        logger.error(f"Error processing sample {sample_idx} from file {file_path}: {e}", exc_info=True)
-                        continue  # Skip this sample
-
-                symbol_counts += np.bincount(input_symbols.flatten(), minlength=self.num_symbols)
-                symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
-                total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
-
+                   
+                    logger.debug(f"Processing file {file_path}, sample index {sample_idx}.")
+                   
+                    input_symbols = self._get_symbols(sample['input'])
+                    output_symbols = self._get_symbols(sample['output'])
+                    symbol_counts += np.bincount(input_symbols.flatten(), minlength=self.num_symbols)
+                    symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
+                    total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
+                except Exception as e:
+                    logger.error(f"Error processing sample {sample_idx} from file {file_path}: {e}", exc_info=True)
+                    continue  # Skip this sample
+   
         if total_symbols == 0:
             logger.warning("No symbols found in the dataset.")
             return {}
-
+   
         symbol_freq = {str(symbol): float(count) / total_symbols for symbol, count in enumerate(symbol_counts)}
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
         return symbol_freq
@@ -541,6 +557,8 @@ class ARCDataset(Dataset):
         """
         Retrieves symbol tensor without preprocessing.
         """
+        logger.debug(f"Extracting symbols from grid with type: {type(grid)}.")
+       
         if isinstance(grid, list):
             grid_tensor = torch.tensor(grid, dtype=torch.int64)
         elif isinstance(grid, np.ndarray):
@@ -548,11 +566,14 @@ class ARCDataset(Dataset):
         elif isinstance(grid, torch.Tensor):
             grid_tensor = grid.long()
         else:
+            logger.error(f"Unexpected grid type: {type(grid)}")
             raise ValueError(f"Unexpected grid type: {type(grid)}")
-        
+       
         if grid_tensor.ndim == 2:
             grid_tensor = grid_tensor.unsqueeze(0)  # Add channel dimension
-
+            logger.debug(f"Added channel dimension. New shape: {grid_tensor.shape}")
+   
+        logger.debug(f"Extracted symbols with shape: {grid_tensor.shape}")
         return grid_tensor
 
     def _compute_grid_size_stats(self):

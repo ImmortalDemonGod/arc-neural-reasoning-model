@@ -74,10 +74,11 @@ def main(args):
             sample = train_dataset[i]
             input_tensor, output_tensor, task_id = sample
             logger.debug(f"Training Sample {i + 1}:")
-            logger.debug(f"  Sample Keys: {sample.keys()}")
+            logger.debug(f"  Type of sample: {type(sample)}")
+            logger.debug(f"  Sample content: {sample}")
             logger.debug(f"  Task ID: {task_id}")
-            logger.debug(f"  Input Tensor Shape: {input_tensor.shape}")
-            logger.debug(f"  Output Tensor Shape: {output_tensor.shape}")
+            logger.debug(f"  Input Tensor Type: {type(input_tensor)}, Shape: {input_tensor.shape}")
+            logger.debug(f"  Output Tensor Type: {type(output_tensor)}, Shape: {output_tensor.shape}")
         except Exception as e:
             logger.error(f"Error accessing sample {i}: {e}")
     
@@ -89,10 +90,11 @@ def main(args):
             sample = eval_dataset[i]
             input_tensor, output_tensor, task_id = sample
             logger.debug(f"Evaluation Sample {i + 1}:")
-            logger.debug(f"  Sample Keys: {sample.keys()}")
+            logger.debug(f"  Type of sample: {type(sample)}")
+            logger.debug(f"  Sample content: {sample}")
             logger.debug(f"  Task ID: {task_id}")
-            logger.debug(f"  Input Tensor Shape: {input_tensor.shape}")
-            logger.debug(f"  Output Tensor Shape: {output_tensor.shape}")
+            logger.debug(f"  Input Tensor Type: {type(input_tensor)}, Shape: {input_tensor.shape}")
+            logger.debug(f"  Output Tensor Type: {type(output_tensor)}, Shape: {output_tensor.shape}")
         except Exception as e:
             logger.error(f"Error accessing evaluation sample {i}: {e}")
     
@@ -109,10 +111,11 @@ def main(args):
             if isinstance(sample, tuple) and len(sample) == 3:
                 input_tensor, output_tensor, task_id = sample
                 logger.debug(f"Synthetic Training Sample {i + 1}:")
-                logger.debug(f"  Sample Keys: {ARCDataset.__getitem__.__doc__}")  # Optional: Print method docstring
+                logger.debug(f"  Type of sample: {type(sample)}")
+                logger.debug(f"  Sample content: {sample}")
                 logger.debug(f"  Task ID: {task_id}")
-                logger.debug(f"  Input Tensor Shape: {input_tensor.shape}")
-                logger.debug(f"  Output Tensor Shape: {output_tensor.shape}")
+                logger.debug(f"  Input Tensor Type: {type(input_tensor)}, Shape: {input_tensor.shape}")
+                logger.debug(f"  Output Tensor Type: {type(output_tensor)}, Shape: {output_tensor.shape}")
             else:
                 logger.warning(f"Synthetic Sample {i + 1} has unexpected format: {type(sample)} with content: {sample}")
         except Exception as e:
