@@ -73,7 +73,9 @@ class ARCDataset(Dataset):
             logger.debug(f"Number of samples (str - file): {self.num_samples}")
             logger.debug(f"Number of samples (str - directory): {self.num_samples}")
             return
-
+        else:
+            logger.debug("Caching is disabled. Proceeding to load data without cache.")
+        
         set_debug_mode(debug)
         logger.debug("Starting ARCDataset initialization with lazy loading")
 
@@ -228,7 +230,7 @@ class ARCDataset(Dataset):
         else:
             raise IndexError("No data available in ARCDataset.")
     
-    def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
+    def _process_single_task(self, task_data: Union[Dict, List], task_id: str) -> List[Dict]:
         logger.debug(f"Inside _process_single_task, self.test_split is: {self.test_split}")
         logger.debug(f"Task data type: {type(task_data)}")
         logger.debug(f"Task data content: {task_data}")
@@ -247,10 +249,33 @@ class ARCDataset(Dataset):
             logger.error(error_msg)
             raise ValueError(error_msg)
 
-        return {
-            "train": train_examples,
-            "test": test_examples
-        }
+        processed_samples = []
+
+        for ex in train_examples:
+            try:
+                input_tensor = self._preprocess_grid(ex[0])
+                output_tensor = self._preprocess_grid(ex[1])
+                processed_samples.append({
+                    'input': input_tensor,
+                    'output': output_tensor,
+                    'task_id': task_id
+                })
+            except Exception as e:
+                logger.error(f"Error processing training example in task {task_id}: {e}", exc_info=True)
+
+        for ex in test_examples:
+            try:
+                input_tensor = self._preprocess_grid(ex[0])
+                output_tensor = self._preprocess_grid(ex[1])
+                processed_samples.append({
+                    'input': input_tensor,
+                    'output': output_tensor,
+                    'task_id': task_id
+                })
+            except Exception as e:
+                logger.error(f"Error processing testing example in task {task_id}: {e}", exc_info=True)
+
+        return processed_samples
 
     def _count_samples_in_directory(self, directory: str):
         num_samples = 0
