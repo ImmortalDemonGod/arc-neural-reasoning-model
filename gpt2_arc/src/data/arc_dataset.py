@@ -537,7 +537,7 @@ class ARCDataset(Dataset):
             logger.warning("No symbols found in the dataset.")
             return {}
    
-        # Change the keys from strings to integers
+        # Construct the symbol frequency dictionary with integer keys
         symbol_freq = {int(symbol): float(count) / total_symbols for symbol, count in enumerate(symbol_counts)}
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
         return symbol_freq
@@ -586,12 +586,6 @@ class ARCDataset(Dataset):
         return grid_tensor
 
 
-    def _compute_symbol_frequencies(self):
-        symbol_counts = np.zeros(self.num_symbols, dtype=int)
-        for sample in self.data:
-            symbol_counts += np.bincount(sample["input"].flatten(), minlength=self.num_symbols)
-            symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
-        return symbol_counts / symbol_counts.sum()
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
         logger.debug(f"Preprocessing grid with initial type: {type(grid)}")
