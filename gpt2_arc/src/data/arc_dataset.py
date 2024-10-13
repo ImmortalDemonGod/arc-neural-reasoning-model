@@ -76,6 +76,9 @@ class ARCDataset(Dataset):
             return
         elif isinstance(self.data_source, TaskSet):
             logger.debug("Processing TaskSet data source for symbol frequencies.")
+            symbol_counts = np.zeros(self.num_symbols, dtype=int)
+            total_symbols = 0
+            max_height, max_width = 0, 0
             for task in self.data_source.tasks:
                 samples = task.test if self.is_test else task.train
                 for ex in samples:
