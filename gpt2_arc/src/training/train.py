@@ -187,9 +187,7 @@ def main(args):
                 n_embd=n_embd,
                 n_head=n_head,
                 n_layer=best_params['n_layer'],
-                dropout=best_params['dropout']
-                collect_grid_stats=not args.disable_gridstats,
-                collect_symbol_freq=not args.disable_symbolfreq
+                dropout=best_params['dropout'],
                 collect_grid_stats=not args.disable_gridstats,
                 collect_symbol_freq=not args.disable_symbolfreq
             )
