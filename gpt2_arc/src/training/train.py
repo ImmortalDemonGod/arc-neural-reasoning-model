@@ -90,13 +90,15 @@ def main(args):
     torch.set_float32_matmul_precision(args.matmul_precision)
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
     # Determine logging level based on --debug flag
-    if args.debug:
+    # Set log_level to DEBUG if --debug or --fast-dev-run is used
+    if args.debug or args.fast_dev_run:
         log_level = logging.DEBUG
     else:
         log_level = getattr(logging, args.log_level.upper(), logging.INFO)
     logging.basicConfig(
         level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        stream=sys.stdout  # Direct logs to stdout
     )
 
     profiler = PyTorchProfiler(
@@ -108,6 +110,8 @@ def main(args):
     ) if args.use_profiler else None
     
     
+    # Add a print statement to confirm that main(args) is being executed
+    print("INFO: Starting main function")
     logger.info("Starting main function")
     logger.debug(f"Command line arguments: {args}")
 
@@ -545,14 +549,14 @@ def main(args):
         trainer.results_collector.save_to_json(results_path)
         logger.debug(f"Results saved to: {results_path}")
 
-    except RuntimeError as e:
-        if 'CUDA out of memory' in str(e):
-            logger.error("CUDA out of memory error occurred.")
-            logger.error("Consider reducing the batch size or model complexity.")
-            raise RuntimeError("CUDA out of memory error occurred.")
-        else:
-            logger.error(f"A runtime error occurred: {str(e)}", exc_info=True)
-            raise RuntimeError(f"A runtime error occurred: {str(e)}")
+except RuntimeError as e:
+    if 'CUDA out of memory' in str(e):
+        logger.error("CUDA out of memory error occurred.")
+        print("ERROR: CUDA out of memory error occurred.")  # Fallback print
+        raise RuntimeError("CUDA out of memory error occurred.")
+    else:
+        logger.error(f"A runtime error occurred: {str(e)}", exc_info=True)
+        raise RuntimeError(f"A runtime error occurred: {str(e)}")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {str(e)}", exc_info=True)
         sys.exit(1)  # Exit the program after logging the error
