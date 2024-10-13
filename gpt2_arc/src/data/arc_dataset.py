@@ -196,7 +196,9 @@ class ARCDataset(Dataset):
         return self.num_samples
     
     def __getitem__(self, idx):
+        logger.debug(f"Retrieving item at index {idx}")
         if idx < 0 or idx >= len(self):
+            logger.error(f"Index {idx} out of bounds for dataset of size {len(self)}")
             raise IndexError(f"Index {idx} out of bounds for dataset of size {len(self)}")
 
         logger.debug(f"Retrieving item at index {idx}")
@@ -257,6 +259,9 @@ class ARCDataset(Dataset):
             has_test = 'test' in task_data
             logger.debug(f"Has train: {has_train}, Has test: {has_test}")
             if not has_train and not has_test:
+                error_msg = f"Task data for task_id '{task_id}' must contain at least 'train' or 'test' keys."
+                logger.error(error_msg)
+                raise ValueError(error_msg)
                 error_msg = f"Task data for task_id '{task_id}' must contain at least 'train' or 'test' keys."
                 logger.error(error_msg)
                 raise ValueError(error_msg)
