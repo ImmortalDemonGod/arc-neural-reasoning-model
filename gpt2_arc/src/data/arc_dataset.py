@@ -545,6 +545,7 @@ class ARCDataset(Dataset):
         Returns:
             Dict[str, Any]: A dictionary containing grid size statistics.
         """
+        logger.debug("Starting get_grid_size_stats computation.")
         max_height, max_width = 0, 0
         if isinstance(self.data_source, list):
             for sample in self.data:
@@ -585,6 +586,7 @@ class ARCDataset(Dataset):
                 max_width = max(max_width, input_shape[2], output_shape[2])
 
         grid_size_stats = {"max_height": max_height, "max_width": max_width}
+        logger.debug("Completed get_grid_size_stats computation.")
         logger.debug(f"Computed grid size stats: {grid_size_stats}")
         return grid_size_stats
 
