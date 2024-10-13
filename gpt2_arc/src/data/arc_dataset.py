@@ -87,8 +87,6 @@ class ARCDataset(Dataset):
             logger.debug(f"Number of samples (str - file): {self.num_samples}")
             logger.debug(f"Number of samples (str - directory): {self.num_samples}")
             return
-        else:
-            logger.debug("Caching is disabled. Proceeding to load data without cache.")
         
 
         if isinstance(data_source, str):
