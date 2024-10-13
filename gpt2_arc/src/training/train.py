@@ -93,7 +93,7 @@ def main(args):
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
     log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'DEBUG', logging.DEBUG)
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 

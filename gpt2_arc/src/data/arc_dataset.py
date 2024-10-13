@@ -17,6 +17,7 @@ from arckit.data import TaskSet, Task
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)  # Set to WARNING by default
+logger.propagate = False  # Prevent logs from propagating to the root logger
 
 # Create a handler that writes to stderr
 handler = logging.StreamHandler()
