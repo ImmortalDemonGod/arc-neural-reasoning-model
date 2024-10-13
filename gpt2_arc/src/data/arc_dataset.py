@@ -46,7 +46,7 @@ class ARCDataset(Dataset):
         num_symbols: int = 10,
         test_split: float = 0.2,
         debug=False,
-        use_cache: bool = True,  # New parameter to control caching
+        use_cache: bool = True,  # Ensure this line exists
     ):
         self.data = []  # Initialize self.data to ensure it's always defined
         self.test_split = test_split
@@ -57,7 +57,8 @@ class ARCDataset(Dataset):
         self.index_mapping = []
         self.file_samples_count = {}
 
-        self.use_cache = use_cache  # Store the use_cache flag
+        print(f"Initializing ARCDataset with use_cache={use_cache}")  # Debug statement
+        self.use_cache = use_cache
 
         self.cache_path = self._generate_cache_path(
             data_source=self.data_source,
