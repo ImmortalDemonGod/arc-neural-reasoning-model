@@ -108,6 +108,9 @@ class ARCDataset(Dataset):
             self.data = data_source
             logger.debug(f"Number of samples (list): {self.num_samples}")
 
+        # Compute and cache dataset statistics after data initialization
+        self._compute_and_cache_statistics()
+
     def _process_list_data_indices(self, data_list: List[Dict]):
         """
         Processes a list of data dictionaries and builds the index mapping.
