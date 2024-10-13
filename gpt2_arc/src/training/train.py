@@ -12,7 +12,7 @@ import arckit
 import numpy as np
 import torch
 from lightning.pytorch.profilers import PyTorchProfiler
-from pytorch_lightning.callbacks import Callback
+from pytorch_lightning.callbacks import Callback, ModelCheckpoint
 from torch.profiler import ProfilerActivity
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
