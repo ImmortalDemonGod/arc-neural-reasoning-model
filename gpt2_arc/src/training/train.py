@@ -63,8 +63,7 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
             iter_num=self.iter_num,
             val_loss=metrics.get("val_loss", 0.0),
             epoch=metrics.get("epoch", 0),
-            timestamp=self.timestamp
-            collect_grid_stats=not args.disable_gridstats   # Pass the flag
+            timestamp=self.timestamp,
             collect_grid_stats=not args.disable_gridstats   # Pass the flag
         )
 
