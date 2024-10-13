@@ -319,34 +319,34 @@ def objective(trial, args):
             for symbol, freq in symbol_freq_dict.items():
                 logger.debug(f"Symbol {symbol}: Frequency {freq}")
 
-    if not args.disable_symbolfreq:
-        logger.info("Symbol frequency computation is enabled.")
-        
-        if args.preload_data:
-            logger.debug("Preloading data and computing symbol frequencies.")
-            if hasattr(train_data, 'symbol_frequencies') and train_data.symbol_frequencies:
-                train_symbol_freq_dict = train_data.symbol_frequencies
-                logger.debug(f"Training symbol frequencies loaded from cache: {train_symbol_freq_dict}")
+        if not args.disable_symbolfreq:
+            logger.info("Symbol frequency computation is enabled.")
+            
+            if args.preload_data:
+                logger.debug("Preloading data and computing symbol frequencies.")
+                if hasattr(train_data, 'symbol_frequencies') and train_data.symbol_frequencies:
+                    train_symbol_freq_dict = train_data.symbol_frequencies
+                    logger.debug(f"Training symbol frequencies loaded from cache: {train_symbol_freq_dict}")
+                else:
+                    logger.error("Symbol frequencies not found in preloaded data.")
+                    raise ValueError("Symbol frequencies not found in preloaded data.")
             else:
-                logger.error("Symbol frequencies not found in preloaded data.")
-                raise ValueError("Symbol frequencies not found in preloaded data.")
+                logger.debug("Computing symbol frequencies on-the-fly.")
+                train_symbol_freq = train_data.get_symbol_frequencies()
+                if not train_symbol_freq:
+                    logger.error("Training symbol frequencies are empty. Cannot initialize GPT2ARC.")
+                    raise optuna.exceptions.TrialPruned()
+                train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in train_symbol_freq.items()}
+                training_config.symbol_freq = train_symbol_freq_dict
+                logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
         else:
-            logger.debug("Computing symbol frequencies on-the-fly.")
-            train_symbol_freq = train_data.get_symbol_frequencies()
-            if not train_symbol_freq:
-                logger.error("Training symbol frequencies are empty. Cannot initialize GPT2ARC.")
-                raise optuna.exceptions.TrialPruned()
-            train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in train_symbol_freq.items()}
-            training_config.symbol_freq = train_symbol_freq_dict
-            logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
-    else:
-        logger.info("Symbol frequency computation is disabled.")
-        training_config.symbol_freq = {}
-        train_symbol_freq_dict = {}
-        val_symbol_freq = {}
-        balance_symbols = False
-        training_config.balance_symbols = balance_symbols
-        logger.info("Balancing symbols is disabled due to --disable_symbolfreq flag.")
+            logger.info("Symbol frequency computation is disabled.")
+            training_config.symbol_freq = {}
+            train_symbol_freq_dict = {}
+            val_symbol_freq = {}
+            balance_symbols = False
+            training_config.balance_symbols = balance_symbols
+            logger.info("Balancing symbols is disabled due to --disable_symbolfreq flag.")
 
         # After defining training_config
         config = Config(

@@ -290,34 +290,34 @@ def main(args):
             logger.info(f"Number of training examples: {len(train_data)}")
             logger.info(f"Number of validation examples: {len(val_data)}")
 
-    if not args.disable_symbolfreq:
-        logger.info("Symbol frequency computation is enabled.")
-        
-        if args.preload_data:
-            logger.debug("Preloading data and computing symbol frequencies.")
-            if hasattr(train_data, 'symbol_frequencies') and train_data.symbol_frequencies:
-                train_symbol_freq_dict = train_data.symbol_frequencies
-                logger.debug(f"Training symbol frequencies loaded from cache: {train_symbol_freq_dict}")
+        if not args.disable_symbolfreq:
+            logger.info("Symbol frequency computation is enabled.")
+            
+            if args.preload_data:
+                logger.debug("Preloading data and computing symbol frequencies.")
+                if hasattr(train_data, 'symbol_frequencies') and train_data.symbol_frequencies:
+                    train_symbol_freq_dict = train_data.symbol_frequencies
+                    logger.debug(f"Training symbol frequencies loaded from cache: {train_symbol_freq_dict}")
+                else:
+                    logger.error("Symbol frequencies not found in preloaded data.")
+                    sys.exit(1)
             else:
-                logger.error("Symbol frequencies not found in preloaded data.")
-                sys.exit(1)
+                logger.debug("Computing symbol frequencies on-the-fly.")
+                train_symbol_freq = train_data.get_symbol_frequencies()
+                if not train_symbol_freq:
+                    logger.error("Training symbol frequencies are empty. Cannot initialize GPT2ARC.")
+                    sys.exit(1)
+                train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in train_symbol_freq.items()}
+                training_config.symbol_freq = train_symbol_freq_dict
+                logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
         else:
-            logger.debug("Computing symbol frequencies on-the-fly.")
-            train_symbol_freq = train_data.get_symbol_frequencies()
-            if not train_symbol_freq:
-                logger.error("Training symbol frequencies are empty. Cannot initialize GPT2ARC.")
-                sys.exit(1)
-            train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in train_symbol_freq.items()}
-            training_config.symbol_freq = train_symbol_freq_dict
-            logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
-    else:
-        logger.info("Symbol frequency computation is disabled.")
-        training_config.symbol_freq = {}
-        train_symbol_freq_dict = {}
-        val_symbol_freq = {}
-        balance_symbols = False
-        training_config.balance_symbols = balance_symbols
-        logger.info("Balancing symbols is disabled due to --disable_symbolfreq flag.")
+            logger.info("Symbol frequency computation is disabled.")
+            training_config.symbol_freq = {}
+            train_symbol_freq_dict = {}
+            val_symbol_freq = {}
+            balance_symbols = False
+            training_config.balance_symbols = balance_symbols
+            logger.info("Balancing symbols is disabled due to --disable_symbolfreq flag.")
 
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
