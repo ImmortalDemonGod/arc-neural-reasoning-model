@@ -289,27 +289,34 @@ def main(args):
             logger.info(f"Number of training examples: {len(train_data)}")
             logger.info(f"Number of validation examples: {len(val_data)}")
 
-        # Access dataset statistics
-        logger.debug("Calling train_data.get_grid_size_stats()")
-        train_grid_stats = train_data.get_grid_size_stats()
-        logger.debug("Completed train_data.get_grid_size_stats()")
-        logger.debug("Calling train_data.get_symbol_frequencies()")
-        train_symbol_freq = train_data.get_symbol_frequencies()
-        logger.debug("Completed train_data.get_symbol_frequencies()")
-
-        val_grid_stats = val_data.get_grid_size_stats()
-        val_symbol_freq = val_data.get_symbol_frequencies()
-
-        # Convert train_symbol_freq from numpy array to dictionary with string keys
-        train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
-
-        # Update the TrainingConfig with the symbol_freq dictionary
-        training_config.symbol_freq = train_symbol_freq_dict
-
-        logger.info(f"Train Grid Size Stats: {train_grid_stats}")
-        logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
-        logger.info(f"Validation Grid Size Stats: {val_grid_stats}")
-        logger.info(f"Validation Symbol Frequencies: {val_symbol_freq}")
+        if not args.disable_gridstats:
+            # Access dataset statistics
+            logger.debug("Calling train_data.get_grid_size_stats()")
+            train_grid_stats = train_data.get_grid_size_stats()
+            logger.debug("Completed train_data.get_grid_size_stats()")
+            logger.debug("Calling train_data.get_symbol_frequencies()")
+            train_symbol_freq = train_data.get_symbol_frequencies()
+            logger.debug("Completed train_data.get_symbol_frequencies()")
+    
+            val_grid_stats = val_data.get_grid_size_stats()
+            val_symbol_freq = val_data.get_symbol_frequencies()
+    
+            # Convert train_symbol_freq from numpy array to dictionary with integer keys
+            train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
+    
+            # Update the TrainingConfig with the symbol_freq dictionary
+            training_config.symbol_freq = train_symbol_freq_dict
+    
+            logger.info(f"Train Grid Size Stats: {train_grid_stats}")
+            logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
+            logger.info(f"Validation Grid Size Stats: {val_grid_stats}")
+            logger.info(f"Validation Symbol Frequencies: {val_symbol_freq}")
+        else:
+            logger.info("Grid size statistics computation is disabled.")
+            train_symbol_freq_dict = {}
+            training_config.symbol_freq = train_symbol_freq_dict
+            train_grid_stats, val_grid_stats = None, None
+            val_symbol_freq = {}
 
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
