@@ -74,13 +74,38 @@ class ARCDataset(Dataset):
             if self.num_samples == 0:
                 logger.error(f"Cache loaded but contains zero samples. Cache path: {self.cache_path}")
             return
-        else:
+        elif isinstance(self.data_source, TaskSet):
+            logger.debug("Processing TaskSet data source for symbol frequencies.")
+            for task in self.data_source.tasks:
+                samples = task.test if self.is_test else task.train
+                for ex in samples:
+                    try:
+                        input_symbols = self._get_symbols(ex[0])
+                        output_symbols = self._get_symbols(ex[1])
+                        symbol_counts += np.bincount(input_symbols.flatten(), minlength=self.num_symbols)
+                        symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
+                        total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
+                    except Exception as e:
+                        logger.error(f"Error processing sample in task {task.id}: {e}", exc_info=True)
+                        continue
             logger.debug("Caching is disabled or cache loading failed. Proceeding to load data without cache.")
         
         # After data initialization
         if self.num_samples == 0:
             logger.error(f"No samples loaded from data source: {self.data_source}. Please verify the data source path and contents.")
-        else:
+        elif isinstance(self.data_source, TaskSet):
+            logger.debug("Processing TaskSet data source for grid size stats.")
+            for task in self.data_source.tasks:
+                samples = task.test if self.is_test else task.train
+                for ex in samples:
+                    try:
+                        input_shape = self._get_grid_shape(ex['input'])
+                        output_shape = self._get_grid_shape(ex['output'])
+                        max_height = max(max_height, input_shape[1], output_shape[1])
+                        max_width = max(max_width, input_shape[2], output_shape[2])
+                    except Exception as e:
+                        logger.error(f"Error processing sample in task {task.id}: {e}", exc_info=True)
+                        continue
             logger.debug(f"Number of samples loaded: {self.num_samples}")
             logger.debug("Data index loaded from cache successfully.")
             self.num_samples = len(self.index_mapping)
