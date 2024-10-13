@@ -107,6 +107,7 @@ class ARCDataset(Dataset):
         elif isinstance(self.data_source, TaskSet):
             logger.debug("Processing TaskSet data source for grid size stats.")
             logger.debug("Processing TaskSet data source for grid size stats from processed data.")
+            max_height, max_width = 0, 0
             for sample in self.data:
                 try:
                     if not isinstance(sample, dict):
