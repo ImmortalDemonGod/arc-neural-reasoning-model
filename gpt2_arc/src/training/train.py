@@ -98,8 +98,17 @@ def main(args):
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        stream=sys.stdout  # Direct logs to stdout
+        stream=sys.stdout,  # Direct logs to stdout
+        force=True          # Override existing logging configurations
     )
+    logging.getLogger().setLevel(log_level)  # Ensure root logger is set to log_level
+
+    # Optional: Add a StreamHandler to the specific logger
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(log_level)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
 
     profiler = PyTorchProfiler(
         dirpath=args.profiler_dirpath,
