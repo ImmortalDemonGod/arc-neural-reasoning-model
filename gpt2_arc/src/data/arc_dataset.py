@@ -575,7 +575,7 @@ class ARCDataset(Dataset):
         """
         Retrieves symbol tensor without preprocessing.
         """
-        logger.debug(f"Extracting symbols from grid with type: {type(grid)} and content: {grid}.")
+        #logger.debug(f"Extracting symbols from grid with type: {type(grid)} and content: {grid}.")
        
         if isinstance(grid, list):
             grid_tensor = torch.tensor(grid, dtype=torch.int64)
@@ -589,9 +589,9 @@ class ARCDataset(Dataset):
        
         if grid_tensor.ndim == 2:
             grid_tensor = grid_tensor.unsqueeze(0)  # Add channel dimension
-            logger.debug(f"Added channel dimension. New shape: {grid_tensor.shape}")
+            #logger.debug(f"Added channel dimension. New shape: {grid_tensor.shape}")
    
-        logger.debug(f"Extracted symbols with shape: {grid_tensor.shape}")
+        #logger.debug(f"Extracted symbols with shape: {grid_tensor.shape}")
         return grid_tensor
 
 
