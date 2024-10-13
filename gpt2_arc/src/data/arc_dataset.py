@@ -483,11 +483,11 @@ class ARCDataset(Dataset):
         logger.debug(f"Computed grid size stats: {grid_size_stats}")
         return grid_size_stats
 
-    def get_symbol_frequencies(self) -> Dict[str, float]:
+    def get_symbol_frequencies(self) -> Dict[int, float]:
         """
         Computes symbol frequencies by iterating over samples on-the-fly.
         Returns:
-            Dict[str, float]: A dictionary mapping symbols to their frequencies.
+            Dict[int, float]: A dictionary mapping symbols to their frequencies.
         """
         symbol_counts = np.zeros(self.num_symbols, dtype=int)
         total_symbols = 0
@@ -537,7 +537,8 @@ class ARCDataset(Dataset):
             logger.warning("No symbols found in the dataset.")
             return {}
    
-        symbol_freq = {str(symbol): float(count) / total_symbols for symbol, count in enumerate(symbol_counts)}
+        # Change the keys from strings to integers
+        symbol_freq = {symbol: float(count) / total_symbols for symbol, count in enumerate(symbol_counts)}
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
         return symbol_freq
 
