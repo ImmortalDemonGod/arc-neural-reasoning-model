@@ -549,14 +549,14 @@ def main(args):
         trainer.results_collector.save_to_json(results_path)
         logger.debug(f"Results saved to: {results_path}")
 
-except RuntimeError as e:
-    if 'CUDA out of memory' in str(e):
-        logger.error("CUDA out of memory error occurred.")
-        print("ERROR: CUDA out of memory error occurred.")  # Fallback print
-        raise RuntimeError("CUDA out of memory error occurred.")
-    else:
-        logger.error(f"A runtime error occurred: {str(e)}", exc_info=True)
-        raise RuntimeError(f"A runtime error occurred: {str(e)}")
+    except RuntimeError as e:
+        if 'CUDA out of memory' in str(e):
+            logger.error("CUDA out of memory error occurred.")
+            print("ERROR: CUDA out of memory error occurred.")  # Fallback print
+            raise RuntimeError("CUDA out of memory error occurred.")
+        else:
+            logger.error(f"A runtime error occurred: {str(e)}", exc_info=True)
+            raise RuntimeError(f"A runtime error occurred: {str(e)}")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {str(e)}", exc_info=True)
         sys.exit(1)  # Exit the program after logging the error
