@@ -6,7 +6,7 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 def main():
     # Set up logging
     logging.basicConfig(
-        level=logging.ERROR,
+        level=logging.DEBUG,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     logger = logging.getLogger(__name__)

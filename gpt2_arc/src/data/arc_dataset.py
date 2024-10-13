@@ -300,6 +300,7 @@ class ARCDataset(Dataset):
 
 
     def _process_list_data(self, data_list: List[Dict], task_id: str) -> List[Dict]:
+        logger.debug(f"Starting to process {len(taskset.tasks)} tasks.")
         processed_data = []
         for idx, example in enumerate(data_list):
             if 'input' in example and 'output' in example and isinstance(example['input'], (list, np.ndarray)) and isinstance(example['output'], (list, np.ndarray)):
@@ -349,7 +350,9 @@ class ARCDataset(Dataset):
         processed_data = []
         total_samples = 0  # For debugging
         for task in taskset.tasks:
+            logger.debug(f"Processing Task ID: {task.id}")
             samples = task.test if self.is_test else task.train
+            logger.debug(f"Number of samples in Task ID {task.id}: {len(samples)}")
             sample_count = len(samples)
             total_samples += sample_count
             logger.debug(f"Processing task {task.id} with {sample_count} samples")
@@ -362,9 +365,10 @@ class ARCDataset(Dataset):
                         "output": output_tensor,
                         "task_id": task.id
                     })
+                    logger.debug(f"Processed sample {len(processed_data)} in Task ID {task.id}")
                 except Exception as e:
                     logger.error(f"Error processing sample in task {task.id}: {e}", exc_info=True)
-        logger.debug(f"Total samples processed: {len(processed_data)}")
+        logger.debug(f"Total samples processed across all tasks: {len(processed_data)}")
         return processed_data
 
 
