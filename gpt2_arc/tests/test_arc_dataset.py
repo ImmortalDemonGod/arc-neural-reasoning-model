@@ -47,8 +47,8 @@ def mock_taskset():
     mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
-def test_dataset_statistics_computation(sample_data):
-    dataset = ARCDataset(sample_data, debug=True)
+def test_dataset_statistics_computation(sample_data, debug_mode):
+    dataset = ARCDataset(sample_data)
     
     # Retrieve statistics
     grid_size_stats = dataset.get_grid_size_stats()
@@ -77,8 +77,8 @@ def test_dataset_statistics_computation(sample_data):
     for symbol, freq in expected_frequencies.items():
         assert symbol_frequencies.get(symbol, 0.0) == freq, f"Frequency for symbol {symbol} should be {freq}"
 
-def test_dataset_statistics_caching(sample_data):
-    dataset = ARCDataset(sample_data, debug=True)
+def test_dataset_statistics_caching(sample_data, debug_mode):
+    dataset = ARCDataset(sample_data)
     
     # Ensure that statistics are cached
     assert hasattr(dataset, 'statistics'), "Dataset should have a 'statistics' attribute after caching"
@@ -86,14 +86,14 @@ def test_dataset_statistics_caching(sample_data):
     assert "symbol_frequencies" in dataset.statistics, "Statistics should include 'symbol_frequencies'"
 
     # Reload the dataset to ensure statistics are loaded from cache
-    dataset_reloaded = ARCDataset(sample_data, debug=True)
+    dataset_reloaded = ARCDataset(sample_data)
     grid_size_stats = dataset_reloaded.get_grid_size_stats()
     symbol_frequencies = dataset_reloaded.get_symbol_frequencies()
     
     # Assertions to verify consistency
     assert grid_size_stats == dataset.statistics["grid_size_stats"], "Grid size stats should match after reloading from cache"
     assert symbol_frequencies == dataset.statistics["symbol_frequencies"], "Symbol frequencies should match after reloading from cache"
-    dataset = ARCDataset(sample_data, debug=True)
+    dataset = ARCDataset(sample_data)
     logger.debug(f"Dataset length: {len(dataset)}, expected: {len(sample_data)}")
     assert len(dataset) == len(sample_data), "Dataset length mismatch"
     
@@ -312,7 +312,7 @@ def mock_taskset():
     return mock_taskset
 def test_experiment_tracker_logs_dataset_statistics(sample_data):
     # Initialize ARCDataset
-    dataset = ARCDataset(sample_data, debug=True)
+    dataset = ARCDataset(sample_data)
     
     # Initialize ExperimentTracker with mock config
     mock_config = {"dummy_key": "dummy_value"}
