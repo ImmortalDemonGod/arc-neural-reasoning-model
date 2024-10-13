@@ -78,39 +78,28 @@ class ARCDataset(Dataset):
                 logger.error(f"Cache loaded but contains zero samples. Cache path: {self.cache_path}")
             return
         elif isinstance(self.data_source, TaskSet):
-            logger.debug("Processing TaskSet data source for symbol frequencies.")
-            symbol_counts = np.zeros(self.num_symbols, dtype=int)
-            total_symbols = 0
-            max_height, max_width = 0, 0
-            for task in self.data_source.tasks:
-                samples = task.test if self.is_test else task.train
-                for ex in samples:
-                    try:
-                        input_symbols = self._get_symbols(ex[0])
-                        output_symbols = self._get_symbols(ex[1])
-                        symbol_counts += np.bincount(input_symbols.flatten(), minlength=self.num_symbols)
-                        symbol_counts += np.bincount(output_symbols.flatten(), minlength=self.num_symbols)
-                        total_symbols += len(input_symbols.flatten()) + len(output_symbols.flatten())
-                    except Exception as e:
-                        logger.error(f"Error processing sample in task {task.id}: {e}", exc_info=True)
-                        continue
             logger.debug("Caching is disabled or cache loading failed. Proceeding to load data without cache.")
-
-            # Set self.num_samples based on the processed TaskSet data
-            self.num_samples = sum(len(task.test) if self.is_test else len(task.train) for task in self.data_source.tasks)
-            self.data = self._process_arckit_data(self.data_source)
-            logger.debug(f"Number of samples loaded from TaskSet: {self.num_samples}")
 
             # Initialize self.index_mapping for on-the-fly data loading
             self.index_mapping = []
+            max_symbol = 0
             for task_idx, task in enumerate(self.data_source.tasks):
                 samples = task.test if self.is_test else task.train
-                for sample_idx, _ in enumerate(samples):
+                for sample_idx, ex in enumerate(samples):
                     self.index_mapping.append((task_idx, sample_idx))
+                    input_symbols = self._get_symbols(ex[0])
+                    output_symbols = self._get_symbols(ex[1])
+                    max_symbol = max(max_symbol, input_symbols.max().item(), output_symbols.max().item())
             logger.debug(f"Index mapping built with {len(self.index_mapping)} samples")
 
-            # Update self.num_samples based on index mapping
+            # Set self.num_samples based on index mapping
             self.num_samples = len(self.index_mapping)
+            logger.debug(f"Number of samples based on index mapping: {self.num_samples}")
+
+            # Update self.num_symbols if necessary
+            if max_symbol + 1 > self.num_symbols:
+                logger.debug(f"Increasing num_symbols from {self.num_symbols} to {max_symbol + 1} to accommodate.")
+                self.num_symbols = max_symbol + 1
         
         # After data initialization
         if self.num_samples == 0:
@@ -247,7 +236,10 @@ class ARCDataset(Dataset):
             cache_data = {
                 "index_mapping": self.index_mapping,
                 "file_samples_count": self.file_samples_count,
-                "statistics": self.statistics if hasattr(self, 'statistics') else {},
+                "statistics": {
+                    "grid_size_stats": self.get_grid_size_stats(),
+                    "symbol_frequencies": self.get_symbol_frequencies()
+                },
                 "num_samples": self.num_samples  # Include num_samples in cache
             }
             with open(cache_path, 'wb') as f:
@@ -262,11 +254,6 @@ class ARCDataset(Dataset):
     def get_num_samples(self):
         return self.num_samples
     
-    def __getitem__(self, idx):
-        logger.debug(f"Retrieving item at index {idx}")
-        if idx < 0 or idx >= len(self):
-            logger.error(f"Index {idx} out of bounds for dataset of size {len(self)}")
-            raise IndexError(f"Index {idx} out of bounds for dataset of size {len(self)}")
 
     def __getitem__(self, idx):
         logger.debug(f"Retrieving item at index {idx}")

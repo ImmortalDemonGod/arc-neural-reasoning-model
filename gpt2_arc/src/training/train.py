@@ -295,7 +295,7 @@ def main(args):
         val_symbol_freq = val_data.get_symbol_frequencies()
 
         # Convert train_symbol_freq from numpy array to dictionary with string keys
-        train_symbol_freq_dict = {str(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
+        train_symbol_freq_dict = {int(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
 
         # Update the TrainingConfig with the symbol_freq dictionary
         training_config.symbol_freq = train_symbol_freq_dict
