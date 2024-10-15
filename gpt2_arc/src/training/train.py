@@ -257,8 +257,8 @@ def main(args):
         max_grid_width = max(train_grid_stats.get("max_width", 30), val_grid_stats.get("max_width", 30))
         logger.debug(f"Adjusted max grid size - Height: {max_grid_height}, Width: {max_grid_width}")
 
-        # Set the number of classes
-        num_classes = 10
+        # Set the number of classes based on TrainingConfig
+        num_classes = config.training.num_classes
         logger.info(f"Number of classes set to: {num_classes}")
 
         num_train_samples = train_data.get_num_samples()
