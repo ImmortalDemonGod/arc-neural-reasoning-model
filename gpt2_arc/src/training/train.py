@@ -551,11 +551,11 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--use-profiler", action="store_true", help="Enable the custom profiler")
-    group.add_argument("--fast-dev-run", action="store_true", help="Run a fast development test")
+    group.add_argument("--use_profiler", action="store_true", help="Enable the custom profiler")
+    group.add_argument("--fast_dev_run", action="store_true", help="Run a fast development test")
     
     parser.add_argument(
-        "--optuna-study-name",
+        "--optuna_study_name",
         type=str,
         default=None,
         help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
@@ -632,13 +632,13 @@ if __name__ == "__main__":
         help="Accelerator to use for training: 'cpu', 'gpu', or 'tpu'. Defaults to 'gpu'."
     )
     parser.add_argument(
-        "--profiler-dirpath",
+        "--profiler_dirpath",
         type=str,
         default="./profiler_logs",
         help="Directory path for profiler output files."
     )
     parser.add_argument(
-        "--profiler-filename",
+        "--profiler_filename",
         type=str,
         default="profile",
         help="Filename for profiler output."
