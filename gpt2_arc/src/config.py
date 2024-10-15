@@ -8,6 +8,14 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logs
 
 @dataclass
 class ModelConfig:
+    def __post_init__(self):
+        assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
+        assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
+        assert self.n_layer > 0, f"n_layer ({self.n_layer}) must be positive"
+        assert self.d_state >= 1, f"d_state ({self.d_state}) must be at least 1"
+        assert self.d_conv >= 1, f"d_conv ({self.d_conv}) must be at least 1"
+        assert self.mamba_depth >= 1, f"mamba_depth ({self.mamba_depth}) must be at least 1"
+        assert self.mamba_expand >= 2, f"mamba_expand ({self.mamba_expand}) must be at least 2"
     n_embd: int = 768
     n_head: int = 12
     n_layer: int = 12
@@ -31,6 +39,11 @@ class TrainingConfig:
     use_gpu: bool = True
     log_level: str = "INFO"
     use_synthetic_data: bool = False
+    use_grokfast: bool = False
+    grokfast_type: Optional[str] = field(default=None)  # 'ema' or 'ma'
+    grokfast_alpha: float = field(default=0.98)
+    grokfast_lamb: float = field(default=2.0)
+    grokfast_window_size: Optional[int] = field(default=100)  # Only relevant if grokfast_type == 'ma'
     balance_symbols: bool = True
     balancing_method: str = "weighting"
     synthetic_data_path: Optional[str] = None
@@ -60,6 +73,8 @@ class Config:
     model: ModelConfig = field(default_factory=ModelConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
     evaluation: EvaluationConfig = field(default_factory=EvaluationConfig)
+    estimated_memory: Optional[float] = None
+    available_memory: Optional[float] = None
 
     def to_dict(self):
         return asdict(self)
