@@ -575,7 +575,7 @@ if __name__ == "__main__":
     parser.add_argument("--mamba_depth", type=int, default=1, help="Depth of each Mamba layer")
     parser.add_argument("--mamba_expand", type=int, default=2, help="Expand factor for each Mamba layer")
     parser.add_argument("--use_gpu", action="store_true", help="Use GPU for training if available")
-    parser.add_argument("--use-grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
+    parser.add_argument("--use_grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
     parser.add_argument(
         "--include_pad_in_loss",
         action="store_true",
@@ -606,24 +606,24 @@ if __name__ == "__main__":
         default=100,
         help="Window size for Grokfast-MA."
     )
-    parser.add_argument("--no-logging", action="store_true", help="Disable logging")
-    parser.add_argument("--no-checkpointing", action="store_true", help="Disable checkpointing")
-    parser.add_argument("--no-progress-bar", action="store_true", help="Disable progress bar")
+    parser.add_argument("--no_logging", action="store_true", help="Disable logging")
+    parser.add_argument("--no_checkpointing", action="store_true", help="Disable checkpointing")
+    parser.add_argument("--no_progress-bar", action="store_true", help="Disable progress bar")
     parser.add_argument("--model_checkpoint", type=str, help="Path to the model checkpoint to resume training")
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
     parser.add_argument("--results_dir", type=str, default="./results", help="Directory to save results")
     parser.add_argument("--run_name", type=str, default="default_run", help="Name of the run for saving results")
     parser.add_argument("--use_synthetic_data", action="store_true", help="Use synthetic data for training")
     parser.add_argument(
-        "--matmul-precision",
+        "--matmul_precision",
         type=str,
         default="medium",
         choices=["highest", "high", "medium"],
         help="Set the internal precision of float32 matrix multiplications. Options: 'highest', 'high', 'medium'. Defaults to 'medium'."
     )
-    parser.add_argument("--synthetic-data-path", type=str, help="Path to synthetic data directory")
-    parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
-    parser.add_argument("--use-optuna", action="store_true", help="Use best hyperparameters from Optuna study")
+    parser.add_argument("--synthetic_data_path", type=str, help="Path to synthetic data directory")
+    parser.add_argument("--log_level", type=str, default="INFO", help="Logging level")
+    parser.add_argument("--use_optuna", action="store_true", help="Use best hyperparameters from Optuna study")
     parser.add_argument(
         "--accelerator",
         type=str,
@@ -648,7 +648,7 @@ if __name__ == "__main__":
 
     # Validate mamba_ratio
     if args.mamba_ratio < 0.0:
-        logger.error("Invalid value for --mamba-ratio: must be non-negative.")
+        logger.error("Invalid value for --mamba_ratio: must be non-negative.")
         sys.exit(1)
     main(args)
 
