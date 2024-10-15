@@ -560,14 +560,14 @@ if __name__ == "__main__":
         default=None,
         help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
     )
-    parser.add_argument("--optuna-storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
-    parser.add_argument("--n-embd", type=int, default=4, help="Embedding dimension for profiling")
-    parser.add_argument("--n-head", type=int, default=1, help="Number of attention heads for profiling")
-    parser.add_argument("--n-layer", type=int, default=1, help="Number of transformer layers for profiling")
-    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for profiling")
-    parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
-    parser.add_argument("--max-epochs", type=int, required=True, help="Maximum number of epochs")
-    parser.add_argument("--mamba-ratio", type=float, default=0.0, help="Mamba ratio (float value)")
+    parser.add_argument("--optuna_storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
+    parser.add_argument("--n_embd", type=int, default=4, help="Embedding dimension for profiling")
+    parser.add_argument("--n_head", type=int, default=1, help="Number of attention heads for profiling")
+    parser.add_argument("--n_layer", type=int, default=1, help="Number of transformer layers for profiling")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for profiling")
+    parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("--max_epochs", type=int, required=True, help="Maximum number of epochs")
+    parser.add_argument("--mamba_ratio", type=float, default=0.0, help="Mamba ratio (float value)")
 
     parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
     parser.add_argument("--d-state", type=int, default=4, help="Mamba state dimension")
