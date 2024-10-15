@@ -577,31 +577,31 @@ if __name__ == "__main__":
     parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
     parser.add_argument("--use-grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
     parser.add_argument(
-        "--include-pad-in-loss",
+        "--include_pad_in_loss",
         action="store_true",
         help="Include the padding class in the loss calculation. If not set, the padding class will be excluded."
     )
     parser.add_argument(
-        "--grokfast-type",
+        "--grokfast_type",
         type=str,
         default="ema",
         choices=["ema", "ma"],
         help="Type of Grokfast filter to use: 'ema' or 'ma'."
     )
     parser.add_argument(
-        "--grokfast-alpha",
+        "--grokfast_alpha",
         type=float,
         default=0.98,
         help="Alpha parameter for Grokfast-EMA."
     )
     parser.add_argument(
-        "--grokfast-lamb",
+        "--grokfast_lamb",
         type=float,
         default=2.0,
         help="Lambda parameter for Grokfast filters."
     )
     parser.add_argument(
-        "--grokfast-window_size",
+        "--grokfast_window_size",
         type=int,
         default=100,
         help="Window size for Grokfast-MA."
