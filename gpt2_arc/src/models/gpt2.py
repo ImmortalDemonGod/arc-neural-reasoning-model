@@ -292,6 +292,8 @@ class GPT2ARC(pl.LightningModule):
         self.log('test_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.log('test_acc', acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
+    
+    def forward(self, input_ids, attention_mask=None):
         if not torch._dynamo.is_compiling():
             logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         
