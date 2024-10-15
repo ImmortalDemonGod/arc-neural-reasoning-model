@@ -611,9 +611,9 @@ if __name__ == "__main__":
     parser.add_argument("--no-progress-bar", action="store_true", help="Disable progress bar")
     parser.add_argument("--model_checkpoint", type=str, help="Path to the model checkpoint to resume training")
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
-    parser.add_argument("--results-dir", type=str, default="./results", help="Directory to save results")
-    parser.add_argument("--run-name", type=str, default="default_run", help="Name of the run for saving results")
-    parser.add_argument("--use-synthetic-data", action="store_true", help="Use synthetic data for training")
+    parser.add_argument("--results_dir", type=str, default="./results", help="Directory to save results")
+    parser.add_argument("--run_name", type=str, default="default_run", help="Name of the run for saving results")
+    parser.add_argument("--use_synthetic_data", action="store_true", help="Use synthetic data for training")
     parser.add_argument(
         "--matmul-precision",
         type=str,
