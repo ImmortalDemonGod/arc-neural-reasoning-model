@@ -180,17 +180,17 @@ class GPT2ARC(pl.LightningModule):
         self.ln_f = nn.LayerNorm(self.config.model.n_embd)
         assert isinstance(self.config.model.n_embd, int), "model.n_embd must be an integer"
         assert isinstance(num_classes, int), "num_classes must be an integer"
-        self.fc_out = BitLinearNew(int(self.config.model.n_embd), int(num_classes))  # Add final linear layer
+        self.fc_out = BitLinearNew(int(self.config.model.n_embd), int(self.config.training.num_classes))  # Dynamic number of classes
 
         # Initialize loss function with class weights if needed
         if self.config.training.balance_symbols and self.config.training.balancing_method == "weighting":
             if not self.symbol_freq:
                 raise ValueError("symbol_freq must be provided when balance_symbols is True and balancing_method is 'weighting'")
             class_weights = 1.0 / torch.tensor(list(symbol_freq.values()), dtype=torch.float)
-            self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+            self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=self.config.training.pad_symbol_idx)
             logger.debug(f"Class Weights: {class_weights}")  # Added line
         else:
-            self.loss_fn = nn.CrossEntropyLoss()
+            self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.config.training.pad_symbol_idx)
 
         # Initialize weights
         self.apply(self._init_weights)
