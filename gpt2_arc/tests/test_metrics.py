@@ -56,4 +56,38 @@ def test_validation_metrics(model):
     assert 'val_loss' in model.logged_metrics                                                                                                                        
     assert 'val_precision' in model.logged_metrics                                                                                                                   
     assert 'val_recall' in model.logged_metrics                                                                                                                      
-    assert 'val_f1' in model.logged_metrics             
+    assert 'val_f1' in model.logged_metrics             import pytest
+import torch
+from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
+
+@pytest.fixture
+def pad_symbol_idx():
+    return 10
+
+def test_pixel_accuracy_with_padding(pad_symbol_idx):
+    # Sample tensors with padding tokens
+    input_tensor = torch.tensor([[[1, 2, pad_symbol_idx],
+                                   [pad_symbol_idx, 4, 5],
+                                   [6, pad_symbol_idx, 8]]], dtype=torch.float)
+    
+    target_tensor = torch.tensor([[[1, 0, pad_symbol_idx],
+                                    [pad_symbol_idx, 4, 5],
+                                    [6, pad_symbol_idx, 8]]], dtype=torch.long)
+    
+    prediction_tensor = torch.tensor([[[1, 3, pad_symbol_idx],
+                                        [pad_symbol_idx, 4, 0],
+                                        [6, pad_symbol_idx, 8]]], dtype=torch.long)
+    
+    # Calculate differential pixel accuracy excluding padding tokens
+    accuracy, _, _ = differential_pixel_accuracy(input_tensor, target_tensor, prediction_tensor, pad_symbol_idx=pad_symbol_idx)
+    
+    # Valid pixels: positions where target != pad_symbol_idx
+    # Differences:
+    # (2 != 0): input=2, target=0, prediction=3 => False
+    # (5 != 0): input=5, target=5, prediction=0 => False (since prediction==target)
+    # Hence, total_diff_pixels = 1 (only position (0,1,1) where target=0)
+    # Correct_diff_predictions = 0 (since prediction=3 != target=0)
+    # Expected accuracy = 0 / 1 = 0.0
+    
+    expected_accuracy = 0.0
+    assert accuracy == expected_accuracy, f"Expected accuracy {expected_accuracy}, got {accuracy}"
