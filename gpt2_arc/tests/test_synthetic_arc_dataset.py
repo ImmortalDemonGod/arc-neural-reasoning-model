@@ -4,7 +4,7 @@ import pytest
 import logging
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 
-SYNTHETIC_DATA_PATH = "/workspaces/arc-neural-reasoning-model/gpt2_arc/src/data/SyntheticARC/tasks"
+SYNTHETIC_DATA_PATH = "/workspaces/arc-neural-reasoning-model/gpt2_arc/src/data/SyntheticARC/small_tasks"
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
