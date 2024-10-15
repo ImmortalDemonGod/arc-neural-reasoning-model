@@ -500,7 +500,7 @@ if __name__ == "__main__":
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
     parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
     parser.add_argument(
-        "--study-name",
+        "--study_name",
         type=str,
         default="gpt2_arc_optimization_v2",
         help="Name of the Optuna study."
@@ -541,7 +541,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_gpu", action="store_true", help="Flag to indicate whether to use GPU for training.")
     parser.add_argument("--use_synthetic_data", action="store_true", help="Flag to indicate whether to use synthetic data for training.")
     parser.add_argument(
-        "--matmul-precision",
+        "--matmul_precision",
         type=str,
         default="medium",
         choices=["highest", "high", "medium"],
