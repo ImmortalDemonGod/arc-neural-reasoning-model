@@ -135,7 +135,8 @@ class GPT2ARC(pl.LightningModule):
         super().__init__()
         self.config = config
         self.symbol_freq = symbol_freq
-        # Replace token embedding with a convolutional layer
+        self.pad_symbol_idx = self.config.training.pad_symbol_idx
+        self.include_pad_in_loss = self.config.training.include_pad_in_loss
         self.conv1 = nn.Conv2d(
             in_channels=1,
             out_channels=self.config.model.n_embd,  # Accessing the 'model' attribute within Config
@@ -229,7 +230,68 @@ class GPT2ARC(pl.LightningModule):
                 init.zeros_(module.bias)
         # No initialization for nn.LayerNorm, using default
 
-    def forward(self, input_ids, attention_mask=None):
+    def training_step(self, batch, batch_idx):
+        inputs, targets, _ = batch
+        outputs = self(inputs)
+        loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
+        
+        preds = torch.argmax(outputs, dim=-1)
+        
+        if self.include_pad_in_loss:
+            correct = (preds == targets).float()
+            total = torch.numel(targets)
+        else:
+            mask = targets != self.pad_symbol_idx
+            correct = (preds == targets).float() * mask
+            total = mask.sum()
+        
+        acc = correct.sum() / total if total > 0 else torch.tensor(0.0)
+        
+        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train_acc', acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        inputs, targets, _ = batch
+        outputs = self(inputs)
+        loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
+        
+        preds = torch.argmax(outputs, dim=-1)
+        
+        if self.include_pad_in_loss:
+            correct = (preds == targets).float()
+            total = torch.numel(targets)
+        else:
+            mask = targets != self.pad_symbol_idx
+            correct = (preds == targets).float() * mask
+            total = mask.sum()
+        
+        acc = correct.sum() / total if total > 0 else torch.tensor(0.0)
+        
+        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc', acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        inputs, targets, _ = batch
+        outputs = self(inputs)
+        loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
+        
+        preds = torch.argmax(outputs, dim=-1)
+        
+        if self.include_pad_in_loss:
+            correct = (preds == targets).float()
+            total = torch.numel(targets)
+        else:
+            mask = targets != self.pad_symbol_idx
+            correct = (preds == targets).float() * mask
+            total = mask.sum()
+        
+        acc = correct.sum() / total if total > 0 else torch.tensor(0.0)
+        
+        self.log('test_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('test_acc', acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        return loss
         if not torch._dynamo.is_compiling():
             logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         
