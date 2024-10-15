@@ -185,10 +185,9 @@ class ARCDataset(Dataset):
         return self.num_samples
     def __getitem__(self, idx):
         sample = self.data[idx]
-        # Pad input tensor with 0
-        input_tensor = self._preprocess_grid(sample["input"], pad_value=0)
-        # Pad output tensor with pad_symbol_idx
-        output_tensor = self._preprocess_grid(sample["output"], pad_value=self.pad_symbol_idx)
+        # Since all samples are already padded to 30x30 during preprocessing, no additional padding is required here.
+        input_tensor = sample["input"]  # Already padded
+        output_tensor = sample["output"]  # Already padded
         return input_tensor, output_tensor, sample["task_id"]
 
     def _count_samples_in_directory(self, directory: str):
