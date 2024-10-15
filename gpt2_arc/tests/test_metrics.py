@@ -57,7 +57,6 @@ def test_validation_metrics(model):
     assert 'val_precision' in model.logged_metrics                                                                                                                   
     assert 'val_recall' in model.logged_metrics                                                                                                                      
     assert 'val_f1' in model.logged_metrics
-import torch
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 
 @pytest.fixture
