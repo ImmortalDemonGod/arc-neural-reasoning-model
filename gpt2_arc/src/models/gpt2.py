@@ -191,10 +191,24 @@ class GPT2ARC(pl.LightningModule):
             padding_weight = torch.tensor([0.0], dtype=torch.float)
             class_weights = torch.cat([class_weights, padding_weight])
             logger.debug(f"Appended padding weight: {padding_weight.item()}. Updated class_weights shape: {class_weights.shape}")
-            self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=self.config.training.pad_symbol_idx)
+            if self.config.training.include_pad_in_loss:
+                # Include padding in loss by not ignoring it
+                self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+                logger.debug("Including padding class in loss calculation.")
+            else:
+                # Exclude padding class from loss
+                self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=self.config.training.pad_symbol_idx)
+                logger.debug("Excluding padding class from loss calculation.")
             logger.debug(f"Class Weights: {class_weights}")  # Added line
         else:
-            self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.config.training.pad_symbol_idx)
+            if self.config.training.include_pad_in_loss:
+                # Include padding in loss without class weights
+                self.loss_fn = nn.CrossEntropyLoss()
+                logger.debug("Including padding class in loss calculation without class weights.")
+            else:
+                # Exclude padding class from loss without class weights
+                self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.config.training.pad_symbol_idx)
+                logger.debug("Excluding padding class from loss calculation without class weights.")
 
         # Initialize weights
         self.apply(self._init_weights)

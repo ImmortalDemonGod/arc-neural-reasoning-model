@@ -197,7 +197,8 @@ def main(args):
                 grokfast_type=args.grokfast_type,
                 grokfast_alpha=args.grokfast_alpha,
                 grokfast_lamb=args.grokfast_lamb,
-                grokfast_window_size=args.grokfast_window_size
+                grokfast_window_size=args.grokfast_window_size,
+                include_pad_in_loss=args.include_pad_in_loss  # Pass the new flag
             )
         
         config = Config(model=model_config, training=training_config)
@@ -575,6 +576,11 @@ if __name__ == "__main__":
     parser.add_argument("--mamba-expand", type=int, default=2, help="Expand factor for each Mamba layer")
     parser.add_argument("--use-gpu", action="store_true", help="Use GPU for training if available")
     parser.add_argument("--use-grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
+    parser.add_argument(
+        "--include-pad-in-loss",
+        action="store_true",
+        help="Include the padding class in the loss calculation. If not set, the padding class will be excluded."
+    )
     parser.add_argument(
         "--grokfast-type",
         type=str,

@@ -47,6 +47,7 @@ class TrainingConfig:
     balance_symbols: bool = True
     balancing_method: str = "weighting"
     synthetic_data_path: Optional[str] = None
+    include_pad_in_loss: bool = True  # Whether to include the padding class in the loss calculation
 
     # New fields for padding symbol
     pad_symbol: str = "<PAD>"
