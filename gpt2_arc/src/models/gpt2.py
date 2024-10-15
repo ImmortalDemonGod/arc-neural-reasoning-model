@@ -187,6 +187,10 @@ class GPT2ARC(pl.LightningModule):
             if not self.symbol_freq:
                 raise ValueError("symbol_freq must be provided when balance_symbols is True and balancing_method is 'weighting'")
             class_weights = 1.0 / torch.tensor(list(symbol_freq.values()), dtype=torch.float)
+            # Append a weight for the padding class (index 10)
+            padding_weight = torch.tensor([0.0], dtype=torch.float)
+            class_weights = torch.cat([class_weights, padding_weight])
+            logger.debug(f"Appended padding weight: {padding_weight.item()}. Updated class_weights shape: {class_weights.shape}")
             self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=self.config.training.pad_symbol_idx)
             logger.debug(f"Class Weights: {class_weights}")  # Added line
         else:
