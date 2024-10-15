@@ -164,7 +164,7 @@ class ARCTrainer(pl.LightningModule):
         
         for i in range(len(inputs)):
             accuracy = self.compute_accuracy(model_outputs[i:i+1], outputs[i:i+1])
-            diff_accuracy, _, _ = differential_pixel_accuracy(inputs[i:i+1], outputs[i:i+1], model_outputs[i:i+1].argmax(dim=-1))
+            diff_accuracy = self.compute_diff_accuracy(inputs[i:i+1], outputs[i:i+1], model_outputs[i:i+1])
             accuracies.append(accuracy.item())
             diff_accuracies.append(diff_accuracy)
             logger.debug(f"DEBUG: diff_accuracy type: {type(diff_accuracy)}, value: {diff_accuracy}")
@@ -231,8 +231,9 @@ class ARCTrainer(pl.LightningModule):
         return accuracy
 
     def compute_diff_accuracy(self, inputs, targets, outputs):
+        pad_symbol_idx = self.config.training.pad_symbol_idx  # Retrieve pad_symbol_idx from config
         predictions = outputs.argmax(dim=-1)
-        diff_accuracies, _, _ = differential_pixel_accuracy(inputs, targets, predictions)
+        diff_accuracies, _, _ = differential_pixel_accuracy(inputs, targets, predictions, pad_symbol_idx=pad_symbol_idx)
         return diff_accuracies
         predictions = outputs.argmax(dim=-1)
         # Reshape predictions to match the target shape
