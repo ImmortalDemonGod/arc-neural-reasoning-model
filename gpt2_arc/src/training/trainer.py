@@ -298,10 +298,10 @@ class ARCTrainer(pl.LightningModule):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=4)
 
     def compute_loss(self, outputs, labels):
-        loss = nn.CrossEntropyLoss()(
+        loss = self.model.loss_fn(
             outputs.view(-1, outputs.size(-1)), labels.view(-1)
         )
-
+        logger.debug(f"Using model's loss function with ignore_index={self.model.loss_fn.ignore_index}")
         logger.debug(f"Computed loss: {loss.item()}")
         return loss
 
