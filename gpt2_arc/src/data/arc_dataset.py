@@ -48,11 +48,13 @@ class ARCDataset(Dataset):
         is_test: bool = False,
         num_symbols: int = 10,
         test_split: float = 0.2,
+        pad_symbol_idx: int = 10,  # Add this parameter with a default value
         debug=False,
     ):
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
+        self.pad_symbol_idx = pad_symbol_idx  # Store it as an instance variable
         self.data_files = []  # Initialize data_files as an empty list
         self.data_source = data_source
         self.num_samples = 0
@@ -183,7 +185,11 @@ class ARCDataset(Dataset):
         return self.num_samples
     def __getitem__(self, idx):
         sample = self.data[idx]
-        return sample["input"], sample["output"], sample["task_id"]
+        # Pad input tensor with 0
+        input_tensor = self._preprocess_grid(sample["input"], pad_value=0)
+        # Pad output tensor with pad_symbol_idx
+        output_tensor = self._preprocess_grid(sample["output"], pad_value=self.pad_symbol_idx)
+        return input_tensor, output_tensor, sample["task_id"]
 
     def _count_samples_in_directory(self, directory: str):
         num_samples = 0
@@ -388,7 +394,7 @@ class ARCDataset(Dataset):
             symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
         return symbol_counts / symbol_counts.sum()
     
-    def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
+    def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor], pad_value: int = 0) -> torch.Tensor:
         logger.debug(f"Preprocessing grid with initial type: {type(grid)}")
         
         # Convert grid to torch.Tensor if it's a list or numpy array
@@ -467,7 +473,7 @@ class ARCDataset(Dataset):
     def _scale_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
         return grid  # No scaling, preserve original size
 
-    def _pad_grid_torch(self, grid: torch.Tensor, height: int, width: int) -> torch.Tensor:
+    def _pad_grid_torch(self, grid: torch.Tensor, height: int, width: int, pad_value: int = 0) -> torch.Tensor:
         """
         Pads the input grid tensor to the specified height and width using PyTorch's functional padding.
         
@@ -488,12 +494,11 @@ class ARCDataset(Dataset):
         logger.debug(f"Padding applied: left={pad_w}, right={width - w - pad_w}, top={pad_h}, bottom={height - h - pad_h}")
     
         # Apply padding using PyTorch's functional pad
-        padded_grid = F.pad(grid, padding, mode='constant', value=0)
+        padded_grid = F.pad(grid, padding, mode='constant', value=pad_value)
         return padded_grid
 
 
-    @staticmethod
-    def collate_fn(batch):
+    def collate_fn(self, batch):
         # Debugging: Check batch size
         logger.debug(f"Collating batch of size: {len(batch)}")
         
@@ -502,28 +507,16 @@ class ARCDataset(Dataset):
             return torch.tensor([]), torch.tensor([]), []
 
         inputs, outputs, task_ids = zip(*batch)
-
-        # Find maximum dimensions in the batch
-        max_h = max(input_tensor.size(1) for input_tensor in inputs)
-        max_w = max(input_tensor.size(2) for input_tensor in outputs)
-
-        # Debugging: Print maximum dimensions
-        logger.debug(f"Maximum height in batch: {max_h}")
-        logger.debug(f"Maximum width in batch: {max_w}")
-
-        # Pad inputs and outputs to the maximum size
-        padded_inputs = torch.stack([
-            F.pad(input_tensor, (0, max_w - input_tensor.size(2), 0, max_h - input_tensor.size(1)))
-            for input_tensor in inputs
-        ])
-
-        padded_outputs = torch.stack([
-            F.pad(output_tensor, (0, max_w - output_tensor.size(2), 0, max_h - output_tensor.size(1)))
-            for output_tensor in outputs
-        ])
-
-        # Debugging: Verify shapes after padding
+    
+        # Since all samples are already padded to 30x30, no additional padding is required here.
+        # However, to ensure consistency, you can verify the shapes.
+    
+        padded_inputs = torch.stack(inputs)
+        padded_outputs = torch.stack(outputs)
+    
+        # Debugging: Verify shapes after stacking
         print(f"Padded inputs shape: {padded_inputs.shape}")
         print(f"Padded outputs shape: {padded_outputs.shape}")
+    
 
         return padded_inputs, padded_outputs, list(task_ids)
