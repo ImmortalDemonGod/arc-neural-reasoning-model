@@ -216,6 +216,9 @@ class ARCDataset(Dataset):
             List[Dict]: List of processed samples from the file.
         """
         return self._process_single_file_streaming(file_path)
+    
+    
+    def _save_cache(self, cache_path: str):
         """
         Saves the dataset and its statistics to the specified cache path using pickle.
         
