@@ -11,6 +11,8 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 import logging
 import ijson  # Import ijson for streaming JSON parsing
+from tqdm import tqdm  # Import tqdm for progress bars
+import sys  # Import sys for handling tqdm output
 from concurrent.futures import ProcessPoolExecutor, as_completed  # For parallel processing
 import multiprocessing  # To determine CPU count
 from threading import Lock
@@ -116,13 +118,15 @@ class ARCDataset(Dataset):
                 
                 logger.debug(f"Using ThreadPoolExecutor with {max_workers} workers for parallel processing.")
                 
-                # Parallel processing using ProcessPoolExecutor
+                logger.debug(f"Using ProcessPoolExecutor with {max_workers} workers for parallel processing.")
+
+                # Initialize tqdm progress bar
                 with ProcessPoolExecutor(max_workers=max_workers) as executor:
                     # Submit all file processing tasks
                     future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in self.data_files}
                     
-                    # Collect all results after processing
-                    for future in as_completed(future_to_file):
+                    # Wrap the as_completed iterator with tqdm for the progress bar
+                    for future in tqdm(as_completed(future_to_file), total=len(future_to_file), desc="Loading JSON Files", unit="file", file=sys.stdout):
                         file_path = future_to_file[future]
                         try:
                             samples = future.result()
