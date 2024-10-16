@@ -188,6 +188,8 @@ def objective(trial, args):
             mamba_depth=mamba_depth,
             mamba_expand=mamba_expand
         )
+        # Improve memory estimation by considering additional factors like optimizer state and activation memory
+        safety_margin = 0.1  # 10% safety margin
         estimated_memory = estimate_memory_usage(
             total_params=total_params,
             batch_size=batch_size,
@@ -196,6 +198,7 @@ def objective(trial, args):
             d_model=n_embd
         )
         available_memory = get_available_memory()
+        estimated_memory *= (1 + safety_margin)
 
         logger.debug(f"Trial {trial.number}: Estimated memory usage: {estimated_memory:.2f} GB")
         logger.debug(f"Trial {trial.number}: Available memory: {available_memory:.2f} GB")
@@ -283,6 +286,9 @@ def objective(trial, args):
         # Convert symbol_freq from NumPy array to dictionary
         symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
         logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
+        assert len(symbol_freq_dict) == config.training.num_classes - 1, (
+            f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+        )
 
         # Assign the converted symbol_freq to the training configuration
         config.training.symbol_freq = symbol_freq_dict
@@ -294,7 +300,7 @@ def objective(trial, args):
 
         # Create model and trainer
         logger.debug("Creating model and trainer")
-        num_classes = 10  # Set this to the appropriate number of classes for your task
+        num_classes = config.training.num_classes
         model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
         
         # Generate model summary
@@ -445,6 +451,8 @@ def objective(trial, args):
         gc.collect()
         torch.cuda.empty_cache()
         logger.debug(f"Cleanup completed for trial {trial.number}")
+        gc.collect()
+        torch.cuda.empty_cache()
 
 
 
@@ -465,6 +473,12 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     )
 
     logger.info(f"Starting optimization with {n_trials} trials using {n_jobs} parallel jobs")
+    if args.use_gpu:
+        available_gpus = torch.cuda.device_count()
+        if available_gpus > 1:
+            n_jobs = min(n_jobs, available_gpus)
+        else:
+            n_jobs = 1  # Limit to 1 to prevent memory issues
     study.optimize(partial(objective, args=args), n_trials=n_trials, n_jobs=n_jobs)
 
     logger.info("Optimization completed")
@@ -501,6 +515,11 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
     parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
+    parser.add_argument(
+        "--use_grokfast",
+        action="store_true",
+        help="Enable Grokfast for gradient filtering."
+    )
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
     parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
     parser.add_argument(
