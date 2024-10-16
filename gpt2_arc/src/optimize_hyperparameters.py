@@ -686,10 +686,11 @@ if __name__ == "__main__":
     parser.add_argument("--mamba_expand_min", type=int, default=2, help="Minimum value for mamba_expand")
     parser.add_argument("--mamba_expand_max", type=int, default=4, help="Maximum value for mamba_expand")
     parser.add_argument(
-        "--disable_symbol_freq",
+        "--enable_symbol_freq",
         action="store_true",
-        help="Disable the calculation of symbol frequencies to bypass related assertions."
+        help="Enable the calculation of symbol frequencies."
     )
+    parser.set_defaults(enable_symbol_freq=False)
     parser.add_argument("--dropout_max", type=float, default=0.5, help="Maximum value for dropout")
     parser.add_argument("--dropout_step", type=float, default=0.1, help="Step size for dropout")
     parser.add_argument("--use_gpu", action="store_true", help="Flag to indicate whether to use GPU for training.")

@@ -133,7 +133,7 @@ def load_train_dataset(args, config):
             is_test=False,
             num_symbols=config.training.num_symbols, 
             pad_symbol_idx=config.training.pad_symbol_idx,
-            symbol_freq=config.training.symbol_freq if not args.disable_symbol_freq else None
+            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
         )
 
 def load_val_dataset(args, config):
@@ -703,10 +703,11 @@ if __name__ == "__main__":
     parser.add_argument("--model_checkpoint", type=str, help="Path to the model checkpoint to resume training")
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
     parser.add_argument(
-        "--disable_symbol_freq",
+        "--enable_symbol_freq",
         action="store_true",
-        help="Disable the calculation of symbol frequencies to bypass related assertions."
+        help="Enable the calculation of symbol frequencies."
     )
+    parser.set_defaults(enable_symbol_freq=False)
     parser.add_argument("--results_dir", type=str, default="./results", help="Directory to save results")
     parser.add_argument("--run_name", type=str, default="default_run", help="Name of the run for saving results")
     parser.add_argument("--use_synthetic_data", action="store_true", help="Use synthetic data for training")
