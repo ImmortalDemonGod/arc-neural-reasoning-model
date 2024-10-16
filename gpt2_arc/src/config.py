@@ -32,6 +32,7 @@ class TrainingConfig:
     batch_size: int = 32
     learning_rate: float = 1e-4
     max_epochs: int = 10
+    num_symbols: int = 11  # Ensure num_symbols is set to 11
     num_workers: int = multiprocessing.cpu_count() // 2 if multiprocessing.cpu_count() else 4
     symbol_freq: Optional[Dict] = None
     prefetch_factor: int = 2

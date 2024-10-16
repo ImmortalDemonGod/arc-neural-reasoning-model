@@ -222,12 +222,12 @@ def main(args):
             train_set, eval_set = arckit.load_data()
             train_data = ARCDataset(
                 train_set, 
-                num_symbols=config.training.num_classes, 
+                num_symbols=config.training.num_symbols, 
                 pad_symbol_idx=config.training.pad_symbol_idx
             )
             val_data = ARCDataset(
                 eval_set, 
-                num_symbols=config.training.num_classes, 
+                num_symbols=config.training.num_symbols, 
                 pad_symbol_idx=config.training.pad_symbol_idx
             )
 
