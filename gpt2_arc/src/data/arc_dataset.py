@@ -574,6 +574,11 @@ class ARCDataset(Dataset):
         elif isinstance(grid, torch.Tensor):
             grid_tensor = grid.float()
             logger.debug(f"Using existing tensor with shape: {grid_tensor.shape}")
+        elif isinstance(grid, int):
+            logger.debug("Grid is of type int. Converting to 1x1 grid.")
+            grid = [[grid]]
+            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
+            logger.debug(f"Converted int to tensor with shape: {grid_tensor.shape}")
         else:
             raise ValueError(f"Unexpected grid type: {type(grid)}")
     
