@@ -16,7 +16,6 @@ import multiprocessing  # To determine CPU count
 from threading import Lock
 from jsonschema import validate, ValidationError
 from torch.utils.data import get_worker_info
-import math  # Import math module for ceiling division
 
 try:
     from arckit.data import TaskSet, Task
@@ -91,7 +90,12 @@ class ARCDataset(Dataset):
         if self._load_cache(self.cache_path):
             logger.debug("Data loaded from cache successfully.")
             return
-        set_debug_mode(debug)
+        if debug:
+            logger.setLevel(logging.DEBUG)
+            handler.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.ERROR)
+            handler.setLevel(logging.ERROR)
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"data_source type: {type(data_source)}")
         logger.debug(f"data_source content: {data_source}")
@@ -158,7 +162,41 @@ class ARCDataset(Dataset):
         self._compute_and_cache_statistics()
         self._save_cache(self.cache_path)
 
-    def _process_single_file_streaming(self, file_path: str) -> List[Dict]:
+    def _process_single_task(self, task: Dict, task_id: str) -> List[Dict]:
+        """
+        Processes a single task dictionary and returns a list of samples.
+        
+        Args:
+            task (Dict): The task data containing 'input' and 'output'.
+            task_id (str): Identifier for the task.
+        
+        Returns:
+            List[Dict]: List of processed sample dictionaries.
+        """
+        samples = []
+        try:
+            # Process training samples
+            for ex in task.get('train', []):
+                input_tensor = self._preprocess_grid(ex['input'])
+                output_tensor = self._preprocess_grid(ex['output'])
+                samples.append({
+                    "input": input_tensor,
+                    "output": output_tensor,
+                    "task_id": task_id
+                })
+            
+            # Process testing samples
+            for ex in task.get('test', []):
+                input_tensor = self._preprocess_grid(ex['input'])
+                output_tensor = self._preprocess_grid(ex['output'])
+                samples.append({
+                    "input": input_tensor,
+                    "output": output_tensor,
+                    "task_id": task_id
+                })
+        except Exception as e:
+            logger.error(f"Error processing task {task_id}: {e}", exc_info=True)
+        return samples
         """
         Processes a single JSON file using streaming parsing and returns the list of samples.
         
@@ -195,6 +233,15 @@ class ARCDataset(Dataset):
             logger.error(f"Unexpected error processing file {file_path}: {e}", exc_info=True)
 
     def _process_single_file_parallel(self, file_path: str) -> List[Dict]:
+        """
+        Wrapper method to process a single file in parallel.
+        
+        Args:
+            file_path (str): Path to the JSON file.
+            
+        Returns:
+            List[Dict]: List of processed samples from the file.
+        """
         """
         Wrapper method to process a single file in parallel.
         
@@ -274,28 +321,6 @@ class ARCDataset(Dataset):
         output_tensor = sample["output"]  # Already padded
         return input_tensor, output_tensor, sample["task_id"]
 
-    def _count_samples_in_directory(self, directory: str):
-        num_samples = 0
-        file_list = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.json')]
-        logger.debug(f"Counting samples in {len(file_list)} files")
-        for file_path in file_list:
-            try:
-                with open(file_path, 'r') as f:
-                    task_data = json.load(f)
-                if isinstance(task_data, dict):
-                    sample_count = len(task_data.get('test', [])) if self.is_test else len(task_data.get('train', []))
-                    num_samples += sample_count
-                    logger.debug(f"File {file_path}: {sample_count} samples")
-                elif isinstance(task_data, list):
-                    num_samples += len(task_data)
-                    logger.debug(f"File {file_path}: {len(task_data)} samples")
-                else:
-                    logger.error(f"Unexpected data format in file {file_path}")
-            except Exception as e:
-                logger.error(f"Error processing file {file_path}: {e}", exc_info=True)
-                continue  # Skip this file and proceed to the next
-        logger.debug(f"Total samples counted: {num_samples}")
-        return num_samples
 
 
     @staticmethod
@@ -397,6 +422,15 @@ class ARCDataset(Dataset):
 
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
+        """
+        Processes data from an arckit TaskSet and returns a list of samples.
+        
+        Args:
+            taskset (TaskSet): The TaskSet object containing tasks.
+            
+        Returns:
+            List[Dict]: List of processed sample dictionaries.
+        """
         processed_data = []
         logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
         for task in taskset.tasks:
@@ -509,19 +543,19 @@ class ARCDataset(Dataset):
         logger.debug(f"Grid shape after padding: {padded_grid.shape}")
         return padded_grid
     def kronecker_scale(self, X, target_height=30, target_width=30):
-        print(f"Kronecker scaling input shape: {X.shape}")
+        logger.debug(f"Kronecker scaling input shape: {X.shape}")
         h, w = X.shape
         scale_h = target_height / h
         scale_w = target_width / w
         d = int(np.floor(min(scale_h, scale_w)))
         
         X_scaled = np.kron(X, np.ones((d, d)))
-        print(f"Kronecker scaled output shape: {X_scaled.shape}")
+        logger.debug(f"Kronecker scaled output shape: {X_scaled.shape}")
         return X_scaled
 
 
     def reverse_scaling(self, X_orig, X_pred):
-        print(f"Reverse scaling - Original shape: {X_orig.shape}, Prediction shape: {X_pred.shape}")
+        logger.debug(f"Reverse scaling - Original shape: {X_orig.shape}, Prediction shape: {X_pred.shape}")
         h, w = X_orig.shape
         # Reshape X_pred to 2D if it's 1D
         if X_pred.ndim == 1:
@@ -530,7 +564,7 @@ class ARCDataset(Dataset):
         X_pred_cropped = X_pred[:h, :w]  # Crop to original size
         
         if h == X_pred.shape[0] and w == X_pred.shape[1]:
-            print("No rescaling needed")
+            logger.debug("No rescaling needed")
             return X_pred_cropped
         
         # Calculate the downscale factor
@@ -542,15 +576,15 @@ class ARCDataset(Dataset):
             try:
                 X_rev = X_pred_cropped.reshape(h, d_h, w, d_w).mean(axis=(1, 3))
             except ValueError as e:
-                print(f"Error during reshaping: {e}")
-                print(f"X_pred_cropped shape: {X_pred_cropped.shape}, h: {h}, w: {w}, d_h: {d_h}, d_w: {d_w}")
+                logger.error(f"Error during reshaping: {e}")
+                logger.debug(f"X_pred_cropped shape: {X_pred_cropped.shape}, h: {h}, w: {w}, d_h: {d_h}, d_w: {d_w}")
                 raise
         else:
-            print(f"Invalid downscale factors: d_h={d_h}, d_w={d_w}")
+            logger.warning(f"Invalid downscale factors: d_h={d_h}, d_w={d_w}")
             raise ValueError("Invalid dimensions for reverse scaling")
         # Resize the result to match the original target shape
         result = np.resize(X_rev.round().astype(int), X_orig.shape)
-        print(f"Reverse scaled output shape: {result.shape}")
+        logger.debug(f"Reverse scaled output shape: {result.shape}")
         return result
 
     def _scale_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
