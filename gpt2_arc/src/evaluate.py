@@ -65,11 +65,11 @@ def evaluate(model, test_dataset, config, batch_size=32):
         if '_test_acc_with_pad' in key or '_test_acc_without_pad' in key:
             if isinstance(value, torch.Tensor):
                 value = value.item()
-            # Key format: 'taskid_test_accuracy' or 'taskid_test_diff_accuracy'
-            task_id, metric_name = key.split('_test_')
+            # Key format: 'taskid_test_acc_with_pad' or 'taskid_test_acc_without_pad'
+            task_id, metric_suffix = key.split('_test_acc_')
             if task_id not in individual_metrics:
                 individual_metrics[task_id] = {}
-            individual_metrics[task_id][f'test_{metric_name}'] = value
+            individual_metrics[task_id][f'test_acc_{metric_suffix}'] = value
 
     # Compute complete task accuracy (fraction of tasks with perfect accuracy)
     num_tasks = len(individual_metrics)
@@ -84,12 +84,12 @@ def evaluate(model, test_dataset, config, batch_size=32):
         if completely_solved:
             num_complete_accuracy += 1
 
-    complete_task_accuracy_with_pad = num_complete_accuracy / num_tasks if num_tasks > 0 else 0.0
-    complete_task_accuracy_without_pad = num_complete_accuracy / num_tasks if num_tasks > 0 else 0.0
+    complete_task_accuracy_with_pad = num_complete_accuracy_with_pad / num_tasks if num_tasks > 0 else 0.0
+    complete_task_accuracy_without_pad = num_complete_accuracy_without_pad / num_tasks if num_tasks > 0 else 0.0
     aggregated_results['complete_task_accuracy_with_pad'] = complete_task_accuracy_with_pad
     aggregated_results['complete_task_accuracy_without_pad'] = complete_task_accuracy_without_pad
 
-    print(f"DEBUG: Computed complete task accuracy: {complete_task_accuracy}")
+    print(f"DEBUG: Computed complete task accuracy with pad: {complete_task_accuracy_with_pad}, without pad: {complete_task_accuracy_without_pad}")
 
     return aggregated_results, individual_metrics
 

@@ -97,7 +97,15 @@ class ExperimentTracker:
             wandb.log({"validation": metrics}, step=epoch)
 
     def set_test_results(self, metrics: Dict[str, float]):
-        self.results["test"] = metrics
+        self.results["test"]["avg_loss"] = metrics.get("avg_test_loss")
+        self.results["test"]["avg_acc_with_pad"] = metrics.get("avg_test_acc_with_pad")
+        self.results["test"]["avg_acc_without_pad"] = metrics.get("avg_test_acc_without_pad")
+        if self.use_wandb and self.run:
+            wandb.log({
+                "test_loss": self.results["test"]["avg_loss"],
+                "test_acc_with_pad": self.results["test"]["avg_acc_with_pad"],
+                "test_acc_without_pad": self.results["test"]["avg_acc_without_pad"],
+            })
         if self.use_wandb:
             wandb.log({"test": metrics})
 

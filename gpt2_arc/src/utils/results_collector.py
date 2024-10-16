@@ -69,7 +69,11 @@ class ResultsCollector:
 
     def set_test_results(self, metrics: Dict[str, float]):
         """Set the test results metrics."""
-        self.results["test"] = metrics
+        self.results["test"] = {
+            "avg_loss": metrics.get("test_loss"),
+            "avg_acc_with_pad": metrics.get("test_acc_with_pad"),
+            "avg_acc_without_pad": metrics.get("test_acc_without_pad"),
+        }
 
     def add_task_specific_result(self, task_id: str, metrics: Dict[str, float]):
         """Add task-specific results for a given task ID."""
@@ -111,13 +115,20 @@ class ResultsCollector:
             os.makedirs(directory)
 
     def get_summary(self) -> Dict[str, Any]:
-        """Get a summary of the results."""
+        """
+        Get a summary of the results.
+        
+        Returns:
+            Dict[str, Any]: Summary of key metrics.
+        """
         summary = {
             "experiment_id": self.experiment_id,
             "timestamp": self.timestamp,
             "final_train_loss": self.results["train"][-1]["loss"] if self.results["train"] else None,
             "final_val_loss": self.results["validation"][-1]["loss"] if self.results["validation"] else None,
-            "test_accuracy": self.results["test"].get("accuracy"),
+            "test_loss": self.results["test"].get("avg_loss"),
+            "test_acc_with_pad": self.results["test"].get("avg_acc_with_pad"),
+            "test_acc_without_pad": self.results["test"].get("avg_acc_without_pad"),
             "config": self._serialize_config(self.config),
             "tensorboard_log_path": self.tensorboard_log_path
         }
