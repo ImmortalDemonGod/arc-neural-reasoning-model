@@ -119,7 +119,7 @@ def objective(trial, args):
             f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
         )
         logger.info(f"Loading model checkpoint: {args.model_checkpoint}")
-            checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
+        checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
             model_config_dict = checkpoint.get('model_config')
             
             if not model_config_dict:
