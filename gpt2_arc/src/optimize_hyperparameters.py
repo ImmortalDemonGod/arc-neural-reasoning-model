@@ -221,7 +221,7 @@ def objective(trial, args):
             batch_size=batch_size,
             learning_rate=learning_rate,
             max_epochs=max_epochs,
-            use_grokfast=use_grokfast,
+            use_grokfast=use_grokfast,  # Use the fixed value from args
             grokfast_type=grokfast_type,
             grokfast_alpha=grokfast_alpha,
             grokfast_lamb=grokfast_lamb,
