@@ -10,7 +10,8 @@ from typing import Dict, Optional
 import torch.nn.init as init
 from bitnet import BitLinearNew
 
-from zeta.nn import MambaBlock
+#from zeta.nn import MambaBlock
+from gpt2_arc.src.models.mamba_block_internal import MambaBlock
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
