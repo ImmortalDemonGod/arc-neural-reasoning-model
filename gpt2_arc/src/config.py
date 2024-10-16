@@ -66,6 +66,8 @@ class TrainingConfig:
             self.pad_symbol_idx = 10  # Assuming 10 symbols (0-9)
             self.num_classes = 11  # 10 symbols + 1 padding
         print(f"TrainingConfig initialized with {self.num_classes} classes and PAD symbol index {self.pad_symbol_idx}")
+        print(f"include_pad_in_loss: {self.include_pad_in_loss}")  # Added debug statement
+        print(f"include_pad_in_accuracy: {self.include_pad_in_accuracy}")  # Added debug statement
 
 @dataclass
 class EvaluationConfig:
