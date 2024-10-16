@@ -240,15 +240,6 @@ class ARCDataset(Dataset):
                         current_key = value
                     elif event in ('string', 'number', 'boolean', 'null'):
                         current_object[current_key] = value
-                    elif (prefix, event) == ('', 'end_map'):
-                        # Determine the structure based on keys
-                        if 'train' in current_object and 'test' in current_object:
-                            # Task-Based Structure
-                            try:
-                                validate(instance=current_object, schema=TASK_SCHEMA)
-                                task_id = current_object.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                                task_samples = self._process_single_task(current_object, task_id=task_id)
-                                samples.extend(task_samples)
                             except ValidationError as ve:
                                 logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
                         elif 'input' in current_object and 'output' in current_object:
@@ -263,6 +254,8 @@ class ARCDataset(Dataset):
                                     "task_id": task_id
                                 })
                                 logger.debug(f"Added sample from file {file_path}")
+                            except Exception as e:
+                                logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
                         current_object = {}
                     elif event == 'map_key':
                         current_key = value
