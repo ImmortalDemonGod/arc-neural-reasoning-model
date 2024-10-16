@@ -118,14 +118,22 @@ def load_train_dataset(args, config):
         if not args.synthetic_data_path:
             raise ValueError("Synthetic data path not provided")
         logger.info(f"Loading synthetic training data from {args.synthetic_data_path}")
-        return ARCDataset(args.synthetic_data_path)
+        return ARCDataset(
+            data_source=args.synthetic_data_path,
+            is_test=False,
+            num_symbols=config.training.num_symbols,
+            pad_symbol_idx=config.training.pad_symbol_idx,
+            symbol_freq=config.training.symbol_freq if not args.disable_symbol_freq else None
+        )
     else:
         logger.info("Loading ARC training dataset")
         train_set, _ = arckit.load_data()
         return ARCDataset(
-            train_set, 
-            num_symbols=11, 
-            pad_symbol_idx=config.training.pad_symbol_idx
+            data_source=train_set, 
+            is_test=False,
+            num_symbols=config.training.num_symbols, 
+            pad_symbol_idx=config.training.pad_symbol_idx,
+            symbol_freq=config.training.symbol_freq if not args.disable_symbol_freq else None
         )
 
 def load_val_dataset(args, config):
@@ -144,14 +152,22 @@ def load_val_dataset(args, config):
             if not args.synthetic_data_path:
                 raise ValueError("Synthetic data path not provided")
             logger.info(f"Loading synthetic validation data from {args.synthetic_data_path}")
-            return ARCDataset(args.synthetic_data_path, is_test=True)
+            return ARCDataset(
+                data_source=args.synthetic_data_path,
+                is_test=True,
+                num_symbols=config.training.num_symbols,
+                pad_symbol_idx=config.training.pad_symbol_idx,
+                symbol_freq=config.training.symbol_freq if not args.disable_symbol_freq else None
+            )
         else:
             logger.info("Loading ARC validation dataset")
             _, eval_set = arckit.load_data()
             return ARCDataset(
-                eval_set, 
-                num_symbols=11, 
-                pad_symbol_idx=config.training.pad_symbol_idx
+                data_source=eval_set, 
+                is_test=True,
+                num_symbols=config.training.num_symbols, 
+                pad_symbol_idx=config.training.pad_symbol_idx,
+                symbol_freq=config.training.symbol_freq if not args.disable_symbol_freq else None
             )
     except Exception as e:
         logger.error(f"Failed to load validation dataset: {e}", exc_info=True)
@@ -667,6 +683,11 @@ if __name__ == "__main__":
     parser.add_argument("--no_progress-bar", action="store_true", help="Disable progress bar")
     parser.add_argument("--model_checkpoint", type=str, help="Path to the model checkpoint to resume training")
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
+    parser.add_argument(
+        "--disable_symbol_freq",
+        action="store_true",
+        help="Disable the calculation of symbol frequencies to bypass related assertions."
+    )
     parser.add_argument("--results_dir", type=str, default="./results", help="Directory to save results")
     parser.add_argument("--run_name", type=str, default="default_run", help="Name of the run for saving results")
     parser.add_argument("--use_synthetic_data", action="store_true", help="Use synthetic data for training")
