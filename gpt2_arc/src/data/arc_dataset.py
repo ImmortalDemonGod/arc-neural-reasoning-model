@@ -550,15 +550,15 @@ class ARCDataset(Dataset):
             logger.warning("Grid size statistics not available.")
             return {}
     
-    def get_symbol_frequencies(self) -> Dict[str, float]:
+    def get_symbol_frequencies(self) -> Dict[int, float]:
         """
         Returns the precomputed symbol frequencies.
         
         Returns:
-            Dict[str, float]: A dictionary mapping symbols to their frequencies.
+            Dict[int, float]: A dictionary mapping symbols to their frequencies.
         """
         if hasattr(self, 'statistics') and 'symbol_frequencies' in self.statistics:
-            return self.statistics['symbol_frequencies']
+            return {int(k): float(v) for k, v in self.statistics['symbol_frequencies'].items()}
         else:
             logger.warning("Symbol frequencies not available.")
             return {}
