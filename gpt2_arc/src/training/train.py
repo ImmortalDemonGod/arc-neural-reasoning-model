@@ -656,6 +656,19 @@ if __name__ == "__main__":
     parser.add_argument("--use_gpu", action="store_true", help="Use GPU for training if available")
     parser.add_argument("--use_grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
     parser.add_argument(
+        "--include_pad_in_loss",
+        dest="include_pad_in_loss",
+        action="store_true",
+        help="Include the padding class in the loss calculation."
+    )
+    parser.add_argument(
+        "--no_include_pad_in_loss",
+        dest="include_pad_in_loss",
+        action="store_false",
+        help="Exclude the padding class from the loss calculation."
+    )
+    parser.set_defaults(include_pad_in_loss=True)
+    parser.add_argument(
         "--grokfast_type",
         type=str,
         default="ema",
