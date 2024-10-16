@@ -13,7 +13,7 @@ import logging
 import ijson  # Import ijson for streaming JSON parsing
 from tqdm import tqdm  # Import tqdm for progress bars
 import sys  # Import sys for handling tqdm output
-from concurrent.futures import ProcessPoolExecutor, as_completed  # For parallel processing
+from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
 import multiprocessing  # To determine CPU count
 from threading import Lock
 from jsonschema import validate, ValidationError
@@ -114,7 +114,7 @@ class ARCDataset(Dataset):
                 random.shuffle(self.data_files)
                 # Determine the number of workers based on CPU count
                 cpu_count = multiprocessing.cpu_count() or 1
-                max_workers = min(32, cpu_count + 4)  # Example heuristic
+                max_workers = min(16, cpu_count + 2)  # Adjusted heuristic for ThreadPoolExecutor
                 
                 logger.debug(f"Using ThreadPoolExecutor with {max_workers} workers for parallel processing.")
                 
@@ -123,7 +123,7 @@ class ARCDataset(Dataset):
                 logger.debug(f"Using ProcessPoolExecutor with {max_workers} workers for parallel processing.")
 
                 # Initialize tqdm progress bar and process files in parallel
-                with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     # Submit all file processing tasks
                     future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in self.data_files}
                     
@@ -263,9 +263,6 @@ class ARCDataset(Dataset):
                                     "task_id": task_id
                                 })
                                 logger.debug(f"Added sample from file {file_path}")
-                            except Exception as e:
-                                logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
-                        # Reset for next object
                         current_object = {}
         except ijson.JSONError as e:
             logger.warning(f"Malformed JSON in file {file_path}: {e}. Skipping.")
