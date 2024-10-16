@@ -101,6 +101,8 @@ class ModelConfigSaver(Callback):
             checkpoint (dict): The checkpoint dictionary to be modified.
         """
         checkpoint['model_config'] = self.config.model.__dict__
+
+        
 def load_train_dataset(args, config):
     """
     Load the training dataset based on the provided arguments and configuration.
