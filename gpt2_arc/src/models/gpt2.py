@@ -196,9 +196,6 @@ class GPT2ARC(pl.LightningModule):
             # Compute class weights as inverse of symbol frequencies
             class_weights = 1.0 / symbol_freq_values
             
-            # Append a weight for the padding symbol
-            pad_weight = 1.0  # You can adjust this value as needed
-            class_weights = torch.cat([class_weights, torch.tensor([pad_weight], dtype=torch.float)])
             
             # Ensure that the length of class_weights matches num_classes
             assert class_weights.size(0) == self.config.training.num_classes, (
