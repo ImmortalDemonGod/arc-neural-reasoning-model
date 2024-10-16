@@ -123,14 +123,14 @@ def objective(trial, args):
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
         # Convert symbol_freq from NumPy array to dictionary
-        symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
+        symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
         # Remove the padding symbol from symbol_freq_dict
         pad_symbol_idx = config.training.pad_symbol_idx
-        symbol_freq_dict.pop(str(pad_symbol_idx), None)
+        symbol_freq_dict.pop(pad_symbol_idx, None)
         logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
 
         assert len(symbol_freq_dict) == config.training.num_classes - 1, (
-            f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes ({config.training.num_classes})."
+            f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
         )
         # Existing hyperparameter suggestions when no checkpoint is provided
         torch.set_float32_matmul_precision(args.matmul_precision)
