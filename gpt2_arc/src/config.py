@@ -56,10 +56,11 @@ class TrainingConfig:
 
     # New fields for padding symbol
     pad_symbol: str = "<PAD>"
-    pad_symbol_idx: int = field(init=False)
+    pad_symbol_idx: int = field(init=False, default=10)
 
     def __post_init__(self):
         # Dynamically set num_classes based on symbol_freq
+        self.pad_symbol_idx = 10  # Set to the default padding index
         print(f"TrainingConfig initialized with {self.num_classes} classes and PAD symbol index {self.pad_symbol_idx}")
         print(f"include_pad_in_loss: {self.include_pad_in_loss}")  # Added debug statement
         print(f"include_pad_in_accuracy: {self.include_pad_in_accuracy}")  # Added debug statement
