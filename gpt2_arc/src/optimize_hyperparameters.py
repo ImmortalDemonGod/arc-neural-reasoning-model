@@ -523,6 +523,12 @@ if __name__ == "__main__":
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
     parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
     parser.add_argument(
+        "--include_pad_in_loss",
+        type=lambda x: (str(x).lower() in ['true', '1', 't', 'y', 'yes']),
+        default=True,
+        help="Whether to include the padding class in the loss calculation. (True/False)"
+    )
+    parser.add_argument(
         "--study_name",
         type=str,
         default="gpt2_arc_optimization_v2",

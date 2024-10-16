@@ -14,7 +14,7 @@ class ExperimentTracker:
     def __init__(self, config: Config, project: str, entity: Optional[str] = None, use_wandb: bool = False):
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.config = config.to_dict()  # Convert Config to dict
+        self.config = config  # Keep Config object as-is
         self.project = project
         self.entity = entity
         self.run = None
