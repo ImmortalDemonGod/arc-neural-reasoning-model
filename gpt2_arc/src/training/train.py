@@ -157,7 +157,7 @@ def load_val_dataset(args, config):
                 is_test=True,
                 num_symbols=config.training.num_symbols,
                 pad_symbol_idx=config.training.pad_symbol_idx,
-                symbol_freq=config.training.symbol_freq if not args.disable_symbol_freq else None
+                symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
             )
         else:
             logger.info("Loading ARC validation dataset")
@@ -167,7 +167,7 @@ def load_val_dataset(args, config):
                 is_test=True,
                 num_symbols=config.training.num_symbols, 
                 pad_symbol_idx=config.training.pad_symbol_idx,
-                symbol_freq=config.training.symbol_freq if not args.disable_symbol_freq else None
+                symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
             )
     except Exception as e:
         logger.error(f"Failed to load validation dataset: {e}", exc_info=True)
@@ -297,29 +297,30 @@ def main(args):
                 logger.error(f"Error occurred while loading datasets in parallel: {e}", exc_info=True)
                 raise e
 
-        if args.disable_symbol_freq:
-            balance_symbols = False
-            balancing_method = "none"
-            symbol_freq_dict = {}
-            logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
-        else:
+        if args.enable_symbol_freq:
+            logger.debug("Calculating symbol frequencies as it is enabled.")
             if args.use_synthetic_data:
                 logger.debug("Calculating symbol frequencies for synthetic training set")
                 symbol_freq = train_data.get_symbol_frequencies()
             else:
                 logger.debug("Calculating symbol frequencies for ARC training set")
                 symbol_freq = train_data.get_symbol_frequencies()
-            
+
             symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
             pad_symbol_idx = config.training.pad_symbol_idx
             symbol_freq_dict.pop(pad_symbol_idx, None)
             logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
-            
+
             assert len(symbol_freq_dict) == config.training.num_classes - 1, (
                 f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
             )
             balance_symbols = True
             balancing_method = "weighting"
+        else:
+            balance_symbols = False
+            balancing_method = "none"
+            symbol_freq_dict = {}
+            logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
 
         training_config = TrainingConfig(
             batch_size=args.batch_size,
