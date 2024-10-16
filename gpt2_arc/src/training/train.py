@@ -11,6 +11,7 @@ import optuna
 import arckit
 import numpy as np
 import torch
+from concurrent.futures import ProcessPoolExecutor
 from lightning.pytorch.profilers import PyTorchProfiler
 from pytorch_lightning.callbacks import Callback
 from torch.profiler import ProfilerActivity
@@ -100,7 +101,55 @@ class ModelConfigSaver(Callback):
             checkpoint (dict): The checkpoint dictionary to be modified.
         """
         checkpoint['model_config'] = self.config.model.__dict__
-def main(args):
+def load_train_dataset(args, config):
+    """
+    Load the training dataset based on the provided arguments and configuration.
+    
+    Args:
+        args: Parsed command-line arguments.
+        config: Configuration object containing model and training settings.
+    
+    Returns:
+        ARCDataset: Loaded training dataset.
+    """
+    if args.use_synthetic_data:
+        if not args.synthetic_data_path:
+            raise ValueError("Synthetic data path not provided")
+        logger.info(f"Loading synthetic training data from {args.synthetic_data_path}")
+        return ARCDataset(args.synthetic_data_path)
+    else:
+        logger.info("Loading ARC training dataset")
+        train_set, _ = arckit.load_data()
+        return ARCDataset(
+            train_set, 
+            num_symbols=11, 
+            pad_symbol_idx=config.training.pad_symbol_idx
+        )
+
+def load_val_dataset(args, config):
+    """
+    Load the validation dataset based on the provided arguments and configuration.
+    
+    Args:
+        args: Parsed command-line arguments.
+        config: Configuration object containing model and training settings.
+    
+    Returns:
+        ARCDataset: Loaded validation dataset.
+    """
+    if args.use_synthetic_data:
+        if not args.synthetic_data_path:
+            raise ValueError("Synthetic data path not provided")
+        logger.info(f"Loading synthetic validation data from {args.synthetic_data_path}")
+        return ARCDataset(args.synthetic_data_path, is_test=True)
+    else:
+        logger.info("Loading ARC validation dataset")
+        _, eval_set = arckit.load_data()
+        return ARCDataset(
+            eval_set, 
+            num_symbols=11, 
+            pad_symbol_idx=config.training.pad_symbol_idx
+        )
     # Set float32 matrix multiplication precision
     torch.set_float32_matmul_precision(args.matmul_precision)
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
@@ -208,30 +257,21 @@ def main(args):
 
         # Load data
         logger.info("Loading data")
-        if args.use_synthetic_data:
-            if not args.synthetic_data_path:
-                raise ValueError("Synthetic data path not provided")
-            logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
-            synthetic_files = os.listdir(args.synthetic_data_path)
-            logger.debug(f"Total files in synthetic data path: {len(synthetic_files)}")
-            logger.debug(f"Sample files: {synthetic_files[:5]}... (total {len(synthetic_files)})")
-            train_data = ARCDataset(args.synthetic_data_path)
-            synthetic_files = os.listdir(args.synthetic_data_path)
-            logger.debug(f"Listing files in synthetic data path for validation: {synthetic_files[:5]}... (total {len(synthetic_files)})")
-            val_data = ARCDataset(args.synthetic_data_path, is_test=True)
-        else:
-            logger.info("Loading ARC dataset")
-            train_set, eval_set = arckit.load_data()
-            train_data = ARCDataset(
-                train_set, 
-                num_symbols=11, 
-                pad_symbol_idx=config.training.pad_symbol_idx
-            )
-            val_data = ARCDataset(
-                eval_set, 
-                num_symbols=11, 
-                pad_symbol_idx=config.training.pad_symbol_idx
-            )
+        logger.info("Loading training and validation datasets in parallel to optimize performance using separate processes")
+
+        with ProcessPoolExecutor(max_workers=2) as executor:
+            # Submit parallel tasks for loading datasets
+            future_train = executor.submit(load_train_dataset, args, config)
+            future_val = executor.submit(load_val_dataset, args, config)
+            
+            # Retrieve the loaded datasets
+            try:
+                train_data = future_train.result()
+                val_data = future_val.result()
+                logger.info("Successfully loaded training and validation datasets in parallel")
+            except Exception as e:
+                logger.error(f"Error occurred while loading datasets in parallel: {e}", exc_info=True)
+                raise e
 
         # Access dataset statistics
         train_grid_stats = train_data.get_grid_size_stats()
