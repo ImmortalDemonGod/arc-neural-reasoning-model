@@ -10,6 +10,11 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 import logging
+import ijson  # Import ijson for streaming JSON parsing
+from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
+import multiprocessing  # To determine CPU count
+from threading import Lock
+from jsonschema import validate, ValidationError
 from torch.utils.data import get_worker_info
 import math  # Import math module for ceiling division
 
@@ -32,7 +37,23 @@ handler.setFormatter(formatter)
 # Add the handler to the logger
 logger.addHandler(handler)
 
-# Function to set debug mode
+# Define JSON Schema for task validation
+TASK_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "id": {"type": "string"},
+        "input": {
+            "type": "array",
+            "items": {"type": "number"}
+        },
+        "output": {
+            "type": "array",
+            "items": {"type": "number"}
+        }
+    },
+    "required": ["input", "output"],
+    "additionalProperties": False
+}
 def set_debug_mode(debug=False):
     if debug:
         logger.setLevel(logging.DEBUG)
@@ -57,6 +78,7 @@ class ARCDataset(Dataset):
         self.pad_symbol_idx = pad_symbol_idx  # Store it as an instance variable
         self.data_files = []  # Initialize data_files as an empty list
         self.data_source = data_source
+        self._data_lock = Lock()
         self.num_samples = 0
         self.data = []
         self.cache_path = self._generate_cache_path(
@@ -85,21 +107,28 @@ class ARCDataset(Dataset):
                     if f.endswith('.json')
                 ]
                 random.shuffle(self.data_files)
-                for file_path in self.data_files:
-                    with open(file_path, 'r') as f:
-                        task_data = json.load(f)
-                    if isinstance(task_data, dict):
-                        task_id = task_data.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                        samples = self._process_single_task(task_data, task_id=task_id)
-                        self.data.extend(samples)
-                        logger.debug(f"Added {len(samples)} samples from file {file_path} with task_id: {task_id}")
-                    elif isinstance(task_data, list):
-                        task_id = os.path.splitext(os.path.basename(file_path))[0]
-                        samples = self._process_list_data(task_data, task_id=task_id)
-                        self.data.extend(samples)
-                        logger.debug(f"Assigned task_id '{task_id}' to list samples from file {file_path}")
-                    else:
-                        logger.error(f"Unexpected data format in file {file_path}: {type(task_data)}")
+                # Determine the number of workers based on CPU count
+                cpu_count = multiprocessing.cpu_count() or 1
+                max_workers = min(32, cpu_count + 4)  # Example heuristic
+                
+                logger.debug(f"Using ThreadPoolExecutor with {max_workers} workers for parallel processing.")
+                
+                # Parallel processing using ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    # Submit all file processing tasks
+                    future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in self.data_files}
+                    
+                    # Iterate over the completed futures
+                    for future in as_completed(future_to_file):
+                        file_path = future_to_file[future]
+                        try:
+                            samples = future.result()
+                            # Thread-safe data extension
+                            with self._data_lock:
+                                self.data.extend(samples)
+                            logger.debug(f"Added {len(samples)} samples from file {file_path}")
+                        except Exception as exc:
+                            logger.error(f"{file_path} generated an exception: {exc}", exc_info=True)
             elif os.path.isfile(data_source):
                 with open(data_source, 'r') as f:
                     task_data = json.load(f)
@@ -129,7 +158,64 @@ class ARCDataset(Dataset):
         self._compute_and_cache_statistics()
         self._save_cache(self.cache_path)
 
-    def _save_cache(self, cache_path: str):
+    def _process_single_file_streaming(self, file_path: str) -> List[Dict]:
+        """
+        Processes a single JSON file using streaming parsing and returns the list of samples.
+        
+        Args:
+            file_path (str): Path to the JSON file.
+        
+        Returns:
+            List[Dict]: List of processed samples from the file.
+        """
+        samples = []
+        try:
+            # Check for empty file
+            if os.path.getsize(file_path) == 0:
+                logger.warning(f"Empty JSON file detected: {file_path}. Skipping.")
+                return []
+            
+            with open(file_path, 'r', encoding='utf-8') as f:
+                parser = ijson.parse(f)
+                current_task = {}
+                for prefix, event, value in parser:
+                    if (prefix, event) == ('item', 'start_map'):
+                        current_task = {}
+                    elif prefix.startswith('item.') and event in ('map_key', 'string', 'number', 'boolean', 'null', 'start_array', 'end_array'):
+                        key = prefix.split('.')[-1]
+                        current_task[key] = value
+                    elif (prefix, event) == ('item', 'end_map'):
+                        # Validate the task data
+                        try:
+                            validate(instance=current_task, schema=TASK_SCHEMA)
+                        except ValidationError as ve:
+                            logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
+                            continue  # Skip invalid tasks
+                        
+                        task_id = current_task.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                        samples.extend(self._process_single_task(current_task, task_id=task_id))
+            return samples
+        except ijson.JSONError as e:
+            logger.error(f"Malformed JSON in file {file_path}: {e}", exc_info=True)
+            return []
+        except UnicodeDecodeError as e:
+            logger.error(f"Encoding error in file {file_path}: {e}", exc_info=True)
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error processing file {file_path}: {e}", exc_info=True)
+            return []
+
+    def _process_single_file_parallel(self, file_path: str) -> List[Dict]:
+        """
+        Wrapper method to process a single file in parallel.
+        
+        Args:
+            file_path (str): Path to the JSON file.
+            
+        Returns:
+            List[Dict]: List of processed samples from the file.
+        """
+        return self._process_single_file_streaming(file_path)
         """
         Saves the dataset and its statistics to the specified cache path using pickle.
         
