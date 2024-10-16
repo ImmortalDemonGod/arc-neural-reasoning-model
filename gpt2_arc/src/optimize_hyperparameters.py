@@ -136,7 +136,7 @@ def objective(trial, args):
                 locals()[key] = value  # Dynamically set variables
         else:
             # Existing hyperparameter suggestions when no checkpoint is provided
-        torch.set_float32_matmul_precision(args.matmul_precision)
+            torch.set_float32_matmul_precision(args.matmul_precision)
         logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
         n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
         n_head = 2 ** n_head_exp
