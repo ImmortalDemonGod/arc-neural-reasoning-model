@@ -153,7 +153,7 @@ class ARCDataset(Dataset):
             samples = self._process_arckit_data(data_source)
             self.data.extend(samples)
         elif isinstance(data_source, list):
-            samples = self._process_list_data(data_source)
+            samples = self._process_list_data(data_source, task_id="default_task")
             self.data.extend(samples)
         else:
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
