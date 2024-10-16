@@ -7,18 +7,19 @@ import torch
 import platform
 import os
 from dataclasses import asdict
-from typing import Dict, Any, Optional
+from typing import Optional
+from gpt2_arc.src.config import Config
 
 class ExperimentTracker:
-    def __init__(self, config: Dict[str, Any], project: str, entity: Optional[str] = None, use_wandb: bool = False):
+    def __init__(self, config: Config, project: str, entity: Optional[str] = None, use_wandb: bool = False):
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.config = config  # Use the Config dataclass instance directly
+        self.config = config.to_dict()  # Convert Config to dict
         self.project = project
         self.entity = entity
         self.run = None
         self.use_wandb = use_wandb
-        self.include_pad_in_accuracy = config.training.include_pad_in_accuracy
+        self.include_pad_in_accuracy = self.config['training']['include_pad_in_accuracy']
         print(f"ExperimentTracker initialized with include_pad_in_accuracy={self.include_pad_in_accuracy}")
         self.metrics = {}
         if self.use_wandb:
@@ -51,23 +52,6 @@ class ExperimentTracker:
             "gpu_info": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
         }
 
-    def _config_to_dict(self, config):
-        if isinstance(config, dict):
-            return {k: self._config_to_dict(v) for k, v in config.items()}
-        elif hasattr(config, '__dict__'):
-            return {k: self._config_to_dict(v) for k, v in config.__dict__.items() if not k.startswith('_')}
-        else:
-            return config
-        if self.use_wandb:
-            try:
-                self.run = wandb.init(project=self.project, entity=self.entity, config=self.config)
-                print(f"Wandb run initialized: {self.run.id}")
-            except Exception as e:
-                print(f"Error initializing wandb: {str(e)}")
-                self.use_wandb = False
-        
-        if not self.use_wandb:
-            print("Using local logging only")
 
     def finish(self):
         if self.use_wandb and self.run:
