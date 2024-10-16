@@ -60,14 +60,6 @@ class TrainingConfig:
 
     def __post_init__(self):
         # Dynamically set num_classes based on symbol_freq
-        if self.symbol_freq:
-            max_existing_idx = max(int(k) for k in self.symbol_freq.keys())
-            self.pad_symbol_idx = max_existing_idx + 1
-            self.num_classes = max_existing_idx + 2  # Include padding class
-        else:
-            # Default number of classes if symbol_freq is not provided
-            self.pad_symbol_idx = 10  # Assuming 10 symbols (0-9)
-            self.num_classes = 11  # 10 symbols + 1 padding
         print(f"TrainingConfig initialized with {self.num_classes} classes and PAD symbol index {self.pad_symbol_idx}")
         print(f"include_pad_in_loss: {self.include_pad_in_loss}")  # Added debug statement
         print(f"include_pad_in_accuracy: {self.include_pad_in_accuracy}")  # Added debug statement
