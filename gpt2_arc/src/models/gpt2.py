@@ -181,7 +181,7 @@ class GPT2ARC(pl.LightningModule):
         self.ln_f = nn.LayerNorm(self.config.model.n_embd)
         assert isinstance(self.config.model.n_embd, int), "model.n_embd must be an integer"
         assert isinstance(num_classes, int), "num_classes must be an integer"
-        self.fc_out = BitLinearNew(int(self.config.model.n_embd), int(self.config.training.num_classes))  # Dynamic number of classes
+        self.fc_out = BitLinearNew(int(self.config.model.n_embd), num_classes)  # Use num_classes directly
 
         # Initialize loss function with class weights if needed
         if self.config.training.balance_symbols and self.config.training.balancing_method == "weighting":
