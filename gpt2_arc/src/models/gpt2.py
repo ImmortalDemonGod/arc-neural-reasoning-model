@@ -137,7 +137,6 @@ class GPT2ARC(pl.LightningModule):
         self.symbol_freq = symbol_freq
         self.pad_symbol_idx = self.config.training.pad_symbol_idx
         self.include_pad_in_loss = self.config.training.include_pad_in_loss
-        self.include_pad_in_accuracy = self.config.training.include_pad_in_accuracy
         self.conv1 = nn.Conv2d(
             in_channels=1,
             out_channels=self.config.model.n_embd,  # Accessing the 'model' attribute within Config
@@ -243,20 +242,21 @@ class GPT2ARC(pl.LightningModule):
         
         preds = torch.argmax(outputs, dim=-1)
         
-        if self.include_pad_in_accuracy:
-            logger.debug("Including padding in accuracy calculation.")
-            correct = (preds == targets).float()
-            total = torch.numel(targets)
-        else:
-            logger.debug("Excluding padding from accuracy calculation.")
-            mask = targets != self.pad_symbol_idx
-            correct = (preds == targets).float() * mask
-            total = mask.sum()
+        # Accuracy including padding
+        correct_with_pad = (preds == targets).float()
+        total_with_pad = torch.numel(targets)
+        acc_with_pad = correct_with_pad.sum() / total_with_pad if total_with_pad > 0 else torch.tensor(0.0)
         
-        acc = correct.sum() / total if total > 0 else torch.tensor(0.0)
+        # Accuracy excluding padding
+        mask = targets != self.pad_symbol_idx
+        correct_without_pad = (preds == targets).float() * mask
+        total_without_pad = mask.sum()
+        acc_without_pad = correct_without_pad.sum() / total_without_pad if total_without_pad > 0 else torch.tensor(0.0)
         
+        # Log both accuracies
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log('train_acc', acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train_acc_with_pad', acc_with_pad, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train_acc_without_pad', acc_without_pad, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -266,18 +266,21 @@ class GPT2ARC(pl.LightningModule):
         
         preds = torch.argmax(outputs, dim=-1)
         
-        if self.include_pad_in_accuracy:
-            correct = (preds == targets).float()
-            total = torch.numel(targets)
-        else:
-            mask = targets != self.pad_symbol_idx
-            correct = (preds == targets).float() * mask
-            total = mask.sum()
+        # Accuracy including padding
+        correct_with_pad = (preds == targets).float()
+        total_with_pad = torch.numel(targets)
+        acc_with_pad = correct_with_pad.sum() / total_with_pad if total_with_pad > 0 else torch.tensor(0.0)
         
-        acc = correct.sum() / total if total > 0 else torch.tensor(0.0)
+        # Accuracy excluding padding
+        mask = targets != self.pad_symbol_idx
+        correct_without_pad = (preds == targets).float() * mask
+        total_without_pad = mask.sum()
+        acc_without_pad = correct_without_pad.sum() / total_without_pad if total_without_pad > 0 else torch.tensor(0.0)
         
+        # Log both accuracies
         self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        self.log('val_acc', acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc_with_pad', acc_with_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc_without_pad', acc_without_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -287,18 +290,21 @@ class GPT2ARC(pl.LightningModule):
         
         preds = torch.argmax(outputs, dim=-1)
         
-        if self.include_pad_in_accuracy:
-            correct = (preds == targets).float()
-            total = torch.numel(targets)
-        else:
-            mask = targets != self.pad_symbol_idx
-            correct = (preds == targets).float() * mask
-            total = mask.sum()
+        # Accuracy including padding
+        correct_with_pad = (preds == targets).float()
+        total_with_pad = torch.numel(targets)
+        acc_with_pad = correct_with_pad.sum() / total_with_pad if total_with_pad > 0 else torch.tensor(0.0)
         
-        acc = correct.sum() / total if total > 0 else torch.tensor(0.0)
+        # Accuracy excluding padding
+        mask = targets != self.pad_symbol_idx
+        correct_without_pad = (preds == targets).float() * mask
+        total_without_pad = mask.sum()
+        acc_without_pad = correct_without_pad.sum() / total_without_pad if total_without_pad > 0 else torch.tensor(0.0)
         
+        # Log both accuracies
         self.log('test_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        self.log('test_acc', acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('test_acc_with_pad', acc_with_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('test_acc_without_pad', acc_without_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
     def forward(self, input_ids, attention_mask=None):

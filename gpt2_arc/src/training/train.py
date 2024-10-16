@@ -218,13 +218,11 @@ def main(args):
                 log_level=args.log_level,
                 use_synthetic_data=args.use_synthetic_data,
                 synthetic_data_path=args.synthetic_data_path,
-                include_pad_in_accuracy=args.include_pad_in_accuracy
             )
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
                 learning_rate=best_params['learning_rate'],
                 max_epochs=args.max_epochs,  # Always use the user-provided max_epochs
-                include_pad_in_accuracy=args.include_pad_in_accuracy
             )
         else:
             logger.info("Using provided or default hyperparameters")
@@ -600,11 +598,6 @@ if __name__ == "__main__":
     group.add_argument("--use_profiler", action="store_true", help="Enable the custom profiler")
     group.add_argument("--fast_dev_run", action="store_true", help="Run a fast development test")
     
-    parser.add_argument(
-        "--include-pad-in-accuracy",
-        action="store_true",
-        help="Include the padding class in the accuracy calculation. If not set, the padding class will be excluded."
-    )
     parser.add_argument(
         "--optuna_study_name",
         type=str,
