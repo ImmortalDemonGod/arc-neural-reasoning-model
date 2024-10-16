@@ -48,7 +48,7 @@ class ARCTrainer(pl.LightningModule):
         self.results_collector = results_collector if results_collector else ResultsCollector(config)
         self.writer = SummaryWriter(f"runs/experiment_{self.results_collector.experiment_id}")
 
-        # Update the weight tensor to have 11 elements
+        # Update the weight tensor to have 11 elements (SHOULD CALCULATE NOT HARDCODE)
         class_weights = torch.tensor([
             0.08399431,  # Class 0
             0.01080552,  # Class 1
