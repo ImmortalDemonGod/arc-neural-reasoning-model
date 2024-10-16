@@ -98,7 +98,44 @@ def objective(trial, args):
     arc_trainer = None
     logger.info(f"Starting trial {trial.number}")
     try:
-        # Set float32 matrix multiplication precision
+        # Initialize fixed hyperparameters dictionary
+        fixed_hyperparams = {}
+
+        # Load hyperparameters from checkpoint if provided
+        if args.model_checkpoint:
+            logger.info(f"Loading model checkpoint: {args.model_checkpoint}")
+            checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
+            model_config_dict = checkpoint.get('model_config')
+            
+            if not model_config_dict:
+                logger.error("Model config not found in checkpoint. Aborting trial.")
+                raise ValueError("Model config not found in checkpoint.")
+            
+            # Create ModelConfig instance from the checkpoint
+            model_config = ModelConfig(**model_config_dict)
+            
+            # Define fixed hyperparameters based on the checkpoint's model_config
+            fixed_hyperparams = {
+                'n_embd': model_config.n_embd,
+                'n_head': model_config.n_head,
+                'n_layer': model_config.n_layer,
+                'dropout': model_config.dropout,
+                'mamba_ratio': model_config.mamba_ratio,
+                'd_state': model_config.d_state,
+                'd_conv': model_config.d_conv,
+                'mamba_depth': model_config.mamba_depth,
+                'mamba_expand': model_config.mamba_expand
+            }
+            
+            # Log and set fixed hyperparameters
+            for key, value in fixed_hyperparams.items():
+                trial.set_user_attr(key, value)
+                logger.debug(f"Trial {trial.number}: Fixed hyperparameter {key} = {value}")
+                
+                # Assign fixed values to hyperparameters
+                locals()[key] = value  # Dynamically set variables
+        else:
+            # Existing hyperparameter suggestions when no checkpoint is provided
         torch.set_float32_matmul_precision(args.matmul_precision)
         logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
         n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
@@ -160,7 +197,25 @@ def objective(trial, args):
         learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
         max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
 
-        # Ensure hyperparameters are within the new limits
+        if not args.model_checkpoint:
+            # Only suggest hyperparameters that are not fixed by the checkpoint
+            n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
+            n_head = 2 ** n_head_exp
+            n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
+            n_embd = n_head * n_embd_multiplier
+            n_embd = 2 ** int(np.log2(n_embd))
+            n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
+            mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
+            d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
+            d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
+            dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
+            mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
+            mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
+        else:
+            # If a checkpoint is used, skip suggesting hyperparameters that are fixed
+            # Only suggest optimizer-related hyperparameters like learning_rate and batch_size
+            learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
+            batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
         n_head = min(n_head, 2 ** args.n_head_exp_max)
         n_embd = min(n_embd, 2 ** int(np.log2(args.n_embd_multiplier_max * n_head)))
         n_layer = min(n_layer, args.n_layer_max)
@@ -210,29 +265,45 @@ def objective(trial, args):
 
         logger.debug(f"Suggested dropout rate: {dropout}")
 
-        model_config = ModelConfig(
-            n_embd=n_embd,
-            n_head=n_head,
-            n_layer=n_layer,
-            dropout=dropout,
-            mamba_ratio=mamba_ratio,
-            d_state=d_state,
-            d_conv=d_conv
-        )
-        logger.debug(f"Model config: {model_config}")
-
-        # Create TrainingConfig with Grokfast parameters from args
-        training_config = TrainingConfig(
-            batch_size=batch_size,
-            learning_rate=learning_rate,
-            max_epochs=max_epochs,
-            use_grokfast=use_grokfast,  # Use the fixed value from args
-            grokfast_type=grokfast_type,
-            grokfast_alpha=grokfast_alpha,
-            grokfast_lamb=grokfast_lamb,
-            grokfast_window_size=grokfast_window_size,
-            include_pad_in_loss=include_pad_in_loss
-        )
+        # Continue constructing the Config object with fixed and suggested hyperparameters
+        if args.model_checkpoint:
+            # Use fixed hyperparameters from the checkpoint
+            model_config = ModelConfig(**fixed_hyperparams)
+            training_config = TrainingConfig(
+                batch_size=batch_size,
+                learning_rate=learning_rate,
+                max_epochs=max_epochs,
+                use_grokfast=use_grokfast,
+                grokfast_type=grokfast_type,
+                grokfast_alpha=grokfast_alpha,
+                grokfast_lamb=grokfast_lamb,
+                grokfast_window_size=grokfast_window_size,
+                include_pad_in_loss=include_pad_in_loss
+            )
+        else:
+            # Use suggested hyperparameters
+            model_config = ModelConfig(
+                n_embd=n_embd,
+                n_head=n_head,
+                n_layer=n_layer,
+                dropout=dropout,
+                mamba_ratio=mamba_ratio,
+                d_state=d_state,
+                d_conv=d_conv,
+                mamba_depth=mamba_depth,
+                mamba_expand=mamba_expand
+            )
+            training_config = TrainingConfig(
+                batch_size=batch_size,
+                learning_rate=learning_rate,
+                max_epochs=max_epochs,
+                use_grokfast=use_grokfast,
+                grokfast_type=grokfast_type,
+                grokfast_alpha=grokfast_alpha,
+                grokfast_lamb=grokfast_lamb,
+                grokfast_window_size=grokfast_window_size,
+                include_pad_in_loss=include_pad_in_loss
+            )
 
         config = Config(model=model_config, training=training_config)
         config.estimated_memory = estimated_memory
@@ -301,7 +372,14 @@ def objective(trial, args):
         # Create model and trainer
         logger.debug("Creating model and trainer")
         num_classes = config.training.num_classes
-        model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
+        # Instantiate the GPT2ARC model with the constructed Config
+        if args.model_checkpoint:
+            # Load additional components from the checkpoint if necessary
+            model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
+            model.load_state_dict(checkpoint['state_dict'], strict=True)
+            logger.debug(f"Loaded model state from checkpoint: {args.model_checkpoint}")
+        else:
+            model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
         
         # Generate model summary
         print("DEBUG: Attempting to generate model summary")
@@ -522,6 +600,12 @@ if __name__ == "__main__":
     )
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
     parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
+    parser.add_argument(
+        "--model_checkpoint",
+        type=str,
+        default=None,
+        help="Path to the model checkpoint to resume optimization from."
+    )
     parser.add_argument(
         "--include_pad_in_loss",
         type=lambda x: (str(x).lower() in ['true', '1', 't', 'y', 'yes']),
