@@ -120,6 +120,8 @@ def objective(trial, args):
         d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
         d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
 
+        include_pad_in_loss = args.include_pad_in_loss
+
         # Suggest dropout rate
         dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
         mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
