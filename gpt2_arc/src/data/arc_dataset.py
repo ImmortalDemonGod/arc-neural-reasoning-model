@@ -249,21 +249,6 @@ class ARCDataset(Dataset):
                                 task_id = current_object.get('id', os.path.splitext(os.path.basename(file_path))[0])
                                 task_samples = self._process_single_task(current_object, task_id=task_id)
                                 samples.extend(task_samples)
-                            except ValidationError as ve:
-                                logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
-                        elif 'input' in current_object and 'output' in current_object:
-                            # Sample-Based Structure
-                            task_id = current_object.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                            try:
-                                input_tensor = self._preprocess_grid(current_object['input'])
-                                output_tensor = self._preprocess_grid(current_object['output'])
-                                samples.append({
-                                    "input": input_tensor,
-                                    "output": output_tensor,
-                                    "task_id": task_id
-                                })
-                                logger.debug(f"Added sample from file {file_path}")
-                        current_object = {}
         except ijson.JSONError as e:
             logger.warning(f"Malformed JSON in file {file_path}: {e}. Skipping.")
         except UnicodeDecodeError as e:
