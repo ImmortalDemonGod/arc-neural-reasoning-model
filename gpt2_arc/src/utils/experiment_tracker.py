@@ -13,7 +13,7 @@ class ExperimentTracker:
     def __init__(self, config: Dict[str, Any], project: str, entity: Optional[str] = None, use_wandb: bool = False):
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.config = config.to_dict() if hasattr(config, 'to_dict') else self._config_to_dict(config)
+        self.config = config  # Use the Config dataclass instance directly
         self.project = project
         self.entity = entity
         self.run = None
