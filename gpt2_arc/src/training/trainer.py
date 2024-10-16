@@ -25,9 +25,9 @@ class NanLossPruningCallback(Callback):
         # Extract loss from outputs
         loss = outputs.get('loss') if isinstance(outputs, dict) else outputs
         if loss is not None:
-            if torch.isnan(loss):
-                logger.warning("NaN loss detected. Pruning the trial.")
-                raise TrialPruned("NaN loss encountered, pruning this trial.")
+            if torch.isnan(loss) or torch.isinf(loss):
+                logger.warning("NaN or Inf loss detected. Pruning the trial.")
+                raise TrialPruned("NaN or Inf loss encountered, pruning this trial.")
 
 
 class ARCTrainer(pl.LightningModule):
@@ -58,7 +58,7 @@ class ARCTrainer(pl.LightningModule):
         for logger in self.trainer.loggers:
             if isinstance(logger, TensorBoardLogger):
                 return logger.experiment
-        print("DEBUG: No TensorBoardLogger found in trainer.loggers")
+        logger.debug("DEBUG: No TensorBoardLogger found in trainer.loggers")
         return None
 
     def training_step(self, batch, batch_idx):
@@ -89,9 +89,9 @@ class ARCTrainer(pl.LightningModule):
         tb_logger = self.get_tensorboard_logger()
         if tb_logger:
             tb_logger.add_scalar('train/loss', loss.item(), self.global_step)
-            print(f"DEBUG: Logged training loss: {loss.item()} at step {self.global_step}")
+            logger.debug(f"DEBUG: Logged training loss: {loss.item()} at step {self.global_step}")
         else:
-            print(f"DEBUG: Failed to log training loss. No TensorBoard logger available.")
+            logger.debug(f"DEBUG: Failed to log training loss. No TensorBoard logger available.")
         
         return loss
 
@@ -129,9 +129,9 @@ class ARCTrainer(pl.LightningModule):
         
         try:
             self.writer.add_scalar('val/loss', loss.item(), self.current_epoch)
-            print(f"DEBUG: Logged validation loss: {loss.item()} for epoch {self.current_epoch}")
+            logger.debug(f"DEBUG: Logged validation loss: {loss.item()} for epoch {self.current_epoch}")
         except Exception as e:
-            print(f"DEBUG: Error logging validation step: {str(e)}")
+            logger.error(f"DEBUG: Error logging validation step: {str(e)}")
         
         return loss
 
@@ -228,7 +228,7 @@ class ARCTrainer(pl.LightningModule):
         predictions = predictions.view(targets.size())
         # Calculate accuracy over all elements
         accuracy = (predictions == targets).float().mean()
-        print(f"DEBUG: compute_accuracy - Accuracy: {accuracy.item()}")
+        logger.debug(f"DEBUG: compute_accuracy - Accuracy: {accuracy.item()}")
         return accuracy
 
     def compute_diff_accuracy(self, inputs, targets, outputs):
@@ -286,7 +286,7 @@ class ARCTrainer(pl.LightningModule):
             print("DEBUG: TensorBoard writer closed successfully.")
         except Exception as e:
             print(f"DEBUG: Error closing TensorBoard writer: {str(e)}")
-        print("DEBUG: Results saved and TensorBoard writer closed.")
+        logger.debug("DEBUG: Results saved and TensorBoard writer closed.")
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=0)
