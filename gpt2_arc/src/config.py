@@ -8,6 +8,17 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logs
 
 @dataclass
 class ModelConfig:
+    n_embd: int = 768
+    n_head: int = 12
+    n_layer: int = 12
+    num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
+    dropout: float = 0.1
+    mamba_ratio: float = 1.0  # Number of Mamba layers per Transformer layer
+    d_state: int = 16          # Mamba state dimension
+    d_conv: int = 4            # Mamba convolution dimension
+    mamba_depth: int = 1       # Depth of each Mamba layer
+    mamba_expand: int = 2      # Expand factor for each Mamba layer
+
     def __post_init__(self):
         assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
         assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
@@ -16,22 +27,14 @@ class ModelConfig:
         assert self.d_conv >= 1, f"d_conv ({self.d_conv}) must be at least 1"
         assert self.mamba_depth >= 1, f"mamba_depth ({self.mamba_depth}) must be at least 1"
         assert self.mamba_expand >= 2, f"mamba_expand ({self.mamba_expand}) must be at least 2"
-    n_embd: int = 768
-    n_head: int = 12
-    n_layer: int = 12
-    dropout: float = 0.1
-    mamba_ratio: float = 1.0  # Number of Mamba layers per Transformer layer
-    d_state: int = 16          # Mamba state dimension
-    d_conv: int = 4            # Mamba convolution dimension
-    mamba_depth: int = 1       # Depth of each Mamba layer
-    mamba_expand: int = 2      # Expand factor for each Mamba layer
+        logger.debug("ModelConfig initialized successfully")
 
 @dataclass
 class TrainingConfig:
-    # Existing fields...
     batch_size: int = 32
     learning_rate: float = 1e-4
     max_epochs: int = 10
+    num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
     num_symbols: int = 11  # Ensure num_symbols is set to 11
     num_workers: int = multiprocessing.cpu_count() // 2 if multiprocessing.cpu_count() else 4
     symbol_freq: Optional[Dict] = None
