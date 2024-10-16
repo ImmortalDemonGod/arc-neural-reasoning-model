@@ -68,7 +68,7 @@ class ARCDataset(Dataset):
         self,
         data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
         is_test: bool = False,
-        num_symbols: int = 10,
+        num_symbols: int = 11,  # Updated to match the number of classes
         test_split: float = 0.2,
         pad_symbol_idx: int = 10,  # Add this parameter with a default value
         debug=False,
