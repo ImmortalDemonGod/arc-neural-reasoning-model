@@ -11,7 +11,7 @@ import optuna
 import arckit
 import numpy as np
 import torch
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from lightning.pytorch.profilers import PyTorchProfiler
 from pytorch_lightning.callbacks import Callback
 from torch.profiler import ProfilerActivity
@@ -139,19 +139,23 @@ def load_val_dataset(args, config):
     Returns:
         ARCDataset: Loaded validation dataset.
     """
-    if args.use_synthetic_data:
-        if not args.synthetic_data_path:
-            raise ValueError("Synthetic data path not provided")
-        logger.info(f"Loading synthetic validation data from {args.synthetic_data_path}")
-        return ARCDataset(args.synthetic_data_path, is_test=True)
-    else:
-        logger.info("Loading ARC validation dataset")
-        _, eval_set = arckit.load_data()
-        return ARCDataset(
-            eval_set, 
-            num_symbols=11, 
-            pad_symbol_idx=config.training.pad_symbol_idx
-        )
+    try:
+        if args.use_synthetic_data:
+            if not args.synthetic_data_path:
+                raise ValueError("Synthetic data path not provided")
+            logger.info(f"Loading synthetic validation data from {args.synthetic_data_path}")
+            return ARCDataset(args.synthetic_data_path, is_test=True)
+        else:
+            logger.info("Loading ARC validation dataset")
+            _, eval_set = arckit.load_data()
+            return ARCDataset(
+                eval_set, 
+                num_symbols=11, 
+                pad_symbol_idx=config.training.pad_symbol_idx
+            )
+    except Exception as e:
+        logger.error(f"Failed to load validation dataset: {e}", exc_info=True)
+        raise
 
 
 def main(args):
@@ -261,7 +265,7 @@ def main(args):
         logger.info("Loading data")
         logger.info("Loading training and validation datasets in parallel to optimize performance using separate processes")
 
-        with ProcessPoolExecutor(max_workers=2) as executor:
+        with ThreadPoolExecutor(max_workers=2) as executor:
             # Submit parallel tasks for loading datasets
             future_train = executor.submit(load_train_dataset, args, config)
             future_val = executor.submit(load_val_dataset, args, config)

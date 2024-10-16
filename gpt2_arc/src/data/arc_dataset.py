@@ -100,67 +100,89 @@ class ARCDataset(Dataset):
         logger.debug(f"data_source content: {data_source}")
         logger.debug(f"self.test_split is set to: {self.test_split}")
 
-        if isinstance(data_source, str):
-            if os.path.isdir(data_source):
-                logger.debug("Initializing dataset with data from directory")
-                self.data_dir = data_source
-                self.data_files = [
-                    os.path.join(data_source, f)
-                    for f in os.listdir(data_source)
-                    if f.endswith('.json')
-                ]
-                random.shuffle(self.data_files)
-                # Determine the number of workers based on CPU count
-                cpu_count = multiprocessing.cpu_count() or 1
-                max_workers = min(4, cpu_count + 1)  # Adjusted heuristic for ThreadPoolExecutor
-                
-                logger.debug(f"Using ThreadPoolExecutor with {max_workers} workers for parallel processing.")
-
-                # Initialize tqdm progress bar and process files in parallel
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    # Submit all file processing tasks
-                    future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in self.data_files}
+        try:
+            if isinstance(data_source, str):
+                if os.path.isdir(data_source):
+                    logger.debug("Initializing dataset with data from directory")
+                    self.data_dir = data_source
+                    self.data_files = [
+                        os.path.join(data_source, f)
+                        for f in os.listdir(data_source)
+                        if f.endswith('.json')
+                    ]
+                    random.shuffle(self.data_files)
+                    # Determine the number of workers based on CPU count
+                    cpu_count = multiprocessing.cpu_count() or 1
+                    max_workers = min(4, cpu_count + 1)  # Adjusted heuristic for ThreadPoolExecutor
                     
-                    # Wrap the as_completed iterator with tqdm for the progress bar
-                    for future in tqdm(
-                        as_completed(future_to_file),
-                        total=len(future_to_file),
-                        desc="Loading JSON Files",
-                        unit="file",
-                        file=sys.stdout,
-                        ncols=100,              # Optional: Set width of the progress bar
-                        mininterval=0.5,        # Optional: Minimum interval between updates
-                        colour='green'          # Optional: Set progress bar color (requires tqdm >=4.46.0)
-                    ):
-                        file_path = future_to_file[future]
-                        try:
-                            samples = future.result()
-                            self.data.extend(samples)  # No lock needed
-                            logger.debug(f"Added {len(samples)} samples from file {file_path}")
-                        except Exception as exc:
-                            logger.error(f"{file_path} generated an exception: {exc}", exc_info=True)
-            elif os.path.isfile(data_source):
-                with open(data_source, 'r') as f:
-                    task_data = json.load(f)
-                if isinstance(task_data, dict):
-                    task_id = task_data.get('id', "default_task")
-                    samples = self._process_single_task(task_data, task_id=task_id)
-                    self.data.extend(samples)
-                elif isinstance(task_data, list):
-                    samples = self._process_list_data(task_data,task_id=task_id)
-                    self.data.extend(samples)
+                    logger.debug(f"Using ThreadPoolExecutor with {max_workers} workers for parallel processing.")
+
+                    # Initialize tqdm progress bar and process files in parallel
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        # Submit all file processing tasks
+                        future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in self.data_files}
+                        
+                        # Wrap the as_completed iterator with tqdm for the progress bar
+                        for future in tqdm(
+                            as_completed(future_to_file),
+                            total=len(future_to_file),
+                            desc="Loading JSON Files",
+                            unit="file",
+                            file=sys.stdout,
+                            ncols=100,              # Optional: Set width of the progress bar
+                            mininterval=0.5,        # Optional: Minimum interval between updates
+                            colour='green'          # Optional: Set progress bar color (requires tqdm >=4.46.0)
+                        ):
+                            file_path = future_to_file[future]
+                            try:
+                                samples = future.result()
+                                self.data.extend(samples)  # No lock needed
+                                logger.debug(f"Added {len(samples)} samples from file {file_path}")
+                            except Exception as exc:
+                                logger.error(f"{file_path} generated an exception: {exc}", exc_info=True)
+                elif os.path.isfile(data_source):
+                    with open(data_source, 'r') as f:
+                        task_data = json.load(f)
+                    if isinstance(task_data, dict):
+                        task_id = task_data.get('id', "default_task")
+                        samples = self._process_single_task(task_data, task_id=task_id)
+                        self.data.extend(samples)
+                    elif isinstance(task_data, list):
+                        samples = self._process_list_data(task_data,task_id=task_id)
+                        self.data.extend(samples)
+                    else:
+                        logger.error(f"Unexpected data format in file {data_source}: {type(task_data)}")
                 else:
-                    logger.error(f"Unexpected data format in file {data_source}: {type(task_data)}")
-            else:
-                raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-        elif TaskSet is not None and isinstance(data_source, TaskSet):
-            logger.debug(f"TaskSet attributes before access: {dir(data_source)}")
-            logger.debug(f"Does TaskSet have 'dataset' attribute? {hasattr(data_source, 'dataset')}")
-            samples = self._process_arckit_data(data_source)
-            self.data.extend(samples)
-        elif isinstance(data_source, list):
-            samples = self._process_list_data(data_source, task_id="default_task")
-            self.data.extend(samples)
+                    raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
+            elif TaskSet is not None and isinstance(data_source, TaskSet):
+                logger.debug(f"TaskSet attributes before access: {dir(data_source)}")
+                logger.debug(f"Does TaskSet have 'dataset' attribute? {hasattr(data_source, 'dataset')}")
+                samples = self._process_arckit_data(data_source)
+                self.data.extend(samples)
+            elif isinstance(data_source, list):
+                samples = self._process_list_data(data_source, task_id="default_task")
+                self.data.extend(samples)
+        except Exception as e:
+            logger.error(f"Failed to initialize ARCDataset: {e}", exc_info=True)
+            raise
+```
+
+gpt2_arc/src/training/train.py
+```python
+<<<<<<< SEARCH
+    if args.use_synthetic_data:
+        if not args.synthetic_data_path:
+            raise ValueError("Synthetic data path not provided")
+        logger.info(f"Loading synthetic training data from {args.synthetic_data_path}")
+        return ARCDataset(args.synthetic_data_path)
+    else:
+        logger.info("Loading ARC training dataset")
+        train_set, _ = arckit.load_data()
+        return ARCDataset(
+            train_set, 
+            num_symbols=11, 
+            pad_symbol_idx=config.training.pad_symbol_idx
+        )
 
         self.num_samples = len(self.data)
         self._compute_and_cache_statistics()
