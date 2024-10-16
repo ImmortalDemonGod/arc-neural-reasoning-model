@@ -33,7 +33,10 @@ class ExperimentTracker:
         self.results = {
             "train": [],
             "validation": [],
-            "test": {}
+            "test": {
+                "acc_with_pad": None,
+                "acc_without_pad": None
+            }
         }
         self.metrics = {}
         self.task_specific_results = {}

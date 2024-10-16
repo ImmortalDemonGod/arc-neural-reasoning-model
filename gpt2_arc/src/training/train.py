@@ -250,7 +250,6 @@ def main(args):
                 grokfast_alpha=args.grokfast_alpha,
                 grokfast_lamb=args.grokfast_lamb,
                 grokfast_window_size=args.grokfast_window_size,
-                include_pad_in_loss=args.include_pad_in_loss  # Pass the new flag
             )
         
         config = Config(model=model_config, training=training_config)
@@ -534,8 +533,8 @@ def main(args):
 
             results = {
                 "avg_test_loss": avg_test_loss,
-                "avg_test_accuracy": avg_test_accuracy,
-                "avg_test_diff_accuracy": avg_test_diff_accuracy,
+                "avg_acc_with_pad": avg_test_accuracy,
+                "avg_acc_without_pad": avg_test_diff_accuracy,
             }
 
             # Add task-specific results
