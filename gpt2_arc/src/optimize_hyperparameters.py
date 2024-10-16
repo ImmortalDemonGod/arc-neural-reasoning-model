@@ -102,7 +102,17 @@ def objective(trial, args):
         fixed_hyperparams = {}
 
         # Load hyperparameters from checkpoint if provided
-        # Calculate Symbol Frequencies before instantiating TrainingConfig
+        # Load data
+        train_set, eval_set = arckit.load_data()
+        train_data = ARCDataset(train_set)
+        val_data = ARCDataset(eval_set)
+
+        # Create configuration
+        model_config = ModelConfig()
+        training_config = TrainingConfig()
+        config = Config(model=model_config, training=training_config)
+
+        # Calculate Symbol Frequencies
         if args.use_synthetic_data:
             logger.debug("Calculating symbol frequencies for synthetic training set")
             symbol_freq = train_data.get_symbol_frequencies()
@@ -113,49 +123,11 @@ def objective(trial, args):
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
         # Convert symbol_freq from NumPy array to dictionary
-        if args.model_checkpoint:
-            # Convert symbol frequencies to a dictionary with string keys
-            symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
-            logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
-    
-            # Assert that symbol_freq_dict length matches num_classes - 1
-            assert len(symbol_freq_dict) == config.training.num_classes - 1, (
-                f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
-            )
-    
-            # Load the model checkpoint
-            logger.info(f"Loading model checkpoint: {args.model_checkpoint}")
-            checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
-            model_config_dict = checkpoint.get('model_config')
-    
-            # Check if model_config exists in the checkpoint
-            if not model_config_dict:
-                logger.error("Model config not found in checkpoint. Aborting trial.")
-                raise ValueError("Model config not found in checkpoint.")
-    
-            # Create ModelConfig instance from the checkpoint
-            model_config = ModelConfig(**model_config_dict)
-    
-            # Define fixed hyperparameters based on the checkpoint's model_config
-            fixed_hyperparams = {
-                'n_embd': model_config.n_embd,
-                'n_head': model_config.n_head,
-                'n_layer': model_config.n_layer,
-                'dropout': model_config.dropout,
-                'mamba_ratio': model_config.mamba_ratio,
-                'd_state': model_config.d_state,
-                'd_conv': model_config.d_conv,
-                'mamba_depth': model_config.mamba_depth,
-                'mamba_expand': model_config.mamba_expand
-            }
-    
-            # Log and set fixed hyperparameters
-            for key, value in fixed_hyperparams.items():
-                trial.set_user_attr(key, value)
-                logger.debug(f"Trial {trial.number}: Fixed hyperparameter {key} = {value}")
-        
-                # Assign fixed values to the configuration object instead of using locals()
-                setattr(config.model, key, value)
+        symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
+        logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
+        assert len(symbol_freq_dict) == config.training.num_classes - 1, (
+            f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+        )
         else:
             # Existing hyperparameter suggestions when no checkpoint is provided
             torch.set_float32_matmul_precision(args.matmul_precision)
@@ -326,8 +298,7 @@ def objective(trial, args):
                 grokfast_lamb=grokfast_lamb,
                 grokfast_window_size=grokfast_window_size,
                 include_pad_in_loss=include_pad_in_loss,
-                symbol_freq=symbol_freq_dict,  # Now symbol_freq_dict is defined earlier
-                symbol_freq=symbol_freq_dict
+                symbol_freq=symbol_freq_dict  # Now symbol_freq_dict is defined earlier
             )
         else:
             # Use suggested hyperparameters
