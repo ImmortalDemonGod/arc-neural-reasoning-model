@@ -150,6 +150,9 @@ def load_val_dataset(args, config):
             num_symbols=11, 
             pad_symbol_idx=config.training.pad_symbol_idx
         )
+
+
+def main(args):
     # Set float32 matrix multiplication precision
     torch.set_float32_matmul_precision(args.matmul_precision)
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
@@ -404,9 +407,6 @@ def load_val_dataset(args, config):
         results_collector = ResultsCollector(config)
 
         # Initialize experiment tracker
-        tracker = ExperimentTracker(config, project=args.project)
-
-        logger.debug("Initializing ExperimentTracker")
         tracker = ExperimentTracker(config, project=args.project)
 
         logger.debug("Initializing ARCTrainer")
