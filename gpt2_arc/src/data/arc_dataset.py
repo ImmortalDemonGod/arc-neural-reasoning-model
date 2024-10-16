@@ -2,12 +2,16 @@
 import os
 import json
 import random
-from typing import Union, List, Dict, Tuple
+from typing import Union, List, Dict, Tuple, Any
 import numpy as np
+import pickle
+import hashlib
 import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 import logging
+from torch.utils.data import get_worker_info
+import math  # Import math module for ceiling division
 
 try:
     from arckit.data import TaskSet, Task
@@ -44,360 +48,382 @@ class ARCDataset(Dataset):
         is_test: bool = False,
         num_symbols: int = 10,
         test_split: float = 0.2,
+        pad_symbol_idx: int = 10,  # Add this parameter with a default value
         debug=False,
     ):
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
-        set_debug_mode(debug)  # Set debug mode based on parameter
+        self.pad_symbol_idx = pad_symbol_idx  # Store it as an instance variable
+        self.data_files = []  # Initialize data_files as an empty list
+        self.data_source = data_source
+        self.num_samples = 0
+        self.data = []
+        self.cache_path = self._generate_cache_path(
+            data_source=self.data_source,
+            num_symbols=self.num_symbols,
+            is_test=self.is_test,
+            test_split=self.test_split
+        )
+
+        if self._load_cache(self.cache_path):
+            logger.debug("Data loaded from cache successfully.")
+            return
+        set_debug_mode(debug)
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"data_source type: {type(data_source)}")
         logger.debug(f"data_source content: {data_source}")
         logger.debug(f"self.test_split is set to: {self.test_split}")
-        
-        self.data = self._process_data_source(data_source)
-        
-    def _process_data_source(self, data_source):
-        logger.debug(f"Processing data source of type: {type(data_source)}")
+
         if isinstance(data_source, str):
-            logger.debug(f"Data source path: {data_source}")
             if os.path.isdir(data_source):
-                logger.debug("Processing synthetic data from directory")
-                return self._process_synthetic_data(data_source)
+                logger.debug("Initializing dataset with data from directory")
+                self.data_dir = data_source
+                self.data_files = [
+                    os.path.join(data_source, f)
+                    for f in os.listdir(data_source)
+                    if f.endswith('.json')
+                ]
+                random.shuffle(self.data_files)
+                for file_path in self.data_files:
+                    with open(file_path, 'r') as f:
+                        task_data = json.load(f)
+                    if isinstance(task_data, dict):
+                        task_id = task_data.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                        samples = self._process_single_task(task_data, task_id=task_id)
+                        self.data.extend(samples)
+                        logger.debug(f"Added {len(samples)} samples from file {file_path} with task_id: {task_id}")
+                    elif isinstance(task_data, list):
+                        task_id = os.path.splitext(os.path.basename(file_path))[0]
+                        samples = self._process_list_data(task_data, task_id=task_id)
+                        self.data.extend(samples)
+                        logger.debug(f"Assigned task_id '{task_id}' to list samples from file {file_path}")
+                    else:
+                        logger.error(f"Unexpected data format in file {file_path}: {type(task_data)}")
             elif os.path.isfile(data_source):
-                logger.debug("Processing JSON data from file")
                 with open(data_source, 'r') as f:
-                    raw_data = json.load(f)
-                return self._process_json_data(raw_data)
+                    task_data = json.load(f)
+                if isinstance(task_data, dict):
+                    task_id = task_data.get('id', "default_task")
+                    samples = self._process_single_task(task_data, task_id=task_id)
+                    self.data.extend(samples)
+                elif isinstance(task_data, list):
+                    samples = self._process_list_data(task_data,task_id=task_id)
+                    self.data.extend(samples)
+                else:
+                    logger.error(f"Unexpected data format in file {data_source}: {type(task_data)}")
             else:
                 raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-        elif isinstance(data_source, list):
-            logger.debug("Processing list data")
-            return self._process_list_data(data_source)
-        elif isinstance(data_source, tuple):
-            logger.debug("Processing combined data")
-            return self._combine_data(*data_source)
         elif TaskSet is not None and isinstance(data_source, TaskSet):
-            logger.debug("Processing ARCkit data")
-            return self._process_arckit_data(data_source)
+            logger.debug(f"TaskSet attributes before access: {dir(data_source)}")
+            logger.debug(f"Does TaskSet have 'dataset' attribute? {hasattr(data_source, 'dataset')}")
+            samples = self._process_arckit_data(data_source)
+            self.data.extend(samples)
+        elif isinstance(data_source, list):
+            samples = self._process_list_data(data_source)
+            self.data.extend(samples)
         else:
-            logger.error(f"Invalid data_source type: {type(data_source)}")
-            raise ValueError("Data source must be either a file path, a list of tasks, or a TaskSet")
+            raise ValueError(f"Unsupported data_source type: {type(data_source)}")
 
-        print(f"DEBUG: Processed data length: {len(self.data)}")
-        if self.data:
-            print(f"DEBUG: First item keys: {self.data[0].keys()}")
-            if 'train' in self.data[0]:
-                train_data = self.data[0]['train']
-                if isinstance(train_data, torch.Tensor):
-                    print(f"DEBUG: First train item (tensor): {train_data}")
-                    print(f"DEBUG: First train item shape: {train_data.shape}")
-                elif isinstance(train_data, list) and train_data:
-                    print(f"DEBUG: First train item: {train_data[0]}")
-                    if isinstance(train_data[0], dict):
-                        print(f"DEBUG: First train input shape: {np.array(train_data[0]['input']).shape}")
-                    else:
-                        print(f"DEBUG: Unexpected train data type: {type(train_data[0])}")
-                else:
-                    print(f"DEBUG: Unexpected train data type: {type(train_data)}")
-            else:
-                print("DEBUG: No 'train' key in first item")
+        self.num_samples = len(self.data)
+        self._compute_and_cache_statistics()
+        self._save_cache(self.cache_path)
 
-        logger.debug(f"Number of tasks: {len(self.data)}")
-        logger.debug(f"First task structure: {self.data[0].keys()}")
-        self.samples = self._process_arckit_data(data_source) if TaskSet is not None and isinstance(data_source, TaskSet) else []
+    def _save_cache(self, cache_path: str):
+        """
+        Saves the dataset and its statistics to the specified cache path using pickle.
         
-        print(f"Number of train samples: {sum(len(task['train']) for task in self.data)}")
-        print(f"Number of test samples: {sum(len(task['test']) for task in self.data)}")
-        self.max_grid_size = self._compute_max_grid_size()
+        Args:
+            cache_path (str): The file path where the cache will be saved.
+        """
+        try:
+            cache_data = {
+                "data": self.data,
+                "statistics": self.statistics
+            }
+            with open(cache_path, 'wb') as f:
+                pickle.dump(cache_data, f)
+            logger.debug(f"Saved cache to {cache_path}")
+        except Exception as e:
+            logger.error(f"Failed to save cache to {cache_path}: {e}")
+
+        # Add data validation
+        self._validate_data()
         self._validate_data()
 
-    def _process_json_data(self, raw_data: List[Dict]) -> List[Dict]:
-        processed_data = []
-        for task in raw_data:
-            logger.debug(f"Processing task: {task}")
-            processed_task = {
-                "train": [
-                    {"input": np.array(example["input"]), "output": np.array(example["output"])}
-                    for example in task["train"]
-                ],
-                "test": [
-                    {"input": np.array(example["input"]), "output": np.array(example["output"])}
-                    for example in task["test"]
-                ]
-            }
-            processed_data.append(processed_task)
-        # Flatten the data structure
-        flattened_data = []
-        for task in processed_data:
-            flattened_data.extend(task['train'])
-            flattened_data.extend(task['test'])
-        
-        return flattened_data
-
     def _validate_data(self):
-        for task in self.data:
-            for split in ["train", "test"]:
-                if split in task:
-                    for sample in task[split]:
-                        if not ("input" in sample and "output" in sample):
-                            raise ValueError(f"Each sample must contain 'input' and 'output'. Task: {task.get('id', 'unknown')}")
-        print("Data validation passed.")
-
-    def _compute_max_grid_size(self):
-        max_h, max_w = 0, 0
-        for task in self.data:
-            for split in ['train', 'test']:
-                samples = task[split]
-                if isinstance(samples, torch.Tensor):
-                    if samples.dim() == 4:  # [num_samples, channels, height, width]
-                        h, w = samples.shape[2], samples.shape[3]
-                    elif samples.dim() == 3:  # [num_samples, height, width]
-                        h, w = samples.shape[1], samples.shape[2]
-                    else:
-                        raise ValueError(f"Unexpected tensor dimensions: {samples.dim()}")
-                elif isinstance(samples, list):
-                    for sample in samples:
-                        if isinstance(sample, torch.Tensor):
-                            if sample.dim() == 3:  # [channels, height, width]
-                                h, w = sample.shape[1], sample.shape[2]
-                            elif sample.dim() == 2:  # [height, width]
-                                h, w = sample.shape
-                            else:
-                                raise ValueError(f"Unexpected tensor dimensions: {sample.dim()}")
-                        elif isinstance(sample, dict):
-                            input_data = sample['input']
-                            if isinstance(input_data, torch.Tensor):
-                                if input_data.dim() == 3:
-                                    h, w = input_data.shape[1], input_data.shape[2]
-                                elif input_data.dim() == 2:
-                                    h, w = input_data.shape
-                                else:
-                                    raise ValueError(f"Unexpected tensor dimensions: {input_data.dim()}")
-                            elif isinstance(input_data, np.ndarray):
-                                if input_data.ndim == 2:
-                                    h, w = input_data.shape
-                                elif input_data.ndim == 3:
-                                    h, w = input_data.shape[1], input_data.shape[2]
-                                else:
-                                    raise ValueError(f"Unexpected ndarray dimensions: {input_data.ndim}")
-                            elif isinstance(input_data, list):
-                                h, w = len(input_data), len(input_data[0])
-                            else:
-                                raise TypeError(f"Unexpected input type: {type(input_data)}")
-                        else:
-                            raise TypeError(f"Unexpected sample type: {type(sample)}")
-                        max_h = max(max_h, h)
-                        max_w = max(max_w, w)
-                else:
-                    raise TypeError(f"Unexpected samples type: {type(samples)}")
+        """
+        Validates the dataset to ensure each sample contains the required keys and correct data types.
+        Raises:
+            ValueError: If any sample is missing required keys or has incorrect types.
+        """
+        required_keys = {"input", "output", "task_id"}
+        for idx, sample in enumerate(self.data):
+            # Check for required keys
+            if not required_keys.issubset(sample.keys()):
+                missing = required_keys - sample.keys()
+                raise KeyError(f"Sample at index {idx} is missing keys: {missing}")
+            
+            # Validate 'input' and 'output' types
+            for key in ["input", "output"]:
+                if not isinstance(sample[key], torch.Tensor):
+                    raise TypeError(f"Sample at index {idx} has '{key}' of type {type(sample[key])}, expected torch.Tensor.")
                 
-        logger.debug(f"Computed max grid size: ({max_h}, {max_w})")
-        return (max_h, max_w)
+                if sample[key].ndimension() != 3 or sample[key].shape[0] != 1:
+                    raise ValueError(f"Sample at index {idx} has '{key}' with shape {sample[key].shape}, expected shape (1, H, W).")
+            
+            # Validate 'task_id' type
+            if not isinstance(sample["task_id"], str):
+                raise TypeError(f"Sample at index {idx} has 'task_id' of type {type(sample['task_id'])}, expected str.")
+        
+        logger.debug("All samples passed validation.")
+    
+    def __len__(self):
+        return len(self.data)
+
+    def get_num_samples(self):
+        return self.num_samples
+    def __getitem__(self, idx):
+        sample = self.data[idx]
+        # Since all samples are already padded to 30x30 during preprocessing, no additional padding is required here.
+        input_tensor = sample["input"]  # Already padded
+        output_tensor = sample["output"]  # Already padded
+        return input_tensor, output_tensor, sample["task_id"]
+
+    def _count_samples_in_directory(self, directory: str):
+        num_samples = 0
+        file_list = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.json')]
+        logger.debug(f"Counting samples in {len(file_list)} files")
+        for file_path in file_list:
+            try:
+                with open(file_path, 'r') as f:
+                    task_data = json.load(f)
+                if isinstance(task_data, dict):
+                    sample_count = len(task_data.get('test', [])) if self.is_test else len(task_data.get('train', []))
+                    num_samples += sample_count
+                    logger.debug(f"File {file_path}: {sample_count} samples")
+                elif isinstance(task_data, list):
+                    num_samples += len(task_data)
+                    logger.debug(f"File {file_path}: {len(task_data)} samples")
+                else:
+                    logger.error(f"Unexpected data format in file {file_path}")
+            except Exception as e:
+                logger.error(f"Error processing file {file_path}: {e}", exc_info=True)
+                continue  # Skip this file and proceed to the next
+        logger.debug(f"Total samples counted: {num_samples}")
+        return num_samples
+
+
+    @staticmethod
+    def _generate_cache_path(data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]], num_symbols: int, is_test: bool, test_split: float) -> str:
+        dataset_version = "v1"
+        hash_input = json.dumps({
+            'version': dataset_version,
+            'data_source': data_source if isinstance(data_source, list) else data_source.__str__(),
+            'num_symbols': num_symbols,
+            'is_test': is_test,
+            'test_split': test_split
+        }, sort_keys=True).encode('utf-8')
+        hash_digest = hashlib.md5(hash_input).hexdigest()
+        cache_filename = f"arc_dataset_cache_{hash_digest}.pkl"
+        cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
+        os.makedirs(cache_dir, exist_ok=True)
+        return os.path.join(cache_dir, cache_filename)
+
+    def _load_cache(self, cache_path: str) -> bool:
+        if os.path.exists(cache_path):
+            try:
+                with open(cache_path, 'rb') as f:
+                    cache_data = pickle.load(f)
+                self.data = cache_data.get("data", [])
+                self.statistics = cache_data.get("statistics", {})
+                self.num_samples = len(self.data)
+                logger.debug(f"Loaded cached data from {cache_path}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to load cache from {cache_path}: {e}")
+        return False
+
+    def _compute_and_cache_statistics(self):
+        """
+        Computes dataset statistics and caches them alongside the dataset cache.
+        """
+        logger.debug("Computing dataset statistics")
+        grid_size_stats = self._compute_grid_size_stats()
+        symbol_frequencies = self._compute_symbol_frequencies()
+        
+        statistics = {
+            "grid_size_stats": grid_size_stats,
+            "symbol_frequencies": symbol_frequencies
+        }
+        
+        # Update the cache dictionary with statistics
+        self.statistics = statistics
+        self._save_cache(self.cache_path)  # Ensure statistics are saved in the cache
+        logger.debug("Dataset statistics computed and cached successfully")
+
+
+    def _process_list_data(self, data_list: List[Dict], task_id: str) -> List[Dict]:
+        processed_data = []
+        for idx, example in enumerate(data_list):
+            if 'input' in example and 'output' in example and isinstance(example['input'], (list, np.ndarray)) and isinstance(example['output'], (list, np.ndarray)):
+                # Preprocess the grids
+                input_grid = self._preprocess_grid(example['input'])
+                output_grid = self._preprocess_grid(example['output'])
+
+                # Assign task_id if not present
+                # Assign task_id from parameter, overriding any existing task_id in the data
+
+                processed_data.append({
+                    "input": input_grid,
+                    "output": output_grid,
+                    "task_id": task_id
+                })
+            else:
+                logger.warning(f"Example at index {idx} missing 'input' or 'output' keys or has incorrect types.")
+                # Optionally, skip or raise an error
+                # raise ValueError("Unexpected item format in data_source.")
+        return processed_data
+
 
     def _combine_data(self, official_data, synthetic_data_path):
         official_processed = self._process_arckit_data(official_data) if TaskSet is not None and isinstance(official_data, TaskSet) else official_data
         synthetic_processed = self._process_synthetic_data(synthetic_data_path)
         return official_processed + synthetic_processed
 
-    def _process_synthetic_data(self, directory: str) -> List[Dict]:
-        processed_data = []
+    def _process_synthetic_data(self, directory: str):
+        self.data_files = []
         for filename in os.listdir(directory):
             if filename.endswith('.json'):
-                task_id = os.path.splitext(filename)[0]  # Use filename without extension as task_id
-                with open(os.path.join(directory, filename), 'r') as f:
-                    task_data = json.load(f)
-                    processed_task = self._process_single_task(task_data)
-                    processed_task['id'] = task_id  # Add task_id to the processed task
-                    if processed_task['train'] or processed_task['test']:
-                        processed_data.append(processed_task)
-        return processed_data
+                file_path = os.path.join(directory, filename)
+                self.data_files.append(file_path)
+                logger.debug(f"Processing file: {file_path}")
+                with open(file_path, 'r') as f:
+                    try:
+                        task_data = json.load(f)
+                        # Assign task_id from filename
+                        task_id = os.path.splitext(filename)[0]
+                        processed_samples = self._process_single_task(task_data, task_id=task_id)
+                        self.data.extend(processed_samples)
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Error decoding JSON from file {file_path}: {e}")
 
-    def _process_single_task(self, task_data: Dict) -> Dict:
-        processed_task = {"train": [], "test": []}
-        for split in ["train", "test"]:
-            for sample in task_data.get(split, []):
-                input_grid = torch.tensor(sample["input"], dtype=torch.float32).unsqueeze(0)
-                output_grid = torch.tensor(sample["output"], dtype=torch.float32).unsqueeze(0)
-                processed_task[split].append({"input": input_grid, "output": output_grid})
-        return processed_task
 
-    def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
-        logger.debug(f"Inside _process_single_task, test_split is: {self.test_split}")
-        if isinstance(task_data, dict):
-            train_examples = task_data.get("train", [])
-            test_examples = task_data.get("test", [])
-        elif isinstance(task_data, list):
-            split_idx = int(len(task_data) * (1 - self.test_split))
-            train_examples = task_data[:split_idx]
-            test_examples = task_data[split_idx:]
-        else:
-            raise ValueError("Task data must be either a dictionary or a list")
 
-        return {
-            "train": [self._preprocess_grid(example) for example in train_examples],
-            "test": [self._preprocess_grid(example) for example in test_examples]
-        }
 
-    def _preprocess_grid(self, example: Dict) -> Dict:
-        if isinstance(example, dict) and 'input' in example and 'output' in example:
-            input_grid = torch.tensor(example["input"], dtype=torch.float32).unsqueeze(0)
-            output_grid = torch.tensor(example["output"], dtype=torch.float32).unsqueeze(0)
-        else:
-            raise ValueError(f"Unexpected example format: {example}")
-        return {"input": input_grid, "output": output_grid}
-
-    def _process_single_task(self, task_data: Union[Dict, List]) -> Dict:
-        logger.debug(f"Inside _process_single_task, self.test_split is: {self.test_split}")
-        logger.debug(f"Task data type: {type(task_data)}")
-        logger.debug(f"Task data content: {task_data}")
-    
-        if isinstance(task_data, dict):
-            train_examples = task_data.get("train", [])
-            test_examples = task_data.get("test", [])
-            logger.debug(f"Dict task data - Train examples: {len(train_examples)}, Test examples: {len(test_examples)}")
-        elif isinstance(task_data, list):
-            split_idx = int(len(task_data) * (1 - self.test_split))
-            train_examples = task_data[:split_idx]
-            test_examples = task_data[split_idx:]
-            logger.debug(f"List task data - Train examples: {len(train_examples)}, Test examples: {len(test_examples)}")
-        else:
-            error_msg = f"Task data must be either a dictionary or a list. Got {type(task_data)}"
-            logger.error(error_msg)
-            raise ValueError(error_msg)
-
-        return {
-            "train": train_examples,
-            "test": test_examples
-        }
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         processed_data = []
         logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
         for task in taskset.tasks:
-            logger.debug(f"Task ID: {task.id}")
-        for task in taskset.tasks:
             logger.debug(f"Processing task: {task.id}")
-            logger.debug(f"Task ID: {task.id}")
             logger.debug(f"Train samples: {len(task.train)}, Test samples: {len(task.test)}")
-            processed_task = {
-                "id": task.id,
-                "train": [
-                    {"input": np.array(ex[0]), "output": np.array(ex[1])}
-                    for ex in task.train
-                ],
-                "test": [
-                    {"input": np.array(ex[0]), "output": np.array(ex[1])}
-                    for ex in task.test
-                ]
-            }
-            processed_data.append(processed_task)
-            logger.debug(f"Processed task {task.id}: Train samples: {len(processed_task['train'])}, Test samples: {len(processed_task['test'])}")
-        logger.debug(f"Processed {len(processed_data)} tasks")
+            # Process training samples
+            for ex in task.train:
+                try:
+                    input_tensor = self._preprocess_grid(ex[0])
+                    output_tensor = self._preprocess_grid(ex[1])
+                    processed_data.append({
+                        "input": input_tensor,
+                        "output": output_tensor,
+                        "task_id": task.id
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing training example in task {task.id}: {e}", exc_info=True)
+            
+            # Process testing samples
+            for ex in task.test:
+                try:
+                    input_tensor = self._preprocess_grid(ex[0])
+                    output_tensor = self._preprocess_grid(ex[1])
+                    processed_data.append({
+                        "input": input_tensor,
+                        "output": output_tensor,
+                        "task_id": task.id
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing testing example in task {task.id}: {e}", exc_info=True)
+            
+            logger.debug(f"Processed task {task.id}: Total samples added: {len(task.train) + len(task.test)}")
+        
+        logger.debug(f"Total samples processed from TaskSet: {len(processed_data)}")
         return processed_data
 
-    def __len__(self) -> int:
-        if self.is_test:
-            total_samples = sum(len(task['test']) for task in self.data)
+
+    def get_grid_size_stats(self) -> Dict[str, Any]:
+        """
+        Returns the precomputed grid size statistics.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing grid size statistics.
+        """
+        if hasattr(self, 'statistics') and 'grid_size_stats' in self.statistics:
+            return self.statistics['grid_size_stats']
         else:
-            total_samples = sum(len(task['train']) for task in self.data)
-        logger.debug(f"Total samples in dataset: {total_samples}")
-        return total_samples
-
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, str]:
-        if idx < 0 or idx >= len(self):
-            raise IndexError(f"Index {idx} out of range (total samples: {len(self)})")
-
-        current_idx = 0
-        for task in self.data:
-            split = 'test' if self.is_test else 'train'
-            if idx < current_idx + len(task[split]):
-                sample = task[split][idx - current_idx]
-                logger.debug(f"Sample index: {idx}")
-                logger.debug(f"Sample input type: {type(sample['input'])}")
-                logger.debug(f"Sample output type: {type(sample['output'])}")
-                input_grid = self._preprocess_grid(sample["input"])
-                output_grid = self._preprocess_grid(sample["output"])
-                logger.debug(f"Returning input shape: {input_grid.shape}, output shape: {output_grid.shape}")
-                logger.debug(f"__getitem__ input dtype: {input_grid.dtype}, output dtype: {output_grid.dtype}")
-                task_id = task.get("id", "unknown")  # Get task_id, use "unknown" if not found
-                logger.debug(f"DEBUG: Dataset __getitem__ called with idx {idx}, returning item with task_id {task_id}")
-                return input_grid, output_grid, task_id
-            current_idx += len(task[split])
-
-        raise RuntimeError("Unexpected error in __getitem__")
-
-    def _validate_data(self):
-        for task in self.data:
-            for split in ["train", "test"]:
-                if split not in task:
-                    continue
-                for idx, sample in enumerate(task[split]):
-                    if "input" not in sample or "output" not in sample:
-                        raise KeyError(f"Sample {idx} in task {split} set is missing 'input' or 'output' key")
-                    input_data = sample["input"]
-                    output_data = sample["output"]
-                    if not (isinstance(input_data, (list, np.ndarray)) and isinstance(output_data, (list, np.ndarray))):
-                        logger.warning(f"Sample {idx} in task {split} set 'input' or 'output' must be a list or numpy array")
-                        continue
-                    if isinstance(input_data, list):
-                        input_data = np.array(input_data)
-                    if isinstance(output_data, list):
-                        output_data = np.array(output_data)
-                    if input_data.ndim != 2 or output_data.ndim != 2:
-                        raise ValueError(f"Sample {idx} in task {split} set 'input' and 'output' must be 2D lists")
-                    if np.any(input_data >= self.num_symbols) or np.any(output_data >= self.num_symbols):
-                        logger.warning(f"Sample {idx} in task {split} set contains invalid symbols (>= {self.num_symbols})")
+            logger.warning("Grid size statistics not available.")
+            return {}
+    
+    def get_symbol_frequencies(self) -> Dict[str, float]:
+        """
+        Returns the precomputed symbol frequencies.
+        
+        Returns:
+            Dict[str, float]: A dictionary mapping symbols to their frequencies.
+        """
+        if hasattr(self, 'statistics') and 'symbol_frequencies' in self.statistics:
+            return self.statistics['symbol_frequencies']
+        else:
+            logger.warning("Symbol frequencies not available.")
+            return {}
 
     def _compute_grid_size_stats(self):
         max_height, max_width = 0, 0
-        for task in self.data:
-            for split in ["train", "test"]:
-                for sample in task[split]:
-                    max_height = max(max_height, sample["input"].shape[0], sample["output"].shape[0])
-                    max_width = max(max_width, sample["input"].shape[1], sample["output"].shape[1])
+        for sample in self.data:
+            # Assuming sample["input"] and sample["output"] have shape [C, H, W]
+            max_height = max(max_height, sample["input"].shape[1], sample["output"].shape[1])
+            max_width = max(max_width, sample["input"].shape[2], sample["output"].shape[2])
+        grid_size_stats = {"max_height": max_height, "max_width": max_width}
         self.max_grid_size = (max_height, max_width)
+        return grid_size_stats
 
     def _compute_symbol_frequencies(self):
         symbol_counts = np.zeros(self.num_symbols, dtype=int)
-        for task in self.data:
-            for split in ["train", "test"]:
-                for sample in task[split]:
-                    symbol_counts += np.bincount(sample["input"].flatten(), minlength=self.num_symbols)
-                    symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
+        for sample in self.data:
+            symbol_counts += np.bincount(sample["input"].flatten(), minlength=self.num_symbols)
+            symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
         return symbol_counts / symbol_counts.sum()
     
-    def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
-        logger.debug(f"Grid type: {type(grid)}")
-    
-        if isinstance(grid, dict):
-            input_grid = np.array(grid['input'])
-        elif isinstance(grid, list):
-            input_grid = np.array(grid)
+    def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor], pad_value: int = 0) -> torch.Tensor:
+        logger.debug(f"Preprocessing grid with initial type: {type(grid)}")
+        
+        # Convert grid to torch.Tensor if it's a list or numpy array
+        if isinstance(grid, list):
+            grid_tensor = torch.tensor(grid, dtype=torch.float32)
+            logger.debug(f"Converted list to tensor with shape: {grid_tensor.shape}")
         elif isinstance(grid, np.ndarray):
-            input_grid = grid
+            grid_tensor = torch.from_numpy(grid).float()
+            logger.debug(f"Converted numpy array to tensor with shape: {grid_tensor.shape}")
         elif isinstance(grid, torch.Tensor):
-            input_grid = grid.numpy()
+            grid_tensor = grid.float()
+            logger.debug(f"Using existing tensor with shape: {grid_tensor.shape}")
         else:
             raise ValueError(f"Unexpected grid type: {type(grid)}")
     
-        logger.debug(f"Input grid shape before processing: {input_grid.shape}")
-    
-        # Ensure input_grid is 2D
-        if input_grid.ndim > 2:
-            input_grid = np.squeeze(input_grid)
-            logger.debug(f"Input grid shape after squeezing: {input_grid.shape}")
-    
-        # Pad the grid to 30x30
-        padded_grid = self._pad_grid(input_grid, height=30, width=30)
-    
-        # Convert to tensor and add channel dimension
-        grid_tensor = torch.tensor(padded_grid, dtype=torch.long).unsqueeze(0)
-    
-        logger.debug(f"Preprocessed grid shape: {grid_tensor.shape}")
-        logger.debug(f"Preprocessed grid content:\n{grid_tensor}")
-    
-        return grid_tensor
+        # Ensure grid_tensor has three dimensions [C, H, W]
+        if grid_tensor.ndim == 2:
+            logger.debug("Grid tensor is 2D. Adding channel dimension.")
+            grid_tensor = grid_tensor.unsqueeze(0)  # Add channel dimension
+            logger.debug(f"Grid tensor shape after unsqueeze: {grid_tensor.shape}")
+        elif grid_tensor.ndim != 3:
+            raise ValueError(f"Unexpected grid tensor dimensions: {grid_tensor.ndim}. Expected 2D or 3D tensor.")
+
+        logger.debug(f"Grid shape before padding: {grid_tensor.shape}")
+
+        # Apply padding using PyTorch's built-in functions
+        padded_grid = self._pad_grid_torch(grid_tensor, height=30, width=30)
+
+        logger.debug(f"Grid shape after padding: {padded_grid.shape}")
+        return padded_grid
     def kronecker_scale(self, X, target_height=30, target_width=30):
         print(f"Kronecker scaling input shape: {X.shape}")
         h, w = X.shape
@@ -409,16 +435,6 @@ class ARCDataset(Dataset):
         print(f"Kronecker scaled output shape: {X_scaled.shape}")
         return X_scaled
 
-    def pad_grid(self, X, target_height=30, target_width=30):
-        print(f"Padding input shape: {X.shape}")
-        h, w = X.shape
-        pad_h = (target_height - h) // 2
-        pad_w = (target_width - w) // 2
-        padded = np.pad(X, ((pad_h, target_height - h - pad_h), 
-                            (pad_w, target_width - w - pad_w)), 
-                        mode='constant')
-        print(f"Padded output shape: {padded.shape}")
-        return padded
 
     def reverse_scaling(self, X_orig, X_pred):
         print(f"Reverse scaling - Original shape: {X_orig.shape}, Prediction shape: {X_pred.shape}")
@@ -456,71 +472,50 @@ class ARCDataset(Dataset):
     def _scale_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
         return grid  # No scaling, preserve original size
 
-    def _pad_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
-        h, w = grid.shape
-        pad_h = (height - h) // 2
-        pad_w = (width - w) // 2
-        return np.pad(grid, ((pad_h, height - h - pad_h), (pad_w, width - w - pad_w)), mode='constant')
-    def _process_list_data(self, data_source):
-        print(f"DEBUG: Processing {len(data_source)} items")
-        processed_data = []
-        for idx, item in enumerate(data_source):
-            print(f"DEBUG: Processing item {idx}")
-            print(f"DEBUG: Item type: {type(item)}")
-            print(f"DEBUG: Item content: {item}")
-
-            if isinstance(item, Task):
-                processed_item = {
-                    "train": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.train],
-                    "test": [{"input": np.array(ex[0]), "output": np.array(ex[1])} for ex in item.test]
-                }
-            elif 'train' in item and 'test' in item:
-                processed_item = {
-                    "train": [{"input": np.array(sample["input"]), "output": np.array(sample["output"])} for sample in item['train']],
-                    "test": [{"input": np.array(sample["input"]), "output": np.array(sample["output"])} for sample in item['test']]
-                }
-            elif 'input' in item and 'output' in item:
-                processed_item = {
-                    "train": [{"input": np.array(item["input"]), "output": np.array(item["output"])}],
-                    "test": []
-                }
-            else:
-                raise ValueError("Unexpected item format in data_source.")
+    def _pad_grid_torch(self, grid: torch.Tensor, height: int, width: int, pad_value: int = 0) -> torch.Tensor:
+        """
+        Pads the input grid tensor to the specified height and width using PyTorch's functional padding.
         
-            processed_data.append(processed_item)
+        Args:
+            grid (torch.Tensor): The input grid tensor with shape [C, H, W].
+            height (int): The target height after padding.
+            width (int): The target width after padding.
+        
+        Returns:
+            torch.Tensor: The padded grid tensor.
+        """
+        _, h, w = grid.shape
+        pad_h = max((height - h) // 2, 0)
+        pad_w = max((width - w) // 2, 0)
+
+        # Calculate padding for top, bottom, left, and right
+        padding = (pad_w, width - w - pad_w, pad_h, height - h - pad_h)  # (left, right, top, bottom)
+        logger.debug(f"Padding applied: left={pad_w}, right={width - w - pad_w}, top={pad_h}, bottom={height - h - pad_h}")
     
-        return processed_data
+        # Apply padding using PyTorch's functional pad
+        padded_grid = F.pad(grid, padding, mode='constant', value=pad_value)
+        return padded_grid
 
 
-    @staticmethod
-    def collate_fn(batch):
-        print(f"Collating batch of size: {len(batch)}")
-        if not batch:
-            print("Warning: Empty batch received")
-            return torch.tensor([]), torch.tensor([]), []
+    def collate_fn(self, batch):
+        # Debugging: Check batch size
+        logger.debug(f"Collating batch of size: {len(batch)}")
         
-        try:
-            inputs, outputs, task_ids = zip(*batch)
-        except ValueError as e:
-            print(f"Error unpacking batch: {e}")
-            print(f"Batch content: {batch}")
-            # Return empty tensors and list if unpacking fails
+        if not batch:
+            logger.warning("Empty batch received")
             return torch.tensor([]), torch.tensor([]), []
 
-        print(f"Input shapes: {[i.shape for i in inputs]}")
-        print(f"Output shapes: {[o.shape for o in outputs]}")
+        inputs, outputs, task_ids = zip(*batch)
+    
+        # Since all samples are already padded to 30x30, no additional padding is required here.
+        # However, to ensure consistency, you can verify the shapes.
+    
+        padded_inputs = torch.stack(inputs)
+        padded_outputs = torch.stack(outputs)
+    
+        # Debugging: Verify shapes after stacking
+        print(f"Padded inputs shape: {padded_inputs.shape}")
+        print(f"Padded outputs shape: {padded_outputs.shape}")
+    
 
-        # Find max dimensions in the batch
-        max_h = max(i.size(1) for i in inputs)
-        max_w = max(i.size(2) for i in inputs)
-
-        print(f"Max dimensions: height={max_h}, width={max_w}")
-
-        # Pad inputs and outputs to max size in the batch
-        padded_inputs = torch.stack([F.pad(i, (0, max_w - i.size(2), 0, max_h - i.size(1))) for i in inputs])
-        padded_outputs = torch.stack([F.pad(o, (0, max_w - o.size(2), 0, max_h - o.size(1))) for o in outputs])
-
-        print(f"Padded input shape: {padded_inputs.shape}")
-        print(f"Padded output shape: {padded_outputs.shape}")
-
-        return [padded_inputs, padded_outputs, list(task_ids)]
+        return padded_inputs, padded_outputs, list(task_ids)

@@ -214,3 +214,4 @@ def test_arctrainer_test_step_with_task_ids(trainer):
         assert f'{task_id}_test_loss' in trainer.logged_metrics
         assert f'{task_id}_test_accuracy' in trainer.logged_metrics
         assert f'{task_id}_test_diff_accuracy' in trainer.logged_metrics
+

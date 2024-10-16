@@ -1,7 +1,7 @@
 # gpt2_arc/src/utils/helpers.py
 import torch
 
-def differential_pixel_accuracy(input, target, prediction):
+def differential_pixel_accuracy(input, target, prediction, pad_symbol_idx=10):
     print(f"Differential pixel accuracy - Input shape: {input.shape}, Target shape: {target.shape}, Prediction shape: {prediction.shape}")
     
     assert isinstance(input, torch.Tensor) and isinstance(target, torch.Tensor) and isinstance(prediction, torch.Tensor), "All inputs must be torch.Tensor"
@@ -12,7 +12,9 @@ def differential_pixel_accuracy(input, target, prediction):
     
     print(f"Reshaped - Input: {input.shape}, Target: {target.shape}, Prediction: {prediction.shape}")
 
-    input_target_diff = input != target
+    # Exclude padding tokens by creating a valid mask
+    valid_mask = target != pad_symbol_idx
+    input_target_diff = (input != target) & valid_mask
     correct_diff_predictions = (prediction == target) & input_target_diff
 
     total_diff_pixels = input_target_diff.sum().item()

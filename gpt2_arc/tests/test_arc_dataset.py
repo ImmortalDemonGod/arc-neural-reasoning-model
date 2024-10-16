@@ -9,6 +9,7 @@ import logging
 import arckit
 from torch.utils.data import DataLoader
 from src.data.arc_dataset import ARCDataset, set_debug_mode
+from src.utils.experiment_tracker import ExperimentTracker
 
 # Set up logging for tests
 logger = logging.getLogger(__name__)
@@ -46,7 +47,52 @@ def mock_taskset():
     mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
-def test_arc_dataset_initialization(sample_data, debug_mode):
+def test_dataset_statistics_computation(sample_data):
+    dataset = ARCDataset(sample_data, debug=True)
+    
+    # Retrieve statistics
+    grid_size_stats = dataset.get_grid_size_stats()
+    symbol_frequencies = dataset.get_symbol_frequencies()
+    
+    # Assertions for grid size statistics
+    assert "max_height" in grid_size_stats, "Grid size stats should include 'max_height'"
+    assert "max_width" in grid_size_stats, "Grid size stats should include 'max_width'"
+    assert grid_size_stats["max_height"] == 2, "Max height should be 2 for sample data"
+    assert grid_size_stats["max_width"] == 2, "Max width should be 2 for sample data"
+    
+    # Assertions for symbol frequencies
+    expected_frequencies = {
+        0: 4 / 8,  # 4 occurrences of symbol '0'
+        1: 4 / 8,  # 4 occurrences of symbol '1'
+        # Assuming num_symbols=10, remaining symbols have frequency 0
+        2: 0.0,
+        3: 0.0,
+        4: 0.0,
+        5: 0.0,
+        6: 0.0,
+        7: 0.0,
+        8: 0.0,
+        9: 0.0
+    }
+    for symbol, freq in expected_frequencies.items():
+        assert symbol_frequencies.get(symbol, 0.0) == freq, f"Frequency for symbol {symbol} should be {freq}"
+
+def test_dataset_statistics_caching(sample_data):
+    dataset = ARCDataset(sample_data, debug=True)
+    
+    # Ensure that statistics are cached
+    assert hasattr(dataset, 'statistics'), "Dataset should have a 'statistics' attribute after caching"
+    assert "grid_size_stats" in dataset.statistics, "Statistics should include 'grid_size_stats'"
+    assert "symbol_frequencies" in dataset.statistics, "Statistics should include 'symbol_frequencies'"
+
+    # Reload the dataset to ensure statistics are loaded from cache
+    dataset_reloaded = ARCDataset(sample_data, debug=True)
+    grid_size_stats = dataset_reloaded.get_grid_size_stats()
+    symbol_frequencies = dataset_reloaded.get_symbol_frequencies()
+    
+    # Assertions to verify consistency
+    assert grid_size_stats == dataset.statistics["grid_size_stats"], "Grid size stats should match after reloading from cache"
+    assert symbol_frequencies == dataset.statistics["symbol_frequencies"], "Symbol frequencies should match after reloading from cache"
     dataset = ARCDataset(sample_data, debug=True)
     logger.debug(f"Dataset length: {len(dataset)}, expected: {len(sample_data)}")
     assert len(dataset) == len(sample_data), "Dataset length mismatch"
@@ -153,7 +199,39 @@ def test_arc_dataset_synthetic_data(debug_mode):
 
 
 
-def test_arc_dataset_getitem(sample_data):
+
+def test_data_loader_parameters(sample_data):                         
+    dataset = ARCDataset(sample_data)
+    num_workers = 4  # Example value
+    prefetch_factor = 2
+    persistent_workers = True
+
+    train_loader = DataLoader(
+        dataset,
+        batch_size=2,
+        num_workers=num_workers,
+        prefetch_factor=prefetch_factor,
+        persistent_workers=persistent_workers
+    )
+
+    assert train_loader.num_workers == num_workers, "num_workers should be set correctly"
+    assert train_loader.prefetch_factor == prefetch_factor, "prefetch_factor should be set correctly"
+    assert train_loader.persistent_workers == persistent_workers, "persistent_workers should be set correctly"
+
+def test_dataloader_loading(sample_data):
+    dataset = ARCDataset(sample_data)
+    data_loader = DataLoader(
+        dataset,
+        batch_size=1,
+        num_workers=2,
+        prefetch_factor=1,
+        persistent_workers=True
+    )
+
+    for batch in data_loader:
+        inputs, outputs, task_ids = batch
+        assert inputs.shape == (1, 1, 30, 30), "Input shape mismatch"
+        assert outputs.shape == (1, 1, 30, 30), "Output shape mismatch"
     dataset = ARCDataset(sample_data)
     input_grid, output_grid, *_ = dataset[0]
 
@@ -232,7 +310,38 @@ def mock_taskset():
     mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
-def test_collate_fn_output():
+def test_experiment_tracker_logs_dataset_statistics(sample_data):
+    # Initialize ARCDataset
+    dataset = ARCDataset(sample_data, debug=True)
+    
+    # Initialize ExperimentTracker with mock config
+    mock_config = {"dummy_key": "dummy_value"}
+    tracker = ExperimentTracker(config=mock_config, project="test_project")
+    
+    # Retrieve dataset statistics
+    train_grid_stats = dataset.get_grid_size_stats()
+    train_symbol_freq = dataset.get_symbol_frequencies()
+    val_grid_stats = dataset.get_grid_size_stats()  # Assuming same dataset for simplicity
+    val_symbol_freq = dataset.get_symbol_frequencies()
+    
+    # Log metrics
+    tracker.log_metric("train_max_grid_height", train_grid_stats.get("max_height", 0))
+    tracker.log_metric("train_max_grid_width", train_grid_stats.get("max_width", 0))
+    tracker.log_metric("train_symbol_frequencies", train_symbol_freq)
+
+    tracker.log_metric("val_max_grid_height", val_grid_stats.get("max_height", 0))
+    tracker.log_metric("val_max_grid_width", val_grid_stats.get("max_width", 0))
+    tracker.log_metric("val_symbol_frequencies", val_symbol_freq)
+    
+    # Assertions to verify metrics are logged correctly
+    assert tracker.metrics["train_max_grid_height"] == train_grid_stats.get("max_height", 0)
+    assert tracker.metrics["train_max_grid_width"] == train_grid_stats.get("max_width", 0)
+    assert tracker.metrics["train_symbol_frequencies"] == train_symbol_freq
+
+    assert tracker.metrics["val_max_grid_height"] == val_grid_stats.get("max_height", 0)
+    assert tracker.metrics["val_max_grid_width"] == val_grid_stats.get("max_width", 0)
+    assert tracker.metrics["val_symbol_frequencies"] == val_symbol_freq
+def test_collate_fn_output(): 
     sample_data = [
         {"input": [[1, 0], [0, 1]], "output": [[0, 1], [1, 0]]},
         {"input": [[0, 1], [1, 0]], "output": [[1, 0], [0, 1]]},

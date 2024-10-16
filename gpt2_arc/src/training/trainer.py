@@ -14,8 +14,20 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from pytorch_lightning.loggers import TensorBoardLogger
 import os
+from optuna.exceptions import TrialPruned
+from pytorch_lightning.callbacks import Callback
+import torch
 
 logger = logging.getLogger(__name__)
+
+class NanLossPruningCallback(Callback):
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        # Extract loss from outputs
+        loss = outputs.get('loss') if isinstance(outputs, dict) else outputs
+        if loss is not None:
+            if torch.isnan(loss):
+                logger.warning("NaN loss detected. Pruning the trial.")
+                raise TrialPruned("NaN loss encountered, pruning this trial.")
 
 
 class ARCTrainer(pl.LightningModule):
@@ -35,6 +47,11 @@ class ARCTrainer(pl.LightningModule):
         self.best_epoch = 0
         self.results_collector = results_collector if results_collector else ResultsCollector(config)
         self.writer = SummaryWriter(f"runs/experiment_{self.results_collector.experiment_id}")
+        
+        if hasattr(self.model, 'loss_fn') and hasattr(self.model.loss_fn, 'weight'):
+            logger.debug(f"Trainer's loss function class weights: {self.model.loss_fn.weight}")
+        else:
+            logger.debug("Trainer's loss function does not have class weights.")
 
     def get_tensorboard_logger(self):
         for logger in self.trainer.loggers:
@@ -65,6 +82,7 @@ class ARCTrainer(pl.LightningModule):
         
         if hasattr(self, 'log'):
             self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.train_losses.append(loss.item())
         self.results_collector.update_train_metrics(self.current_epoch, {"loss": loss.item()})
         
         tb_logger = self.get_tensorboard_logger()
@@ -123,7 +141,14 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: test_step input - batch: {batch}, batch_idx: {batch_idx}")
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
-        inputs, outputs, task_ids = batch
+        # Unpack batch
+        if len(batch) == 3:
+            inputs, outputs, task_ids = batch
+        elif len(batch) == 2:
+            inputs, outputs = batch
+            task_ids = None  # Set to None or a default value
+        else:
+            raise ValueError(f"Unexpected batch format with length {len(batch)}")
         logger.debug(f"DEBUG: Task IDs in batch: {task_ids}")
 
         inputs = inputs.float()
@@ -139,7 +164,7 @@ class ARCTrainer(pl.LightningModule):
         
         for i in range(len(inputs)):
             accuracy = self.compute_accuracy(model_outputs[i:i+1], outputs[i:i+1])
-            diff_accuracy, _, _ = differential_pixel_accuracy(inputs[i:i+1], outputs[i:i+1], model_outputs[i:i+1].argmax(dim=-1))
+            diff_accuracy = self.compute_diff_accuracy(inputs[i:i+1], outputs[i:i+1], model_outputs[i:i+1])
             accuracies.append(accuracy.item())
             diff_accuracies.append(diff_accuracy)
             logger.debug(f"DEBUG: diff_accuracy type: {type(diff_accuracy)}, value: {diff_accuracy}")
@@ -153,11 +178,12 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: Test loss: {result['test_loss']}, Avg accuracy: {result['test_accuracy']}, Avg diff accuracy: {result['test_diff_accuracy']}")
 
         # Log task-specific metrics
-        for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
-            result[f"{task_id}_test_accuracy"] = accuracy
-            result[f"{task_id}_test_diff_accuracy"] = diff_accuracy
-            self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-            self.log(f"{task_id}_test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        if task_ids is not None:
+            for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
+                result[f"{task_id}_test_accuracy"] = accuracy
+                result[f"{task_id}_test_diff_accuracy"] = diff_accuracy
+                self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+                self.log(f"{task_id}_test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
         try:
             self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)
@@ -171,7 +197,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: Test step result: {result}")
 
         # Append the result to self.test_outputs
-        self.test_outputs.append(result)
+        self.test_outputs.append({key: value.item() if isinstance(value, torch.Tensor) else value for key, value in result.items()})
 
         return result
 
@@ -205,9 +231,10 @@ class ARCTrainer(pl.LightningModule):
         return accuracy
 
     def compute_diff_accuracy(self, inputs, targets, outputs):
+        pad_symbol_idx = self.config.training.pad_symbol_idx  # Retrieve pad_symbol_idx from config
         predictions = outputs.argmax(dim=-1)
-        diff_accuracies, _, _ = differential_pixel_accuracy(inputs, targets, predictions)
-        return diff_accuracies
+        diff_accuracy, _, _ = differential_pixel_accuracy(inputs, targets, predictions, pad_symbol_idx=pad_symbol_idx)
+        return diff_accuracy
         predictions = outputs.argmax(dim=-1)
         # Reshape predictions to match the target shape
         predictions = predictions.view(targets.size())
@@ -261,10 +288,10 @@ class ARCTrainer(pl.LightningModule):
         print("DEBUG: Results saved and TensorBoard writer closed.")
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=0)
 
     def val_dataloader(self):
-        loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=4)
+        loader = DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=0)
         logger.debug(f"DEBUG: Test dataloader created with {len(loader)} batches")
         return loader
 
@@ -272,9 +299,12 @@ class ARCTrainer(pl.LightningModule):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=4)
 
     def compute_loss(self, outputs, labels):
-        return nn.CrossEntropyLoss()(
+        loss = self.model.loss_fn(
             outputs.view(-1, outputs.size(-1)), labels.view(-1)
         )
+        logger.debug(f"Using model's loss function with ignore_index={self.model.loss_fn.ignore_index}")
+        logger.debug(f"Computed loss: {loss.item()}")
+        return loss
 
     def forward(self, input_ids, attention_mask=None):
         return self.model(input_ids, attention_mask)

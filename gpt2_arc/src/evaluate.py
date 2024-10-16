@@ -1,9 +1,11 @@
 # gpt2_arc/src/evaluate.py
 import sys
+import sys
 import os
 import json
 import argparse
 import pytorch_lightning as pl
+import os
 import torch
 import wandb
 import numpy as np
@@ -69,11 +71,19 @@ def evaluate(model, test_dataset, config, batch_size=32):
                 individual_metrics[task_id] = {}
             individual_metrics[task_id][f'test_{metric_name}'] = value
 
-    # Compute complete task accuracy (fraction of tasks with 100% accuracy)
+    # Compute complete task accuracy (fraction of tasks with perfect accuracy)
     num_tasks = len(individual_metrics)
-    num_complete_accuracy = sum(
-        1 for metrics in individual_metrics.values() if metrics.get('test_accuracy', 0) >= 0.98
-    )
+    perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold / 100.0  # Convert percentage to fraction
+
+    num_complete_accuracy = 0
+    for task_id, metrics in individual_metrics.items():
+        test_accuracy = metrics.get('test_accuracy', 0)
+        # Determine if the task is completely solved
+        completely_solved = test_accuracy >= perfect_accuracy_threshold
+        metrics['completely_solved'] = completely_solved
+        if completely_solved:
+            num_complete_accuracy += 1
+
     complete_task_accuracy = num_complete_accuracy / num_tasks if num_tasks > 0 else 0.0
     aggregated_results['complete_task_accuracy'] = complete_task_accuracy
 
@@ -107,14 +117,25 @@ def save_results(results, individual_metrics, output_dir, model_name, model_summ
     return output_path
 
 def main(args):
-    # Initialize wandb
-    wandb.init(project=args.wandb_project, name=args.wandb_run_name)
+    if args.use_wandb:
+        api_key = os.getenv("WANDB_API_KEY")
+        if api_key:
+            wandb.login(key=api_key)
+            wandb.init(project=args.wandb_project, name=args.wandb_run_name)
+        else:
+            print("WARNING: WANDB_API_KEY not found in environment variables.")
+            print("Weights & Biases logging is disabled.")
+            args.use_wandb = False
+    else:
+        print("Weights & Biases logging is disabled.")
 
     # Load the test data using arckit
     _, test_set = arckit.load_data()
     test_data = ARCDataset(test_set)
 
-    # Load the checkpoint with map_location='cpu'
+    # Compute symbol frequencies from the test dataset
+    symbol_freq_array = test_data.get_symbol_frequencies()
+    symbol_freq = {str(i): float(freq) for i, freq in enumerate(symbol_freq_array)}
     checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
 
     # Extract and convert the model configuration from the checkpoint
@@ -123,23 +144,23 @@ def main(args):
         # Convert dict to ModelConfig object
         model_config = ModelConfig(**model_config_dict)
     else:
-        raise ValueError("Model configuration not found in checkpoint")
+        logger.error("Model configuration not found in checkpoint. Please ensure the checkpoint includes 'model_config'.")
+        raise ValueError("Model configuration not found in checkpoint. Ensure that the training process includes the ModelConfigSaver callback.")
 
-    # Initialize the model with the checkpoint configuration
-    # Determine the number of classes from the dataset
-    def find_max_label(task_set):
-        max_label = 0
-        for task in task_set.tasks:
-            for sample in task.train + task.test:
-                input_grid, output_grid = sample
-                max_label = max(max_label, np.max(input_grid), np.max(output_grid))
-        return max_label
+    # Create configuration
+    config = Config(
+        model=model_config,
+        training=TrainingConfig(),
+        evaluation=EvaluationConfig()
+    )
 
     # Determine the number of classes from the test dataset
-    max_label_test = find_max_label(test_set)
-    num_classes = max_label_test + 1  # Add 1 because labels start from 0
+    max_label_test = max([sample[1].max().item() for sample in test_data])
+    num_classes = int(max_label_test) + 1  # Ensure num_classes is an integer
+    config.training.symbol_freq = symbol_freq
 
-    model = GPT2ARC(model_config, num_classes=num_classes)
+    # Initialize the model with the complete Config object and symbol frequencies
+    model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq, pad_symbol_idx=config.training.pad_symbol_idx)
     try:
         # Remove the "model." prefix from state dict keys
         state_dict = {k.replace('model.', ''): v for k, v in checkpoint['state_dict'].items()}
@@ -199,7 +220,7 @@ def main(args):
     )
 
     # Evaluate the model
-    results, individual_metrics = evaluate(model, test_data, config, args.batch_size)
+    results, individual_metrics = evaluate(model, test_data, config, args.batch_size, pad_symbol_idx=config.training.pad_symbol_idx)
 
     logger.debug(f"DEBUG: Evaluation results: {results}")
     logger.debug(f"DEBUG: Individual metrics: {individual_metrics}")
@@ -208,12 +229,14 @@ def main(args):
     for metric, value in results.items():
         if metric != 'complete_task_accuracy':
             print(f"{metric}: {value}")
-            wandb.log({f"eval/{metric}": value})
+            if args.use_wandb:
+                wandb.log({f"eval/{metric}": value})
 
     # Print complete_task_accuracy at the bottom
     if 'complete_task_accuracy' in results:
         print(f"complete_task_accuracy: {results['complete_task_accuracy']}")
-        wandb.log({"eval/complete_task_accuracy": results['complete_task_accuracy']})
+        if args.use_wandb:
+            wandb.log({"eval/complete_task_accuracy": results['complete_task_accuracy']})
 
     # Log individual task metrics
     for task_id, metrics in individual_metrics.items():
@@ -223,25 +246,27 @@ def main(args):
         if isinstance(metrics['test_diff_accuracy'], list):
             metrics['test_diff_accuracy'] = sum(metrics['test_diff_accuracy']) / len(metrics['test_diff_accuracy'])
         logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
-    # Use the sanitized model_name
+
+    # Save results regardless of wandb usage
     results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
 
-    # Debugging statements before Artifact creation
-    logger.debug(f"Creating wandb Artifact with name: {model_name}")
-    print(f"DEBUG: Creating wandb Artifact with name: {model_name}")
+    if args.use_wandb:
+        # Wandb artifact creation and logging
+        logger.debug(f"Creating wandb Artifact with name: {model_name}")
+        print(f"DEBUG: Creating wandb Artifact with name: {model_name}")
 
-    try:
-        artifact = wandb.Artifact(name=model_name, type='evaluation')
-        artifact.add_file(results_path)
-        wandb.log_artifact(artifact)
-        logger.debug("Artifact created and logged successfully.")
-        print("DEBUG: Artifact created and logged successfully.")
-    except ValueError as ve:
-        logger.error(f"Failed to create wandb Artifact: {ve}")
-        print(f"ERROR: Failed to create wandb Artifact: {ve}")
-        raise ve
+        try:
+            artifact = wandb.Artifact(name=model_name, type='evaluation')
+            artifact.add_file(results_path)
+            wandb.log_artifact(artifact)
+            logger.debug("Artifact created and logged successfully.")
+            print("DEBUG: Artifact created and logged successfully.")
+        except ValueError as ve:
+            logger.error(f"Failed to create wandb Artifact: {ve}")
+            print(f"ERROR: Failed to create wandb Artifact: {ve}")
+            raise ve
 
-    wandb.finish()
+        wandb.finish()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate the ARC Neural Reasoning Model")
@@ -252,6 +277,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_project", type=str, default="arc-evaluation", help="Weights & Biases project name")
     parser.add_argument("--wandb_run_name", type=str, default=None, help="Weights & Biases run name")
 
+    parser.add_argument("--use_wandb", action='store_true', help="Use Weights & Biases for logging")
     args = parser.parse_args()
 
     # Create output directory if it doesn't exist
