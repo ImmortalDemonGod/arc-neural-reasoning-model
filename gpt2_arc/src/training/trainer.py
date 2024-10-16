@@ -91,7 +91,7 @@ class ARCTrainer(pl.LightningModule):
             tb_logger.add_scalar('train/loss', loss.item(), self.global_step)
             logger.debug(f"DEBUG: Logged training loss: {loss.item()} at step {self.global_step}")
         else:
-            logger.debug(f"DEBUG: Failed to log training loss. No TensorBoard logger available.")
+            logger.debug("DEBUG: Failed to log training loss. No TensorBoard logger available.")
         
         return loss
 

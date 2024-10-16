@@ -130,24 +130,24 @@ def objective(trial, args):
         )
         # Existing hyperparameter suggestions when no checkpoint is provided
         torch.set_float32_matmul_precision(args.matmul_precision)
-            logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
-    
-            # Suggest n_head exponent and calculate n_head
-            n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
-            n_head = 2 ** n_head_exp
-            logger.debug(f"Suggested n_head: {n_head} (2^{n_head_exp})")
-    
-            # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
-            n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
-            n_embd = n_head * n_embd_multiplier
-            n_embd = 2 ** int(np.log2(n_embd))
-            logger.debug(f"Adjusted n_embd: {n_embd}")
-    
-            # Suggest n_layer
-            n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
-            logger.debug(f"Suggested n_layer: {n_layer}")
-    
-            # Suggest Mamba-specific hyperparameters
+        logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
+
+        # Suggest n_head exponent and calculate n_head
+        n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
+        n_head = 2 ** n_head_exp
+        logger.debug(f"Suggested n_head: {n_head} (2^{n_head_exp})")
+
+        # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
+        n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
+        n_embd = n_head * n_embd_multiplier
+        n_embd = 2 ** int(np.log2(n_embd))
+        logger.debug(f"Adjusted n_embd: {n_embd}")
+
+        # Suggest n_layer
+        n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
+        logger.debug(f"Suggested n_layer: {n_layer}")
+
+        # Suggest Mamba-specific hyperparameters
         mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
         d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
         d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
