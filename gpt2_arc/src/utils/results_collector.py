@@ -102,6 +102,10 @@ class ResultsCollector:
                 "checkpoint_path": self.checkpoint_path,
                 "used_synthetic_data": self.used_synthetic_data
             }
+            if self.symbol_freq:
+                data["symbol_freq"] = self.symbol_freq
+            else:
+                data["symbol_freq"] = {}
             with open(filepath, 'w') as f:
                 json.dump(data, f, indent=2)
         except IOError as e:
