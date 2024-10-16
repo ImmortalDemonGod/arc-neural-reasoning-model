@@ -592,8 +592,8 @@ class ARCDataset(Dataset):
 
         logger.debug(f"Grid shape before padding: {grid_tensor.shape}")
 
-        # Apply padding using PyTorch's built-in functions
-        padded_grid = self._pad_grid_torch(grid_tensor, height=30, width=30)
+        # Apply padding using PyTorch's built-in functions with correct pad_value
+        padded_grid = self._pad_grid_torch(grid_tensor, height=30, width=30, pad_value=self.pad_symbol_idx)
 
         logger.debug(f"Grid shape after padding: {padded_grid.shape}")
         return padded_grid
