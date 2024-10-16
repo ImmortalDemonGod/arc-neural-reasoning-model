@@ -72,7 +72,9 @@ class ARCDataset(Dataset):
         test_split: float = 0.2,
         pad_symbol_idx: int = 10,  # Add this parameter with a default value
         debug=False,
+        symbol_freq: Optional[Dict[int, float]] = None,
     ):
+        self.symbol_freq = symbol_freq if symbol_freq is not None else {}
         self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
