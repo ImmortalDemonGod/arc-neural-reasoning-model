@@ -129,7 +129,6 @@ def objective(trial, args):
         logger.debug(f"Suggested mamba_expand: {mamba_expand}")
 
         # Suggest whether to include padding in accuracy and loss calculations
-        include_pad_in_accuracy = trial.suggest_categorical("include_pad_in_accuracy", [True, False])
         include_pad_in_loss = trial.suggest_categorical("include_pad_in_loss", [True, False])
 
         validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
@@ -229,7 +228,6 @@ def objective(trial, args):
             grokfast_alpha=grokfast_alpha,
             grokfast_lamb=grokfast_lamb,
             grokfast_window_size=grokfast_window_size,
-            include_pad_in_accuracy=include_pad_in_accuracy,
             include_pad_in_loss=include_pad_in_loss
         )
 
