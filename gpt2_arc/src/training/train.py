@@ -441,12 +441,16 @@ def main(args):
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
 
+        # Initialize experiment tracker
+        tracker = ExperimentTracker(config, project=args.project)
+
         logger.debug("Initializing ARCTrainer")
         trainer = ARCTrainer(
             model=model,
             train_dataset=train_data,
             val_dataset=val_data,
-            config=config
+            config=config,
+            results_collector=results_collector  # Pass ResultsCollector to ARCTrainer
         )
         trainer.log_hyperparameters()
 
