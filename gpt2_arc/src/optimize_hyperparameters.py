@@ -125,8 +125,8 @@ def objective(trial, args):
         # Convert symbol_freq from NumPy array to dictionary
         symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
         logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
-        assert len(symbol_freq_dict) == config.training.num_classes - 1, (
-            f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+        assert len(symbol_freq_dict) == config.training.num_classes, (
+            f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes ({config.training.num_classes})."
         )
         # Existing hyperparameter suggestions when no checkpoint is provided
         torch.set_float32_matmul_precision(args.matmul_precision)
