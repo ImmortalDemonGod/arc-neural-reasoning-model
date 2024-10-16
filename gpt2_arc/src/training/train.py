@@ -338,8 +338,8 @@ def main(args):
         )
         config = Config(model=model_config, training=training_config)
 
-        # Calculate symbol frequencies if not disabled
-        if not args.disable_symbol_freq:
+        # Calculate symbol frequencies if enabled
+        if args.enable_symbol_freq:
             if args.use_synthetic_data:
                 logger.debug("Calculating symbol frequencies for synthetic training set")
                 train_symbol_freq = train_data.get_symbol_frequencies()
