@@ -362,7 +362,7 @@ class ARCDataset(Dataset):
 
 
     @staticmethod
-    def _generate_cache_path(self, data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]], num_symbols: int, is_test: bool, test_split: float) -> str:
+    def _generate_cache_path(data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]], num_symbols: int, is_test: bool, test_split: float) -> str:
         dataset_version = "v1"
         
         # Create a stable representation of data_source based on its type
