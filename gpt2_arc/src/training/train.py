@@ -558,7 +558,8 @@ def main(args):
         os.makedirs("checkpoints", exist_ok=True)
         torch.save({
             'state_dict': trainer.model.state_dict(),
-            'model_config': trainer.config.model.__dict__
+            'model_config': trainer.config.model.__dict__,
+            'training_config': trainer.config.training.__dict__
         }, model_path)
         trainer.results_collector.set_checkpoint_path(model_path)
         logger.debug(f"Model and configuration saved to: {model_path}")
