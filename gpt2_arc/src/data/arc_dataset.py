@@ -160,12 +160,6 @@ class ARCDataset(Dataset):
         elif isinstance(data_source, list):
             samples = self._process_list_data(data_source, task_id="default_task")
             self.data.extend(samples)
-        elif isinstance(grid, int):
-            logger.debug("Grid is of type int. Converting to 1x1 grid.")
-            grid = [[grid]]
-            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
-            logger.debug(f"Converted int to tensor with shape: {grid_tensor.shape}")
-            raise ValueError(f"Unsupported data_source type: {type(data_source)}")
 
         self.num_samples = len(self.data)
         self._compute_and_cache_statistics()
@@ -373,7 +367,11 @@ class ARCDataset(Dataset):
             data_source_str = f"TaskSet:{len(data_source.tasks)}"  # Use number of tasks as identifier
         elif isinstance(data_source, list):
             data_source_str = f"List:{len(data_source)}"  # Use length of the list
-        else:
+        elif isinstance(grid, int):
+            logger.debug("Grid is of type int. Converting to 1x1 grid.")
+            grid = [[grid]]
+            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
+            logger.debug(f"Converted int to tensor with shape: {grid_tensor.shape}")
             data_source_str = str(data_source)  # Fallback to string representation
         
         # Create a JSON string with stable identifiers
