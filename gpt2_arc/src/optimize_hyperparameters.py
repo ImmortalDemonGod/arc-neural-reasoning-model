@@ -157,8 +157,7 @@ def objective(trial, args):
             symbol_freq_dict = {}
             logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
             balance_symbols = False
-            symbol_freq_dict = {}
-            logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
+            balancing_method = "none"
         # Existing hyperparameter suggestions when no checkpoint is provided
         torch.set_float32_matmul_precision(args.matmul_precision)
         logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
@@ -342,7 +341,9 @@ def objective(trial, args):
                 grokfast_lamb=grokfast_lamb,
                 grokfast_window_size=grokfast_window_size,
                 include_pad_in_loss=include_pad_in_loss,
-                symbol_freq=symbol_freq_dict  # Now symbol_freq_dict is defined earlier
+                symbol_freq=symbol_freq_dict,
+                balance_symbols=balance_symbols,
+                balancing_method=balancing_method
             )
 
         config = Config(model=model_config, training=training_config)
