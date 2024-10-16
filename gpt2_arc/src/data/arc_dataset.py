@@ -108,7 +108,7 @@ class ARCDataset(Dataset):
                     samples = self._process_single_task(task_data, task_id=task_id)
                     self.data.extend(samples)
                 elif isinstance(task_data, list):
-                    samples = self._process_list_data(task_data)
+                    samples = self._process_list_data(task_data,task_id=task_id)
                     self.data.extend(samples)
                 else:
                     logger.error(f"Unexpected data format in file {data_source}: {type(task_data)}")
