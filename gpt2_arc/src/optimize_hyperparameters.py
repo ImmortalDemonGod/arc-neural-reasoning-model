@@ -647,11 +647,6 @@ if __name__ == "__main__":
         help="Name of the Optuna study."
     )
 
-    parser.add_argument(
-        "--disable_symbol_freq",
-        action="store_true",
-        help="Disable the calculation of symbol frequencies to bypass related assertions."
-    )
     parser.add_argument("--n_embd_max", type=int, default=8, help="Maximum value for n_embd")
     parser.add_argument("--n_head_min", type=int, default=2, help="Minimum value for n_head")
     parser.add_argument("--n_head_max", type=int, default=16, help="Maximum value for n_head")
