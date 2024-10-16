@@ -7,7 +7,7 @@ import torch
 import platform
 import os
 from dataclasses import asdict
-from typing import Optional
+from typing import Dict, Any, Optional
 from gpt2_arc.src.config import Config
 
 class ExperimentTracker:
