@@ -18,7 +18,7 @@ class ExperimentTracker:
         self.entity = entity
         self.run = None
         self.use_wandb = use_wandb
-        self.include_pad_in_accuracy = config['training'].get('include_pad_in_accuracy', True)
+        self.include_pad_in_accuracy = config.training.include_pad_in_accuracy
         print(f"ExperimentTracker initialized with include_pad_in_accuracy={self.include_pad_in_accuracy}")
         self.metrics = {}
         if self.use_wandb:
