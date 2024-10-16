@@ -128,7 +128,6 @@ def objective(trial, args):
         assert len(symbol_freq_dict) == config.training.num_classes - 1, (
             f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
         )
-        else:
             # Existing hyperparameter suggestions when no checkpoint is provided
             torch.set_float32_matmul_precision(args.matmul_precision)
             logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
