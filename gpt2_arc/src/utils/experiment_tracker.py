@@ -19,7 +19,7 @@ class ExperimentTracker:
         self.entity = entity
         self.run = None
         self.use_wandb = use_wandb
-        self.include_pad_in_accuracy = self.config['training']['include_pad_in_accuracy']
+        self.include_pad_in_accuracy = config.training.include_pad_in_accuracy
         self.metrics = {}
         if self.use_wandb:
             try:
