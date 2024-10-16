@@ -187,24 +187,30 @@ class GPT2ARC(pl.LightningModule):
         if self.config.training.balance_symbols and self.config.training.balancing_method == "weighting":
             if not self.symbol_freq:
                 raise ValueError("symbol_freq must be provided when balance_symbols is True and balancing_method is 'weighting'")
-            # Dynamically compute class weights from symbol frequencies
-            class_weights = 1.0 / torch.tensor(list(self.symbol_freq.values()), dtype=torch.float)
-            logger.debug(f"Class weights shape: {class_weights.shape}")
+            # Prevent division by zero by adding a small epsilon to each frequency
+            epsilon = 1e-6
+            symbol_freq_values = torch.tensor([
+                freq if freq > 0 else epsilon for freq in self.symbol_freq.values()
+            ], dtype=torch.float)
             
-            # Ensure the number of class weights matches the number of classes
+            # Compute class weights as inverse of symbol frequencies
+            class_weights = 1.0 / symbol_freq_values
+            
+            # Append a weight for the padding symbol
+            pad_weight = 1.0  # You can adjust this value as needed
+            class_weights = torch.cat([class_weights, torch.tensor([pad_weight], dtype=torch.float)])
+            
+            # Ensure that the length of class_weights matches num_classes
             assert class_weights.size(0) == self.config.training.num_classes, (
-                f"Expected class_weights length {self.config.training.num_classes}, "
-                f"got {class_weights.size(0)}"
+                f"class_weights length ({class_weights.size(0)}) does not match num_classes ({self.config.training.num_classes})"
             )
             
             if self.config.training.include_pad_in_loss:
-                # Include padding in loss by not ignoring it
                 self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
-                logger.debug("Including padding class in loss calculation.")
+                logger.debug("Including padding class in loss calculation with class weights.")
             else:
-                # Exclude padding class from loss
                 self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=self.config.training.pad_symbol_idx)
-                logger.debug("Excluding padding class from loss calculation.")
+                logger.debug("Excluding padding class from loss calculation with class weights.")
             logger.debug(f"Class Weights: {class_weights}")  # Added line
         else:
             if self.config.training.include_pad_in_loss:
