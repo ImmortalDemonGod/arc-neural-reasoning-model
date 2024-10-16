@@ -439,7 +439,16 @@ def objective(trial, args):
             trial.set_user_attr(key, value)
             logger.debug(f"Mamba metric - {key}: {value}")
 
-        arc_trainer = ARCTrainer(model, train_data, val_data, config)
+        # Initialize the ResultsCollector
+        results_collector = ResultsCollector(config)
+
+        arc_trainer = ARCTrainer(
+            model=model,
+            train_dataset=train_data,
+            val_dataset=val_data,
+            config=config,
+            results_collector=results_collector  # Pass ResultsCollector to ARCTrainer
+        )
 
         # Set up PyTorch Lightning trainer with custom pruning callback
         pruning_callback = CustomPruningCallback(trial, monitor="val_loss")
