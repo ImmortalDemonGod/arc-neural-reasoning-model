@@ -166,8 +166,6 @@ class ARCDataset(Dataset):
             logger.error(f"Failed to initialize ARCDataset: {e}", exc_info=True)
             raise
 
-gpt2_arc/src/training/train.py
-```python
 <<<<<<< SEARCH
     if args.use_synthetic_data:
         if not args.synthetic_data_path:
