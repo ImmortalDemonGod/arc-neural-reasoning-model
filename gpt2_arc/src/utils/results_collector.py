@@ -14,6 +14,8 @@ class ResultsCollector:
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         self.config = asdict(config)
+        self.symbol_freq = self.config.get('training', {}).get('symbol_freq', {})
+        logger.debug(f"Symbol frequencies set in ResultsCollector: {self.symbol_freq}")
         self.results = {
             "train": {},
             "validation": {},
