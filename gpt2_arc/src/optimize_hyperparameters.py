@@ -278,7 +278,7 @@ def objective(trial, args):
                 grokfast_alpha=grokfast_alpha,
                 grokfast_lamb=grokfast_lamb,
                 grokfast_window_size=grokfast_window_size,
-                include_pad_in_loss=include_pad_in_loss
+                include_pad_in_loss=include_pad_in_loss,
                 symbol_freq=symbol_freq_dict
                 symbol_freq=symbol_freq_dict
             )
