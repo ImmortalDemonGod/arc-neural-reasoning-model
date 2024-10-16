@@ -367,11 +367,7 @@ class ARCDataset(Dataset):
             data_source_str = f"TaskSet:{len(data_source.tasks)}"  # Use number of tasks as identifier
         elif isinstance(data_source, list):
             data_source_str = f"List:{len(data_source)}"  # Use length of the list
-        elif isinstance(grid, int):
-            logger.debug("Grid is of type int. Converting to 1x1 grid.")
-            grid = [[grid]]
-            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
-            logger.debug(f"Converted int to tensor with shape: {grid_tensor.shape}")
+        else:
             data_source_str = str(data_source)  # Fallback to string representation
         
         # Create a JSON string with stable identifiers
