@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 import logging
 import ijson  # Import ijson for streaming JSON parsing
-from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
+from concurrent.futures import ProcessPoolExecutor, as_completed  # For parallel processing
 import multiprocessing  # To determine CPU count
 from threading import Lock
 from jsonschema import validate, ValidationError
@@ -77,7 +77,6 @@ class ARCDataset(Dataset):
         self.pad_symbol_idx = pad_symbol_idx  # Store it as an instance variable
         self.data_files = []  # Initialize data_files as an empty list
         self.data_source = data_source
-        self._data_lock = Lock()
         self.num_samples = 0
         self.data = []
         self.cache_path = self._generate_cache_path(
@@ -117,19 +116,17 @@ class ARCDataset(Dataset):
                 
                 logger.debug(f"Using ThreadPoolExecutor with {max_workers} workers for parallel processing.")
                 
-                # Parallel processing using ThreadPoolExecutor
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Parallel processing using ProcessPoolExecutor
+                with ProcessPoolExecutor(max_workers=max_workers) as executor:
                     # Submit all file processing tasks
                     future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in self.data_files}
                     
-                    # Iterate over the completed futures
+                    # Collect all results after processing
                     for future in as_completed(future_to_file):
                         file_path = future_to_file[future]
                         try:
                             samples = future.result()
-                            # Thread-safe data extension
-                            with self._data_lock:
-                                self.data.extend(samples)
+                            self.data.extend(samples)  # No lock needed
                             logger.debug(f"Added {len(samples)} samples from file {file_path}")
                         except Exception as exc:
                             logger.error(f"{file_path} generated an exception: {exc}", exc_info=True)
@@ -519,10 +516,10 @@ class ARCDataset(Dataset):
         
         # Convert grid to torch.Tensor if it's a list or numpy array
         if isinstance(grid, list):
-            grid_tensor = torch.tensor(grid, dtype=torch.float32)
+            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
             logger.debug(f"Converted list to tensor with shape: {grid_tensor.shape}")
         elif isinstance(grid, np.ndarray):
-            grid_tensor = torch.from_numpy(grid).float()
+            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
             logger.debug(f"Converted numpy array to tensor with shape: {grid_tensor.shape}")
         elif isinstance(grid, torch.Tensor):
             grid_tensor = grid.float()
