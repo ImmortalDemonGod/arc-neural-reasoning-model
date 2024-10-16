@@ -13,11 +13,11 @@ class ModelConfig:
     n_layer: int = 12
     num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
     dropout: float = 0.1
-    mamba_ratio: float = 1.0  # Number of Mamba layers per Transformer layer
-    d_state: int = 16          # Mamba state dimension
-    d_conv: int = 4            # Mamba convolution dimension
-    mamba_depth: int = 1       # Depth of each Mamba layer
-    mamba_expand: int = 2      # Expand factor for each Mamba layer
+    mamba_ratio: float = 0.0
+    d_state: int = 4
+    d_conv: int = 1
+    mamba_depth: int = 1
+    mamba_expand: int = 2
 
     def __post_init__(self):
         assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
