@@ -49,10 +49,10 @@ class ARCTrainer(pl.LightningModule):
         self.writer = SummaryWriter(f"runs/experiment_{self.results_collector.experiment_id}")
 
         
-        if hasattr(self.model, 'loss_fn') and hasattr(self.model.loss_fn, 'weight'):
-            logger.debug(f"Trainer's loss function class weights: {self.model.loss_fn.weight}")
+        if self.model.symbol_freq:
+            logger.debug(f"Training with symbol frequencies: {self.model.symbol_freq}")
         else:
-            logger.debug("Trainer's loss function does not have class weights.")
+            logger.debug("Training with symbol frequencies disabled.")
 
     def get_tensorboard_logger(self):
         for logger in self.trainer.loggers:

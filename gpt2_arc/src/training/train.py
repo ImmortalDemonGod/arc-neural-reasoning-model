@@ -123,7 +123,7 @@ def load_train_dataset(args, config):
             is_test=False,
             num_symbols=config.training.num_symbols,
             pad_symbol_idx=config.training.pad_symbol_idx,
-            symbol_freq=config.training.symbol_freq if not args.disable_symbol_freq else None
+            symbol_freq=None if args.disable_symbol_freq else config.training.symbol_freq
         )
     else:
         logger.info("Loading ARC training dataset")
