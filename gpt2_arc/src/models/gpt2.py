@@ -253,7 +253,7 @@ class GPT2ARC(pl.LightningModule):
         total_without_pad = mask.sum()
         acc_without_pad = correct_without_pad.sum() / total_without_pad if total_without_pad > 0 else torch.tensor(0.0)
         
-        # Log both accuracies
+        # Log both accuracies: with padding and without padding
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log('train_acc_with_pad', acc_with_pad, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log('train_acc_without_pad', acc_without_pad, on_step=True, on_epoch=True, prog_bar=True, logger=True)
