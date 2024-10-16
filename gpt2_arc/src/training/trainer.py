@@ -26,8 +26,8 @@ class NanLossPruningCallback(Callback):
         loss = outputs.get('loss') if isinstance(outputs, dict) else outputs
         if loss is not None:
             if torch.isnan(loss) or torch.isinf(loss):
-                logger.warning("NaN or Inf loss detected. Pruning the trial.")
-                raise TrialPruned("NaN or Inf loss encountered, pruning this trial.")
+                logger.warning(f"Invalid loss detected at epoch {trainer.current_epoch}, batch {batch_idx}: {loss.item()}")
+                raise TrialPruned("Invalid loss encountered, pruning this trial.")
 
 
 class ARCTrainer(pl.LightningModule):
