@@ -63,8 +63,14 @@ class ARCTrainer(pl.LightningModule):
             0.85666958   # Class 10 (PAD)
         ], dtype=torch.float)
 
-        # Initialize the loss function with the correct weight tensor
-        self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+        # Initialize the loss function based on whether to include PAD in loss
+        if config.training.include_pad_in_loss:
+            self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
+        else:
+            self.loss_fn = nn.CrossEntropyLoss(
+                weight=None,
+                ignore_index=config.training.pad_symbol_idx
+            )
         
         if hasattr(self.model, 'loss_fn') and hasattr(self.model.loss_fn, 'weight'):
             logger.debug(f"Trainer's loss function class weights: {self.model.loss_fn.weight}")
