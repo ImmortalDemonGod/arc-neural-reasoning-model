@@ -344,6 +344,16 @@ class ARCDataset(Dataset):
                 
                 if sample[key].ndimension() != 3 or sample[key].shape[0] != 1:
                     raise ValueError(f"Sample at index {idx} has '{key}' with shape {sample[key].shape}, expected shape (1, H, W).")
+                
+                # Validate that the symbols are within the valid range
+                max_symbol = sample[key].max()
+                if max_symbol > self.num_symbols - 1:
+                    logger.error(
+                        f"Sample at index {idx} has symbol {max_symbol.item()} exceeding num_symbols - 1 ({self.num_symbols - 1})."
+                    )
+                    raise ValueError(
+                        f"Sample at index {idx} has symbol {max_symbol.item()} exceeding num_symbols - 1 ({self.num_symbols - 1})."
+                    )
             
             # Validate 'task_id' type
             if not isinstance(sample["task_id"], str):
@@ -565,9 +575,24 @@ class ARCDataset(Dataset):
 
     def _compute_symbol_frequencies(self):
         symbol_counts = np.zeros(self.num_symbols, dtype=int)
+        max_symbol_in_data = 0
         for sample in self.data:
-            symbol_counts += np.bincount(sample["input"].flatten(), minlength=self.num_symbols)
-            symbol_counts += np.bincount(sample["output"].flatten(), minlength=self.num_symbols)
+            input_symbols = sample["input"].flatten().numpy().astype(int)
+            output_symbols = sample["output"].flatten().numpy().astype(int)
+            if input_symbols.size > 0:
+                max_symbol_in_data = max(max_symbol_in_data, input_symbols.max())
+            if output_symbols.size > 0:
+                max_symbol_in_data = max(max_symbol_in_data, output_symbols.max())
+            symbol_counts += np.bincount(input_symbols, minlength=self.num_symbols)
+            symbol_counts += np.bincount(output_symbols, minlength=self.num_symbols)
+        
+        logger.debug(f"Maximum symbol index in data: {max_symbol_in_data}")
+        logger.debug(f"Symbol counts length: {len(symbol_counts)}")
+        
+        if max_symbol_in_data >= self.num_symbols:
+            logger.error(f"Found symbol index {max_symbol_in_data} exceeding num_symbols - 1 ({self.num_symbols - 1}).")
+            raise ValueError(f"Symbol index {max_symbol_in_data} exceeds the allowed range.")
+        
         return symbol_counts / symbol_counts.sum()
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor], pad_value: int = 0) -> torch.Tensor:

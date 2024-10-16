@@ -38,7 +38,7 @@ class TrainingConfig:
     num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
     num_symbols: int = 11  # Ensure num_symbols is set to 11
     num_workers: int = multiprocessing.cpu_count() // 2 if multiprocessing.cpu_count() else 4
-    symbol_freq: Optional[Dict] = None
+    symbol_freq: Optional[Dict[int, float]] = None
     prefetch_factor: int = 2
     persistent_workers: bool = True
     use_gpu: bool = True

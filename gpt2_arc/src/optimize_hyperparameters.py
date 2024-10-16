@@ -122,7 +122,7 @@ def objective(trial, args):
 
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
-        # Convert symbol_freq from NumPy array to dictionary
+        # Convert symbol_freq from NumPy array to dictionary with integer keys
         symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
         # Remove the padding symbol from symbol_freq_dict
         pad_symbol_idx = config.training.pad_symbol_idx
