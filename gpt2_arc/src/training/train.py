@@ -319,7 +319,20 @@ def main(args):
         )
         config = Config(model=model_config, training=training_config)
 
-        # Create DataLoader instances
+        # Calculate symbol frequencies if not disabled
+        if not args.disable_symbol_freq:
+            if args.use_synthetic_data:
+                logger.debug("Calculating symbol frequencies for synthetic training set")
+                train_symbol_freq = train_data.get_symbol_frequencies()
+            else:
+                logger.debug("Calculating symbol frequencies for ARC training set")
+                train_symbol_freq = train_data.get_symbol_frequencies()
+        else:
+            train_symbol_freq = {}
+
+        # Set the number of classes based on TrainingConfig
+        num_classes = config.training.num_classes
+        logger.info(f"Number of classes set to: {num_classes}")
         logger.info("Creating DataLoader instances")
         # Create DataLoader instances
         logger.info("Creating DataLoader instances")
@@ -384,7 +397,7 @@ def main(args):
 
         # Initialize model
         logger.info("Initializing model")
-        model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=train_symbol_freq)
+        model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
         logger.debug(f"Model initialized with config: {model_config}")
 
         # Load the checkpoint if specified
