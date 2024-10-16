@@ -137,6 +137,7 @@ class GPT2ARC(pl.LightningModule):
         self.symbol_freq = symbol_freq
         self.pad_symbol_idx = self.config.training.pad_symbol_idx
         self.include_pad_in_loss = self.config.training.include_pad_in_loss
+        self.include_pad_in_accuracy = self.config.training.include_pad_in_accuracy
         self.conv1 = nn.Conv2d(
             in_channels=1,
             out_channels=self.config.model.n_embd,  # Accessing the 'model' attribute within Config
@@ -242,7 +243,7 @@ class GPT2ARC(pl.LightningModule):
         
         preds = torch.argmax(outputs, dim=-1)
         
-        if self.include_pad_in_loss:
+        if self.include_pad_in_accuracy:
             correct = (preds == targets).float()
             total = torch.numel(targets)
         else:
@@ -263,7 +264,7 @@ class GPT2ARC(pl.LightningModule):
         
         preds = torch.argmax(outputs, dim=-1)
         
-        if self.include_pad_in_loss:
+        if self.include_pad_in_accuracy:
             correct = (preds == targets).float()
             total = torch.numel(targets)
         else:
@@ -284,7 +285,7 @@ class GPT2ARC(pl.LightningModule):
         
         preds = torch.argmax(outputs, dim=-1)
         
-        if self.include_pad_in_loss:
+        if self.include_pad_in_accuracy:
             correct = (preds == targets).float()
             total = torch.numel(targets)
         else:
