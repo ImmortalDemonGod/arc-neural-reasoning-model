@@ -129,7 +129,7 @@ class MambaLayer(nn.Module):
 from gpt2_arc.src.config import Config
 
 class GPT2ARC(pl.LightningModule):
-    def __init__(self, config: Config, num_classes: int, symbol_freq: Dict[str, float] = None):
+    def __init__(self, config: Config, num_classes: int, symbol_freq: Optional[Dict[int, float]] = None):
         # Define an example input array for model summary
         self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
         super().__init__()

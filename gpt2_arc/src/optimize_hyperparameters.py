@@ -152,7 +152,11 @@ def objective(trial, args):
             assert len(symbol_freq_dict) == config.training.num_classes - 1, (
                 f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
             )
+            balance_symbols = True
         else:
+            symbol_freq_dict = {}
+            logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
+            balance_symbols = False
             symbol_freq_dict = {}
             logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
         # Existing hyperparameter suggestions when no checkpoint is provided
@@ -311,7 +315,9 @@ def objective(trial, args):
                 grokfast_lamb=grokfast_lamb,
                 grokfast_window_size=grokfast_window_size,
                 include_pad_in_loss=include_pad_in_loss,
-                symbol_freq=symbol_freq_dict  # Now symbol_freq_dict is defined earlier
+                symbol_freq=symbol_freq_dict,
+                balance_symbols=balance_symbols,
+                balancing_method="weighting" if balance_symbols else "none"
             )
         else:
             # Use suggested hyperparameters
