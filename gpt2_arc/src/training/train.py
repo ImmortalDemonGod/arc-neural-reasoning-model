@@ -395,9 +395,17 @@ def main(args):
         if args.model_checkpoint:
             logger.info(f"Loading model from checkpoint: {args.model_checkpoint}")
             checkpoint = torch.load(args.model_checkpoint)
-            if 'model_config' in checkpoint:
+            if 'model_config' in checkpoint and 'training_config' in checkpoint:
                 model_config = ModelConfig(**checkpoint['model_config'])
-                model = GPT2ARC(config=model_config)
+                training_config = TrainingConfig(**checkpoint['training_config'])
+                config = Config(model=model_config, training=training_config)
+                num_classes = config.training.num_classes
+                symbol_freq_dict = config.training.symbol_freq
+                model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
+                logger.debug(f"Loaded TrainingConfig with num_classes={num_classes} from checkpoint")
+            else:
+                logger.error("Checkpoint missing 'model_config' or 'training_config'.")
+                raise KeyError("Checkpoint must contain 'model_config' and 'training_config'.")
             model.load_state_dict(checkpoint['state_dict'])
 
         # Initialize results collector
