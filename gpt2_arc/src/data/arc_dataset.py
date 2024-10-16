@@ -120,13 +120,24 @@ class ARCDataset(Dataset):
                 
                 logger.debug(f"Using ProcessPoolExecutor with {max_workers} workers for parallel processing.")
 
-                # Initialize tqdm progress bar
+                logger.debug(f"Using ProcessPoolExecutor with {max_workers} workers for parallel processing.")
+
+                # Initialize tqdm progress bar and process files in parallel
                 with ProcessPoolExecutor(max_workers=max_workers) as executor:
                     # Submit all file processing tasks
                     future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in self.data_files}
                     
                     # Wrap the as_completed iterator with tqdm for the progress bar
-                    for future in tqdm(as_completed(future_to_file), total=len(future_to_file), desc="Loading JSON Files", unit="file", file=sys.stdout):
+                    for future in tqdm(
+                        as_completed(future_to_file),
+                        total=len(future_to_file),
+                        desc="Loading JSON Files",
+                        unit="file",
+                        file=sys.stdout,
+                        ncols=100,              # Optional: Set width of the progress bar
+                        mininterval=0.5,        # Optional: Minimum interval between updates
+                        colour='green'          # Optional: Set progress bar color (requires tqdm >=4.46.0)
+                    ):
                         file_path = future_to_file[future]
                         try:
                             samples = future.result()
