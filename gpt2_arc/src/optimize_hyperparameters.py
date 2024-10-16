@@ -113,22 +113,29 @@ def objective(trial, args):
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
         # Convert symbol_freq from NumPy array to dictionary
-        symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
-        logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
-        assert len(symbol_freq_dict) == config.training.num_classes - 1, (
-            f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
-        )
-        logger.info(f"Loading model checkpoint: {args.model_checkpoint}")
-        checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
-        model_config_dict = checkpoint.get('model_config')
-            
+        if args.model_checkpoint:
+            # Convert symbol frequencies to a dictionary with string keys
+            symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
+            logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
+    
+            # Assert that symbol_freq_dict length matches num_classes - 1
+            assert len(symbol_freq_dict) == config.training.num_classes - 1, (
+                f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+            )
+    
+            # Load the model checkpoint
+            logger.info(f"Loading model checkpoint: {args.model_checkpoint}")
+            checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
+            model_config_dict = checkpoint.get('model_config')
+    
+            # Check if model_config exists in the checkpoint
             if not model_config_dict:
                 logger.error("Model config not found in checkpoint. Aborting trial.")
                 raise ValueError("Model config not found in checkpoint.")
-            
+    
             # Create ModelConfig instance from the checkpoint
             model_config = ModelConfig(**model_config_dict)
-            
+    
             # Define fixed hyperparameters based on the checkpoint's model_config
             fixed_hyperparams = {
                 'n_embd': model_config.n_embd,
@@ -141,33 +148,35 @@ def objective(trial, args):
                 'mamba_depth': model_config.mamba_depth,
                 'mamba_expand': model_config.mamba_expand
             }
-            
+    
             # Log and set fixed hyperparameters
             for key, value in fixed_hyperparams.items():
                 trial.set_user_attr(key, value)
                 logger.debug(f"Trial {trial.number}: Fixed hyperparameter {key} = {value}")
-                
-                # Assign fixed values to hyperparameters
-                locals()[key] = value  # Dynamically set variables
+        
+                # Assign fixed values to the configuration object instead of using locals()
+                setattr(config.model, key, value)
         else:
             # Existing hyperparameter suggestions when no checkpoint is provided
             torch.set_float32_matmul_precision(args.matmul_precision)
-        logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
-        n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
-        n_head = 2 ** n_head_exp
-        logger.debug(f"Suggested n_head: {n_head} (2^{n_head_exp})")
-
-        # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
-        n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
-        n_embd = n_head * n_embd_multiplier
-        n_embd = 2 ** int(np.log2(n_embd))
-        logger.debug(f"Adjusted n_embd: {n_embd}")
-
-        # Suggest n_layer
-        n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
-        logger.debug(f"Suggested n_layer: {n_layer}")
-
-        # Suggest Mamba-specific hyperparameters
+            logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
+    
+            # Suggest n_head exponent and calculate n_head
+            n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
+            n_head = 2 ** n_head_exp
+            logger.debug(f"Suggested n_head: {n_head} (2^{n_head_exp})")
+    
+            # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
+            n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
+            n_embd = n_head * n_embd_multiplier
+            n_embd = 2 ** int(np.log2(n_embd))
+            logger.debug(f"Adjusted n_embd: {n_embd}")
+    
+            # Suggest n_layer
+            n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
+            logger.debug(f"Suggested n_layer: {n_layer}")
+    
+            # Suggest Mamba-specific hyperparameters
         mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
         d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
         d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
