@@ -220,8 +220,16 @@ def main(args):
         else:
             logger.info("Loading ARC dataset")
             train_set, eval_set = arckit.load_data()
-            train_data = ARCDataset(train_set)
-            val_data = ARCDataset(eval_set)
+            train_data = ARCDataset(
+                train_set, 
+                num_symbols=config.training.num_classes, 
+                pad_symbol_idx=config.training.pad_symbol_idx
+            )
+            val_data = ARCDataset(
+                eval_set, 
+                num_symbols=config.training.num_classes, 
+                pad_symbol_idx=config.training.pad_symbol_idx
+            )
 
         # Access dataset statistics
         train_grid_stats = train_data.get_grid_size_stats()
