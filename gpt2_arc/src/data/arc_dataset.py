@@ -71,6 +71,7 @@ class ARCDataset(Dataset):
         num_symbols: int = 11,  # Updated to match the number of classes
         test_split: float = 0.2,
         pad_symbol_idx: int = 10,  # Add this parameter with a default value
+        symbol_freq: Optional[Dict[int, float]] = None,  # New parameter added
         debug=False,
         symbol_freq: Optional[Dict[int, float]] = None,
     ):
@@ -84,6 +85,8 @@ class ARCDataset(Dataset):
         self.data_source = data_source
         self.num_samples = 0
         self.data = []
+        self.symbol_freq = symbol_freq  # Assign the symbol_freq parameter
+
         self.cache_path = self._generate_cache_path(
             data_source=self.data_source,
             num_symbols=self.num_symbols,
