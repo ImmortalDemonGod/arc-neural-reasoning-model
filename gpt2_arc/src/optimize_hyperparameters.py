@@ -288,6 +288,8 @@ def objective(trial, args):
             # Use fixed hyperparameters from the checkpoint
             model_config = ModelConfig(**fixed_hyperparams)
             training_config = TrainingConfig(
+                num_classes=config.model.num_classes,
+                num_classes=config.model.num_classes,
                 batch_size=batch_size,
                 learning_rate=learning_rate,
                 max_epochs=max_epochs,

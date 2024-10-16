@@ -83,3 +83,20 @@ class Config:
 
     def to_dict(self):
         return asdict(self)
+from dataclasses import dataclass, field
+
+@dataclass
+class TrainingConfig:
+    # Example attributes
+    batch_size: int = 32
+    learning_rate: float = 1e-3
+    num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
+    symbol_freq: dict = field(default_factory=dict, metadata={"description": "Frequency of each symbol."})
+
+@dataclass
+class ModelConfig:
+    # Example attributes
+    n_embd: int = 768
+    n_head: int = 12
+    n_layer: int = 12
+    num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
