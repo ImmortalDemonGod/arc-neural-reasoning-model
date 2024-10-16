@@ -63,7 +63,7 @@ class TrainingConfig:
         if self.symbol_freq:
             max_existing_idx = max(int(k) for k in self.symbol_freq.keys())
             self.pad_symbol_idx = max_existing_idx + 1
-            self.num_classes = max_existing_idx + 1  # No extra padding class needed
+            self.num_classes = max_existing_idx + 2  # Include padding class
         else:
             # Default number of classes if symbol_freq is not provided
             self.pad_symbol_idx = 10  # Assuming 10 symbols (0-9)

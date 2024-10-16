@@ -124,8 +124,12 @@ def objective(trial, args):
 
         # Convert symbol_freq from NumPy array to dictionary
         symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
-        logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
-        assert len(symbol_freq_dict) == config.training.num_classes, (
+        # Remove the padding symbol from symbol_freq_dict
+        pad_symbol_idx = config.training.pad_symbol_idx
+        symbol_freq_dict.pop(str(pad_symbol_idx), None)
+        logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
+
+        assert len(symbol_freq_dict) == config.training.num_classes - 1, (
             f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes ({config.training.num_classes})."
         )
         # Existing hyperparameter suggestions when no checkpoint is provided
