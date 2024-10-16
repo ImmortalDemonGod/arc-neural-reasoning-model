@@ -91,10 +91,11 @@ class ARCDataset(Dataset):
 
         if self._load_cache(self.cache_path):
             logger.debug("Data loaded from cache successfully.")
-            return
+            self.num_samples = len(self.data)
+            return  # Exit initialization if cache is loaded
+
         if debug:
-            logger.setLevel(logging.DEBUG)
-            handler.setLevel(logging.DEBUG)
+            set_debug_mode(True)
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"data_source type: {type(data_source)}")
         logger.debug(f"data_source content: {data_source}")
@@ -148,7 +149,7 @@ class ARCDataset(Dataset):
                         samples = self._process_single_task(task_data, task_id=task_id)
                         self.data.extend(samples)
                     elif isinstance(task_data, list):
-                        samples = self._process_list_data(task_data,task_id=task_id)
+                        samples = self._process_list_data(task_data, task_id="default_task")
                         self.data.extend(samples)
                     else:
                         logger.error(f"Unexpected data format in file {data_source}: {type(task_data)}")
@@ -162,23 +163,11 @@ class ARCDataset(Dataset):
             elif isinstance(data_source, list):
                 samples = self._process_list_data(data_source, task_id="default_task")
                 self.data.extend(samples)
+            else:
+                logger.error(f"Unsupported data_source type: {type(data_source)}")
         except Exception as e:
             logger.error(f"Failed to initialize ARCDataset: {e}", exc_info=True)
             raise
-
-    if args.use_synthetic_data:
-        if not args.synthetic_data_path:
-            raise ValueError("Synthetic data path not provided")
-        logger.info(f"Loading synthetic training data from {args.synthetic_data_path}")
-        return ARCDataset(args.synthetic_data_path)
-    else:
-        logger.info("Loading ARC training dataset")
-        train_set, _ = arckit.load_data()
-        return ARCDataset(
-            train_set, 
-            num_symbols=11, 
-            pad_symbol_idx=config.training.pad_symbol_idx
-        )
 
         self.num_samples = len(self.data)
         self._compute_and_cache_statistics()
