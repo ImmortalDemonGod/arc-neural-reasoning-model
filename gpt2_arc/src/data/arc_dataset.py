@@ -558,7 +558,7 @@ class ARCDataset(Dataset):
             Dict[int, float]: A dictionary mapping symbols to their frequencies.
         """
         if hasattr(self, 'statistics') and 'symbol_frequencies' in self.statistics:
-            return {int(k): float(v) for k, v in self.statistics['symbol_frequencies'].items()}
+            return {k: float(v) for k, v in self.statistics['symbol_frequencies'].items()}
         else:
             logger.warning("Symbol frequencies not available.")
             return {}
