@@ -279,47 +279,45 @@ def main(args):
                 logger.error(f"Error occurred while loading datasets in parallel: {e}", exc_info=True)
                 raise e
 
-        # Access dataset statistics
-        train_grid_stats = train_data.get_grid_size_stats()
-        train_symbol_freq = train_data.get_symbol_frequencies()
+        if args.disable_symbol_freq:
+            balance_symbols = False
+            balancing_method = "none"
+            symbol_freq_dict = {}
+            logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
+        else:
+            if args.use_synthetic_data:
+                logger.debug("Calculating symbol frequencies for synthetic training set")
+                symbol_freq = train_data.get_symbol_frequencies()
+            else:
+                logger.debug("Calculating symbol frequencies for ARC training set")
+                symbol_freq = train_data.get_symbol_frequencies()
+            
+            symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
+            pad_symbol_idx = config.training.pad_symbol_idx
+            symbol_freq_dict.pop(pad_symbol_idx, None)
+            logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
+            
+            assert len(symbol_freq_dict) == config.training.num_classes - 1, (
+                f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+            )
+            balance_symbols = True
+            balancing_method = "weighting"
 
-        val_grid_stats = val_data.get_grid_size_stats()
-        val_symbol_freq = val_data.get_symbol_frequencies()
-
-        logger.info(f"Validation Grid Size Stats: {val_grid_stats}")
-        logger.info(f"Validation Symbol Frequencies: {val_symbol_freq}")
-
-        # Initialize experiment tracker
-        tracker = ExperimentTracker(config, project=args.project)
-
-        # Log dataset statistics to ExperimentTracker
-        tracker.log_metric("train_max_grid_height", train_grid_stats.get("max_height", 0))
-        tracker.log_metric("train_max_grid_width", train_grid_stats.get("max_width", 0))
-        tracker.log_metric("train_symbol_frequencies", train_symbol_freq)
-
-        tracker.log_metric("val_max_grid_height", val_grid_stats.get("max_height", 0))
-        tracker.log_metric("val_max_grid_width", val_grid_stats.get("max_width", 0))
-        tracker.log_metric("val_symbol_frequencies", val_symbol_freq)
-
-        # Example: Adjust model configuration based on grid size stats
-        max_grid_height = max(train_grid_stats.get("max_height", 30), val_grid_stats.get("max_height", 30))
-        max_grid_width = max(train_grid_stats.get("max_width", 30), val_grid_stats.get("max_width", 30))
-        logger.debug(f"Adjusted max grid size - Height: {max_grid_height}, Width: {max_grid_width}")
-
-        # Set the number of classes based on TrainingConfig
-        num_classes = config.training.num_classes
-        logger.info(f"Number of classes set to: {num_classes}")
-
-        num_train_samples = train_data.get_num_samples()
-        num_val_samples = val_data.get_num_samples()
-        logger.info(f"Number of training examples: {num_train_samples}")
-        logger.info(f"Number of validation examples: {num_val_samples}")
-        
-        if num_train_samples == 0 or num_val_samples == 0:
-            logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
-            return
-
-        logger.debug(f"Train data size: {train_data.get_num_samples()}, Validation data size: {val_data.get_num_samples()}")
+        training_config = TrainingConfig(
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+            max_epochs=args.max_epochs,
+            use_grokfast=args.use_grokfast,
+            grokfast_type=args.grokfast_type,
+            grokfast_alpha=args.grokfast_alpha,
+            grokfast_lamb=args.grokfast_lamb,
+            grokfast_window_size=args.grokfast_window_size,
+            include_pad_in_loss=args.include_pad_in_loss,
+            symbol_freq=symbol_freq_dict,
+            balance_symbols=balance_symbols,
+            balancing_method=balancing_method
+        )
+        config = Config(model=model_config, training=training_config)
 
         # Create DataLoader instances
         logger.info("Creating DataLoader instances")

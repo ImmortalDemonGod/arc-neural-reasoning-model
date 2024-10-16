@@ -345,16 +345,16 @@ class ARCDataset(Dataset):
                 if sample[key].ndimension() != 3 or sample[key].shape[0] != 1:
                     raise ValueError(f"Sample at index {idx} has '{key}' with shape {sample[key].shape}, expected shape (1, H, W).")
                 
-                if self.symbol_freq is not None:
-                    # Validate that the symbols are within the valid range
-                    max_symbol = sample[key].max()
-                    if max_symbol > max(self.symbol_freq.keys()):
-                        logger.error(
-                            f"Sample at index {idx} has symbol {max_symbol.item()} exceeding the maximum allowed symbol ({max(self.symbol_freq.keys())})."
-                        )
-                        raise ValueError(
-                            f"Sample at index {idx} has symbol {max_symbol.item()} exceeding the allowed range."
-                        )
+                # Validate that symbols are within the allowed range based on num_symbols
+                max_symbol_allowed = self.num_symbols - 1
+                max_symbol = sample[key].max()
+                if max_symbol > max_symbol_allowed:
+                    logger.error(
+                        f"Sample at index {idx} has symbol {max_symbol.item()} exceeding the allowed maximum ({max_symbol_allowed})."
+                    )
+                    raise ValueError(
+                        f"Sample at index {idx} has symbol {max_symbol.item()} exceeding the allowed maximum ({max_symbol_allowed})."
+                    )
             
             # Validate 'task_id' type
             if not isinstance(sample["task_id"], str):
