@@ -133,8 +133,8 @@ def objective(trial, args):
 
         validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
 
-        # Suggest whether to use Grokfast
-        use_grokfast = trial.suggest_categorical("use_grokfast", [True, False])
+        # Use grokfast based on command line argument
+        use_grokfast = args.use_grokfast
 
         if use_grokfast:
             # Suggest Grokfast type based on command-line choices
