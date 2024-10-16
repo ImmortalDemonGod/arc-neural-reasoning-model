@@ -122,12 +122,28 @@ def objective(trial, args):
 
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
+        # Calculate Symbol Frequencies
+        if args.use_synthetic_data:
+            logger.debug("Calculating symbol frequencies for synthetic training set")
+            symbol_freq = train_data.get_symbol_frequencies()
+        else:
+            logger.debug("Calculating symbol frequencies for ARC training set")
+            symbol_freq = train_data.get_symbol_frequencies()
+
+        logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+
         # Convert symbol_freq from NumPy array to dictionary with integer keys
         symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
         # Remove the padding symbol from symbol_freq_dict
         pad_symbol_idx = config.training.pad_symbol_idx
         symbol_freq_dict.pop(pad_symbol_idx, None)
         logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
+
+        # Debugging: Check keys and values
+        logger.debug(f"Keys in symbol_freq_dict after popping padding symbol: {list(symbol_freq_dict.keys())}")
+        logger.debug(f"Values in symbol_freq_dict after popping padding symbol: {list(symbol_freq_dict.values())}")
+        key_types = set(type(k) for k in symbol_freq_dict.keys())
+        logger.debug(f"Types of keys in symbol_freq_dict: {key_types}")
 
         assert len(symbol_freq_dict) == config.training.num_classes - 1, (
             f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
