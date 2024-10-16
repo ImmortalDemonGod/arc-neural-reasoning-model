@@ -125,7 +125,19 @@ def objective(trial, args):
             logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
             # Directly copy symbol_freq to symbol_freq_dict
-            symbol_freq_dict = symbol_freq.copy()
+            # Ensure symbol_freq_dict is a dictionary
+            if isinstance(symbol_freq, np.ndarray):
+                # If symbol_freq is a NumPy array, convert it to a dictionary
+                symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
+                logger.debug("Converted symbol_freq from NumPy array to dictionary.")
+            elif isinstance(symbol_freq, dict):
+                symbol_freq_dict = symbol_freq.copy()
+                logger.debug("Copied symbol_freq as a dictionary.")
+            else:
+                raise TypeError(f"Unexpected type for symbol_freq: {type(symbol_freq)}. Expected dict or np.ndarray.")
+
+            # Assert that symbol_freq_dict is indeed a dictionary
+            assert isinstance(symbol_freq_dict, dict), f"symbol_freq_dict must be a dict, but got {type(symbol_freq_dict)}."
 
             # Remove the padding symbol from symbol_freq_dict
             pad_symbol_idx = config.training.pad_symbol_idx
