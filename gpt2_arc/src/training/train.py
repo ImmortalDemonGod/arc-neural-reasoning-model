@@ -281,10 +281,6 @@ def main(args):
 
         logger.debug(f"Train data size: {train_data.get_num_samples()}, Validation data size: {val_data.get_num_samples()}")
 
-        # Set the number of classes
-        num_classes = 10
-        logger.info(f"Number of classes set to: {num_classes}")
-
         # Create DataLoader instances
         logger.info("Creating DataLoader instances")
         # Create DataLoader instances
