@@ -94,13 +94,6 @@ class ARCDataset(Dataset):
         if debug:
             logger.setLevel(logging.DEBUG)
             handler.setLevel(logging.DEBUG)
-        elif isinstance(grid, int):
-            logger.debug("Grid is of type int. Converting to 1x1 grid.")
-            grid = [[grid]]
-            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
-            logger.debug(f"Converted int to tensor with shape: {grid_tensor.shape}")
-            logger.setLevel(logging.ERROR)
-            handler.setLevel(logging.ERROR)
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"data_source type: {type(data_source)}")
         logger.debug(f"data_source content: {data_source}")
@@ -167,7 +160,11 @@ class ARCDataset(Dataset):
         elif isinstance(data_source, list):
             samples = self._process_list_data(data_source, task_id="default_task")
             self.data.extend(samples)
-        else:
+        elif isinstance(grid, int):
+            logger.debug("Grid is of type int. Converting to 1x1 grid.")
+            grid = [[grid]]
+            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
+            logger.debug(f"Converted int to tensor with shape: {grid_tensor.shape}")
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
 
         self.num_samples = len(self.data)
