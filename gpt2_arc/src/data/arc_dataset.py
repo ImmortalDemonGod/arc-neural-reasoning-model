@@ -165,7 +165,6 @@ class ARCDataset(Dataset):
         except Exception as e:
             logger.error(f"Failed to initialize ARCDataset: {e}", exc_info=True)
             raise
-```
 
 gpt2_arc/src/training/train.py
 ```python
