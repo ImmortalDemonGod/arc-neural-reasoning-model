@@ -166,7 +166,6 @@ class ARCDataset(Dataset):
             logger.error(f"Failed to initialize ARCDataset: {e}", exc_info=True)
             raise
 
-<<<<<<< SEARCH
     if args.use_synthetic_data:
         if not args.synthetic_data_path:
             raise ValueError("Synthetic data path not provided")
@@ -184,6 +183,7 @@ class ARCDataset(Dataset):
         self.num_samples = len(self.data)
         self._compute_and_cache_statistics()
         self._save_cache(self.cache_path)
+
 
     def _process_single_task(self, task: Dict, task_id: str) -> List[Dict]:
         """
