@@ -120,7 +120,7 @@ def objective(trial, args):
         )
         logger.info(f"Loading model checkpoint: {args.model_checkpoint}")
         checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
-            model_config_dict = checkpoint.get('model_config')
+        model_config_dict = checkpoint.get('model_config')
             
             if not model_config_dict:
                 logger.error("Model config not found in checkpoint. Aborting trial.")
