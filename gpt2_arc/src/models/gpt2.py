@@ -134,7 +134,12 @@ class GPT2ARC(pl.LightningModule):
         self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
         super().__init__()
         self.config = config
-        self.symbol_freq = symbol_freq
+        if symbol_freq:
+            self.symbol_freq = symbol_freq
+            logger.debug(f"Symbol frequencies loaded: {self.symbol_freq}")
+        else:
+            self.symbol_freq = {}
+            logger.debug("No symbol frequencies provided. Proceeding without symbol frequency adjustments.")
         self.pad_symbol_idx = self.config.training.pad_symbol_idx
         self.include_pad_in_loss = self.config.training.include_pad_in_loss
         self.conv1 = nn.Conv2d(
