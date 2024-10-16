@@ -114,13 +114,9 @@ class ARCDataset(Dataset):
                 random.shuffle(self.data_files)
                 # Determine the number of workers based on CPU count
                 cpu_count = multiprocessing.cpu_count() or 1
-                max_workers = min(16, cpu_count + 2)  # Adjusted heuristic for ThreadPoolExecutor
+                max_workers = min(4, cpu_count + 1)  # Adjusted heuristic for ThreadPoolExecutor
                 
                 logger.debug(f"Using ThreadPoolExecutor with {max_workers} workers for parallel processing.")
-                
-                logger.debug(f"Using ProcessPoolExecutor with {max_workers} workers for parallel processing.")
-
-                logger.debug(f"Using ProcessPoolExecutor with {max_workers} workers for parallel processing.")
 
                 # Initialize tqdm progress bar and process files in parallel
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
