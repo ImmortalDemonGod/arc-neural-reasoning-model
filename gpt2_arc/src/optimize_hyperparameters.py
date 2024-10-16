@@ -265,7 +265,30 @@ def objective(trial, args):
 
         logger.debug(f"Suggested dropout rate: {dropout}")
 
-        # Continue constructing the Config object with fixed and suggested hyperparameters
+        # Calculate Symbol Frequencies
+        if args.use_synthetic_data:
+            logger.debug("Calculating symbol frequencies for synthetic training set")
+            symbol_freq = train_data.get_symbol_frequencies()
+        else:
+            logger.debug("Calculating symbol frequencies for ARC training set")
+            symbol_freq = train_data.get_symbol_frequencies()
+
+        logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+
+        # Convert symbol_freq from NumPy array to dictionary
+        symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
+        logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
+        assert len(symbol_freq_dict) == config.training.num_classes - 1, (
+            f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+        )
+
+        # Assign the converted symbol_freq to the training configuration
+        config.training.symbol_freq = symbol_freq_dict
+
+        # Validate that symbol_freq_dict is not empty
+        if not symbol_freq_dict:
+            logger.error("symbol_freq_dict is empty. Cannot proceed with balance_symbols=True and balancing_method='weighting'.")
+            raise ValueError("symbol_freq must be provided and non-empty when balance_symbols is True and balancing_method is 'weighting'.")
         if args.model_checkpoint:
             # Use fixed hyperparameters from the checkpoint
             model_config = ModelConfig(**fixed_hyperparams)
