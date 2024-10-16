@@ -176,34 +176,23 @@ class ARCDataset(Dataset):
                 return []
             
             with open(file_path, 'r', encoding='utf-8') as f:
-                parser = ijson.parse(f)
-                current_task = {}
-                for prefix, event, value in parser:
-                    if (prefix, event) == ('item', 'start_map'):
-                        current_task = {}
-                    elif prefix.startswith('item.') and event in ('map_key', 'string', 'number', 'boolean', 'null', 'start_array', 'end_array'):
-                        key = prefix.split('.')[-1]
-                        current_task[key] = value
-                    elif (prefix, event) == ('item', 'end_map'):
-                        # Validate the task data
-                        try:
-                            validate(instance=current_task, schema=TASK_SCHEMA)
-                        except ValidationError as ve:
-                            logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
-                            continue  # Skip invalid tasks
-                        
-                        task_id = current_task.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                        samples.extend(self._process_single_task(current_task, task_id=task_id))
+                tasks = ijson.items(f, 'item')
+                for task in tasks:
+                    try:
+                        validate(instance=task, schema=TASK_SCHEMA)
+                    except ValidationError as ve:
+                        logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
+                        continue
+        
+                    task_id = task.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                    samples.extend(self._process_single_task(task, task_id=task_id))
             return samples
         except ijson.JSONError as e:
-            logger.error(f"Malformed JSON in file {file_path}: {e}", exc_info=True)
-            return []
+            logger.warning(f"Malformed JSON in file {file_path}: {e}. Skipping.")
         except UnicodeDecodeError as e:
-            logger.error(f"Encoding error in file {file_path}: {e}", exc_info=True)
-            return []
+            logger.warning(f"Encoding error in file {file_path}: {e}. Skipping.")
         except Exception as e:
             logger.error(f"Unexpected error processing file {file_path}: {e}", exc_info=True)
-            return []
 
     def _process_single_file_parallel(self, file_path: str) -> List[Dict]:
         """
@@ -218,21 +207,27 @@ class ARCDataset(Dataset):
         return self._process_single_file_streaming(file_path)
     
     
-    def _save_cache(self, cache_path: str):
+    def _save_cache(self, cache_path: str, data_only=False):
         """
         Saves the dataset and its statistics to the specified cache path using pickle.
-        
+    
         Args:
             cache_path (str): The file path where the cache will be saved.
+            data_only (bool): If True, only save the data without statistics.
         """
         try:
-            cache_data = {
-                "data": self.data,
-                "statistics": self.statistics
-            }
+            if data_only:
+                cache_data = {
+                    "data": self.data
+                }
+            else:
+                cache_data = {
+                    "data": self.data,
+                    "statistics": self.statistics
+                }
             with open(cache_path, 'wb') as f:
                 pickle.dump(cache_data, f)
-            logger.debug(f"Saved cache to {cache_path}")
+            logger.debug(f"Saved {'data only ' if data_only else ''}cache to {cache_path}")
         except Exception as e:
             logger.error(f"Failed to save cache to {cache_path}: {e}")
 
