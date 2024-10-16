@@ -102,7 +102,22 @@ def objective(trial, args):
         fixed_hyperparams = {}
 
         # Load hyperparameters from checkpoint if provided
-        if args.model_checkpoint:
+        # Calculate Symbol Frequencies before instantiating TrainingConfig
+        if args.use_synthetic_data:
+            logger.debug("Calculating symbol frequencies for synthetic training set")
+            symbol_freq = train_data.get_symbol_frequencies()
+        else:
+            logger.debug("Calculating symbol frequencies for ARC training set")
+            symbol_freq = train_data.get_symbol_frequencies()
+
+        logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+
+        # Convert symbol_freq from NumPy array to dictionary
+        symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
+        logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
+        assert len(symbol_freq_dict) == config.training.num_classes - 1, (
+            f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+        )
             logger.info(f"Loading model checkpoint: {args.model_checkpoint}")
             checkpoint = torch.load(args.model_checkpoint, map_location='cpu')
             model_config_dict = checkpoint.get('model_config')
@@ -302,6 +317,7 @@ def objective(trial, args):
                 grokfast_lamb=grokfast_lamb,
                 grokfast_window_size=grokfast_window_size,
                 include_pad_in_loss=include_pad_in_loss,
+                symbol_freq=symbol_freq_dict,  # Now symbol_freq_dict is defined earlier
                 symbol_freq=symbol_freq_dict
             )
         else:
@@ -326,7 +342,8 @@ def objective(trial, args):
                 grokfast_alpha=grokfast_alpha,
                 grokfast_lamb=grokfast_lamb,
                 grokfast_window_size=grokfast_window_size,
-                include_pad_in_loss=include_pad_in_loss
+                include_pad_in_loss=include_pad_in_loss,
+                symbol_freq=symbol_freq_dict  # Now symbol_freq_dict is defined earlier
             )
 
         config = Config(model=model_config, training=training_config)
