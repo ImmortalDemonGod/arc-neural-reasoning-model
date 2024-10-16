@@ -289,7 +289,6 @@ def objective(trial, args):
             model_config = ModelConfig(**fixed_hyperparams)
             training_config = TrainingConfig(
                 num_classes=config.model.num_classes,
-                num_classes=config.model.num_classes,
                 batch_size=batch_size,
                 learning_rate=learning_rate,
                 max_epochs=max_epochs,
@@ -398,6 +397,7 @@ def objective(trial, args):
         if args.model_checkpoint:
             # Load additional components from the checkpoint if necessary
             model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
+            checkpoint = torch.load(args.model_checkpoint)
             model.load_state_dict(checkpoint['state_dict'], strict=True)
             logger.debug(f"Loaded model state from checkpoint: {args.model_checkpoint}")
         else:
