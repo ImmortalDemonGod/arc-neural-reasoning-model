@@ -1,3 +1,4 @@
+# gpt2_arc/src/config.py
 from typing import Optional, Dict
 from dataclasses import dataclass, asdict, field
 import multiprocessing
