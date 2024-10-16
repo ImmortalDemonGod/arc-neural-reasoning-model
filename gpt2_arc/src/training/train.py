@@ -240,6 +240,8 @@ def main(args):
                 log_level=args.log_level,
                 use_synthetic_data=args.use_synthetic_data,
                 synthetic_data_path=args.synthetic_data_path,
+                include_pad_in_loss=args.include_pad_in_loss,
+                include_pad_in_accuracy=args.include_pad_in_accuracy
             )
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
@@ -719,6 +721,18 @@ if __name__ == "__main__":
         type=str,
         default="profile",
         help="Filename for profiler output."
+    )
+    parser.add_argument(
+        "--include_pad_in_loss",
+        type=lambda x: (str(x).lower() in ['true', '1', 't', 'y', 'yes']),
+        default=True,
+        help="Whether to include the padding class in the loss calculation. (True/False)"
+    )
+    parser.add_argument(
+        "--include_pad_in_accuracy",
+        type=lambda x: (str(x).lower() in ['true', '1', 't', 'y', 'yes']),
+        default=True,
+        help="Whether to include the padding class in accuracy calculations. (True/False)"
     )
     
     args = parser.parse_args()
