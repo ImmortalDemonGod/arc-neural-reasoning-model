@@ -217,6 +217,7 @@ def objective(trial, args):
         logger.debug(f"Model config: {model_config}")
 
         # Create TrainingConfig with Grokfast parameters from args
+        include_pad_in_loss = args.include_pad_in_loss
         training_config = TrainingConfig(
             batch_size=batch_size,
             learning_rate=learning_rate,
