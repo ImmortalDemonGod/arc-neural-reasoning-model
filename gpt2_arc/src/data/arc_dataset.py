@@ -199,7 +199,7 @@ class ARCDataset(Dataset):
         return samples
     
     
-    def _process_single_file_streaming(self, file_path: str) -> List[Dict]:                                                                                        
+    def _process_single_file_streaming(self, file_path: str) -> List[Dict]:
         """
         Processes a single JSON file using streaming parsing and returns the list of samples.
         
