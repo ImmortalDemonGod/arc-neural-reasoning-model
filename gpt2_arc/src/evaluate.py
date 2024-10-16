@@ -46,10 +46,6 @@ def evaluate(model, test_dataset, config, batch_size=32):
     # Convert tensors to Python floats if necessary
     if avg_test_loss is not None:
         avg_test_loss = avg_test_loss.item()
-    if avg_test_accuracy is not None:
-        avg_test_accuracy = avg_test_accuracy.item()
-    if avg_test_diff_accuracy is not None:
-        avg_test_diff_accuracy = avg_test_diff_accuracy.item()
 
     aggregated_results = {
         'test_loss': avg_test_loss,
@@ -70,26 +66,6 @@ def evaluate(model, test_dataset, config, batch_size=32):
             if task_id not in individual_metrics:
                 individual_metrics[task_id] = {}
             individual_metrics[task_id][f'test_acc_{metric_suffix}'] = value
-
-    # Compute complete task accuracy (fraction of tasks with perfect accuracy)
-    num_tasks = len(individual_metrics)
-    perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold / 100.0  # Convert percentage to fraction
-
-    num_complete_accuracy = 0
-    for task_id, metrics in individual_metrics.items():
-        test_accuracy = metrics.get('test_accuracy', 0)
-        # Determine if the task is completely solved
-        completely_solved = test_accuracy >= perfect_accuracy_threshold
-        metrics['completely_solved'] = completely_solved
-        if completely_solved:
-            num_complete_accuracy += 1
-
-    complete_task_accuracy_with_pad = num_complete_accuracy_with_pad / num_tasks if num_tasks > 0 else 0.0
-    complete_task_accuracy_without_pad = num_complete_accuracy_without_pad / num_tasks if num_tasks > 0 else 0.0
-    aggregated_results['complete_task_accuracy_with_pad'] = complete_task_accuracy_with_pad
-    aggregated_results['complete_task_accuracy_without_pad'] = complete_task_accuracy_without_pad
-
-    print(f"DEBUG: Computed complete task accuracy with pad: {complete_task_accuracy_with_pad}, without pad: {complete_task_accuracy_without_pad}")
 
     return aggregated_results, individual_metrics
 

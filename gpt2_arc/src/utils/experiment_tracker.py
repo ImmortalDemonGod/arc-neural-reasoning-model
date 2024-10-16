@@ -20,8 +20,6 @@ class ExperimentTracker:
         self.run = None
         self.use_wandb = use_wandb
         self.include_pad_in_accuracy = self.config['training']['include_pad_in_accuracy']
-        self.include_pad_in_accuracy = self.config['training']['include_pad_in_accuracy']
-        print(f"ExperimentTracker initialized with include_pad_in_accuracy={self.include_pad_in_accuracy}")
         self.metrics = {}
         if self.use_wandb:
             try:
@@ -157,7 +155,9 @@ class ExperimentTracker:
             "timestamp": self.timestamp,
             "final_train_loss": self.results["train"][-1]["loss"] if self.results["train"] else None,
             "final_val_loss": self.results["validation"][-1]["loss"] if self.results["validation"] else None,
-            "test_accuracy": self.results["test"].get("accuracy"),
+            "test_loss": self.results["test"].get("avg_loss"),
+            "test_acc_with_pad": self.results["test"].get("avg_acc_with_pad"),
+            "test_acc_without_pad": self.results["test"].get("avg_acc_without_pad"),
             "config": self._serialize_config(self.config)
         }
         return {k: self._make_serializable(v) for k, v in summary.items()}

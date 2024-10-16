@@ -27,8 +27,6 @@ class ResultsCollector:
         self.environment = self._get_environment_info()
         self.checkpoint_path = None
         self.tensorboard_log_path = None
-        self.include_pad_in_accuracy = config.training.include_pad_in_accuracy
-        print(f"ResultsCollector initialized with include_pad_in_accuracy={self.include_pad_in_accuracy}")
 
     def set_tensorboard_log_path(self, path):
         self.tensorboard_log_path = path
