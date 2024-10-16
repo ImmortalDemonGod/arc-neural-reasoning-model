@@ -94,7 +94,11 @@ class ARCDataset(Dataset):
         if debug:
             logger.setLevel(logging.DEBUG)
             handler.setLevel(logging.DEBUG)
-        else:
+        elif isinstance(grid, int):
+            logger.debug("Grid is of type int. Converting to 1x1 grid.")
+            grid = [[grid]]
+            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
+            logger.debug(f"Converted int to tensor with shape: {grid_tensor.shape}")
             logger.setLevel(logging.ERROR)
             handler.setLevel(logging.ERROR)
         logger.debug("Starting ARCDataset initialization")
