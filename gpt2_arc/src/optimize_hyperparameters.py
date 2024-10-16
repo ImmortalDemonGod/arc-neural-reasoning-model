@@ -113,7 +113,7 @@ def objective(trial, args):
         config = Config(model=model_config, training=training_config)
 
 
-        if not args.disable_symbol_freq:
+        if args.enable_symbol_freq:
             # Calculate Symbol Frequencies
             if args.use_synthetic_data:
                 logger.debug("Calculating symbol frequencies for synthetic training set")
