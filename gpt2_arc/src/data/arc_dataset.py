@@ -223,70 +223,40 @@ class ARCDataset(Dataset):
         """
         samples = []
         try:
-            # Check for empty file
+            # Skip empty files early
             if os.path.getsize(file_path) == 0:
                 logger.warning(f"Empty JSON file detected: {file_path}. Skipping.")
-                return []
+                return samples
             
             with open(file_path, 'r', encoding='utf-8') as f:
-                try:
-                    content = json.load(f)
-                except json.JSONDecodeError as e:
-                    logger.error(f"JSON decoding error in file {file_path}: {e}. Skipping file.")
-                    return []
-
-                if isinstance(content, dict):
-                    if 'train' in content and 'test' in content:
-                        # Existing processing for tasks with 'train' and 'test'
-                        try:
-                            validate(instance=content, schema=TASK_SCHEMA)
-                        except ValidationError as ve:
-                            logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
-                            return []
-            
-                        task_id = content.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                        samples.extend(self._process_single_task(content, task_id=task_id))
-                    elif 'input' in content and 'output' in content:
-                        # New processing for individual samples without 'train'/'test' splits
-                        task_id = content.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                        sample = {
-                            "input": content['input'],
-                            "output": content['output'],
-                            "task_id": task_id
-                        }
-                        try:
-                            input_tensor = self._preprocess_grid(sample['input'])
-                            output_tensor = self._preprocess_grid(sample['output'])
-                            samples.append({
-                                "input": input_tensor,
-                                "output": output_tensor,
-                                "task_id": sample['task_id']
-                            })
-                            logger.debug(f"Added sample from file {file_path}")
-                        except Exception as e:
-                            logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
-                    else:
-                        logger.warning(f"Unexpected keys in task data from file {file_path}: {content.keys()}. Skipping.")
-                        return []
-                elif isinstance(content, list):
-                    if all(isinstance(task, dict) and 'train' in task and 'test' in task for task in content):
-                        # Existing processing for list of tasks with 'train' and 'test'
-                        for task in content:
+                # Use ijson for efficient streaming if the file is large
+                parser = ijson.parse(f)
+                current_object = {}
+                current_key = None
+                for prefix, event, value in parser:
+                    if (prefix, event) == ('', 'start_map'):
+                        current_object = {}
+                    elif event == 'map_key':
+                        current_key = value
+                    elif event in ('string', 'number', 'boolean', 'null'):
+                        current_object[current_key] = value
+                    elif (prefix, event) == ('', 'end_map'):
+                        # Determine the structure based on keys
+                        if 'train' in current_object and 'test' in current_object:
+                            # Task-Based Structure
                             try:
-                                validate(instance=task, schema=TASK_SCHEMA)
+                                validate(instance=current_object, schema=TASK_SCHEMA)
+                                task_id = current_object.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                                task_samples = self._process_single_task(current_object, task_id=task_id)
+                                samples.extend(task_samples)
                             except ValidationError as ve:
                                 logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
-                                continue
-
-                            task_id = task.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                            samples.extend(self._process_single_task(task, task_id=task_id))
-                    elif all(isinstance(task, dict) and 'input' in task and 'output' in task for task in content):
-                        # New processing for list of individual samples without 'train'/'test' splits
-                        for sample in content:
-                            task_id = sample.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                        elif 'input' in current_object and 'output' in current_object:
+                            # Sample-Based Structure
+                            task_id = current_object.get('id', os.path.splitext(os.path.basename(file_path))[0])
                             try:
-                                input_tensor = self._preprocess_grid(sample['input'])
-                                output_tensor = self._preprocess_grid(sample['output'])
+                                input_tensor = self._preprocess_grid(current_object['input'])
+                                output_tensor = self._preprocess_grid(current_object['output'])
                                 samples.append({
                                     "input": input_tensor,
                                     "output": output_tensor,
@@ -295,17 +265,15 @@ class ARCDataset(Dataset):
                                 logger.debug(f"Added sample from file {file_path}")
                             except Exception as e:
                                 logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
-                    else:
-                        logger.warning(f"Unexpected structure in file {file_path}. Skipping.")
-                        return []
-                else:
-                    logger.warning(f"Unexpected JSON structure in file {file_path}: Expected dict or list, got {type(content)}. Skipping file.")
+                        # Reset for next object
+                        current_object = {}
         except ijson.JSONError as e:
             logger.warning(f"Malformed JSON in file {file_path}: {e}. Skipping.")
         except UnicodeDecodeError as e:
             logger.warning(f"Encoding error in file {file_path}: {e}. Skipping.")
         except Exception as e:
             logger.error(f"Unexpected error processing file {file_path}: {e}", exc_info=True)
+        
         return samples
 
     def _process_single_file_parallel(self, file_path: str) -> List[Dict]:
@@ -399,19 +367,36 @@ class ARCDataset(Dataset):
 
 
     @staticmethod
-    def _generate_cache_path(data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]], num_symbols: int, is_test: bool, test_split: float) -> str:
+    def _generate_cache_path(self, data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]], num_symbols: int, is_test: bool, test_split: float) -> str:
         dataset_version = "v1"
+        
+        # Create a stable representation of data_source based on its type
+        if isinstance(data_source, str):
+            data_source_str = os.path.abspath(data_source)  # Use absolute path for consistency
+        elif isinstance(data_source, TaskSet):
+            data_source_str = f"TaskSet:{len(data_source.tasks)}"  # Use number of tasks as identifier
+        elif isinstance(data_source, list):
+            data_source_str = f"List:{len(data_source)}"  # Use length of the list
+        else:
+            data_source_str = str(data_source)  # Fallback to string representation
+        
+        # Create a JSON string with stable identifiers
         hash_input = json.dumps({
             'version': dataset_version,
-            'data_source': data_source if isinstance(data_source, list) else data_source.__str__(),
+            'data_source': data_source_str,
             'num_symbols': num_symbols,
             'is_test': is_test,
             'test_split': test_split
         }, sort_keys=True).encode('utf-8')
+        
+        # Generate MD5 hash for the cache filename
         hash_digest = hashlib.md5(hash_input).hexdigest()
         cache_filename = f"arc_dataset_cache_{hash_digest}.pkl"
+        
+        # Define the cache directory relative to the current file
         cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
         os.makedirs(cache_dir, exist_ok=True)
+        
         return os.path.join(cache_dir, cache_filename)
 
     def _load_cache(self, cache_path: str) -> bool:
