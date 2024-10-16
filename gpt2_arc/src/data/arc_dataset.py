@@ -77,6 +77,7 @@ class ARCDataset(Dataset):
         self.is_test = is_test
         self.num_symbols = num_symbols
         self.pad_symbol_idx = pad_symbol_idx  # Store it as an instance variable
+        assert 0 <= self.pad_symbol_idx <= 10, "pad_symbol_idx must be within the range of 0 to 10"
         self.data_files = []  # Initialize data_files as an empty list
         self.data_source = data_source
         self.num_samples = 0

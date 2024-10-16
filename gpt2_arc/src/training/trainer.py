@@ -47,6 +47,24 @@ class ARCTrainer(pl.LightningModule):
         self.best_epoch = 0
         self.results_collector = results_collector if results_collector else ResultsCollector(config)
         self.writer = SummaryWriter(f"runs/experiment_{self.results_collector.experiment_id}")
+
+        # Update the weight tensor to have 11 elements
+        class_weights = torch.tensor([
+            0.08399431,  # Class 0
+            0.01080552,  # Class 1
+            0.00880578,  # Class 2
+            0.00941793,  # Class 3
+            0.00724389,  # Class 4
+            0.00680701,  # Class 5
+            0.0031461,   # Class 6
+            0.00204598,  # Class 7
+            0.00932706,  # Class 8
+            0.00173684,  # Class 9
+            0.85666958   # Class 10 (PAD)
+        ], dtype=torch.float)
+
+        # Initialize the loss function with the correct weight tensor
+        self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
         
         if hasattr(self.model, 'loss_fn') and hasattr(self.model.loss_fn, 'weight'):
             logger.debug(f"Trainer's loss function class weights: {self.model.loss_fn.weight}")
