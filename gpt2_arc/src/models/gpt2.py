@@ -244,9 +244,11 @@ class GPT2ARC(pl.LightningModule):
         preds = torch.argmax(outputs, dim=-1)
         
         if self.include_pad_in_accuracy:
+            logger.debug("Including padding in accuracy calculation.")
             correct = (preds == targets).float()
             total = torch.numel(targets)
         else:
+            logger.debug("Excluding padding from accuracy calculation.")
             mask = targets != self.pad_symbol_idx
             correct = (preds == targets).float() * mask
             total = mask.sum()
