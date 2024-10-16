@@ -229,16 +229,39 @@ class ARCDataset(Dataset):
                 return []
             
             with open(file_path, 'r', encoding='utf-8') as f:
-                tasks = ijson.items(f, 'item')
-                for task in tasks:
+                try:
+                    content = json.load(f)
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON decoding error in file {file_path}: {e}. Skipping file.")
+                    return []
+
+            if isinstance(content, dict):
+                # Single task object
+                try:
+                    validate(instance=content, schema=TASK_SCHEMA)
+                except ValidationError as ve:
+                    logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
+                    return []
+
+                task_id = content.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                samples.extend(self._process_single_task(content, task_id=task_id))
+
+            elif isinstance(content, list):
+                # List of task objects
+                for task in content:
+                    if not isinstance(task, dict):
+                        logger.warning(f"Invalid task format in file {file_path}: Expected dict, got {type(task)}. Skipping task.")
+                        continue
                     try:
                         validate(instance=task, schema=TASK_SCHEMA)
                     except ValidationError as ve:
                         logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
                         continue
-        
+
                     task_id = task.get('id', os.path.splitext(os.path.basename(file_path))[0])
                     samples.extend(self._process_single_task(task, task_id=task_id))
+            else:
+                logger.warning(f"Unexpected JSON structure in file {file_path}: Expected dict or list, got {type(content)}. Skipping file.")
             return samples
         except ijson.JSONError as e:
             logger.warning(f"Malformed JSON in file {file_path}: {e}. Skipping.")
