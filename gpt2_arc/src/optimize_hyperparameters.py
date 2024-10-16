@@ -476,7 +476,7 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     if args.use_gpu:
         available_gpus = torch.cuda.device_count()
         if available_gpus > 1:
-            n_jobs = min(n_jobs, available_gpus)
+            n_jobs = max(n_jobs, available_gpus)
         else:
             n_jobs = 1  # Limit to 1 to prevent memory issues
     study.optimize(partial(objective, args=args), n_trials=n_trials, n_jobs=n_jobs)
