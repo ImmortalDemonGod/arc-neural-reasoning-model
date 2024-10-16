@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch import nn
-from typing import Dict
+from typing import Dict, Optional
 import torch.nn.init as init
 from bitnet import BitLinearNew
 
