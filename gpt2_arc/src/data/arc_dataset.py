@@ -235,78 +235,78 @@ class ARCDataset(Dataset):
                     logger.error(f"JSON decoding error in file {file_path}: {e}. Skipping file.")
                     return []
 
-        if isinstance(content, dict):
-            if 'train' in content and 'test' in content:
-                # Existing processing for tasks with 'train' and 'test'
-                try:
-                    validate(instance=content, schema=TASK_SCHEMA)
-                except ValidationError as ve:
-                    logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
-                    return []
-    
-                task_id = content.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                samples.extend(self._process_single_task(content, task_id=task_id))
-            elif 'input' in content and 'output' in content:
-                # New processing for individual samples without 'train'/'test' splits
-                task_id = content.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                sample = {
-                    "input": content['input'],
-                    "output": content['output'],
-                    "task_id": task_id
-                }
-                try:
-                    input_tensor = self._preprocess_grid(sample['input'])
-                    output_tensor = self._preprocess_grid(sample['output'])
-                    samples.append({
-                        "input": input_tensor,
-                        "output": output_tensor,
-                        "task_id": sample['task_id']
-                    })
-                    logger.debug(f"Added sample from file {file_path}")
-                except Exception as e:
-                    logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
-            else:
-                logger.warning(f"Unexpected keys in task data from file {file_path}: {content.keys()}. Skipping.")
-                return []
-        elif isinstance(content, list):
-            if all(isinstance(task, dict) and 'train' in task and 'test' in task for task in content):
-                # Existing processing for list of tasks with 'train' and 'test'
-                for task in content:
-                    try:
-                        validate(instance=task, schema=TASK_SCHEMA)
-                    except ValidationError as ve:
-                        logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
-                        continue
-
-                    task_id = task.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                    samples.extend(self._process_single_task(task, task_id=task_id))
-            elif all(isinstance(task, dict) and 'input' in task and 'output' in task for task in content):
-                # New processing for list of individual samples without 'train'/'test' splits
-                for sample in content:
-                    task_id = sample.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                    try:
-                        input_tensor = self._preprocess_grid(sample['input'])
-                        output_tensor = self._preprocess_grid(sample['output'])
-                        samples.append({
-                            "input": input_tensor,
-                            "output": output_tensor,
+                if isinstance(content, dict):
+                    if 'train' in content and 'test' in content:
+                        # Existing processing for tasks with 'train' and 'test'
+                        try:
+                            validate(instance=content, schema=TASK_SCHEMA)
+                        except ValidationError as ve:
+                            logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
+                            return []
+            
+                        task_id = content.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                        samples.extend(self._process_single_task(content, task_id=task_id))
+                    elif 'input' in content and 'output' in content:
+                        # New processing for individual samples without 'train'/'test' splits
+                        task_id = content.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                        sample = {
+                            "input": content['input'],
+                            "output": content['output'],
                             "task_id": task_id
-                        })
-                        logger.debug(f"Added sample from file {file_path}")
-                    except Exception as e:
-                        logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
-            else:
-                logger.warning(f"Unexpected structure in file {file_path}. Skipping.")
-                return []
-        else:
-            logger.warning(f"Unexpected JSON structure in file {file_path}: Expected dict or list, got {type(content)}. Skipping file.")
+                        }
+                        try:
+                            input_tensor = self._preprocess_grid(sample['input'])
+                            output_tensor = self._preprocess_grid(sample['output'])
+                            samples.append({
+                                "input": input_tensor,
+                                "output": output_tensor,
+                                "task_id": sample['task_id']
+                            })
+                            logger.debug(f"Added sample from file {file_path}")
+                        except Exception as e:
+                            logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
+                    else:
+                        logger.warning(f"Unexpected keys in task data from file {file_path}: {content.keys()}. Skipping.")
+                        return []
+                elif isinstance(content, list):
+                    if all(isinstance(task, dict) and 'train' in task and 'test' in task for task in content):
+                        # Existing processing for list of tasks with 'train' and 'test'
+                        for task in content:
+                            try:
+                                validate(instance=task, schema=TASK_SCHEMA)
+                            except ValidationError as ve:
+                                logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
+                                continue
+
+                            task_id = task.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                            samples.extend(self._process_single_task(task, task_id=task_id))
+                    elif all(isinstance(task, dict) and 'input' in task and 'output' in task for task in content):
+                        # New processing for list of individual samples without 'train'/'test' splits
+                        for sample in content:
+                            task_id = sample.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                            try:
+                                input_tensor = self._preprocess_grid(sample['input'])
+                                output_tensor = self._preprocess_grid(sample['output'])
+                                samples.append({
+                                    "input": input_tensor,
+                                    "output": output_tensor,
+                                    "task_id": task_id
+                                })
+                                logger.debug(f"Added sample from file {file_path}")
+                            except Exception as e:
+                                logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
+                    else:
+                        logger.warning(f"Unexpected structure in file {file_path}. Skipping.")
+                        return []
+                else:
+                    logger.warning(f"Unexpected JSON structure in file {file_path}: Expected dict or list, got {type(content)}. Skipping file.")
+        except ijson.JSONError as e:
+            logger.warning(f"Malformed JSON in file {file_path}: {e}. Skipping.")
+        except UnicodeDecodeError as e:
+            logger.warning(f"Encoding error in file {file_path}: {e}. Skipping.")
+        except Exception as e:
+            logger.error(f"Unexpected error processing file {file_path}: {e}", exc_info=True)
         return samples
-    except ijson.JSONError as e:
-        logger.warning(f"Malformed JSON in file {file_path}: {e}. Skipping.")
-    except UnicodeDecodeError as e:
-        logger.warning(f"Encoding error in file {file_path}: {e}. Skipping.")
-    except Exception as e:
-        logger.error(f"Unexpected error processing file {file_path}: {e}", exc_info=True)
 
     def _process_single_file_parallel(self, file_path: str) -> List[Dict]:
         """
