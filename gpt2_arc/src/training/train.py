@@ -736,12 +736,6 @@ if __name__ == "__main__":
         help="Filename for profiler output."
     )
     parser.add_argument(
-        "--include_pad_in_loss",
-        type=lambda x: (str(x).lower() in ['true', '1', 't', 'y', 'yes']),
-        default=True,
-        help="Whether to include the padding class in the loss calculation. (True/False)"
-    )
-    parser.add_argument(
         "--include_pad_in_accuracy",
         type=lambda x: (str(x).lower() in ['true', '1', 't', 'y', 'yes']),
         default=True,
