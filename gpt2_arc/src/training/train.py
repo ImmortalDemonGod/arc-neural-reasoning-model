@@ -283,12 +283,12 @@ def main(args):
                 n_embd=args.n_embd,
                 n_head=args.n_head,
                 n_layer=args.n_layer,
+                dropout=args.dropout,
                 mamba_ratio=args.mamba_ratio,
                 d_state=args.d_state,
                 d_conv=args.d_conv,
-                dropout=args.dropout,
                 mamba_depth=args.mamba_depth,
-                mamba_expand=args.mamba_expand
+                mamba_expand=args.mamba_expand,
             )
             training_config = TrainingConfig(
                 batch_size=args.batch_size,
@@ -635,7 +635,27 @@ if __name__ == "__main__":
         default=None,
         help="Number of worker threads for DataLoader. If not set, uses configuration default (total CPU count)."
     )
-    parser.add_argument("--n_embd", type=int, default=4, help="Embedding dimension for profiling")
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        help="Number of worker threads for DataLoader. Overrides config if set."
+    )
+    parser.add_argument(
+        "--prefetch_factor",
+        type=int,
+        default=2,
+        help="Number of batches to prefetch per worker."
+    )
+    parser.add_argument(
+        "--no_persistent_workers",
+        action="store_true",
+        help="Disable persistent workers in DataLoader."
+    )
+    parser.add_argument(
+        "--no_pin_memory",
+        action="store_true",
+        help="Disable pin_memory in DataLoader."
+    )
     parser.add_argument("--n_head", type=int, default=1, help="Number of attention heads for profiling")
     parser.add_argument("--n_layer", type=int, default=1, help="Number of transformer layers for profiling")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for profiling")

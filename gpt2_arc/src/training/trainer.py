@@ -37,7 +37,6 @@ class NanLossPruningCallback(Callback):
 class ARCTrainer(pl.LightningModule):
     def __init__(self, model, train_dataset, val_dataset, config: Config, args, results_collector=None, test_dataset=None):
         logger.debug("Initializing ARCTrainer")
-        self.args = args
         super().__init__()
         self.model = model
         self.train_dataset = train_dataset
@@ -71,11 +70,12 @@ class ARCTrainer(pl.LightningModule):
                 train_loader = DataLoader(
                     self.train_dataset,
                     batch_size=self.config.training.batch_size,
-                    num_workers=get_num_workers(self.config.training, self.args.num_workers),
-                    shuffle=True,  # Enable shuffle
-                    pin_memory=True if self.args.use_gpu else False,
+                    num_workers=get_num_workers(self.config.training),
+                    shuffle=True,
+                    pin_memory=self.config.training.pin_memory,
                     prefetch_factor=self.config.training.prefetch_factor,
-                    persistent_workers=self.config.training.persistent_workers
+                    persistent_workers=self.config.training.persistent_workers,
+                    collate_fn=self.train_dataset.collate_fn
                 )
             elif self.config.training.balancing_method == "oversampling":
                 # Placeholder for oversampling implementation
@@ -121,10 +121,11 @@ class ARCTrainer(pl.LightningModule):
         dataloader = DataLoader(
             self.val_dataset,
             batch_size=self.config.training.batch_size,
-            num_workers=get_num_workers(self.config.training, self.args.num_workers),
-            pin_memory=self.config.training.pin_memory if self.args.use_gpu else False,
+            num_workers=get_num_workers(self.config.training),
+            pin_memory=self.config.training.pin_memory,
             prefetch_factor=self.config.training.prefetch_factor,
-            persistent_workers=self.config.training.persistent_workers
+            persistent_workers=self.config.training.persistent_workers,
+            collate_fn=self.val_dataset.collate_fn
         )
         logger.debug("Exiting ARCTrainer.test_dataloader")
         return dataloader
@@ -138,7 +139,7 @@ class ARCTrainer(pl.LightningModule):
             batch_size=self.config.training.batch_size,
             num_workers=get_num_workers(self.config.training, self.args.num_workers),
             shuffle=False,
-            pin_memory=self.config.training.pin_memory if self.args.use_gpu else False,
+            pin_memory=self.config.training.pin_memory,
             prefetch_factor=self.config.training.prefetch_factor,
             persistent_workers=self.config.training.persistent_workers
         )

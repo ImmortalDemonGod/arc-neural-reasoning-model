@@ -37,7 +37,7 @@ class TrainingConfig:
     max_epochs: int = 10
     num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
     num_symbols: int = 11  # Ensure num_symbols is set to 11
-    num_workers: int = field(default_factory=lambda: multiprocessing.cpu_count() if multiprocessing.cpu_count() else 1, metadata={"description": "Number of worker threads for DataLoader."})
+    num_workers: int = field(default_factory=lambda: multiprocessing.cpu_count())
     symbol_freq: Optional[Dict[int, float]] = None
     prefetch_factor: int = 2
     persistent_workers: bool = True
