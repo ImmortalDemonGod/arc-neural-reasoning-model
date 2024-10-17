@@ -290,6 +290,16 @@ class ARCTrainer(pl.LightningModule):
                 
                 self.log(f"{task_id}_test_accuracy", task_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
                 self.log(f"{task_id}_test_diff_accuracy", task_diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+                
+                # Add the following lines to send per-task metrics to ResultsCollector
+                self.results_collector.add_task_specific_result(
+                    task_id, 
+                    {
+                        "test_accuracy": task_accuracy.item(),
+                        "test_diff_accuracy": task_diff_accuracy.item()
+                    }
+                )
+                logger.debug(f"DEBUG: Added per-task metrics for {task_id} to ResultsCollector.")
 
         try:
             self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)
@@ -311,8 +321,6 @@ class ARCTrainer(pl.LightningModule):
         total_loss = torch.stack([torch.tensor(x['test_loss']) for x in self.test_outputs]).mean()
         all_accuracies = []
         all_diff_accuracies = []
-        per_task_accuracy = {}
-        per_task_diff_accuracy = {}
 
         for output in self.test_outputs:
             if 'test_accuracy' in output:
@@ -345,11 +353,14 @@ class ARCTrainer(pl.LightningModule):
             "final_test_diff_accuracy": avg_diff_accuracy
         }
 
-        # Include per-task metrics
-        final_metrics.update(per_task_accuracy)
-        final_metrics.update(per_task_diff_accuracy)
+        # Retrieve per-task metrics from ResultsCollector and include them in final_metrics
+        for task_id, metrics in self.results_collector.task_specific_results.items():
+            final_metrics.update({
+                f"{task_id}_test_accuracy": metrics.get("test_accuracy", 0.0),
+                f"{task_id}_test_diff_accuracy": metrics.get("test_diff_accuracy", 0.0)
+            })
 
-        # Update the ResultsCollector with final metrics
+        logger.debug(f"DEBUG: Final metrics including per-task metrics: {final_metrics}")
         self.results_collector.set_final_metrics(final_metrics)
 
     def compute_accuracy(self, outputs, targets):
