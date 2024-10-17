@@ -70,12 +70,11 @@ class ARCTrainer(pl.LightningModule):
                 train_loader = DataLoader(
                     self.train_dataset,
                     batch_size=self.config.training.batch_size,
-                    num_workers=get_num_workers(self.config.training),
+                    num_workers=get_num_workers(self.config.training, self.args.num_workers),
                     shuffle=True,
-                    pin_memory=self.config.training.pin_memory,
+                    pin_memory=True if self.args.use_gpu else False,
                     prefetch_factor=self.config.training.prefetch_factor,
-                    persistent_workers=self.config.training.persistent_workers,
-                    collate_fn=self.train_dataset.collate_fn
+                    persistent_workers=self.config.training.persistent_workers
                 )
             elif self.config.training.balancing_method == "oversampling":
                 # Placeholder for oversampling implementation

@@ -39,8 +39,9 @@ class TrainingConfig:
     num_symbols: int = 11  # Ensure num_symbols is set to 11
     num_workers: int = field(default_factory=lambda: multiprocessing.cpu_count())
     symbol_freq: Optional[Dict[int, float]] = None
+    pin_memory: bool = False
     prefetch_factor: int = 2
-    persistent_workers: bool = True
+    persistent_workers: bool = False
     use_gpu: bool = True
     log_level: str = "INFO"
     use_synthetic_data: bool = False

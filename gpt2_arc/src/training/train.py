@@ -202,7 +202,12 @@ def load_and_split_synthetic_data(args, config):
 
 
 def main(args):
-    # Set float32 matrix multiplication precision
+    if args.use_synthetic_data and not args.synthetic_data_path:
+        raise ValueError("--synthetic_data_path must be provided when using synthetic data.")
+
+    total_split = args.train_split + args.val_split + args.test_split
+    if not abs(total_split - 1.0) < 1e-6:
+        raise ValueError("Train, validation, and test splits must sum to 1.0")
     torch.set_float32_matmul_precision(args.matmul_precision)
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
     logger.debug(f"Command line arguments: {args}")
@@ -264,6 +269,10 @@ def main(args):
                 prefetch_factor=args.prefetch_factor,
                 persistent_workers=not args.no_persistent_workers,
                 pin_memory=not args.no_pin_memory,
+                pin_memory=args.use_gpu,
+                prefetch_factor=2,
+                persistent_workers=True,
+                num_workers=args.num_workers if args.num_workers is not None else multiprocessing.cpu_count(),
             )
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
@@ -323,11 +332,15 @@ def main(args):
         else:
             all_synthetic_data = None
 
-        # Load datasets
-        logger.info("Loading datasets")
-        train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
-        val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
-        test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
+        try:
+            # Load datasets
+            logger.info("Loading datasets")
+            train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
+            val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
+            test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
+        except Exception as e:
+            logger.error(f"Error loading datasets: {str(e)}")
+            raise  # Re-raise the exception after logging
 
         if args.enable_symbol_freq:
             logger.debug("Calculating symbol frequencies as it is enabled.")
