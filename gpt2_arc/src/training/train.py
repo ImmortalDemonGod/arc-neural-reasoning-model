@@ -355,66 +355,6 @@ def main(args):
         logger.info(f"Number of classes set to: {num_classes}")
         logger.info("Creating DataLoader instances")
         logger.debug(f"Validation DataLoader created with num_workers={get_num_workers(config.training, args.num_workers)}")
-        # Create DataLoader instances with centralized num_workers
-        logger.info("Creating training DataLoader with centralized num_workers")
-        if config.training.balance_symbols:
-            if config.training.balancing_method == "weighting":
-                # Compute class weights (inverse of frequencies)
-                class_weights = 1.0 / torch.tensor(train_symbol_freq, dtype=torch.float)
-                # Removed WeightedRandomSampler as it is not appropriate for multi-class samples
-                train_loader = DataLoader(
-                    train_data,
-                    batch_size=config.training.batch_size,
-                    num_workers=get_num_workers(),
-                    shuffle=True,  # Enable shuffle
-                    pin_memory=True if args.use_gpu else False,
-                    prefetch_factor=config.training.prefetch_factor,
-                    persistent_workers=config.training.persistent_workers
-                )
-                logger.debug("Class weights applied in loss function. WeightedRandomSampler removed.")
-            elif config.training.balancing_method == "oversampling":
-                # Placeholder for oversampling implementation
-                logger.info("Oversampling method selected, but not yet implemented.")
-                # Implement oversampling logic here if desired
-                train_loader = DataLoader(
-                    train_data,
-                    batch_size=config.training.batch_size,
-                    num_workers=get_num_workers(),
-                    shuffle=True,  # Enable shuffle if not using a sampler
-                    pin_memory=True if args.use_gpu else False,
-                    prefetch_factor=config.training.prefetch_factor,
-                    persistent_workers=config.training.persistent_workers
-                )
-            else:
-                logger.warning(f"Unknown balancing method: {config.training.balancing_method}. Skipping balancing.")
-                train_loader = DataLoader(
-                    train_data,
-                    batch_size=config.training.batch_size,
-                    num_workers=get_num_workers(),
-                    shuffle=True,  # Enable shuffle
-                    pin_memory=True if args.use_gpu else False,
-                    prefetch_factor=config.training.prefetch_factor,
-                    persistent_workers=config.training.persistent_workers
-                )
-        else:
-            train_loader = DataLoader(
-                train_data,
-                batch_size=config.training.batch_size,
-                num_workers=get_num_workers(config.training, args.num_workers),
-                shuffle=True,  # Enable shuffle
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers
-            )
-        val_loader = DataLoader(
-            val_data,
-            batch_size=config.training.batch_size,
-            num_workers=get_num_workers(config.training, args.num_workers),
-            pin_memory=config.training.pin_memory if args.use_gpu else False,
-            prefetch_factor=config.training.prefetch_factor,
-            persistent_workers=config.training.persistent_workers
-        )
-        logger.debug(f"Training DataLoader created with num_workers={get_num_workers(config.training, args.num_workers)}")
 
         # Initialize model
         logger.info("Initializing model")
@@ -556,7 +496,7 @@ def main(args):
 
         # Train the model
         logger.info("Starting model training")
-        pl_trainer.fit(trainer, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        pl_trainer.fit(trainer)
 
         # Log memory usage after training
         if args.use_gpu and torch.cuda.is_available():
