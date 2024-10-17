@@ -152,7 +152,7 @@ def load_and_split_synthetic_data(args):
     """
     logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
     # Implement the actual loading logic
-    all_data = []  # Placeholder for synthetic data loading logic
+    all_data = load_synthetic_data(args.synthetic_data_path)                                                   # Placeholder for synthetic data loading logic
     total_samples = len(all_data)
     train_end = int(args.train_split * total_samples)
     val_end = train_end + int(args.val_split * total_samples)
