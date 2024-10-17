@@ -322,6 +322,9 @@ class ARCTrainer(pl.LightningModule):
         all_accuracies = []
         all_diff_accuracies = []
 
+        per_task_accuracy = {}
+        per_task_diff_accuracy = {}
+
         for output in self.test_outputs:
             if 'test_accuracy' in output:
                 all_accuracies.append(output['test_accuracy'])
