@@ -141,7 +141,7 @@ class ResultsCollector:
             "config": self._serialize_config(self.config),
             "tensorboard_log_path": self.tensorboard_log_path
         }
-        print(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
+        logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
     def _make_serializable(self, obj):
