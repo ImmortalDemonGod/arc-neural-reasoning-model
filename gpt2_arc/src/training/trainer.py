@@ -53,6 +53,7 @@ class ARCTrainer(pl.LightningModule):
         self.best_epoch = 0
         self.results_collector = results_collector if results_collector else ResultsCollector(config)
         self.writer = SummaryWriter(f"runs/experiment_{self.results_collector.experiment_id}")
+        self.args = args  # Add this line to assign args
     
     
     def train_dataloader(self):
@@ -96,7 +97,7 @@ class ARCTrainer(pl.LightningModule):
                 train_loader = DataLoader(
                     self.train_dataset,
                     batch_size=self.config.training.batch_size,
-                    num_workers=get_num_workers(self.config.training, self.args.num_workers),
+                    num_workers=get_num_workers(self.config.training),
                     shuffle=True,  # Enable shuffle
                     pin_memory=True if self.args.use_gpu else False,
                     prefetch_factor=self.config.training.prefetch_factor,
@@ -114,11 +115,11 @@ class ARCTrainer(pl.LightningModule):
                 collate_fn=self.train_dataset.collate_fn  # Change this line
             )
 
-        logger.debug(f"Training DataLoader created with num_workers={get_num_workers(self.config.training, self.args.num_workers)}")
+        logger.debug(f"Training DataLoader created with num_workers={get_num_workers(self.config.training)}")
         return train_loader
 
     def val_dataloader(self):
-        logger.debug("Entering ARCTrainer.test_dataloader")
+        logger.debug("Entering ARCTrainer.val_dataloader")
         dataloader = DataLoader(
             self.val_dataset,
             batch_size=self.config.training.batch_size,
@@ -128,7 +129,7 @@ class ARCTrainer(pl.LightningModule):
             persistent_workers=self.config.training.persistent_workers,
             collate_fn=self.val_dataset.collate_fn
         )
-        logger.debug("Exiting ARCTrainer.test_dataloader")
+        logger.debug("Exiting ARCTrainer.val_dataloader")
         return dataloader
 
     def test_dataloader(self):
