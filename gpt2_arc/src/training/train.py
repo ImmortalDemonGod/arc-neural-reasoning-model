@@ -407,7 +407,7 @@ def main(args):
         test_loader = DataLoader(
             test_data,
             batch_size=config.training.batch_size,
-            num_workers=get_num_workers(config.training, args.num_workers),
+            num_workers=get_num_workers(config.training),
             shuffle=False,
             pin_memory=config.training.pin_memory if args.use_gpu else False,
             prefetch_factor=config.training.prefetch_factor,
