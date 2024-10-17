@@ -161,7 +161,7 @@ def main(args):
     config.training.symbol_freq = symbol_freq
 
     # Initialize the model with the complete Config object and symbol frequencies
-    model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq, pad_symbol_idx=config.training.pad_symbol_idx)
+    model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq)
     try:
         # Remove the "model." prefix from state dict keys
         state_dict = {k.replace('model.', ''): v for k, v in checkpoint['state_dict'].items()}
