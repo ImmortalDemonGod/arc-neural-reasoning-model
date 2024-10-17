@@ -293,7 +293,7 @@ class ARCTrainer(pl.LightningModule):
                     task_id, 
                     {
                         "test_accuracy": task_accuracy.item(),
-                        "test_diff_accuracy": task_diff_accuracy if isinstance(task_diff_accuracy, float) else task_diff_accuracy.item()
+                        "test_diff_accuracy": task_diff_accuracy
                     }
                 )
                 logger.debug(f"DEBUG: Added per-task metrics for {task_id} to ResultsCollector.")
