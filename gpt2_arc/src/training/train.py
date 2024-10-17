@@ -121,14 +121,14 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         logger.info(f"Using synthetic {dataset_type} dataset with {len(dataset)} samples")
     else:
         logger.info(f"Loading ARC {dataset_type} dataset")
-        train_set, eval_set, test_set = arckit.load_data()
+        train_set, eval_set = arckit.load_data()
 
         if dataset_type == 'train':
             data_source = train_set
         elif dataset_type == 'val':
             data_source = eval_set
         elif dataset_type == 'test':
-            data_source = test_set
+            raise ValueError("test_set is not available. Please update arckit.load_data() to return test_set.")
         else:
             raise ValueError(f"Unknown dataset_type: {dataset_type}")
 
