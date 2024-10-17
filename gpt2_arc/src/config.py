@@ -9,9 +9,9 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logs
 
 @dataclass
 class ModelConfig:
-    n_embd: int = 768
-    n_head: int = 12
-    n_layer: int = 12
+    n_embd: int = 256          # Reduced from 768 to 256
+    n_head: int = 2            # Increased from 1 to 2
+    n_layer: int = 2           # Increased from 12 to 2
     num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
     dropout: float = 0.1
     mamba_ratio: float = 0.0
@@ -32,16 +32,16 @@ class ModelConfig:
 
 @dataclass
 class TrainingConfig:
-    batch_size: int = 32
-    learning_rate: float = 1e-4
-    max_epochs: int = 10
+    batch_size: int = 16             # Reduced from 32 to 16
+    learning_rate: float = 1e-4      # Keep as is or adjust if necessary
+    max_epochs: int = 1              # Already set for fast dev run
     num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
     num_symbols: int = 11  # Ensure num_symbols is set to 11
-    num_workers: int = field(default_factory=lambda: multiprocessing.cpu_count())
+    num_workers: int = 1             # Reduced from multiprocessing.cpu_count() to 1
     symbol_freq: Optional[Dict[int, float]] = None
-    pin_memory: bool = False
-    prefetch_factor: int = 2
-    persistent_workers: bool = False
+    pin_memory: bool = False         # Disable if not using GPU
+    prefetch_factor: int = 1         # Reduced from 2 to 1
+    persistent_workers: bool = False # Ensure workers do not stay alive
     use_gpu: bool = True
     log_level: str = "INFO"
     use_synthetic_data: bool = False
