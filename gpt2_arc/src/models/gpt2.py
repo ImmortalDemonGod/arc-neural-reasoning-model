@@ -127,6 +127,8 @@ class MambaLayer(nn.Module):
             logger.debug(f"MambaLayer output shape: {output.shape}")
         return output
 
+from torch.utils.data import DataLoader
+from src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.config import Config
 
 class GPT2ARC(pl.LightningModule):
@@ -263,6 +265,26 @@ class GPT2ARC(pl.LightningModule):
         self.log('train_acc_with_pad', acc_with_pad, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log('train_acc_without_pad', acc_without_pad, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
+
+    def test_dataloader(self):
+        # Initialize the test dataset
+        test_dataset = ARCDataset(
+            data_source=self.config.test_data_path,  # Ensure this path is correctly set in your configuration
+            is_test=True,
+            num_symbols=self.config.training.num_symbols,
+            pad_symbol_idx=self.config.training.pad_symbol_idx,
+            symbol_freq=self.config.training.symbol_freq,
+            debug=self.config.debug
+        )
+        
+        # Create and return the DataLoader
+        return DataLoader(
+            test_dataset,
+            batch_size=self.config.training.batch_size,
+            num_workers=self.config.training.num_workers,
+            shuffle=False,  # Typically, shuffling is not needed for test data
+            pin_memory=self.config.training.use_gpu  # Optimize memory usage based on GPU availability
+        )
 
     def validation_step(self, batch, batch_idx):
         inputs, targets, _ = batch
