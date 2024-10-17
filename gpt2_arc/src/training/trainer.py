@@ -13,7 +13,7 @@ from ..utils.results_collector import ResultsCollector
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from pytorch_lightning.loggers import TensorBoardLogger
-from gpt2_arc.src.training.train import get_num_workers
+from gpt2_arc.src.utils.training_helpers import get_num_workers
 import os
 from optuna.exceptions import TrialPruned
 from pytorch_lightning.callbacks import Callback
