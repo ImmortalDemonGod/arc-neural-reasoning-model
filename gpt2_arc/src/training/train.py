@@ -38,11 +38,11 @@ from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 from gpt2_arc.src.utils import GrokfastCallback
 
-def get_num_workers():
-    try:
-        return multiprocessing.cpu_count() // 2  # Use half of the available CPUs
-    except NotImplementedError:
-        return 4  # Default fallback
+def get_num_workers(config: TrainingConfig, args_num_workers: Optional[int] = None) -> int:
+    """Determine the number of DataLoader workers, allowing for command-line overrides."""
+    if args_num_workers is not None:
+        return args_num_workers
+    return config.num_workers
 logger = logging.getLogger(__name__)
 
 class ConfigSavingModelCheckpoint(ModelCheckpoint):
@@ -407,8 +407,8 @@ def main(args):
         val_loader = DataLoader(
             val_data,
             batch_size=config.training.batch_size,
-            num_workers=get_num_workers(),
-            pin_memory=True if args.use_gpu else False,
+            num_workers=get_num_workers(config.training, args.num_workers),
+            pin_memory=config.training.pin_memory if args.use_gpu else False,
             prefetch_factor=config.training.prefetch_factor,
             persistent_workers=config.training.persistent_workers
         )
@@ -646,6 +646,12 @@ if __name__ == "__main__":
         help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
     )
     parser.add_argument("--optuna_storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=None,
+        help="Number of worker threads for DataLoader. If not set, uses configuration default."
+    )
     parser.add_argument("--n_embd", type=int, default=4, help="Embedding dimension for profiling")
     parser.add_argument("--n_head", type=int, default=1, help="Number of attention heads for profiling")
     parser.add_argument("--n_layer", type=int, default=1, help="Number of transformer layers for profiling")
