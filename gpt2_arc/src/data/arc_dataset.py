@@ -399,10 +399,10 @@ class ARCDataset(Dataset):
         return self.num_samples
     def __getitem__(self, idx):
         sample = self.data[idx]
+        task_id = sample["task_id"]
         assert task_id != "default_task", f"Sample at index {idx} has 'default_task' as task_id."
         input_tensor = sample["input"]  # Already padded
         output_tensor = sample["output"]  # Already padded
-        task_id = sample["task_id"]
         if idx < 5:  # Log only the first 5 samples to avoid clutter
             logger.debug(f"Sample {idx} - Task ID: {task_id}")
         return input_tensor, output_tensor, task_id
