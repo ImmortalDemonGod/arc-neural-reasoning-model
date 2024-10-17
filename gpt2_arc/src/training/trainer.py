@@ -262,10 +262,10 @@ class ARCTrainer(pl.LightningModule):
         diff_accuracy = self.compute_diff_accuracy(inputs, outputs, model_outputs)
 
         # Append batch metrics
-        accuracies.append(accuracy.item())
+        accuracies.append(accuracy)
         diff_accuracies.append(diff_accuracy)
 
-        logger.debug(f"DEBUG: Batch accuracy: {accuracy.item()}, Batch diff_accuracy: {diff_accuracy}")
+        logger.debug(f"DEBUG: Batch accuracy: {accuracy}, Batch diff_accuracy: {diff_accuracy}")
 
         result = {
             'test_loss': loss.item(),
@@ -282,7 +282,7 @@ class ARCTrainer(pl.LightningModule):
                 # Create a mask for the current task_id
                 mask = [tid == task_id for tid in task_ids]  # Create mask as list of booleans
                 mask = torch.tensor(mask, dtype=torch.bool, device=outputs.device)  # Convert to tensor
-                task_accuracy = self.compute_accuracy(model_outputs[mask], outputs[mask]).item()
+                task_accuracy = self.compute_accuracy(model_outputs[mask], outputs[mask])
                 task_diff_accuracy = self.compute_diff_accuracy(inputs[mask], outputs[mask], model_outputs[mask])
                 
                 result[f"{task_id}_test_accuracy"] = task_accuracy
