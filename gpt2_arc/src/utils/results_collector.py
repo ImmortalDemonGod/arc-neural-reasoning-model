@@ -17,7 +17,7 @@ class ResultsCollector:
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         self.config = asdict(config)
-        self.symbol_freq = self.config.get('training', {}).get('symbol_freq', {})
+        self.symbol_freq = self.config['training'].get('symbol_freq', {})
         logger.debug(f"Symbol frequencies set in ResultsCollector: {self.symbol_freq}")
         self.results = {
             "train": [],
@@ -26,7 +26,7 @@ class ResultsCollector:
         }
         self.metrics = {}
         self.task_specific_results = {}
-        self.tensorboard_log_path = getattr(config.training, 'tensorboard_log_path', None)
+        self.tensorboard_log_path = config.training.tensorboard_log_path
         self.used_synthetic_data = config.training.use_synthetic_data
         print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
         self._log_results_type("After initialization")
