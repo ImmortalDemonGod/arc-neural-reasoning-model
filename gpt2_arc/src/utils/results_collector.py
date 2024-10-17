@@ -24,6 +24,8 @@ class ResultsCollector:
             "validation": [],
             "test": {}
         }
+        self.metrics = {}
+        self.task_specific_results = {}
         self.tensorboard_log_path = config.get('tensorboard_log_path', None)
         self.used_synthetic_data = config.training.use_synthetic_data
         print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
