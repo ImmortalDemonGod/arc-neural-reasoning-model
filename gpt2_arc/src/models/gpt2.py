@@ -225,7 +225,10 @@ class GPT2ARC(pl.LightningModule):
                 logger.debug("Excluding padding class from loss calculation without class weights.")
         
         # Ensure loss_fn is part of the model's state_dict
-        self.register_buffer('loss_fn_weight', self.loss_fn.weight if hasattr(self.loss_fn, 'weight') else None)
+        if hasattr(self.loss_fn, 'weight') and self.loss_fn.weight is not None:
+            self.register_buffer('loss_fn_weight', self.loss_fn.weight)
+        else:
+            self.register_buffer('loss_fn_weight', torch.ones(num_classes))
 
         # Initialize weights
         self.apply(self._init_weights)
