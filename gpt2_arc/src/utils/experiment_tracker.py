@@ -1,4 +1,5 @@
 # gpt2_arc/src/utils/experiment_tracker.py
+import logging
 import wandb
 import json
 import time
@@ -18,6 +19,7 @@ class ExperimentTracker:
         self.entity = entity
         self.run = None
         self.use_wandb = use_wandb
+        self.logger = logging.getLogger(__name__)
         self.metrics = {}
         if self.use_wandb:
             try:
@@ -115,7 +117,7 @@ class ExperimentTracker:
         if task_id not in self.task_specific_results:
             self.task_specific_results[task_id] = {}
         self.task_specific_results[task_id].update(metrics)
-        logger.debug(f"Added task-specific result for task_id {task_id}: {metrics}")
+        self.logger.debug(f"Added task-specific result for task_id {task_id}: {metrics}")
         if self.use_wandb:
             wandb.log({f"task_{task_id}": metrics})
 
@@ -171,7 +173,7 @@ class ExperimentTracker:
             "config": self._serialize_config(self.config),
             "tensorboard_log_path": self.tensorboard_log_path
         }
-        logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
+        self.logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
     def _make_serializable(self, obj):
