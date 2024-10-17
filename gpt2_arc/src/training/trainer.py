@@ -241,6 +241,7 @@ class ARCTrainer(pl.LightningModule):
             inputs, outputs, task_ids = batch
         elif len(batch) == 2:
             inputs, outputs = batch
+            logger.error("Batch does not contain 'task_ids'. Ensure the dataset provides 'task_ids'.")
             raise ValueError("Batch does not contain 'task_ids'. Ensure the dataset provides 'task_ids'.")
         else:
             raise ValueError(f"Unexpected batch format with length {len(batch)}")
@@ -279,27 +280,9 @@ class ARCTrainer(pl.LightningModule):
         if task_ids is not None:
             # Aggregate task-specific metrics across the batch
             for task_id in set(task_ids):  # Remove .tolist()
-                # Create a mask for the current task_id
-                mask = [tid == task_id for tid in task_ids]  # Create mask as list of booleans
-                mask = torch.tensor(mask, dtype=torch.bool, device=outputs.device)  # Convert to tensor
-                task_accuracy = self.compute_accuracy(model_outputs[mask], outputs[mask])
-                task_diff_accuracy = self.compute_diff_accuracy(inputs[mask], outputs[mask], model_outputs[mask])
-                
-                result[f"{task_id}_test_accuracy"] = task_accuracy
-                result[f"{task_id}_test_diff_accuracy"] = task_diff_accuracy
-                
-                self.log(f"{task_id}_test_accuracy", task_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-                self.log(f"{task_id}_test_diff_accuracy", task_diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-                
-                # Add the following lines to send per-task metrics to ResultsCollector
-                self.results_collector.add_task_specific_result(
-                    task_id, 
-                    {
-                        "test_accuracy": task_accuracy.item(),
-                        "test_diff_accuracy": task_diff_accuracy
-                    }
-                )
-                logger.debug(f"DEBUG: Added per-task metrics for {task_id} to ResultsCollector.")
+                if task_id == "default_task":
+                    logger.error(f"'default_task' detected in task_id: {task_id}")
+                    raise ValueError(f"'default_task' detected in task_id: {task_id}")
 
         try:
             self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)

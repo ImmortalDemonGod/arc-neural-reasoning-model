@@ -25,7 +25,13 @@ except ImportError:
     TaskSet = None
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)  # Set to ERROR by default
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False") == "True"
+if DEBUG_MODE:
+    logger.setLevel(logging.DEBUG)
+    handler.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
+    handler.setLevel(logging.INFO)
 
 # Create a handler that writes to stderr
 handler = logging.StreamHandler()
@@ -173,7 +179,8 @@ class ARCDataset(Dataset):
                     item = underlying_dataset[idx]
                     input_tensor = self._preprocess_grid(item[0])
                     output_tensor = self._preprocess_grid(item[1])
-                    task_id = item[2] if len(item) > 2 else "unknown_task"
+                    task_id = item[2] if len(item) > 2 else None
+                    assert task_id is not None, "Task ID must be provided for each sample."
                     samples.append({
                         "input": input_tensor,
                         "output": output_tensor,
@@ -391,7 +398,7 @@ class ARCDataset(Dataset):
         return self.num_samples
     def __getitem__(self, idx):
         sample = self.data[idx]
-        # Since all samples are already padded to 30x30 during preprocessing, no additional padding is required here.
+        assert task_id != "default_task", f"Sample at index {idx} has 'default_task' as task_id."
         input_tensor = sample["input"]  # Already padded
         output_tensor = sample["output"]  # Already padded
         task_id = sample["task_id"]
@@ -476,9 +483,8 @@ class ARCDataset(Dataset):
                 output_grid = self._preprocess_grid(example['output'])
 
                 # Extract task_id from the example data
-                task_id_sample = example.get('task_id')
-                if not task_id_sample:
-                    raise ValueError(f"Sample at index {idx} is missing 'task_id'.")
+                task_id_sample = example['task_id']
+                assert task_id_sample is not None, f"Sample at index {idx} is missing 'task_id'."
                 processed_data.append({
                     "input": input_grid,
                     "output": output_grid,

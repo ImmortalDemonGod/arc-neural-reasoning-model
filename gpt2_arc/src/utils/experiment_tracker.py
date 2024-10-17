@@ -190,16 +190,9 @@ class ExperimentTracker:
         return {k: self._make_serializable(v) for k, v in config.items()}
 
     def log_metric(self, name: str, value: float, step: Optional[int] = None):
-        if self.use_wandb:
-            try:
-                wandb.log({name: value}, step=step)
-                print(f"Logged metric to wandb: {name}={value}, step={step}")
-            except Exception as e:
-                print(f"Error logging metric to wandb: {str(e)}")
-        
-        # Always log locally as a fallback
-        self.metrics[name] = value
-        print(f"Logged metric locally: {name}={value}, step={step}")
+        if name.startswith("default_task_"):
+            logger.error("Attempted to log metric under 'default_task'. This should be avoided.")
+            raise ValueError("Cannot log metrics under 'default_task'. Ensure that task_id is correctly assigned.")
 
 # Add a simple test
 if __name__ == "__main__":

@@ -77,10 +77,9 @@ class ResultsCollector:
         
     def add_task_specific_result(self, task_id: str, metrics: Dict[str, float]):
         """Add task-specific results for a given task ID."""
-        if task_id not in self.task_specific_results:
-            self.task_specific_results[task_id] = {}
-        self.task_specific_results[task_id].update(metrics)
-        logger.debug(f"Added task-specific result for task_id {task_id}: {metrics}")
+        if task_id == "default_task":
+            logger.error("Attempted to add metrics for 'default_task'. This should be avoided.")
+            raise ValueError("Cannot add metrics for 'default_task'. Ensure that task_id is correctly assigned.")
 
     def set_final_metrics(self, metrics: Dict[str, float]):
         """Set the final metrics after training."""

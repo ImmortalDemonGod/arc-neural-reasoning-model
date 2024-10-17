@@ -47,7 +47,11 @@ def mock_taskset():
     mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
-def test_dataset_statistics_computation(sample_data):
+def test_no_default_task_id(sample_data):
+    dataset = ARCDataset(sample_data)
+    for idx in range(len(dataset)):
+        _, _, task_id = dataset[idx]
+        assert task_id != "default_task", f"Sample at index {idx} has 'default_task' as task_id."
     dataset = ARCDataset(sample_data, num_symbols=11, pad_symbol_idx=10, debug=True)
     
     # Retrieve statistics
