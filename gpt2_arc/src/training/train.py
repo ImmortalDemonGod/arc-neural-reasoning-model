@@ -333,7 +333,7 @@ def main(args):
 
         if args.use_synthetic_data:
             # Load and split synthetic data
-            all_synthetic_data = load_and_split_synthetic_data(args)
+            all_synthetic_data = load_and_split_synthetic_data(args, config)
         else:
             all_synthetic_data = None
 
