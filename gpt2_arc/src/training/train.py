@@ -589,8 +589,7 @@ def main(args):
             "best_val_loss": trainer.best_val_loss,
             "best_epoch": trainer.best_epoch,
             "final_test_loss": avg_test_loss,
-            "final_test_accuracy": avg_test_accuracy,
-            "final_test_diff_accuracy": avg_test_diff_accuracy
+            "final_test_accuracy": avg_test_accuracy
         })
 
         # Save the final model with configuration
