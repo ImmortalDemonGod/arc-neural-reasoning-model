@@ -484,8 +484,11 @@ class ARCDataset(Dataset):
                 output_grid = self._preprocess_grid(example['output'])
 
                 # Extract task_id from the example data
-                task_id_sample = example['task_id']
-                assert task_id_sample is not None, f"Sample at index {idx} is missing 'task_id'."
+                task_id_sample = example.get('task_id')
+
+                if not task_id_sample or task_id_sample == "default_task":
+                    task_id_sample = f"default_task_{idx}"
+                    logger.warning(f"Sample at index {idx} has invalid 'task_id'. Assigning new task_id: {task_id_sample}")
                 processed_data.append({
                     "input": input_grid,
                     "output": output_grid,
