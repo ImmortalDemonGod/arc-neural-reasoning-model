@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @pytest.fixture
 def model():
     config = ModelConfig()
-    return GPT2ARC(config, num_classes=11)
+    return GPT2ARC(config)
 
 
 def test_gpt2arc_initialization(model):
