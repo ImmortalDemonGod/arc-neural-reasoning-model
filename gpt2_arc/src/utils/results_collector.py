@@ -17,7 +17,7 @@ class ResultsCollector:
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         self.config = asdict(config)
-        self.symbol_freq = self.config['training'].get('symbol_freq', {})
+        self.symbol_freq = self.config['training']['symbol_freq'] if 'symbol_freq' in self.config['training'] else {}
         logger.debug(f"Symbol frequencies set in ResultsCollector: {self.symbol_freq}")
         self.results = {
             "train": [],
@@ -26,8 +26,8 @@ class ResultsCollector:
         }
         self.metrics = {}
         self.task_specific_results = {}
-        self.tensorboard_log_path = config.training.tensorboard_log_path
-        self.used_synthetic_data = config.training.use_synthetic_data
+        self.tensorboard_log_path = getattr(config.training, 'tensorboard_log_path', None)
+        self.used_synthetic_data = getattr(config.training, 'use_synthetic_data', False)
         print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
         self._log_results_type("After initialization")
         self.metrics = {}
@@ -137,8 +137,8 @@ class ResultsCollector:
             "test_acc_without_pad": self.results["test"].get("avg_acc_without_pad"),
             "best_val_loss": self.results.get("best_val_loss"),
             "best_val_epoch": self.results.get("best_val_epoch"),
-            "learning_rate": self.config.get("training", {}).get("learning_rate"),
-            "batch_size": self.config.get("training", {}).get("batch_size"),
+            "learning_rate": self.config['training']['learning_rate'],
+            "batch_size": self.config['training']['batch_size'],
             "training_duration": self.results.get("training_duration"),
             "config": self._serialize_config(self.config),
             "tensorboard_log_path": self.tensorboard_log_path
