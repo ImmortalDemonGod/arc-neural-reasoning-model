@@ -238,7 +238,7 @@ class ARCTrainer(pl.LightningModule):
             inputs, outputs, task_ids = batch
         elif len(batch) == 2:
             inputs, outputs = batch
-            task_ids = None  # Set to None or a default value
+            raise ValueError("Batch does not contain 'task_ids'. Ensure the dataset provides 'task_ids'.")
         else:
             raise ValueError(f"Unexpected batch format with length {len(batch)}")
         logger.debug(f"DEBUG: Task IDs in batch: {task_ids}")
