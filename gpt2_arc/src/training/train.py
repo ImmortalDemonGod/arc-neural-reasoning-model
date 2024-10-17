@@ -393,6 +393,7 @@ def main(args):
             train_dataset=train_data,
             val_dataset=val_data,
             config=config,
+            args=args,  # Add this line to pass args
             results_collector=results_collector  # Pass ResultsCollector to ARCTrainer
         )
         trainer.log_hyperparameters()

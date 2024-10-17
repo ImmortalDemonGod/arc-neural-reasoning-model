@@ -32,7 +32,8 @@ class NanLossPruningCallback(Callback):
 
 
 class ARCTrainer(pl.LightningModule):
-    def __init__(self, model, train_dataset, val_dataset, config: Config, results_collector=None):
+    def __init__(self, model, train_dataset, val_dataset, config: Config, args, results_collector=None):
+        self.args = args  # Add this line to store args
         super().__init__()
         self.model = model
         self.train_dataset = train_dataset
@@ -51,7 +52,65 @@ class ARCTrainer(pl.LightningModule):
     
     
     def train_dataloader(self):
-        return DataLoader(
+        logger.info("Creating training DataLoader with centralized num_workers")
+
+        if self.config.training.balance_symbols:
+            if self.config.training.balancing_method == "weighting":
+                # Compute class weights (inverse of frequencies)
+                class_weights = 1.0 / torch.tensor(
+                    list(self.config.training.symbol_freq.values()), dtype=torch.float
+                )
+                # Example: Integrate class weights into the loss function if applicable
+                self.model.loss_fn.weight = class_weights.to(self.device)
+                logger.debug("Class weights applied in loss function. WeightedRandomSampler removed.")
+
+                train_loader = DataLoader(
+                    self.train_dataset,
+                    batch_size=self.config.training.batch_size,
+                    num_workers=get_num_workers(self.config.training, self.args.num_workers),
+                    shuffle=True,  # Enable shuffle
+                    pin_memory=True if self.args.use_gpu else False,
+                    prefetch_factor=self.config.training.prefetch_factor,
+                    persistent_workers=self.config.training.persistent_workers
+                )
+            elif self.config.training.balancing_method == "oversampling":
+                # Placeholder for oversampling implementation
+                logger.info("Oversampling method selected, but not yet implemented.")
+
+                train_loader = DataLoader(
+                    self.train_dataset,
+                    batch_size=self.config.training.batch_size,
+                    num_workers=get_num_workers(self.config.training, self.args.num_workers),
+                    shuffle=True,  # Enable shuffle if not using a sampler
+                    pin_memory=True if self.args.use_gpu else False,
+                    prefetch_factor=self.config.training.prefetch_factor,
+                    persistent_workers=self.config.training.persistent_workers
+                )
+            else:
+                logger.warning(f"Unknown balancing method: {self.config.training.balancing_method}. Skipping balancing.")
+
+                train_loader = DataLoader(
+                    self.train_dataset,
+                    batch_size=self.config.training.batch_size,
+                    num_workers=get_num_workers(self.config.training, self.args.num_workers),
+                    shuffle=True,  # Enable shuffle
+                    pin_memory=True if self.args.use_gpu else False,
+                    prefetch_factor=self.config.training.prefetch_factor,
+                    persistent_workers=self.config.training.persistent_workers
+                )
+        else:
+            train_loader = DataLoader(
+                self.train_dataset,
+                batch_size=self.config.training.batch_size,
+                num_workers=get_num_workers(self.config.training, self.args.num_workers),
+                shuffle=True,  # Enable shuffle
+                pin_memory=self.config.training.pin_memory if self.args.use_gpu else False,
+                prefetch_factor=self.config.training.prefetch_factor,
+                persistent_workers=self.config.training.persistent_workers
+            )
+
+        logger.debug(f"Training DataLoader created with num_workers={get_num_workers(self.config.training, self.args.num_workers)}")
+        return train_loader
             self.train_dataset,
             batch_size=self.config.training.batch_size,
             num_workers=get_num_workers(self.config.training, self.args.num_workers),
