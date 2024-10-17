@@ -112,7 +112,7 @@ class ARCTrainer(pl.LightningModule):
                 pin_memory=self.config.training.pin_memory,
                 prefetch_factor=self.config.training.prefetch_factor,
                 persistent_workers=self.config.training.persistent_workers,
-                collate_fn=self.train_dataset.collate_fn  # Change this line
+                collate_fn=self.train_dataset.dataset.collate_fn  # Change this line
             )
 
         logger.debug(f"Training DataLoader created with num_workers={get_num_workers(self.config.training)}")
@@ -127,7 +127,7 @@ class ARCTrainer(pl.LightningModule):
             pin_memory=self.config.training.pin_memory,
             prefetch_factor=self.config.training.prefetch_factor,
             persistent_workers=self.config.training.persistent_workers,
-            collate_fn=self.val_dataset.collate_fn
+            collate_fn=self.val_dataset.dataset.collate_fn
         )
         logger.debug("Exiting ARCTrainer.val_dataloader")
         return dataloader
@@ -144,7 +144,7 @@ class ARCTrainer(pl.LightningModule):
             pin_memory=self.config.training.pin_memory,
             prefetch_factor=self.config.training.prefetch_factor,
             persistent_workers=self.config.training.persistent_workers,
-            collate_fn=self.test_dataset.collate_fn  # Add this line
+            collate_fn=self.test_dataset.dataset.collate_fn  # Add this line
         )
 
     
