@@ -133,6 +133,11 @@ class ResultsCollector:
             "test_loss": self.results["test"].get("avg_loss"),
             "test_acc_with_pad": self.results["test"].get("avg_acc_with_pad"),
             "test_acc_without_pad": self.results["test"].get("avg_acc_without_pad"),
+            "best_val_loss": self.results.get("best_val_loss"),
+            "best_val_epoch": self.results.get("best_val_epoch"),
+            "learning_rate": self.config.get("training", {}).get("learning_rate"),
+            "batch_size": self.config.get("training", {}).get("batch_size"),
+            "training_duration": self.results.get("training_duration"),
             "config": self._serialize_config(self.config),
             "tensorboard_log_path": self.tensorboard_log_path
         }
