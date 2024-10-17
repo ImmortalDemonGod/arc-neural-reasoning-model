@@ -83,12 +83,21 @@ def test_main_with_synthetic_data(synthetic_data, use_synthetic):
          patch("gpt2_arc.src.training.train.ARCDataset") as mock_dataset, \
          patch("gpt2_arc.src.training.train.GPT2ARC") as mock_model, \
          patch("gpt2_arc.src.training.train.ARCTrainer") as mock_arc_trainer:
+        
         # Ensure that any float comparisons are valid by setting return values
         mock_model.return_value.some_float_attribute = 0.5
+        
+        # Mock num_workers if it's accessed in the code
+        mock_arc_trainer.return_value.config = MagicMock()
+        mock_arc_trainer.return_value.config.training = MagicMock()
+        mock_arc_trainer.return_value.config.training.num_workers = 1  # Set to an integer
+
         print("DEBUG: Inside test_main_with_synthetic_data")
         print(f"DEBUG: mock_pl_trainer = {mock_pl_trainer}")
         print(f"DEBUG: mock_arc_trainer = {mock_arc_trainer}")
+
         main(args)
+
         mock_pl_trainer.assert_called_once()
 
 def test_synthetic_data_argument_parsing():
