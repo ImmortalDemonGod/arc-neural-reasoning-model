@@ -109,20 +109,20 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         args: Parsed command-line arguments.
         config: Configuration object containing model and training settings.
         dataset_type (str): Type of dataset to load ('train', 'val', 'test').
-        all_synthetic_data: Loaded synthetic data to be split (if using synthetic data).
+        all_synthetic_data: Loaded synthetic data splits (if using synthetic data).
 
     Returns:
-        ARCDataset: Loaded dataset.
+        Dataset: Loaded dataset (ARCDataset or Subset of ARCDataset).
     """
-    is_test = dataset_type == 'test'
     if args.use_synthetic_data:
         if all_synthetic_data is None:
             raise ValueError("Synthetic data not loaded")
-        data_source = all_synthetic_data[dataset_type]
-        logger.info(f"Loaded synthetic {dataset_type} data with {len(data_source)} samples")
+        dataset = all_synthetic_data[dataset_type]
+        logger.info(f"Using synthetic {dataset_type} dataset with {len(dataset)} samples")
     else:
         logger.info(f"Loading ARC {dataset_type} dataset")
         train_set, eval_set, test_set = arckit.load_data()
+
         if dataset_type == 'train':
             data_source = train_set
         elif dataset_type == 'val':
@@ -132,42 +132,71 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         else:
             raise ValueError(f"Unknown dataset_type: {dataset_type}")
 
-    return ARCDataset(
-        data_source=data_source,
-        is_test=is_test,
-        num_symbols=config.training.num_symbols,
-        pad_symbol_idx=config.training.pad_symbol_idx,
-        symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
-    )
+        dataset = ARCDataset(
+            data_source=data_source,
+            is_test=(dataset_type == 'test'),
+            num_symbols=config.training.num_symbols,
+            pad_symbol_idx=config.training.pad_symbol_idx,
+            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+        )
+    return dataset
 
-def load_and_split_synthetic_data(args):
+import random
+from torch.utils.data import Subset
+
+def load_and_split_synthetic_data(args, config):
     """
-    Load synthetic data and split it into train, val, and test sets.
+    Load synthetic data using ARCDataset and split it into train, val, and test sets.
 
     Args:
         args: Parsed command-line arguments.
+        config: Configuration object containing model and training settings.
 
     Returns:
         dict: A dictionary containing 'train', 'val', and 'test' datasets.
     """
     logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
-    # Implement the actual loading logic
-    all_data = load_synthetic_data(args.synthetic_data_path)                                                   # Placeholder for synthetic data loading logic
-    total_samples = len(all_data)
+    # Initialize ARCDataset with the synthetic data directory
+    synthetic_dataset = ARCDataset(
+        data_source=args.synthetic_data_path,
+        is_test=False,
+        num_symbols=config.training.num_symbols,
+        pad_symbol_idx=config.training.pad_symbol_idx,
+        symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+    )
+
+    total_samples = len(synthetic_dataset)
+    logger.info(f"Total synthetic samples loaded: {total_samples}")
+
+    # Shuffle the indices
+    indices = list(range(total_samples))
+    random.shuffle(indices)
+
+    # Calculate split indices
     train_end = int(args.train_split * total_samples)
     val_end = train_end + int(args.val_split * total_samples)
 
+    # Split the indices
+    train_indices = indices[:train_end]
+    val_indices = indices[train_end:val_end]
+    test_indices = indices[val_end:]
+
+    # Create Subsets of the synthetic dataset
+    train_dataset = Subset(synthetic_dataset, train_indices)
+    val_dataset = Subset(synthetic_dataset, val_indices)
+    test_dataset = Subset(synthetic_dataset, test_indices)
+
     data_splits = {
-        'train': all_data[:train_end],
-        'val': all_data[train_end:val_end],
-        'test': all_data[val_end:]
+        'train': train_dataset,
+        'val': val_dataset,
+        'test': test_dataset
     }
 
     logger.debug(
         f"Synthetic data split into "
-        f"{len(data_splits['train'])} training, "
-        f"{len(data_splits['val'])} validation, and "
-        f"{len(data_splits['test'])} test samples"
+        f"{len(train_dataset)} training, "
+        f"{len(val_dataset)} validation, and "
+        f"{len(test_dataset)} test samples"
     )
     return data_splits
 
@@ -506,26 +535,8 @@ def main(args):
 
         # Train the model
         logger.info("Starting model training")
-        train_loader = DataLoader(
-            train_data,
-            batch_size=config.training.batch_size,
-            num_workers=get_num_workers(config.training, args.num_workers),
-            shuffle=True,
-            pin_memory=config.training.pin_memory if args.use_gpu else False,
-            prefetch_factor=config.training.prefetch_factor,
-            persistent_workers=config.training.persistent_workers
-        )
-        val_loader = DataLoader(
-            val_data,
-            batch_size=config.training.batch_size,
-            num_workers=get_num_workers(config.training, args.num_workers),
-            pin_memory=config.training.pin_memory if args.use_gpu else False,
-            prefetch_factor=config.training.prefetch_factor,
-            persistent_workers=config.training.persistent_workers
-        )
-
         # Update the fit call to exclude DataLoaders
-        pl_trainer.fit(trainer, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        pl_trainer.fit(trainer)
 
         # Log memory usage after training
         if args.use_gpu and torch.cuda.is_available():
