@@ -232,12 +232,15 @@ class ARCTrainer(pl.LightningModule):
         accuracies = []
         diff_accuracies = []
         
-        for i in range(len(inputs)):
-            accuracy = self.compute_accuracy(model_outputs[i:i+1], outputs[i:i+1])
-            diff_accuracy = self.compute_diff_accuracy(inputs[i:i+1], outputs[i:i+1], model_outputs[i:i+1])
-            accuracies.append(accuracy.item())
-            diff_accuracies.append(diff_accuracy)
-            logger.debug(f"DEBUG: diff_accuracy type: {type(diff_accuracy)}, value: {diff_accuracy}")
+        # Compute batch-wise accuracy
+        accuracy = self.compute_accuracy(model_outputs, outputs)
+        diff_accuracy = self.compute_diff_accuracy(inputs, outputs, model_outputs)
+
+        # Append batch metrics
+        accuracies.append(accuracy.item())
+        diff_accuracies.append(diff_accuracy)
+
+        logger.debug(f"DEBUG: Batch accuracy: {accuracy.item()}, Batch diff_accuracy: {diff_accuracy}")
 
         result = {
             'test_loss': loss.item(),
@@ -247,13 +250,20 @@ class ARCTrainer(pl.LightningModule):
         }
         logger.debug(f"DEBUG: Test loss: {result['test_loss']}, Avg accuracy: {result['test_accuracy']}, Avg diff accuracy: {result['test_diff_accuracy']}")
 
-        # Log task-specific metrics
+        # Log task-specific metrics if task_ids are available
         if task_ids is not None:
-            for task_id, accuracy, diff_accuracy in zip(task_ids, accuracies, diff_accuracies):
-                result[f"{task_id}_test_accuracy"] = accuracy
-                result[f"{task_id}_test_diff_accuracy"] = diff_accuracy
-                self.log(f"{task_id}_test_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-                self.log(f"{task_id}_test_diff_accuracy", diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            # Aggregate task-specific metrics across the batch
+            for task_id in set(task_ids.tolist()):
+                # Create a mask for the current task_id
+                mask = (task_ids == task_id)
+                task_accuracy = self.compute_accuracy(model_outputs[mask], outputs[mask]).item()
+                task_diff_accuracy = self.compute_diff_accuracy(inputs[mask], outputs[mask], model_outputs[mask]).item()
+                
+                result[f"{task_id}_test_accuracy"] = task_accuracy
+                result[f"{task_id}_test_diff_accuracy"] = task_diff_accuracy
+                
+                self.log(f"{task_id}_test_accuracy", task_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+                self.log(f"{task_id}_test_diff_accuracy", task_diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
         try:
             self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)
