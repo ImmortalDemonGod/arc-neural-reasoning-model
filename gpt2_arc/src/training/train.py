@@ -126,18 +126,30 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         if dataset_type == 'train':
             data_source = train_set
         else:
-            # Calculate the number of validation and test samples
-            total_eval = len(eval_set)
-            val_size = int(total_eval * args.val_split / (args.val_split + args.test_split))
-            test_size = total_eval - val_size
+            # Extract samples from eval_set
+            samples = []
+            for task in eval_set.tasks:
+                # Combine train and test examples from each task
+                for ex in task.train:
+                    samples.append({'input': ex[0], 'output': ex[1], 'task_id': task.id})
+                for ex in task.test:
+                    samples.append({'input': ex[0], 'output': ex[1], 'task_id': task.id})
 
-            # Split eval_set into val_set and test_set
-            val_set, test_set = torch.utils.data.random_split(eval_set, [val_size, test_size])
+            total_samples = len(samples)
+            val_size = int(total_samples * args.val_split / (args.val_split + args.test_split))
+            test_size = total_samples - val_size
+
+            # Shuffle samples
+            random.shuffle(samples)
+
+            # Split samples into validation and test sets
+            val_samples = samples[:val_size]
+            test_samples = samples[val_size:]
 
             if dataset_type == 'val':
-                data_source = val_set
+                data_source = val_samples
             elif dataset_type == 'test':
-                data_source = test_set
+                data_source = test_samples
             else:
                 raise ValueError(f"Unknown dataset_type: {dataset_type}")
 
