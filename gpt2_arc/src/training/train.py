@@ -34,16 +34,13 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
+logger = logging.getLogger(__name__)
+logger.debug(f"Imported get_num_workers from training_helpers: {get_num_workers}")
 from gpt2_arc.src.training.trainer import ARCTrainer, get_num_workers
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 from gpt2_arc.src.utils import GrokfastCallback
 
-def get_num_workers(config: TrainingConfig, args_num_workers: Optional[int] = None) -> int:
-    """Determine the number of DataLoader workers, allowing for command-line overrides."""
-    if args_num_workers is not None:
-        return args_num_workers
-    return config.num_workers
 logger = logging.getLogger(__name__)
 
 class ConfigSavingModelCheckpoint(ModelCheckpoint):
