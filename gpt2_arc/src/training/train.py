@@ -443,8 +443,6 @@ def main(args):
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
 
-        # Initialize experiment tracker
-        tracker = ExperimentTracker(config, project=args.project)
 
         logger.debug("Initializing ARCTrainer")
         trainer = ARCTrainer(
