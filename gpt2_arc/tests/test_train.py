@@ -61,14 +61,14 @@ from src.config import Config, ModelConfig, TrainingConfig
 @pytest.fixture
 def model():
     config = Config(model=ModelConfig(), training=TrainingConfig())
-    return GPT2ARC(config.model, num_classes=config.model.num_classes)
+    return GPT2ARC(config.model, num_classes=config.training.num_classes)
 
 
 @pytest.fixture
 def trainer():
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
     config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=2))
-    model = GPT2ARC(config.model, num_classes=config.model.num_classes)
+    model = GPT2ARC(config.model, num_classes=config.training.num_classes)
     return ARCTrainer(model, None, None, config)
 
 
@@ -140,7 +140,7 @@ def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
     print("Entering test_logging")
     with patch(
         "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
-    ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
+    ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=GPT2ARC(config.model, num_classes=config.training.num_classes)), patch(
         "gpt2_arc.src.training.train.ARCTrainer"
     ), patch(
     ) as mock_ARCTrainer, patch(
