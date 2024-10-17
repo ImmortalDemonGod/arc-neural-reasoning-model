@@ -202,7 +202,6 @@ class GPT2ARC(pl.LightningModule):
             # Compute class weights as inverse of symbol frequencies
             class_weights = 1.0 / symbol_freq_values
             
-            
             # Ensure that the length of class_weights matches num_classes
             assert class_weights.size(0) == self.config.training.num_classes, (
                 f"class_weights length ({class_weights.size(0)}) does not match num_classes ({self.config.training.num_classes})"
@@ -224,6 +223,9 @@ class GPT2ARC(pl.LightningModule):
                 # Exclude padding class from loss without class weights
                 self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.config.training.pad_symbol_idx)
                 logger.debug("Excluding padding class from loss calculation without class weights.")
+        
+        # Ensure loss_fn is part of the model's state_dict
+        self.register_buffer('loss_fn_weight', self.loss_fn.weight if hasattr(self.loss_fn, 'weight') else None)
 
         # Initialize weights
         self.apply(self._init_weights)
