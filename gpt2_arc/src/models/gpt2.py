@@ -62,8 +62,6 @@ class FeedForward(nn.Module):
         self.net = nn.Sequential(
             BitLinearNew(n_embd, 4 * n_embd), nn.ReLU(), nn.Dropout(dropout), BitLinearNew(4 * n_embd, n_embd)
         )
-        logger.debug("Exiting GPT2ARC.test_dataloader")
-        return dataloader
         logger.debug(f"Initialized FeedForward with n_embd={n_embd}")
 
     def forward(self, x):
