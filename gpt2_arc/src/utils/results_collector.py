@@ -52,26 +52,24 @@ class ResultsCollector:
         """Log the type of self.results['train'] for debugging."""
     
     def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
-        # print(f"DEBUG: self.results['train'] is of type {type(self.results['train'])}")
         """Update training metrics for a specific epoch."""
-        self._log_results_type("Before checking 'train' in results")
         if "train" not in self.results:
             self.results["train"] = {}
-        self._log_results_type("Before type check")
         if not isinstance(self.results["train"], dict):
             raise TypeError(f"Expected self.results['train'] to be a dict, but got {type(self.results['train'])}")
-        self._log_results_type("Before setting default")
-        # print(f"DEBUG: Before setting default, self.results['train'] is of type {type(self.results['train'])}")
         self.results["train"].setdefault(epoch, {})
-        self._log_results_type("After setting default")
-        # print(f"DEBUG: After setting default, self.results['train'] is of type {type(self.results['train'])}")
         self.results["train"][epoch].update(metrics)
+        logger.debug(f"Updated train metrics for epoch {epoch}: {metrics}")
 
     def update_val_metrics(self, epoch: int, metrics: Dict[str, float]):
         """Update validation metrics for a specific epoch."""
         if "validation" not in self.results:
             self.results["validation"] = {}
-        self.results["validation"][epoch] = metrics
+        if not isinstance(self.results["validation"], dict):
+            raise TypeError(f"Expected self.results['validation'] to be a dict, but got {type(self.results['validation'])}")
+        self.results["validation"].setdefault(epoch, {})
+        self.results["validation"][epoch].update(metrics)
+        logger.debug(f"Updated validation metrics for epoch {epoch}: {metrics}")
 
     def set_test_results(self, metrics: Dict[str, float]):
         """Set the test results metrics."""
