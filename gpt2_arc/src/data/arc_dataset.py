@@ -462,7 +462,7 @@ class ARCDataset(Dataset):
         logger.debug("Dataset statistics computed and cached successfully")
 
 
-    def _process_list_data(self, data_list: List[Dict], task_id: str) -> List[Dict]:
+    def _process_list_data(self, data_list: List[Dict]) -> List[Dict]:
         processed_data = []
         for idx, example in enumerate(data_list):
             if 'input' in example and 'output' in example and isinstance(example['input'], (list, np.ndarray)) and isinstance(example['output'], (list, np.ndarray)):
@@ -470,13 +470,14 @@ class ARCDataset(Dataset):
                 input_grid = self._preprocess_grid(example['input'])
                 output_grid = self._preprocess_grid(example['output'])
 
-                # Assign task_id if not present
-                # Assign task_id from parameter, overriding any existing task_id in the data
-
+                # Extract task_id from the example data
+                task_id_sample = example.get('task_id')
+                if not task_id_sample:
+                    raise ValueError(f"Sample at index {idx} is missing 'task_id'.")
                 processed_data.append({
                     "input": input_grid,
                     "output": output_grid,
-                    "task_id": task_id
+                    "task_id": task_id_sample
                 })
             else:
                 logger.warning(f"Example at index {idx} missing 'input' or 'output' keys or has incorrect types.")
