@@ -65,9 +65,6 @@ class ARCTrainer(pl.LightningModule):
                 class_weights = 1.0 / torch.tensor(
                     list(self.config.training.symbol_freq.values()), dtype=torch.float
                 )
-                # Example: Integrate class weights into the loss function if applicable
-                self.model.loss_fn.weight = class_weights.to(self.device)
-                logger.debug("Class weights applied in loss function. WeightedRandomSampler removed.")
 
                 train_loader = DataLoader(
                     self.train_dataset,

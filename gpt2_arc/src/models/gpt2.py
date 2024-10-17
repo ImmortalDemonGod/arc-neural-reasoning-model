@@ -197,7 +197,7 @@ class GPT2ARC(pl.LightningModule):
             epsilon = 1e-6
             symbol_freq_values = torch.tensor([
                 freq if freq > 0 else epsilon for freq in self.symbol_freq.values()
-            ], dtype=torch.float)
+            ], dtype=torch.float32)
             
             # Compute class weights as inverse of symbol frequencies
             class_weights = 1.0 / symbol_freq_values
