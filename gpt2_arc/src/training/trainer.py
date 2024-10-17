@@ -315,12 +315,6 @@ class ARCTrainer(pl.LightningModule):
         predictions = outputs.argmax(dim=-1)
         diff_accuracy, _, _ = differential_pixel_accuracy(inputs, targets, predictions, pad_symbol_idx=pad_symbol_idx)
         return diff_accuracy
-        predictions = outputs.argmax(dim=-1)
-        # Reshape predictions to match the target shape
-        predictions = predictions.view(targets.size())
-        # Calculate accuracy for each sample in the batch
-        accuracies = (predictions == targets).float().mean(dim=[1, 2, 3])
-        return accuracies
         
     def on_validation_epoch_end(self):
         # Compute average validation loss
