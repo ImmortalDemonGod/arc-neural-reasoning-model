@@ -42,6 +42,7 @@ class ARCTrainer(pl.LightningModule):
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.config = config
+        self.test_dataset = test_dataset  # Add this line
         self.batch_size = config.training.batch_size
         self.lr = config.training.learning_rate
         self.train_losses = []
@@ -110,7 +111,7 @@ class ARCTrainer(pl.LightningModule):
                 pin_memory=self.config.training.pin_memory,
                 prefetch_factor=self.config.training.prefetch_factor,
                 persistent_workers=self.config.training.persistent_workers,
-                collate_fn=self.test_dataset.collate_fn
+                collate_fn=self.train_dataset.collate_fn  # Change this line
             )
 
         logger.debug(f"Training DataLoader created with num_workers={get_num_workers(self.config.training, self.args.num_workers)}")
