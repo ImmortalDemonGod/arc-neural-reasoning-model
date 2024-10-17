@@ -398,9 +398,9 @@ def main(args):
             train_loader = DataLoader(
                 train_data,
                 batch_size=config.training.batch_size,
-                num_workers=get_num_workers(),
+                num_workers=get_num_workers(config.training, args.num_workers),
                 shuffle=True,  # Enable shuffle
-                pin_memory=True if args.use_gpu else False,
+                pin_memory=config.training.pin_memory if args.use_gpu else False,
                 prefetch_factor=config.training.prefetch_factor,
                 persistent_workers=config.training.persistent_workers
             )
