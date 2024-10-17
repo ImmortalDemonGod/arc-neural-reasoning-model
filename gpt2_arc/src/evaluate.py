@@ -170,6 +170,9 @@ def main(args):
         # Remove the "model." prefix from state dict keys
         state_dict = {k.replace('model.', ''): v for k, v in checkpoint['state_dict'].items()}
         model.load_state_dict(state_dict)
+        
+        # Print all keys in the model's state dictionary
+        print("Model state_dict keys:", list(model.state_dict().keys()))
     except Exception as e:
         logger.error(f"Error while loading state_dict: {e}")
         logger.error(f"Available keys in checkpoint: {list(checkpoint.keys())}")
