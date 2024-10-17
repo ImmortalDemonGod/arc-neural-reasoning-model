@@ -1,7 +1,7 @@
 # gpt2_arc/tests/test_trainer.py
 import pytest
 import torch
-from src.config import Config, ModelConfig, TrainingConfig
+from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
 from src.data.arc_dataset import ARCDataset
 from src.models.gpt2 import GPT2ARC
 from src.training.trainer import ARCTrainer
