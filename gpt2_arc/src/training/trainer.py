@@ -111,14 +111,6 @@ class ARCTrainer(pl.LightningModule):
 
         logger.debug(f"Training DataLoader created with num_workers={get_num_workers(self.config.training, self.args.num_workers)}")
         return train_loader
-            self.train_dataset,
-            batch_size=self.config.training.batch_size,
-            num_workers=get_num_workers(self.config.training, self.args.num_workers),
-            shuffle=True,
-            pin_memory=self.config.training.pin_memory if self.args.use_gpu else False,
-            prefetch_factor=self.config.training.prefetch_factor,
-            persistent_workers=self.config.training.persistent_workers
-        )
 
     def val_dataloader(self):
         return DataLoader(
@@ -129,10 +121,6 @@ class ARCTrainer(pl.LightningModule):
             prefetch_factor=self.config.training.prefetch_factor,
             persistent_workers=self.config.training.persistent_workers
         )
-        if self.model.symbol_freq:
-            logger.debug(f"Training with symbol frequencies: {self.model.symbol_freq}")
-        else:
-            logger.debug("Training with symbol frequencies disabled.")
 
     def get_tensorboard_logger(self):
         for logger in self.trainer.loggers:
