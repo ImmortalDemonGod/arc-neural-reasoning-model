@@ -538,6 +538,19 @@ def objective(trial, args):
         best_val_loss = trainer.callback_metrics.get("val_loss").item()
         logger.info(f"Trial {trial.number} completed. Best validation loss: {best_val_loss}")
 
+        # Ensure both accuracy metrics are included
+        final_test_accuracy = avg_test_accuracy  # Includes padding
+        final_test_diff_accuracy = avg_test_diff_accuracy  # Excludes padding
+
+        # Set final metrics
+        trainer.results_collector.set_final_metrics({
+            "best_val_loss": trainer.best_val_loss,
+            "best_epoch": trainer.best_epoch,
+            "final_test_loss": avg_test_loss,
+            "final_test_accuracy": final_test_accuracy,             # Includes padding
+            "final_test_diff_accuracy": final_test_diff_accuracy    # Excludes padding
+        })
+
         return best_val_loss
 
     except RuntimeError as e:
