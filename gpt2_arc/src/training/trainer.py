@@ -8,7 +8,8 @@ from typing import Any, Dict, Optional
 from collections import deque
 from torch.optim.lr_scheduler import LambdaLR
 from ..config import Config
-from ..utils.helpers import differential_pixel_accuracy
+from gpt2_arc.src.utils.training_helpers import get_num_workers
+from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 from ..utils.results_collector import ResultsCollector
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter

@@ -27,6 +27,7 @@ import logging
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.training.trainer import ARCTrainer
+from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 
 # Set up logging
