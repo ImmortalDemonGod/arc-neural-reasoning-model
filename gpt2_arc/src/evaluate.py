@@ -48,9 +48,9 @@ def evaluate(model, test_dataset, config, batch_size=32):
     if avg_test_loss is not None:
         avg_test_loss = avg_test_loss.item()
     if avg_test_accuracy is not None:
-        avg_test_accuracy = avg_test_accuracy.item()
+        avg_test_accuracy = avg_test_accuracy.item() if isinstance(avg_test_accuracy, torch.Tensor) else avg_test_accuracy
     if avg_test_diff_accuracy is not None:
-        avg_test_diff_accuracy = avg_test_diff_accuracy.item()
+        avg_test_diff_accuracy = avg_test_diff_accuracy.item() if isinstance(avg_test_diff_accuracy, torch.Tensor) else avg_test_diff_accuracy
 
     aggregated_results = {
         'test_loss': avg_test_loss,
