@@ -8,18 +8,16 @@ import platform
 import os
 from dataclasses import asdict
 from typing import Dict, Any, Optional
-from gpt2_arc.src.config import Config
 
 class ExperimentTracker:
-    def __init__(self, config: Config, project: str, entity: Optional[str] = None, use_wandb: bool = False):
+    def __init__(self, config: Dict[str, Any], project: str, entity: Optional[str] = None, use_wandb: bool = False):
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.config = config  # Keep Config object as-is
+        self.config = config.to_dict() if hasattr(config, 'to_dict') else self._config_to_dict(config)
         self.project = project
         self.entity = entity
         self.run = None
         self.use_wandb = use_wandb
-        self.include_pad_in_loss = config.training.include_pad_in_loss
         self.metrics = {}
         if self.use_wandb:
             try:
@@ -32,10 +30,7 @@ class ExperimentTracker:
         self.results = {
             "train": [],
             "validation": [],
-            "test": {
-                "acc_with_pad": None,
-                "acc_without_pad": None
-            }
+            "test": {}
         }
         self.metrics = {}
         self.task_specific_results = {}
@@ -43,7 +38,7 @@ class ExperimentTracker:
         self.checkpoint_path = None
 
         # Add debug logging
-        print(f"ExperimentTracker initialized with config: {json.dumps(asdict(self.config), indent=2)}")
+        print(f"ExperimentTracker initialized with config: {json.dumps(self.config, indent=2)}")
         print(f"Project: {project}, Entity: {entity}")
         print(f"use_wandb: {self.use_wandb}")
 
@@ -54,6 +49,23 @@ class ExperimentTracker:
             "gpu_info": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
         }
 
+    def _config_to_dict(self, config):
+        if isinstance(config, dict):
+            return {k: self._config_to_dict(v) for k, v in config.items()}
+        elif hasattr(config, '__dict__'):
+            return {k: self._config_to_dict(v) for k, v in config.__dict__.items() if not k.startswith('_')}
+        else:
+            return config
+        if self.use_wandb:
+            try:
+                self.run = wandb.init(project=self.project, entity=self.entity, config=self.config)
+                print(f"Wandb run initialized: {self.run.id}")
+            except Exception as e:
+                print(f"Error initializing wandb: {str(e)}")
+                self.use_wandb = False
+        
+        if not self.use_wandb:
+            print("Using local logging only")
 
     def finish(self):
         if self.use_wandb and self.run:
@@ -95,15 +107,7 @@ class ExperimentTracker:
             wandb.log({"validation": metrics}, step=epoch)
 
     def set_test_results(self, metrics: Dict[str, float]):
-        self.results["test"]["avg_loss"] = metrics.get("avg_test_loss")
-        self.results["test"]["avg_acc_with_pad"] = metrics.get("avg_test_acc_with_pad")
-        self.results["test"]["avg_acc_without_pad"] = metrics.get("avg_test_acc_without_pad")
-        if self.use_wandb and self.run:
-            wandb.log({
-                "test_loss": self.results["test"]["avg_loss"],
-                "test_acc_with_pad": self.results["test"]["avg_acc_with_pad"],
-                "test_acc_without_pad": self.results["test"]["avg_acc_without_pad"],
-            })
+        self.results["test"] = metrics
         if self.use_wandb:
             wandb.log({"test": metrics})
 
@@ -158,8 +162,15 @@ class ExperimentTracker:
             "test_loss": self.results["test"].get("avg_loss"),
             "test_acc_with_pad": self.results["test"].get("avg_acc_with_pad"),
             "test_acc_without_pad": self.results["test"].get("avg_acc_without_pad"),
-            "config": self._serialize_config(self.config)
+            "best_val_loss": self.results.get("best_val_loss"),
+            "best_val_epoch": self.results.get("best_val_epoch"),
+            "learning_rate": self.config.get("training", {}).get("learning_rate"),
+            "batch_size": self.config.get("training", {}).get("batch_size"),
+            "training_duration": self.results.get("training_duration"),
+            "config": self._serialize_config(self.config),
+            "tensorboard_log_path": self.tensorboard_log_path
         }
+        logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
     def _make_serializable(self, obj):

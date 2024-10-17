@@ -683,10 +683,10 @@ if __name__ == "__main__":
         action="store_true",
         help="Disable pin_memory in DataLoader."
     )
-    parser.add_argument("--n_embd", type=int, default=768, help="Embedding size for the model.")
+    parser.add_argument("--n_embd", type=int, default=12, help="Embedding size for the model.")
     parser.add_argument("--n_head", type=int, default=1, help="Number of attention heads for profiling")
     parser.add_argument("--n_layer", type=int, default=1, help="Number of transformer layers for profiling")
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for profiling")
+    parser.add_argument("--batch_size", type=int, default=1, help="Batch size for profiling")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max_epochs", type=int, required=True, help="Maximum number of epochs")
     parser.add_argument("--mamba_ratio", type=float, default=0.0, help="Mamba ratio (float value)")
