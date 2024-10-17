@@ -259,7 +259,7 @@ def main(args):
                 n_embd=n_embd,
                 n_head=n_head,
                 n_layer=best_params['n_layer'],
-                dropout=best_params['dropout']
+                dropout=best_params['dropout'],
                 num_workers=args.num_workers,
                 prefetch_factor=args.prefetch_factor,
                 persistent_workers=not args.no_persistent_workers,
