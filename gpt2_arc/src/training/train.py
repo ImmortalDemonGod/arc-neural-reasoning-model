@@ -640,11 +640,6 @@ if __name__ == "__main__":
         help="Number of worker threads for DataLoader. If not set, uses configuration default (total CPU count)."
     )
     parser.add_argument(
-        "--num_workers",
-        type=int,
-        help="Number of worker threads for DataLoader. Overrides config if set."
-    )
-    parser.add_argument(
         "--prefetch_factor",
         type=int,
         default=2,
