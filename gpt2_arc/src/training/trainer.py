@@ -12,6 +12,8 @@ from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 from ..utils.results_collector import ResultsCollector
 from torch.utils.data import DataLoader
+
+logger = logging.getLogger(__name__)
 from torch.utils.tensorboard import SummaryWriter
 from pytorch_lightning.loggers import TensorBoardLogger
 from gpt2_arc.src.utils.training_helpers import get_num_workers
@@ -34,7 +36,8 @@ class NanLossPruningCallback(Callback):
 
 class ARCTrainer(pl.LightningModule):
     def __init__(self, model, train_dataset, val_dataset, config: Config, args, results_collector=None):
-        self.args = args  # Add this line to store args
+        logger.debug("Initializing ARCTrainer")
+        self.args = args
         super().__init__()
         self.model = model
         self.train_dataset = train_dataset
@@ -114,7 +117,8 @@ class ARCTrainer(pl.LightningModule):
         return train_loader
 
     def val_dataloader(self):
-        return DataLoader(
+        logger.debug("Entering ARCTrainer.test_dataloader")
+        dataloader = DataLoader(
             self.val_dataset,
             batch_size=self.config.training.batch_size,
             num_workers=get_num_workers(self.config.training, self.args.num_workers),
@@ -122,6 +126,8 @@ class ARCTrainer(pl.LightningModule):
             prefetch_factor=self.config.training.prefetch_factor,
             persistent_workers=self.config.training.persistent_workers
         )
+        logger.debug("Exiting ARCTrainer.test_dataloader")
+        return dataloader
 
     def get_tensorboard_logger(self):
         for logger in self.trainer.loggers:

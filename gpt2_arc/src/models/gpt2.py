@@ -10,6 +10,8 @@ from typing import Dict, Optional
 import torch.nn.init as init
 from bitnet import BitLinearNew
 from torch.utils.data import DataLoader
+
+logger = logging.getLogger(__name__)
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.config import Config
 #from zeta.nn import MambaBlock
@@ -60,6 +62,8 @@ class FeedForward(nn.Module):
         self.net = nn.Sequential(
             BitLinearNew(n_embd, 4 * n_embd), nn.ReLU(), nn.Dropout(dropout), BitLinearNew(4 * n_embd, n_embd)
         )
+        logger.debug("Exiting GPT2ARC.test_dataloader")
+        return dataloader
         logger.debug(f"Initialized FeedForward with n_embd={n_embd}")
 
     def forward(self, x):
@@ -278,7 +282,8 @@ class GPT2ARC(pl.LightningModule):
         )
         
         # Create and return the DataLoader
-        return DataLoader(
+        logger.debug("Entering GPT2ARC.test_dataloader")
+        dataloader = DataLoader(
             test_dataset,
             batch_size=self.config.training.batch_size,
             num_workers=self.config.training.num_workers,

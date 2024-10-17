@@ -179,6 +179,7 @@ def main(args):
     # Set float32 matrix multiplication precision
     torch.set_float32_matmul_precision(args.matmul_precision)
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
+    logger.debug(f"Command line arguments: {args}")
     log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'DEBUG', logging.DEBUG)
     logging.basicConfig(
         level=log_level,
@@ -196,6 +197,7 @@ def main(args):
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
     
     logger.info("Starting main function")
+    logger.debug("Initializing PyTorch Lightning Trainer")
     logger.debug(f"Command line arguments: {args}")
 
     trainer = None  # Initialize trainer to None
@@ -525,6 +527,7 @@ def main(args):
 
         # After training, run test
         logger.info("Running model evaluation")
+        logger.debug("Preparing to run Trainer.test()")
         test_results = pl_trainer.test(trainer)
         if test_results:
             avg_test_loss = sum(result['avg_test_loss'] for result in test_results) / len(test_results)
