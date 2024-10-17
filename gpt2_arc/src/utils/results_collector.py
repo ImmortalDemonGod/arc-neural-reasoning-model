@@ -20,8 +20,8 @@ class ResultsCollector:
         self.symbol_freq = self.config['training']['symbol_freq'] if 'symbol_freq' in self.config['training'] else {}
         logger.debug(f"Symbol frequencies set in ResultsCollector: {self.symbol_freq}")
         self.results = {
-            "train": [],
-            "validation": [],
+            "train": {},
+            "validation": {},
             "test": {}
         }
         self.metrics = {}
