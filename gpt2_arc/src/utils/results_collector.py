@@ -23,7 +23,6 @@ class ResultsCollector:
             "train": [],
             "validation": [],
             "test": {}
-            "test": {}
         }
         self.tensorboard_log_path = None
         self.used_synthetic_data = config.training.use_synthetic_data
