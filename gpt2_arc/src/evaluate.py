@@ -72,9 +72,9 @@ def evaluate(model, test_dataset, config, batch_size=32):
             except ValueError:
                 logger.warning(f"Unexpected metric format: {key}. Skipping.")
                 continue
-            if task_id not in individual_metrics:
-                individual_metrics[task_id] = {}
-            individual_metrics[task_id][f'test_{metric_name}'] = value
+            if task_id == "default_task":
+                logger.error("'default_task' detected in individual_metrics.")
+                raise ValueError("'default_task' detected in individual_metrics. Ensure that task_ids are correctly handled.")
 
     # Compute complete task accuracy (fraction of tasks with perfect accuracy)
     num_tasks = len(individual_metrics)
