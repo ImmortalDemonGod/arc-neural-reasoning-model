@@ -143,7 +143,8 @@ class ARCTrainer(pl.LightningModule):
             shuffle=False,
             pin_memory=self.config.training.pin_memory,
             prefetch_factor=self.config.training.prefetch_factor,
-            persistent_workers=self.config.training.persistent_workers
+            persistent_workers=self.config.training.persistent_workers,
+            collate_fn=self.test_dataset.collate_fn  # Add this line
         )
 
     
@@ -235,75 +236,76 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: test_step input - batch: {batch}, batch_idx: {batch_idx}")
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
-        # Unpack batch
-        if len(batch) == 3:
-            inputs, outputs, task_ids = batch
-        elif len(batch) == 2:
-            inputs, outputs = batch
-            task_ids = None  # Set to None or a default value
-        else:
-            raise ValueError(f"Unexpected batch format with length {len(batch)}")
-        logger.debug(f"DEBUG: Task IDs in batch: {task_ids}")
+    # Unpack batch
+    if len(batch) == 3:
+        inputs, outputs, task_ids = batch
+    elif len(batch) == 2:
+        inputs, outputs = batch
+        task_ids = None  # Set to None or a default value
+    else:
+        raise ValueError(f"Unexpected batch format with length {len(batch)}")
+    logger.debug(f"DEBUG: Task IDs in batch: {task_ids}")
 
-        inputs = inputs.float()
-        outputs = outputs.long()
+    inputs = inputs.float()
+    outputs = outputs.long()
 
-        attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32, device=inputs.device)
+    attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32, device=inputs.device)
 
-        model_outputs = self(inputs, attention_mask)
-        loss = self.compute_loss(model_outputs, outputs)
+    model_outputs = self(inputs, attention_mask)
+    loss = self.compute_loss(model_outputs, outputs)
 
-        accuracies = []
-        diff_accuracies = []
-        
-        # Compute batch-wise accuracy
-        accuracy = self.compute_accuracy(model_outputs, outputs)
-        diff_accuracy = self.compute_diff_accuracy(inputs, outputs, model_outputs)
+    accuracies = []
+    diff_accuracies = []
+    
+    # Compute batch-wise accuracy
+    accuracy = self.compute_accuracy(model_outputs, outputs)
+    diff_accuracy = self.compute_diff_accuracy(inputs, outputs, model_outputs)
 
-        # Append batch metrics
-        accuracies.append(accuracy.item())
-        diff_accuracies.append(diff_accuracy)
+    # Append batch metrics
+    accuracies.append(accuracy.item())
+    diff_accuracies.append(diff_accuracy)
 
-        logger.debug(f"DEBUG: Batch accuracy: {accuracy.item()}, Batch diff_accuracy: {diff_accuracy}")
+    logger.debug(f"DEBUG: Batch accuracy: {accuracy.item()}, Batch diff_accuracy: {diff_accuracy}")
 
-        result = {
-            'test_loss': loss.item(),
-            'task_ids': task_ids,
-            'test_accuracy': sum(accuracies) / len(accuracies) if accuracies else 0,
-            'test_diff_accuracy': sum(diff_accuracies) / len(diff_accuracies) if diff_accuracies else 0,
-        }
-        logger.debug(f"DEBUG: Test loss: {result['test_loss']}, Avg accuracy: {result['test_accuracy']}, Avg diff accuracy: {result['test_diff_accuracy']}")
+    result = {
+        'test_loss': loss.item(),
+        'task_ids': task_ids,
+        'test_accuracy': sum(accuracies) / len(accuracies) if accuracies else 0,
+        'test_diff_accuracy': sum(diff_accuracies) / len(diff_accuracies) if diff_accuracies else 0,
+    }
+    logger.debug(f"DEBUG: Test loss: {result['test_loss']}, Avg accuracy: {result['test_accuracy']}, Avg diff accuracy: {result['test_diff_accuracy']}")
 
-        # Log task-specific metrics if task_ids are available
-        if task_ids is not None:
-            # Aggregate task-specific metrics across the batch
-            for task_id in set(task_ids.tolist()):
-                # Create a mask for the current task_id
-                mask = (task_ids == task_id)
-                task_accuracy = self.compute_accuracy(model_outputs[mask], outputs[mask]).item()
-                task_diff_accuracy = self.compute_diff_accuracy(inputs[mask], outputs[mask], model_outputs[mask]).item()
-                
-                result[f"{task_id}_test_accuracy"] = task_accuracy
-                result[f"{task_id}_test_diff_accuracy"] = task_diff_accuracy
-                
-                self.log(f"{task_id}_test_accuracy", task_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-                self.log(f"{task_id}_test_diff_accuracy", task_diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+    # Log task-specific metrics if task_ids are available
+    if task_ids is not None:
+        # Aggregate task-specific metrics across the batch
+        for task_id in set(task_ids):  # Remove .tolist()
+            # Create a mask for the current task_id
+            mask = [tid == task_id for tid in task_ids]  # Create mask as list of booleans
+            mask = torch.tensor(mask, dtype=torch.bool, device=outputs.device)  # Convert to tensor
+            task_accuracy = self.compute_accuracy(model_outputs[mask], outputs[mask]).item()
+            task_diff_accuracy = self.compute_diff_accuracy(inputs[mask], outputs[mask], model_outputs[mask]).item()
+            
+            result[f"{task_id}_test_accuracy"] = task_accuracy
+            result[f"{task_id}_test_diff_accuracy"] = task_diff_accuracy
+            
+            self.log(f"{task_id}_test_accuracy", task_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            self.log(f"{task_id}_test_diff_accuracy", task_diff_accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
-        try:
-            self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)
-            self.writer.add_scalar('test/avg_accuracy', result['test_accuracy'], self.current_epoch)
-            self.writer.add_scalar('test/diff_accuracy', result['test_diff_accuracy'], self.current_epoch)
-            logger.debug(f"DEBUG: Logged test metrics for epoch {self.current_epoch}: loss={result['test_loss']}, avg_accuracy={result['test_accuracy']}, diff_accuracy={result['test_diff_accuracy']}")
-        except Exception as e:
-            logger.error(f"DEBUG: Error logging test step: {str(e)}")
+    try:
+        self.writer.add_scalar('test/loss', result['test_loss'], self.current_epoch)
+        self.writer.add_scalar('test/avg_accuracy', result['test_accuracy'], self.current_epoch)
+        self.writer.add_scalar('test/diff_accuracy', result['test_diff_accuracy'], self.current_epoch)
+        logger.debug(f"DEBUG: Logged test metrics for epoch {self.current_epoch}: loss={result['test_loss']}, avg_accuracy={result['test_accuracy']}, diff_accuracy={result['test_diff_accuracy']}")
+    except Exception as e:
+        logger.error(f"DEBUG: Error logging test step: {str(e)}")
 
-        logger.debug(f"DEBUG: test_step output - result: {result}")
-        logger.debug(f"DEBUG: Test step result: {result}")
+    logger.debug(f"DEBUG: test_step output - result: {result}")
+    logger.debug(f"DEBUG: Test step result: {result}")
 
-        # Append the result to self.test_outputs
-        self.test_outputs.append({key: value.item() if isinstance(value, torch.Tensor) else value for key, value in result.items()})
+    # Append the result to self.test_outputs
+    self.test_outputs.append({key: value.item() if isinstance(value, torch.Tensor) else value for key, value in result.items()})
 
-        return result
+    return result
 
     def on_test_epoch_end(self):
         total_loss = torch.stack([torch.tensor(x['test_loss']) for x in self.test_outputs]).mean()
