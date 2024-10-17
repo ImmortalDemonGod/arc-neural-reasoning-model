@@ -80,6 +80,7 @@ class ResultsCollector:
         if task_id not in self.task_specific_results:
             self.task_specific_results[task_id] = {}
         self.task_specific_results[task_id].update(metrics)
+        logger.debug(f"Added task-specific result for task_id {task_id}: {metrics}")
 
     def set_final_metrics(self, metrics: Dict[str, float]):
         """Set the final metrics after training."""

@@ -115,6 +115,7 @@ class ExperimentTracker:
         if task_id not in self.task_specific_results:
             self.task_specific_results[task_id] = {}
         self.task_specific_results[task_id].update(metrics)
+        logger.debug(f"Added task-specific result for task_id {task_id}: {metrics}")
         if self.use_wandb:
             wandb.log({f"task_{task_id}": metrics})
 
