@@ -283,7 +283,7 @@ class ARCTrainer(pl.LightningModule):
                 mask = [tid == task_id for tid in task_ids]  # Create mask as list of booleans
                 mask = torch.tensor(mask, dtype=torch.bool, device=outputs.device)  # Convert to tensor
                 task_accuracy = self.compute_accuracy(model_outputs[mask], outputs[mask]).item()
-                task_diff_accuracy = self.compute_diff_accuracy(inputs[mask], outputs[mask], model_outputs[mask]).item()
+                task_diff_accuracy = self.compute_diff_accuracy(inputs[mask], outputs[mask], model_outputs[mask])
                 
                 result[f"{task_id}_test_accuracy"] = task_accuracy
                 result[f"{task_id}_test_diff_accuracy"] = task_diff_accuracy
@@ -303,7 +303,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: Test step result: {result}")
 
         # Append the result to self.test_outputs
-        self.test_outputs.append({key: value.item() if isinstance(value, torch.Tensor) else value for key, value in result.items()})
+        self.test_outputs.append(result)
 
         return result
 
