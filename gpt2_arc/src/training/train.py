@@ -34,7 +34,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
-from gpt2_arc.src.training.trainer import ARCTrainer
+from gpt2_arc.src.training.trainer import ARCTrainer, get_num_workers
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 from gpt2_arc.src.utils import GrokfastCallback
@@ -354,8 +354,8 @@ def main(args):
         num_classes = config.training.num_classes
         logger.info(f"Number of classes set to: {num_classes}")
         logger.info("Creating DataLoader instances")
-        # Create DataLoader instances
-        logger.info("Creating DataLoader instances")
+        # Create DataLoader instances with centralized num_workers
+        logger.info("Creating training DataLoader with centralized num_workers")
         if config.training.balance_symbols:
             if config.training.balancing_method == "weighting":
                 # Compute class weights (inverse of frequencies)
@@ -413,7 +413,7 @@ def main(args):
             prefetch_factor=config.training.prefetch_factor,
             persistent_workers=config.training.persistent_workers
         )
-        logger.debug(f"DataLoaders created with batch size {args.batch_size}")
+        logger.debug(f"Training DataLoader created with num_workers={get_num_workers(config.training, args.num_workers)}")
 
         # Initialize model
         logger.info("Initializing model")
@@ -651,7 +651,7 @@ if __name__ == "__main__":
         "--num_workers",
         type=int,
         default=None,
-        help="Number of worker threads for DataLoader. If not set, uses configuration default."
+        help="Number of worker threads for DataLoader. If not set, uses configuration default (total CPU count)."
     )
     parser.add_argument("--n_embd", type=int, default=4, help="Embedding dimension for profiling")
     parser.add_argument("--n_head", type=int, default=1, help="Number of attention heads for profiling")
