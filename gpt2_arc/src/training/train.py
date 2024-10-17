@@ -413,7 +413,7 @@ def main(args):
             prefetch_factor=config.training.prefetch_factor,
             persistent_workers=config.training.persistent_workers
         )
-        logger.debug(f"Validation DataLoader created with num_workers={get_num_workers(config.training, args.num_workers)}")
+        logger.debug(f"Validation DataLoader created with num_workers={get_num_workers(config.training)}")
 
         # Initialize model
         logger.info("Initializing model")

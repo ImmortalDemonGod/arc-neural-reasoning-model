@@ -8,7 +8,7 @@ import pickle
 import hashlib
 import torch
 import torch.nn.functional as F
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Subset
 import logging
 import ijson  # Import ijson for streaming JSON parsing
 from tqdm import tqdm  # Import tqdm for progress bars
@@ -163,6 +163,22 @@ class ARCDataset(Dataset):
                 logger.debug(f"TaskSet attributes before access: {dir(data_source)}")
                 logger.debug(f"Does TaskSet have 'dataset' attribute? {hasattr(data_source, 'dataset')}")
                 samples = self._process_arckit_data(data_source)
+                self.data.extend(samples)
+            elif isinstance(data_source, Subset):
+                logger.debug("Processing data from Subset")
+                subset_indices = data_source.indices
+                underlying_dataset = data_source.dataset
+                samples = []
+                for idx in subset_indices:
+                    item = underlying_dataset[idx]
+                    input_tensor = self._preprocess_grid(item[0])
+                    output_tensor = self._preprocess_grid(item[1])
+                    task_id = item[2] if len(item) > 2 else "unknown_task"
+                    samples.append({
+                        "input": input_tensor,
+                        "output": output_tensor,
+                        "task_id": task_id
+                    })
                 self.data.extend(samples)
             elif isinstance(data_source, list):
                 samples = self._process_list_data(data_source, task_id="default_task")
