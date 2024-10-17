@@ -320,6 +320,7 @@ class ARCTrainer(pl.LightningModule):
         pad_symbol_idx = self.config.training.pad_symbol_idx  # Retrieve pad_symbol_idx from config
         predictions = outputs.argmax(dim=-1)
         diff_accuracy, _, _ = differential_pixel_accuracy(inputs, targets, predictions, pad_symbol_idx=pad_symbol_idx)
+        logger.debug(f"Computed differential pixel accuracy (excluding padding tokens): {diff_accuracy}")
         return diff_accuracy
         
     def on_validation_epoch_end(self):
