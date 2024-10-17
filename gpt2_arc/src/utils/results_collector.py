@@ -20,10 +20,12 @@ class ResultsCollector:
         self.symbol_freq = self.config.get('training', {}).get('symbol_freq', {})
         logger.debug(f"Symbol frequencies set in ResultsCollector: {self.symbol_freq}")
         self.results = {
-            "train": {},
-            "validation": {},
+            "train": [],
+            "validation": [],
+            "test": {}
             "test": {}
         }
+        self.tensorboard_log_path = None
         self.used_synthetic_data = config.training.use_synthetic_data
         print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
         self._log_results_type("After initialization")
@@ -150,3 +152,14 @@ class ResultsCollector:
 
     def _serialize_config(self, config):
         return {k: self._make_serializable(v) for k, v in config.items()}
+    def _serialize_config(self, config):
+        """Serialize the configuration dictionary."""
+        return json.dumps(config, indent=2)
+    
+    def _make_serializable(self, value):
+        """Ensure the value is serializable, handling non-serializable objects."""
+        try:
+            json.dumps(value)
+            return value
+        except (TypeError, OverflowError):
+            return str(value)
