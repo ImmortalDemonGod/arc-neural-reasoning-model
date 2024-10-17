@@ -284,6 +284,14 @@ def main(args):
 
         # Load data
         logger.info("Loading data")
+        logger.info("Loading ARC test dataset")
+        test_dataset = ARCDataset(
+            data_source="data/ARC/data/test/",  # Update the path to your test dataset
+            is_test=True,
+            num_symbols=config.training.num_symbols,
+            pad_symbol_idx=config.training.pad_symbol_idx,
+            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+        )
         logger.info("Loading training and validation datasets in parallel to optimize performance using separate processes")
 
         with ThreadPoolExecutor(max_workers=2) as executor:
@@ -356,6 +364,16 @@ def main(args):
         num_classes = config.training.num_classes
         logger.info(f"Number of classes set to: {num_classes}")
         logger.info("Creating DataLoader instances")
+        # Create test DataLoader
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=config.training.batch_size,
+            num_workers=get_num_workers(config.training, args.num_workers),
+            shuffle=False,
+            pin_memory=config.training.pin_memory if args.use_gpu else False,
+            prefetch_factor=config.training.prefetch_factor,
+            persistent_workers=config.training.persistent_workers
+        )
         logger.debug(f"Validation DataLoader created with num_workers={get_num_workers(config.training, args.num_workers)}")
 
         # Initialize model
@@ -396,7 +414,8 @@ def main(args):
             val_dataset=val_data,
             config=config,
             args=args,  # Add this line to pass args
-            results_collector=results_collector  # Pass ResultsCollector to ARCTrainer
+            results_collector=results_collector,  # Pass ResultsCollector to ARCTrainer
+            test_loader=test_loader  # Add this argument
         )
         trainer.log_hyperparameters()
 
@@ -528,7 +547,7 @@ def main(args):
         # After training, run test
         logger.info("Running model evaluation")
         logger.debug("Preparing to run Trainer.test()")
-        test_results = pl_trainer.test(trainer)
+        test_results = pl_trainer.test(model=trainer, dataloaders=test_loader)
         if test_results:
             avg_test_loss = sum(result['avg_test_loss'] for result in test_results) / len(test_results)
             avg_test_accuracy = sum(result['avg_test_accuracy'] for result in test_results) / len(test_results)

@@ -35,7 +35,7 @@ class NanLossPruningCallback(Callback):
 
 
 class ARCTrainer(pl.LightningModule):
-    def __init__(self, model, train_dataset, val_dataset, config: Config, args, results_collector=None):
+    def __init__(self, model, train_dataset, val_dataset, config: Config, args, results_collector=None, test_loader=None):
         logger.debug("Initializing ARCTrainer")
         self.args = args
         super().__init__()
@@ -129,7 +129,8 @@ class ARCTrainer(pl.LightningModule):
         logger.debug("Exiting ARCTrainer.test_dataloader")
         return dataloader
 
-    def get_tensorboard_logger(self):
+    def test_dataloader(self):
+        return self.test_loader
         for logger in self.trainer.loggers:
             if isinstance(logger, TensorBoardLogger):
                 return logger.experiment
