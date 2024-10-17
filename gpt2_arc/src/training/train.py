@@ -497,7 +497,26 @@ def main(args):
 
         # Train the model
         logger.info("Starting model training")
-        pl_trainer.fit(trainer)
+        train_loader = DataLoader(
+            train_data,
+            batch_size=config.training.batch_size,
+            num_workers=get_num_workers(config.training, args.num_workers),
+            shuffle=True,
+            pin_memory=config.training.pin_memory if args.use_gpu else False,
+            prefetch_factor=config.training.prefetch_factor,
+            persistent_workers=config.training.persistent_workers
+        )
+        val_loader = DataLoader(
+            val_data,
+            batch_size=config.training.batch_size,
+            num_workers=get_num_workers(config.training, args.num_workers),
+            pin_memory=config.training.pin_memory if args.use_gpu else False,
+            prefetch_factor=config.training.prefetch_factor,
+            persistent_workers=config.training.persistent_workers
+        )
+
+        # Update the fit call to exclude DataLoaders
+        pl_trainer.fit(trainer, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
         # Log memory usage after training
         if args.use_gpu and torch.cuda.is_available():
