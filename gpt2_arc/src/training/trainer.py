@@ -131,6 +131,9 @@ class ARCTrainer(pl.LightningModule):
 
     def test_dataloader(self):
         return self.test_loader
+
+    
+    def get_tensorboard_logger(self):
         for logger in self.trainer.loggers:
             if isinstance(logger, TensorBoardLogger):
                 return logger.experiment
