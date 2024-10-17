@@ -47,9 +47,26 @@ class ARCTrainer(pl.LightningModule):
         self.best_epoch = 0
         self.results_collector = results_collector if results_collector else ResultsCollector(config)
         self.writer = SummaryWriter(f"runs/experiment_{self.results_collector.experiment_id}")
-        # Removed old DataLoader methods
+    def train_dataloader(self):
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.config.training.batch_size,
+            num_workers=get_num_workers(self.config.training, self.args.num_workers),
+            shuffle=True,
+            pin_memory=self.config.training.pin_memory if self.args.use_gpu else False,
+            prefetch_factor=self.config.training.prefetch_factor,
+            persistent_workers=self.config.training.persistent_workers
+        )
 
-        
+    def val_dataloader(self):
+        return DataLoader(
+            self.val_dataset,
+            batch_size=self.config.training.batch_size,
+            num_workers=get_num_workers(self.config.training, self.args.num_workers),
+            pin_memory=self.config.training.pin_memory if self.args.use_gpu else False,
+            prefetch_factor=self.config.training.prefetch_factor,
+            persistent_workers=self.config.training.persistent_workers
+        )
         if self.model.symbol_freq:
             logger.debug(f"Training with symbol frequencies: {self.model.symbol_freq}")
         else:
