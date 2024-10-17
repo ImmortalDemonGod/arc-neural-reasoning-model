@@ -101,75 +101,75 @@ class ModelConfigSaver(Callback):
         checkpoint['model_config'] = self.config.model.__dict__
 
         
-def load_train_dataset(args, config):
+def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
     """
-    Load the training dataset based on the provided arguments and configuration.
-    
-    Args:
-        args: Parsed command-line arguments.
-        config: Configuration object containing model and training settings.
-    
-    Returns:
-        ARCDataset: Loaded training dataset.
-    """
-    if args.use_synthetic_data:
-        if not args.synthetic_data_path:
-            raise ValueError("Synthetic data path not provided")
-        logger.info(f"Loading synthetic training data from {args.synthetic_data_path}")
-        return ARCDataset(
-            data_source=args.synthetic_data_path,
-            is_test=False,
-            num_symbols=config.training.num_symbols,
-            pad_symbol_idx=config.training.pad_symbol_idx,
-            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
-        )
-    else:
-        logger.info("Loading ARC training dataset")
-        train_set, _ = arckit.load_data()
-        return ARCDataset(
-            data_source=train_set, 
-            is_test=False,
-            num_symbols=config.training.num_symbols, 
-            pad_symbol_idx=config.training.pad_symbol_idx,
-            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
-        )
+    Load the specified dataset based on the provided arguments and configuration.
 
-def load_val_dataset(args, config):
-    """
-    Load the validation dataset based on the provided arguments and configuration.
-    
     Args:
         args: Parsed command-line arguments.
         config: Configuration object containing model and training settings.
-    
+        dataset_type (str): Type of dataset to load ('train', 'val', 'test').
+        all_synthetic_data: Loaded synthetic data to be split (if using synthetic data).
+
     Returns:
-        ARCDataset: Loaded validation dataset.
+        ARCDataset: Loaded dataset.
     """
-    try:
-        if args.use_synthetic_data:
-            if not args.synthetic_data_path:
-                raise ValueError("Synthetic data path not provided")
-            logger.info(f"Loading synthetic validation data from {args.synthetic_data_path}")
-            return ARCDataset(
-                data_source=args.synthetic_data_path,
-                is_test=True,
-                num_symbols=config.training.num_symbols,
-                pad_symbol_idx=config.training.pad_symbol_idx,
-                symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
-            )
+    is_test = dataset_type == 'test'
+    if args.use_synthetic_data:
+        if all_synthetic_data is None:
+            raise ValueError("Synthetic data not loaded")
+        data_source = all_synthetic_data[dataset_type]
+        logger.info(f"Loaded synthetic {dataset_type} data with {len(data_source)} samples")
+    else:
+        logger.info(f"Loading ARC {dataset_type} dataset")
+        train_set, eval_set, test_set = arckit.load_data()
+        if dataset_type == 'train':
+            data_source = train_set
+        elif dataset_type == 'val':
+            data_source = eval_set
+        elif dataset_type == 'test':
+            data_source = test_set
         else:
-            logger.info("Loading ARC validation dataset")
-            _, eval_set = arckit.load_data()
-            return ARCDataset(
-                data_source=eval_set, 
-                is_test=True,
-                num_symbols=config.training.num_symbols, 
-                pad_symbol_idx=config.training.pad_symbol_idx,
-                symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
-            )
-    except Exception as e:
-        logger.error(f"Failed to load validation dataset: {e}", exc_info=True)
-        raise
+            raise ValueError(f"Unknown dataset_type: {dataset_type}")
+
+    return ARCDataset(
+        data_source=data_source,
+        is_test=is_test,
+        num_symbols=config.training.num_symbols,
+        pad_symbol_idx=config.training.pad_symbol_idx,
+        symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+    )
+
+def load_and_split_synthetic_data(args):
+    """
+    Load synthetic data and split it into train, val, and test sets.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        dict: A dictionary containing 'train', 'val', and 'test' datasets.
+    """
+    logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
+    # Implement the actual loading logic; for now, we'll assume a function 'load_synthetic_data' exists
+    all_data = load_synthetic_data(args.synthetic_data_path)
+    total_samples = len(all_data)
+    train_end = int(args.train_split * total_samples)
+    val_end = train_end + int(args.val_split * total_samples)
+
+    data_splits = {
+        'train': all_data[:train_end],
+        'val': all_data[train_end:val_end],
+        'test': all_data[val_end:]
+    }
+
+    logger.debug(
+        f"Synthetic data split into "
+        f"{len(data_splits['train'])} training, "
+        f"{len(data_splits['val'])} validation, and "
+        f"{len(data_splits['test'])} test samples"
+    )
+    return data_splits
 
 
 def main(args):
@@ -279,31 +279,22 @@ def main(args):
         config = Config(model=model_config, training=training_config)
         logger.debug(f"Configuration: {config}")
 
-        # Load data
-        logger.info("Loading data")
-        logger.info("Loading ARC test dataset")
-        test_dataset = ARCDataset(
-            data_source="data/ARC/data/test/",  # Update the path to your test dataset
-            is_test=True,
-            num_symbols=config.training.num_symbols,
-            pad_symbol_idx=config.training.pad_symbol_idx,
-            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
-        )
-        logger.info("Loading training and validation datasets in parallel to optimize performance using separate processes")
+        # Validate split ratios sum to 1.0
+        total_split = args.train_split + args.val_split + args.test_split
+        if not abs(total_split - 1.0) < 1e-6:
+            raise ValueError("Train, validation, and test splits must sum to 1.0")
 
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            # Submit parallel tasks for loading datasets
-            future_train = executor.submit(load_train_dataset, args, config)
-            future_val = executor.submit(load_val_dataset, args, config)
-            
-            # Retrieve the loaded datasets
-            try:
-                train_data = future_train.result()
-                val_data = future_val.result()
-                logger.info("Successfully loaded training and validation datasets in parallel")
-            except Exception as e:
-                logger.error(f"Error occurred while loading datasets in parallel: {e}", exc_info=True)
-                raise e
+        if args.use_synthetic_data:
+            # Load and split synthetic data
+            all_synthetic_data = load_and_split_synthetic_data(args)
+        else:
+            all_synthetic_data = None
+
+        # Load datasets
+        logger.info("Loading datasets")
+        train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
+        val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
+        test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
 
         if args.enable_symbol_freq:
             logger.debug("Calculating symbol frequencies as it is enabled.")
@@ -700,6 +691,9 @@ if __name__ == "__main__":
     parser.add_argument("--results_dir", type=str, default="./results", help="Directory to save results")
     parser.add_argument("--run_name", type=str, default="default_run", help="Name of the run for saving results")
     parser.add_argument("--use_synthetic_data", action="store_true", help="Use synthetic data for training")
+    parser.add_argument("--train_split", type=float, default=0.8, help="Proportion of data to use for training")
+    parser.add_argument("--val_split", type=float, default=0.1, help="Proportion of data to use for validation")
+    parser.add_argument("--test_split", type=float, default=0.1, help="Proportion of data to use for testing")
     parser.add_argument(
         "--matmul_precision",
         type=str,
