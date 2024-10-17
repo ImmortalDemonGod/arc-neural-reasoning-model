@@ -230,7 +230,7 @@ class ARCTrainer(pl.LightningModule):
         return loss
 
     def on_test_epoch_start(self):
-        self.test_outputs = []
+        self.test_outputs = []  # Clear previous test outputs
 
     def test_step(self, batch, batch_idx):
         logger.debug(f"DEBUG: test_step input - batch: {batch}, batch_idx: {batch_idx}")
@@ -311,12 +311,21 @@ class ARCTrainer(pl.LightningModule):
         total_loss = torch.stack([torch.tensor(x['test_loss']) for x in self.test_outputs]).mean()
         all_accuracies = []
         all_diff_accuracies = []
+        per_task_accuracy = {}
+        per_task_diff_accuracy = {}
 
         for output in self.test_outputs:
             if 'test_accuracy' in output:
                 all_accuracies.append(output['test_accuracy'])
             if 'test_diff_accuracy' in output:
                 all_diff_accuracies.append(output['test_diff_accuracy'])
+
+            # Collect per-task metrics
+            for key, value in output.items():
+                if key.endswith('_test_accuracy'):
+                    per_task_accuracy[key] = value
+                elif key.endswith('_test_diff_accuracy'):
+                    per_task_diff_accuracy[key] = value
 
         avg_accuracy = sum(all_accuracies) / len(all_accuracies) if all_accuracies else 0
         avg_diff_accuracy = sum(all_diff_accuracies) / len(all_diff_accuracies) if all_diff_accuracies else 0
@@ -326,6 +335,22 @@ class ARCTrainer(pl.LightningModule):
         self.log('avg_test_diff_accuracy', avg_diff_accuracy, prog_bar=True)
 
         print(f"DEBUG: Test epoch end - Avg loss: {total_loss}, Avg accuracy: {avg_accuracy}, Avg diff accuracy: {avg_diff_accuracy}")
+
+        # Prepare final metrics including per-task metrics
+        final_metrics = {
+            "best_val_loss": self.best_val_loss,
+            "best_epoch": self.best_epoch,
+            "final_test_loss": total_loss.item(),
+            "final_test_accuracy": avg_accuracy,
+            "final_test_diff_accuracy": avg_diff_accuracy
+        }
+
+        # Include per-task metrics
+        final_metrics.update(per_task_accuracy)
+        final_metrics.update(per_task_diff_accuracy)
+
+        # Update the ResultsCollector with final metrics
+        self.results_collector.set_final_metrics(final_metrics)
 
     def compute_accuracy(self, outputs, targets):
         predictions = outputs.argmax(dim=-1)
