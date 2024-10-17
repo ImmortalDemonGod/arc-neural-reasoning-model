@@ -25,24 +25,25 @@ except ImportError:
     TaskSet = None
 
 logger = logging.getLogger(__name__)
+
+# Create a handler that writes to stderr
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(handler)
+
+# Determine debug mode
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False") == "True"
+
+# Set logging levels based on DEBUG_MODE
 if DEBUG_MODE:
     logger.setLevel(logging.DEBUG)
     handler.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
     handler.setLevel(logging.INFO)
-
-# Create a handler that writes to stderr
-handler = logging.StreamHandler()
-handler.setLevel(logging.ERROR)
-
-# Create a formatting for the logs
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-
-# Add the handler to the logger
-logger.addHandler(handler)
 
 # Define JSON Schema for task validation
 TASK_SCHEMA = {
