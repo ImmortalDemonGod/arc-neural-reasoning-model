@@ -72,12 +72,8 @@ class ResultsCollector:
 
     def set_test_results(self, metrics: Dict[str, float]):
         """Set the test results metrics."""
-        self.results["test"] = {
-            "avg_loss": metrics.get("test_loss"),
-            "avg_acc_with_pad": metrics.get("test_acc_with_pad"),
-            "avg_acc_without_pad": metrics.get("test_acc_without_pad"),
-        }
-
+        self.results["test"] = metrics
+        
     def add_task_specific_result(self, task_id: str, metrics: Dict[str, float]):
         """Add task-specific results for a given task ID."""
         if task_id not in self.task_specific_results:
