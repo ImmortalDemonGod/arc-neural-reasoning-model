@@ -742,8 +742,8 @@ class ARCDataset(Dataset):
         padded_outputs = torch.stack(outputs)
     
         # Debugging: Verify shapes after stacking
-        print(f"Padded inputs shape: {padded_inputs.shape}")
-        print(f"Padded outputs shape: {padded_outputs.shape}")
+        #print(f"Padded inputs shape: {padded_inputs.shape}")
+        #print(f"Padded outputs shape: {padded_outputs.shape}")
     
 
         return padded_inputs, padded_outputs, list(task_ids)
