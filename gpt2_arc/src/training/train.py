@@ -126,9 +126,9 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         if dataset_type == 'train':
             data_source = train_set
         elif dataset_type == 'val':
-            data_source = eval_set
+            data_source = val_set
         elif dataset_type == 'test':
-            raise ValueError("test_set is not available. Please update arckit.load_data() to return test_set.")
+            data_source = test_set
         else:
             raise ValueError(f"Unknown dataset_type: {dataset_type}")
 
@@ -332,8 +332,17 @@ def main(args):
             # Load datasets
             logger.info("Loading datasets")
             train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
-            val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
-            test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
+        
+            # Calculate the number of validation and test samples
+            total_eval = len(eval_set)
+            val_size = int(total_eval * args.val_split / (args.val_split + args.test_split))
+            test_size = total_eval - val_size
+        
+            # Split eval_set into val_set and test_set
+            val_set, test_set = torch.utils.data.random_split(eval_set, [val_size, test_size])
+        
+            val_data = ARCDataset(val_set)
+            test_data = ARCDataset(test_set)
         except Exception as e:
             logger.error(f"Error loading datasets: {str(e)}")
             raise  # Re-raise the exception after logging
