@@ -106,11 +106,12 @@ class ARCTrainer(pl.LightningModule):
             train_loader = DataLoader(
                 self.train_dataset,
                 batch_size=self.config.training.batch_size,
-                num_workers=get_num_workers(self.config.training, self.args.num_workers),
+                num_workers=get_num_workers(self.config.training),
                 shuffle=True,  # Enable shuffle
-                pin_memory=self.config.training.pin_memory if self.args.use_gpu else False,
+                pin_memory=self.config.training.pin_memory,
                 prefetch_factor=self.config.training.prefetch_factor,
-                persistent_workers=self.config.training.persistent_workers
+                persistent_workers=self.config.training.persistent_workers,
+                collate_fn=self.test_dataset.collate_fn
             )
 
         logger.debug(f"Training DataLoader created with num_workers={get_num_workers(self.config.training, self.args.num_workers)}")
