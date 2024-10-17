@@ -67,7 +67,11 @@ def evaluate(model, test_dataset, config, batch_size=32):
             if isinstance(value, torch.Tensor):
                 value = value.item()
             # Key format: 'taskid_test_accuracy' or 'taskid_test_diff_accuracy'
-            task_id, metric_name = key.split('_test_')
+            try:
+                task_id, metric_name = key.split('_test_')
+            except ValueError:
+                logger.warning(f"Unexpected metric format: {key}. Skipping.")
+                continue
             if task_id not in individual_metrics:
                 individual_metrics[task_id] = {}
             individual_metrics[task_id][f'test_{metric_name}'] = value

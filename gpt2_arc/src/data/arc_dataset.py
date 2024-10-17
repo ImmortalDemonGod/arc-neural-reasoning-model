@@ -262,7 +262,9 @@ class ARCDataset(Dataset):
                         current_object[current_key] = value
                     elif 'input' in current_object and 'output' in current_object:
                         # Sample-Based Structure
-                        task_id = current_object.get('id', os.path.splitext(os.path.basename(file_path))[0])
+                        task_id = current_object.get('id')
+                        if not task_id:
+                            raise ValueError(f"Sample in {file_path} is missing 'id' for task_id.")
                         try:
                             input_tensor = self._preprocess_grid(current_object['input'])
                             output_tensor = self._preprocess_grid(current_object['output'])
@@ -271,7 +273,7 @@ class ARCDataset(Dataset):
                                 "output": output_tensor,
                                 "task_id": task_id
                             })
-                            logger.debug(f"Added sample from file {file_path}")
+                            logger.debug(f"Added sample with task_id: {task_id} from file {file_path}")
                         except Exception as e:
                             logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
                         current_object = {}
@@ -392,7 +394,10 @@ class ARCDataset(Dataset):
         # Since all samples are already padded to 30x30 during preprocessing, no additional padding is required here.
         input_tensor = sample["input"]  # Already padded
         output_tensor = sample["output"]  # Already padded
-        return input_tensor, output_tensor, sample["task_id"]
+        task_id = sample["task_id"]
+        if idx < 5:  # Log only the first 5 samples to avoid clutter
+            logger.debug(f"Sample {idx} - Task ID: {task_id}")
+        return input_tensor, output_tensor, task_id
 
 
 
