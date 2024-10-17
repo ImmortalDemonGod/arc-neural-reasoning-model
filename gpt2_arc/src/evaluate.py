@@ -221,7 +221,7 @@ def main(args):
     )
 
     # Evaluate the model
-    results, individual_metrics = evaluate(model, test_data, config, args.batch_size)
+    results, individual_metrics = evaluate(model, test_data, config, args.batch_size, pad_symbol_idx=config.training.pad_symbol_idx)
 
     logger.debug(f"DEBUG: Evaluation results: {results}")
     logger.debug(f"DEBUG: Individual metrics: {individual_metrics}")
