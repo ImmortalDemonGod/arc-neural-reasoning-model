@@ -664,6 +664,7 @@ if __name__ == "__main__":
         action="store_true",
         help="Disable pin_memory in DataLoader."
     )
+    parser.add_argument("--n_embd", type=int, default=768, help="Embedding size for the model.")
     parser.add_argument("--n_head", type=int, default=1, help="Number of attention heads for profiling")
     parser.add_argument("--n_layer", type=int, default=1, help="Number of transformer layers for profiling")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for profiling")
