@@ -354,6 +354,7 @@ def main(args):
         num_classes = config.training.num_classes
         logger.info(f"Number of classes set to: {num_classes}")
         logger.info("Creating DataLoader instances")
+        logger.debug(f"Validation DataLoader created with num_workers={get_num_workers(config.training, args.num_workers)}")
         # Create DataLoader instances with centralized num_workers
         logger.info("Creating training DataLoader with centralized num_workers")
         if config.training.balance_symbols:

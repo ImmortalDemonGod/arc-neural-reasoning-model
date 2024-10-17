@@ -47,6 +47,7 @@ class ARCTrainer(pl.LightningModule):
         self.best_epoch = 0
         self.results_collector = results_collector if results_collector else ResultsCollector(config)
         self.writer = SummaryWriter(f"runs/experiment_{self.results_collector.experiment_id}")
+        # Removed old DataLoader methods
 
         
         if self.model.symbol_freq:
