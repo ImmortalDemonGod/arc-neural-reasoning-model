@@ -61,14 +61,14 @@ from src.config import Config, ModelConfig, TrainingConfig
 @pytest.fixture
 def model():
     config = Config(model=ModelConfig(), training=TrainingConfig())
-    return GPT2ARC(config.model)
+    return GPT2ARC(config.model, num_classes=config.model.num_classes)
 
 
 @pytest.fixture
 def trainer():
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
     config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=2))
-    model = GPT2ARC(config.model)
+    model = GPT2ARC(config.model, num_classes=config.model.num_classes)
     return ARCTrainer(model, None, None, config)
 
 
