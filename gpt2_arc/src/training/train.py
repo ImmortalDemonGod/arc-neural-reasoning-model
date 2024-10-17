@@ -573,8 +573,8 @@ def main(args):
 
             results = {
                 "avg_test_loss": avg_test_loss,
-                "avg_acc_with_pad": avg_test_accuracy,
-                "avg_acc_without_pad": avg_test_diff_accuracy,
+                "avg_test_accuracy": avg_test_accuracy,
+                "avg_test_diff_accuracy": avg_test_diff_accuracy,
             }
 
             # Add task-specific results
