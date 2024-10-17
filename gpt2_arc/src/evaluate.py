@@ -40,32 +40,54 @@ def evaluate(model, test_dataset, config, batch_size=32):
     logger.debug(f"DEBUG: Raw results from test: {results}")
 
     avg_test_loss = pl_trainer.callback_metrics.get('avg_test_loss')
-    avg_test_acc_with_pad = pl_trainer.callback_metrics.get('avg_test_acc_with_pad')
-    avg_test_acc_without_pad = pl_trainer.callback_metrics.get('avg_test_acc_without_pad')
+    avg_test_accuracy = pl_trainer.callback_metrics.get('avg_test_accuracy')
+    avg_test_diff_accuracy = pl_trainer.callback_metrics.get('avg_test_diff_accuracy')
 
     # Convert tensors to Python floats if necessary
     if avg_test_loss is not None:
         avg_test_loss = avg_test_loss.item()
+    if avg_test_accuracy is not None:
+        avg_test_accuracy = avg_test_accuracy.item()
+    if avg_test_diff_accuracy is not None:
+        avg_test_diff_accuracy = avg_test_diff_accuracy.item()
 
     aggregated_results = {
         'test_loss': avg_test_loss,
-        'test_acc_with_pad': avg_test_acc_with_pad,
-        'test_acc_without_pad': avg_test_acc_without_pad,
+        'test_accuracy': avg_test_accuracy,
+        'test_diff_accuracy': avg_test_diff_accuracy,
     }
 
-    print(f"DEBUG: Logged metrics - Avg test loss: {avg_test_loss}, Avg test acc with pad: {avg_test_acc_with_pad}, Avg test acc without pad: {avg_test_acc_without_pad}")
+    print(f"DEBUG: Logged metrics - Avg test loss: {avg_test_loss}, Avg test accuracy: {avg_test_accuracy}, Avg diff accuracy: {avg_test_diff_accuracy}")
 
     # Collect individual task metrics
     individual_metrics = {}
     for key, value in pl_trainer.callback_metrics.items():
-        if '_test_acc_with_pad' in key or '_test_acc_without_pad' in key:
+        if '_test_accuracy' in key or '_test_diff_accuracy' in key:
             if isinstance(value, torch.Tensor):
                 value = value.item()
-            # Key format: 'taskid_test_acc_with_pad' or 'taskid_test_acc_without_pad'
-            task_id, metric_suffix = key.split('_test_acc_')
+            # Key format: 'taskid_test_accuracy' or 'taskid_test_diff_accuracy'
+            task_id, metric_name = key.split('_test_')
             if task_id not in individual_metrics:
                 individual_metrics[task_id] = {}
-            individual_metrics[task_id][f'test_acc_{metric_suffix}'] = value
+            individual_metrics[task_id][f'test_{metric_name}'] = value
+
+    # Compute complete task accuracy (fraction of tasks with perfect accuracy)
+    num_tasks = len(individual_metrics)
+    perfect_accuracy_threshold = config.evaluation.perfect_accuracy_threshold / 100.0  # Convert percentage to fraction
+
+    num_complete_accuracy = 0
+    for task_id, metrics in individual_metrics.items():
+        test_accuracy = metrics.get('test_accuracy', 0)
+        # Determine if the task is completely solved
+        completely_solved = test_accuracy >= perfect_accuracy_threshold
+        metrics['completely_solved'] = completely_solved
+        if completely_solved:
+            num_complete_accuracy += 1
+
+    complete_task_accuracy = num_complete_accuracy / num_tasks if num_tasks > 0 else 0.0
+    aggregated_results['complete_task_accuracy'] = complete_task_accuracy
+
+    print(f"DEBUG: Computed complete task accuracy: {complete_task_accuracy}")
 
     return aggregated_results, individual_metrics
 
@@ -212,8 +234,7 @@ def main(args):
 
     # Print complete_task_accuracy at the bottom
     if 'complete_task_accuracy' in results:
-        print(f"complete_task_accuracy_with_pad: {results['complete_task_accuracy_with_pad']}")
-        print(f"complete_task_accuracy_without_pad: {results['complete_task_accuracy_without_pad']}")
+        print(f"complete_task_accuracy: {results['complete_task_accuracy']}")
         if args.use_wandb:
             wandb.log({"eval/complete_task_accuracy": results['complete_task_accuracy']})
 
