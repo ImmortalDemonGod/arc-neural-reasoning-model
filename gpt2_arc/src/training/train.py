@@ -1,5 +1,6 @@
 # gpt2_arc/src/training/train.py
 import argparse
+from typing import Optional
 import multiprocessing
 import sys
 import logging
