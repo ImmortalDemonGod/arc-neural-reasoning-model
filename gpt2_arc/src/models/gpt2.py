@@ -134,12 +134,12 @@ class MambaLayer(nn.Module):
 
 
 class GPT2ARC(pl.LightningModule):
-    def __init__(self, config: Config, num_classes: int, symbol_freq: Dict[int, float], pad_symbol_idx: int):
+    def __init__(self, config: Config, num_classes: int, symbol_freq: Optional[Dict[int, float]] = None, pad_symbol_idx: int = 10):
         super().__init__()
         self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
         self.config = config
-        self.symbol_freq = symbol_freq
-        self.pad_symbol_idx = pad_symbol_idx
+        self.symbol_freq = symbol_freq if symbol_freq is not None else {}
+        self.pad_symbol_idx = pad_symbol_idx  # Add this line
         self.include_pad_in_loss = self.config.training.include_pad_in_loss  # Reintroduced
         self.conv1 = nn.Conv2d(
             in_channels=1,

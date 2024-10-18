@@ -379,10 +379,10 @@ def main(args):
             balance_symbols = True
             balancing_method = "weighting"
         else:
-            balance_symbols = False
-            balancing_method = "none"
             symbol_freq_dict = {}
             logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
+            balance_symbols = False
+            balancing_method = "none"
 
         training_config = TrainingConfig(
             batch_size=args.batch_size,
