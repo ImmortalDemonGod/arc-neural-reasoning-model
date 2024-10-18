@@ -706,8 +706,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size_max", type=int, default=1, help="Maximum value for batch_size")
     parser.add_argument("--learning_rate_min", type=float, default=1e-5, help="Minimum value for learning_rate")
     parser.add_argument("--learning_rate_max", type=float, default=1e-2, help="Maximum value for learning_rate")
-    parser.add_argument("--max_epochs_min", type=int, default=0, help="Minimum value for max_epochs")
-    parser.add_argument("--max_epochs_max", type=int, default=0, help="Maximum value for max_epochs")
+    parser.add_argument("--max_epochs_min", type=int, default=1, help="Minimum value for max_epochs")
+    parser.add_argument("--max_epochs_max", type=int, default=10, help="Maximum value for max_epochs")
 
     parser.add_argument("--mamba_ratio_min", type=float, default=1.0, help="Minimum value for mamba_ratio")
     parser.add_argument("--mamba_ratio_max", type=float, default=8.0, help="Maximum value for mamba_ratio")
