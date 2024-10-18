@@ -722,6 +722,7 @@ class ARCDataset(Dataset):
 
 
     @staticmethod
+    @staticmethod
     def collate_fn(batch):
         # Debugging: Check batch size
         logger.debug(f"Collating batch of size: {len(batch)}")
