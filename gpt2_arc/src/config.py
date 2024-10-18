@@ -3,7 +3,6 @@ from typing import Optional, Dict
 from dataclasses import dataclass, asdict, field
 import multiprocessing
 import logging
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logs
