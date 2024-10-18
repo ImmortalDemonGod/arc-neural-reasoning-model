@@ -30,11 +30,6 @@ class ResultsCollector:
         self.used_synthetic_data = getattr(config.training, 'use_synthetic_data', False)
         print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
         self._log_results_type("After initialization")
-        self.metrics = {}
-        self.task_specific_results = {}
-        self.environment = self._get_environment_info()
-        self.checkpoint_path = None
-        self.tensorboard_log_path = None
 
     def set_tensorboard_log_path(self, path):
         self.tensorboard_log_path = path
@@ -50,6 +45,7 @@ class ResultsCollector:
 
     def _log_results_type(self, context: str):
         """Log the type of self.results['train'] for debugging."""
+        logger.debug(f"{context}: self.results['train'] is of type {type(self.results['train'])}")
     
     def update_train_metrics(self, epoch: int, metrics: Dict[str, float]):
         """Update training metrics for a specific epoch."""
@@ -170,6 +166,7 @@ class ResultsCollector:
             return str(obj)
 
     def _serialize_config(self, config):
+        """Serialize the configuration dictionary."""
         return {k: self._make_serializable(v) for k, v in config.items()}
     def _serialize_config(self, config):
         """Serialize the configuration dictionary."""
