@@ -13,13 +13,26 @@ import numpy as np
 from pytorch_lightning.utilities.model_summary import ModelSummary
 from optuna.pruners import PercentilePruner
 from optuna.samplers import TPESampler
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, Callback
 from pytorch_lightning.loggers import TensorBoardLogger
 #from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.training.trainer import NanLossPruningCallback
 from gpt2_arc.src.training.train import ModelConfigSaver
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.utils.results_collector import ResultsCollector
+
+class BestEpochTrackerCallback(Callback):
+    def __init__(self):
+        super().__init__()
+        self.best_epoch = 0
+
+    def on_validation_end(self, trainer, pl_module):
+        current_val_loss = trainer.callback_metrics.get("val_loss")
+        if current_val_loss is not None:
+            if not hasattr(self, 'best_val_loss') or current_val_loss < self.best_val_loss:
+                self.best_val_loss = current_val_loss
+                self.best_epoch = trainer.current_epoch
+                logger.debug(f"New best_val_loss: {self.best_val_loss} at epoch {self.best_epoch}")
 
 from gpt2_arc.src.utils.model_memory_estimator import (
     calculate_params,
@@ -436,30 +449,6 @@ def objective(trial, args):
         # Instantiate the ModelConfigSaver callback with the current config
         model_config_saver = ModelConfigSaver(config)
 
-        # Load data
-        if args.use_synthetic_data:
-            if not args.synthetic_data_path:
-                raise ValueError("Synthetic data path not provided")
-            logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
-            train_data = ARCDataset(
-                data_source=args.synthetic_data_path,
-                is_test=False,
-                num_symbols=config.model.n_embd
-            )
-            val_data = ARCDataset(
-                data_source=args.synthetic_data_path,
-                is_test=True,
-                num_symbols=config.model.n_embd
-            )
-            logger.debug(f"Synthetic training data size: {len(train_data)}")
-            logger.debug(f"Synthetic validation data size: {len(val_data)}")
-        else:
-            logger.info("Loading ARC dataset")
-            train_set, eval_set = arckit.load_data()
-            train_data = ARCDataset(train_set)
-            val_data = ARCDataset(eval_set)
-            logger.debug(f"ARC training data size: {len(train_data)}")
-            logger.debug(f"ARC validation data size: {len(val_data)}")
 
         # Calculate Symbol Frequencies
         if args.use_synthetic_data:
