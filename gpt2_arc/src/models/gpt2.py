@@ -136,6 +136,7 @@ class MambaLayer(nn.Module):
 class GPT2ARC(pl.LightningModule):
     def __init__(self, config: Config, num_classes: int, symbol_freq: Dict[int, float], pad_symbol_idx: int):
         super().__init__()
+        self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
         self.config = config
         self.symbol_freq = symbol_freq
         self.pad_symbol_idx = pad_symbol_idx
