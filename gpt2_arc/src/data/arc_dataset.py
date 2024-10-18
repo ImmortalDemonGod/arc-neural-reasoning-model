@@ -244,7 +244,7 @@ class ARCDataset(Dataset):
                                 # Generate a unique task_id based on the filename and a unique index
                                 filename = os.path.splitext(os.path.basename(file_path))[0]
                                 task_id = f"{filename}_sample_{sample_count}"
-                                logger.warning(f"Sample is missing 'id'. Assigning default task_id: {task_id}")
+                                #logger.warning(f"Sample is missing 'id'. Assigning default task_id: {task_id}")
                                 missing_id_logged = True  # Set flag to prevent further warnings for this file
                             else:
                                 # Assign task_id without logging the warning again
