@@ -1,7 +1,6 @@
 # gpt2_arc/src/optimize_hyperparameters.py
 import argparse
 import random
-import logging
 import optuna
 import logging
 import sys
@@ -72,14 +71,20 @@ import arckit
 from gpt2_arc.src.utils.performance_metrics import calculate_mamba_efficiency
 
 # Set up logging
+parser.add_argument("--log_level", type=str, default="INFO", help="Logging level")
+
+args = parser.parse_args()
+
+log_level = getattr(logging, args.log_level.upper(), logging.INFO)
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
+logger.setLevel(log_level)
 
 def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout):
     """Validate that hyperparameters meet necessary constraints."""
