@@ -284,8 +284,7 @@ def objective(trial, args):
             d_conv=d_conv,
             mamba_depth=mamba_depth,
             mamba_expand=mamba_expand,
-            fast_dev_run=args.fast_dev_run,  # Use the command-line argument
-            fast_dev_run=args.fast_dev_run  # Added this line
+            fast_dev_run=args.fast_dev_run  # Use the command-line argument
         )
         # Improve memory estimation by considering additional factors like optimizer state and activation memory
         safety_margin = 0.1  # 10% safety margin
