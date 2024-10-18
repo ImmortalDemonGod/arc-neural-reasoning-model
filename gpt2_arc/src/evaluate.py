@@ -169,8 +169,20 @@ def main(args):
     try:
         # Remove the "model." prefix from state dict keys
         state_dict = {k.replace('model.', ''): v for k, v in checkpoint['state_dict'].items()}
-        model.load_state_dict(state_dict)
-        
+        missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+
+        # Check if 'loss_fn.weight' is missing and initialize it if necessary
+        if "loss_fn.weight" in missing_keys:
+            logger.debug("'loss_fn.weight' not found in state_dict. Initializing with default weights.")
+            num_classes = config.training.num_classes  # Ensure this is correctly retrieved from your config
+            default_weights = torch.ones(num_classes)
+            model.loss_fn.weight = default_weights
+            logger.debug(f"'loss_fn.weight' initialized with weights: {default_weights}")
+
+        # Optionally, log any unexpected keys for further debugging
+        if unexpected_keys:
+            logger.warning(f"Unexpected keys in state_dict: {unexpected_keys}")
+
         # Print all keys in the model's state dictionary
         print("Model state_dict keys:", list(model.state_dict().keys()))
     except Exception as e:
