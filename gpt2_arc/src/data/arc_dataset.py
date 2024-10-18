@@ -111,7 +111,6 @@ class ARCDataset(Dataset):
         if self._load_cache(self.cache_path):
             logger.debug("Data loaded from cache successfully.")
             self.num_samples = len(self.data)
-            return
         
         if debug:
             logger.setLevel(logging.DEBUG)
