@@ -42,9 +42,9 @@ class ExperimentTracker:
         self.checkpoint_path = None
 
         # Add debug logging
-        print(f"ExperimentTracker initialized with config: {json.dumps(self.config, indent=2)}")
-        print(f"Project: {project}, Entity: {entity}")
-        print(f"use_wandb: {self.use_wandb}")
+        logger.debug(f"ExperimentTracker initialized with config: {json.dumps(self.config, indent=2)}")
+        logger.debug(f"Project: {project}, Entity: {entity}")
+        logger.debug(f"use_wandb: {self.use_wandb}")
 
     def _get_environment_info(self) -> Dict[str, str]:
         return {
