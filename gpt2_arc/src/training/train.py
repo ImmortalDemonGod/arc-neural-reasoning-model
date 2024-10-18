@@ -415,21 +415,71 @@ def main(args):
         num_classes = config.training.num_classes
         logger.info(f"Number of classes set to: {num_classes}")
         logger.info("Creating DataLoader instances")
-        # Create test DataLoader
-        test_loader = DataLoader(
-            test_data,
+        # Create Training DataLoader with WeightedRandomSampler if available
+        if train_data.sampler:
+            train_loader = DataLoader(
+                train_data,
+                batch_size=config.training.batch_size,
+                sampler=train_data.sampler,
+                num_workers=get_num_workers(config.training),
+                shuffle=False,  # Disable shuffle when using sampler
+                pin_memory=config.training.pin_memory if args.use_gpu else False,
+                prefetch_factor=config.training.prefetch_factor,
+                persistent_workers=config.training.persistent_workers
+            )
+            logger.debug("Using WeightedRandomSampler for Training DataLoader.")
+        else:
+            train_loader = DataLoader(
+                train_data,
+                batch_size=config.training.batch_size,
+                shuffle=True,
+                num_workers=get_num_workers(config.training),
+                pin_memory=config.training.pin_memory if args.use_gpu else False,
+                prefetch_factor=config.training.prefetch_factor,
+                persistent_workers=config.training.persistent_workers
+            )
+            logger.debug("Shuffling enabled for Training DataLoader.")
+
+        # Create Validation DataLoader
+        val_loader = DataLoader(
+            val_data,
             batch_size=config.training.batch_size,
+            shuffle=False,  # Typically, no shuffle for validation
             num_workers=get_num_workers(config.training),
-            shuffle=False,
             pin_memory=config.training.pin_memory if args.use_gpu else False,
             prefetch_factor=config.training.prefetch_factor,
             persistent_workers=config.training.persistent_workers
         )
-        logger.debug(f"Validation DataLoader created with num_workers={get_num_workers(config.training)}")
+        logger.debug("Shuffling disabled for Validation DataLoader.")
+
+        # Create Test DataLoader with similar logic
+        if test_data.sampler:
+            test_loader = DataLoader(
+                test_data,
+                batch_size=config.training.batch_size,
+                sampler=test_data.sampler,
+                num_workers=get_num_workers(config.training),
+                shuffle=False,
+                pin_memory=config.training.pin_memory if args.use_gpu else False,
+                prefetch_factor=config.training.prefetch_factor,
+                persistent_workers=config.training.persistent_workers
+            )
+            logger.debug("Using WeightedRandomSampler for Test DataLoader.")
+        else:
+            test_loader = DataLoader(
+                test_data,
+                batch_size=config.training.batch_size,
+                shuffle=False,
+                num_workers=get_num_workers(config.training),
+                pin_memory=config.training.pin_memory if args.use_gpu else False,
+                prefetch_factor=config.training.prefetch_factor,
+                persistent_workers=config.training.persistent_workers
+            )
+            logger.debug("Shuffling disabled for Test DataLoader.")
 
         # Initialize model
         logger.info("Initializing model")
-        model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
+        model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
         logger.debug(f"Model initialized with config: {model_config}")
 
         # Load the checkpoint if specified
@@ -565,6 +615,10 @@ def main(args):
             logger.info(f"Initial CUDA memory allocated: {torch.cuda.memory_allocated()} bytes")
             logger.info(f"Initial CUDA memory reserved: {torch.cuda.memory_reserved()} bytes")
 
+        logger.info("Starting model training")
+        logger.debug("Training parameters: ")
+        logger.debug(f"Batch size: {config.training.batch_size}, Learning rate: {config.training.learning_rate}, Max epochs: {config.training.max_epochs}")
+
         # Train the model
         logger.info("Starting model training")
         # Update the fit call to exclude DataLoaders
@@ -575,7 +629,10 @@ def main(args):
             logger.info(f"CUDA memory allocated after training: {torch.cuda.memory_allocated()} bytes")
             logger.info(f"CUDA memory reserved after training: {torch.cuda.memory_reserved()} bytes")
 
+        logger.info("Model training completed successfully.")
+
         # After training, run test
+        logger.info("Starting model evaluation on test dataset.")
         logger.info("Running model evaluation")
         logger.debug("Preparing to run Trainer.test()")
         test_results = pl_trainer.test(model=trainer, dataloaders=test_loader)
@@ -584,7 +641,7 @@ def main(args):
             avg_test_accuracy = sum(result['avg_test_accuracy'] for result in test_results) / len(test_results)
             avg_test_diff_accuracy = sum(result['avg_test_diff_accuracy'] for result in test_results) / len(test_results)
 
-            logger.info(f"Test results - Loss: {avg_test_loss}, Accuracy: {avg_test_accuracy}, Diff Accuracy: {avg_test_diff_accuracy}")
+            logger.info(f"Test results - Loss: {avg_test_loss:.4f}, Accuracy: {avg_test_accuracy:.4f}, Diff Accuracy: {avg_test_diff_accuracy:.4f}")
 
             results = {
                 "avg_test_loss": avg_test_loss,
@@ -615,7 +672,9 @@ def main(args):
         torch.save({
             'state_dict': trainer.model.state_dict(),
             'model_config': trainer.config.model.__dict__,
-            'training_config': trainer.config.training.__dict__
+            'training_config': trainer.config.training.__dict__,
+            'pad_symbol_idx': trainer.config.training.pad_symbol_idx,
+            'symbol_freq': trainer.config.training.symbol_freq
         }, model_path)
         trainer.results_collector.set_checkpoint_path(model_path)
         logger.debug(f"Model and configuration saved to: {model_path}")
