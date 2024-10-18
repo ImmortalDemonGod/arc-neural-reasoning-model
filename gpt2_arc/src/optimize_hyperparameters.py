@@ -389,13 +389,15 @@ def objective(trial, args):
             n_embd = n_head * n_embd_multiplier
             n_embd = 2 ** int(np.log2(n_embd))
             n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
-            # Remove mamba_ratio from suggestions since it's fixed
-            # mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
-            # d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
-            # d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
-            # dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
-            # mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
-            # mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
+            mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
+            d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
+            d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
+            dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
+            mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
+            mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
+
+            # Validate hyperparameters
+            validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
         else:
             # If a checkpoint is used, set fixed values and do not suggest architecture-related hyperparameters
             n_head = model_config.n_head
@@ -407,17 +409,9 @@ def objective(trial, args):
             dropout = model_config.dropout
             mamba_depth = model_config.mamba_depth
             mamba_expand = model_config.mamba_expand
-        if not args.model_checkpoint:
-            n_head = min(n_head, 2 ** args.n_head_exp_max)
-            n_embd = min(n_embd, 2 ** int(np.log2(args.n_embd_multiplier_max * n_head)))
-            n_layer = min(n_layer, args.n_layer_max)
-            mamba_ratio = min(mamba_ratio, args.mamba_ratio_max)
-            d_state = min(d_state, args.d_state_max)
-            d_conv = min(d_conv, args.d_conv_max)
-            batch_size = min(batch_size, args.batch_size_max)
-            # Optionally, log the clamped values
-            logger.debug(f"Clamped hyperparameters: n_head={n_head}, n_embd={n_embd}, n_layer={n_layer}, \
-                mamba_ratio={mamba_ratio}, d_state={d_state}, d_conv={d_conv}, batch_size={batch_size}")
+
+            # Validate hyperparameters
+            validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
 
         # Check if the model will fit in memory
         # Adjust the total number of layers to include Mamba layers
