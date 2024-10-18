@@ -407,6 +407,7 @@ def main(args):
             )
         else:
             # ... (keep the existing code for non-synthetic data)
+            pass
 
         # Initialize model
         logger.info("Initializing model")
