@@ -155,7 +155,6 @@ class ARCDataset(Dataset):
             logger.debug("No symbol frequencies provided; sampler not initialized.")
         self._save_cache(self.cache_path)
 
-
     def _process_single_task(self, task: Dict, task_id: str) -> List[Dict]:
         """
         Processes a single task dictionary and returns a list of samples.
@@ -351,6 +350,8 @@ class ARCDataset(Dataset):
 
     def get_num_samples(self):
         return self.num_samples
+    
+    
     def __getitem__(self, idx):
         sample = self.data[idx]
         task_id = sample["task_id"]
@@ -360,7 +361,6 @@ class ARCDataset(Dataset):
         if idx < 5:  # Log only the first 5 samples to avoid clutter
             logger.debug(f"Sample {idx} - Task ID: {task_id}")
         return input_tensor, output_tensor, task_id
-
 
 
     @staticmethod
@@ -477,10 +477,6 @@ class ARCDataset(Dataset):
                         self.data.extend(processed_samples)
                     except json.JSONDecodeError as e:
                         logger.error(f"Error decoding JSON from file {file_path}: {e}")
-
-
-
-
 
     def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
         """
@@ -719,6 +715,7 @@ class ARCDataset(Dataset):
     
 
         return padded_inputs, padded_outputs, list(task_ids)
+    
     def _load_data(self, data_source):
         logger.debug(f"Loading data from source type: {type(data_source)}")
         if isinstance(data_source, list):
