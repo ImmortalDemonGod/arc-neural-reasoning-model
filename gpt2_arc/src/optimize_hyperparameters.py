@@ -285,6 +285,7 @@ def objective(trial, args):
             mamba_depth=mamba_depth,
             mamba_expand=mamba_expand,
             fast_dev_run=args.fast_dev_run,  # Use the command-line argument
+            fast_dev_run=args.fast_dev_run  # Added this line
         )
         # Improve memory estimation by considering additional factors like optimizer state and activation memory
         safety_margin = 0.1  # 10% safety margin
@@ -663,6 +664,11 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
     parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
+    parser.add_argument(
+        "--fast_dev_run",
+        action="store_true",
+        help="Run a fast development test."
+    )
     parser.add_argument(
         "--use_grokfast",
         action="store_true",
