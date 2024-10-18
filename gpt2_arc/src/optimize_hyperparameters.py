@@ -342,17 +342,6 @@ def objective(trial, args):
 
             mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
             logger.debug(f"Suggested mamba_expand: {mamba_expand}")
-        else:
-            # If a checkpoint is used, set fixed values and do not suggest architecture-related hyperparameters
-            n_head = model_config.n_head
-            n_embd = model_config.n_embd
-            n_layer = model_config.n_layer
-            mamba_ratio = model_config.mamba_ratio
-            d_state = model_config.d_state
-            d_conv = model_config.d_conv
-            dropout = model_config.dropout
-            mamba_depth = model_config.mamba_depth
-            mamba_expand = model_config.mamba_expand
 
             logger.debug(f"Using fixed hyperparameters from checkpoint: n_head={n_head}, n_embd={n_embd}, "
                          f"n_layer={n_layer}, mamba_ratio={mamba_ratio}, d_state={d_state}, "
@@ -418,16 +407,17 @@ def objective(trial, args):
             dropout = model_config.dropout
             mamba_depth = model_config.mamba_depth
             mamba_expand = model_config.mamba_expand
-        n_head = min(n_head, 2 ** args.n_head_exp_max)
-        n_embd = min(n_embd, 2 ** int(np.log2(args.n_embd_multiplier_max * n_head)))
-        n_layer = min(n_layer, args.n_layer_max)
-        mamba_ratio = min(mamba_ratio, args.mamba_ratio_max)
-        d_state = min(d_state, args.d_state_max)
-        d_conv = min(d_conv, args.d_conv_max)
-        batch_size = min(batch_size, args.batch_size_max)
-        # Optionally, log the clamped values
-        logger.debug(f"Clamped hyperparameters: n_head={n_head}, n_embd={n_embd}, n_layer={n_layer}, \
-            mamba_ratio={mamba_ratio}, d_state={d_state}, d_conv={d_conv}, batch_size={batch_size}")
+        if not args.model_checkpoint:
+            n_head = min(n_head, 2 ** args.n_head_exp_max)
+            n_embd = min(n_embd, 2 ** int(np.log2(args.n_embd_multiplier_max * n_head)))
+            n_layer = min(n_layer, args.n_layer_max)
+            mamba_ratio = min(mamba_ratio, args.mamba_ratio_max)
+            d_state = min(d_state, args.d_state_max)
+            d_conv = min(d_conv, args.d_conv_max)
+            batch_size = min(batch_size, args.batch_size_max)
+            # Optionally, log the clamped values
+            logger.debug(f"Clamped hyperparameters: n_head={n_head}, n_embd={n_embd}, n_layer={n_layer}, \
+                mamba_ratio={mamba_ratio}, d_state={d_state}, d_conv={d_conv}, batch_size={batch_size}")
 
         # Check if the model will fit in memory
         # Adjust the total number of layers to include Mamba layers
@@ -583,15 +573,6 @@ def objective(trial, args):
                 logger.error(f"Error loading state_dict: {e}")
                 raise e
             
-            # Fix model architecture parameters to match the checkpoint
-            model_config.mamba_ratio = 0.0
-            model_config.n_embd = 2
-            model_config.n_head = 1
-            model_config.n_layer = 1
-            
-            # Update the Config object with fixed parameters
-            config = Config(model=model_config, training=training_config)
-            logger.debug(f"Config updated with fixed architectural parameters: {config}")
         else:
             model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
         
