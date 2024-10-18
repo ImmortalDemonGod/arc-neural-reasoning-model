@@ -440,7 +440,8 @@ def main(args):
             num_workers=get_num_workers(config.training),
             pin_memory=config.training.pin_memory if args.use_gpu else False,
             prefetch_factor=config.training.prefetch_factor,
-            persistent_workers=config.training.persistent_workers
+            persistent_workers=config.training.persistent_workers,
+            collate_fn=ARCDataset.collate_fn
         )
         logger.debug("Created Validation DataLoader")
         
@@ -453,7 +454,8 @@ def main(args):
             num_workers=get_num_workers(config.training),
             pin_memory=config.training.pin_memory if args.use_gpu else False,
             prefetch_factor=config.training.prefetch_factor,
-            persistent_workers=config.training.persistent_workers
+            persistent_workers=config.training.persistent_workers,
+            collate_fn=ARCDataset.collate_fn
         )
         logger.debug("Created Test DataLoader")
 
