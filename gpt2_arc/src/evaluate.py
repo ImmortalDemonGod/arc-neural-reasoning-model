@@ -192,6 +192,8 @@ def parse_model_summary(model_summary: str) -> Dict[str, Any]:
     }
 
     return output
+
+def save_results(results, individual_metrics, output_dir, model_name, model_summary):                                                                
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{model_name}_eval_results_{timestamp}.json"
     output_path = os.path.join(output_dir, filename)
