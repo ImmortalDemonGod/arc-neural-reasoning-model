@@ -115,51 +115,59 @@ def objective(trial, args):
         config = Config(model=model_config, training=training_config)
 
 
-        if args.enable_symbol_freq:
-            # Calculate Symbol Frequencies
-            if args.use_synthetic_data:
-                logger.debug("Calculating symbol frequencies for synthetic training set")
-                symbol_freq = train_data.get_symbol_frequencies()
-            else:
-                logger.debug("Calculating symbol frequencies for ARC training set")
-                symbol_freq = train_data.get_symbol_frequencies()
-
-            logger.debug(f"Computed symbol frequencies: {symbol_freq}")
-
-            # Directly copy symbol_freq to symbol_freq_dict
-            # Ensure symbol_freq_dict is a dictionary
-            if isinstance(symbol_freq, np.ndarray):
-                # If symbol_freq is a NumPy array, convert it to a dictionary
-                symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
-                logger.debug("Converted symbol_freq from NumPy array to dictionary.")
-            elif isinstance(symbol_freq, dict):
-                symbol_freq_dict = symbol_freq.copy()
-                logger.debug("Copied symbol_freq as a dictionary.")
-            else:
-                raise TypeError(f"Unexpected type for symbol_freq: {type(symbol_freq)}. Expected dict or np.ndarray.")
-
-            # Assert that symbol_freq_dict is indeed a dictionary
-            assert isinstance(symbol_freq_dict, dict), f"symbol_freq_dict must be a dict, but got {type(symbol_freq_dict)}."
-
-            # Remove the padding symbol from symbol_freq_dict
-            pad_symbol_idx = config.training.pad_symbol_idx
-            symbol_freq_dict.pop(pad_symbol_idx, None)
-            logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
-
-            # Debugging: Check keys and their types
-            logger.debug(f"Keys in symbol_freq_dict after popping padding symbol: {list(symbol_freq_dict.keys())}")
-            logger.debug(f"Types of keys in symbol_freq_dict: {set(type(k) for k in symbol_freq_dict.keys())}")
-
-            # Ensure the length of symbol_freq_dict matches num_classes - 1
-            assert len(symbol_freq_dict) == config.training.num_classes - 1, (
-                f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
-            )
-            balance_symbols = True
-        else:
+        if args.fast_dev_run:
+            # Disable symbol frequency balancing for fast development run
             symbol_freq_dict = {}
-            logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
             balance_symbols = False
             balancing_method = "none"
+            logger.debug("fast_dev_run is enabled. Disabling symbol frequency balancing.")
+        else:
+            if args.enable_symbol_freq:
+                # Calculate Symbol Frequencies
+                if args.use_synthetic_data:
+                    logger.debug("Calculating symbol frequencies for synthetic training set")
+                    symbol_freq = train_data.get_symbol_frequencies()
+                else:
+                    logger.debug("Calculating symbol frequencies for ARC training set")
+                    symbol_freq = train_data.get_symbol_frequencies()
+
+                logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+
+                # Directly copy symbol_freq to symbol_freq_dict
+                # Ensure symbol_freq_dict is a dictionary
+                if isinstance(symbol_freq, np.ndarray):
+                    # If symbol_freq is a NumPy array, convert it to a dictionary
+                    symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
+                    logger.debug("Converted symbol_freq from NumPy array to dictionary.")
+                elif isinstance(symbol_freq, dict):
+                    symbol_freq_dict = symbol_freq.copy()
+                    logger.debug("Copied symbol_freq as a dictionary.")
+                else:
+                    raise TypeError(f"Unexpected type for symbol_freq: {type(symbol_freq)}. Expected dict or np.ndarray.")
+
+                # Assert that symbol_freq_dict is indeed a dictionary
+                assert isinstance(symbol_freq_dict, dict), f"symbol_freq_dict must be a dict, but got {type(symbol_freq_dict)}."
+
+                # Remove the padding symbol from symbol_freq_dict
+                pad_symbol_idx = config.training.pad_symbol_idx
+                symbol_freq_dict.pop(pad_symbol_idx, None)
+                logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
+
+                # Debugging: Check keys and their types
+                logger.debug(f"Keys in symbol_freq_dict after popping padding symbol: {list(symbol_freq_dict.keys())}")
+                logger.debug(f"Types of keys in symbol_freq_dict: {set(type(k) for k in symbol_freq_dict.keys())}")
+
+                # Ensure the length of symbol_freq_dict matches num_classes - 1
+                assert len(symbol_freq_dict) == config.training.num_classes - 1, (
+                    f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+                )
+                balance_symbols = True
+                balancing_method = "weighting"
+            else:
+                symbol_freq_dict = {}
+                logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
+                balance_symbols = False
+                balancing_method = "none"
         # Existing hyperparameter suggestions when no checkpoint is provided
         torch.set_float32_matmul_precision(args.matmul_precision)
         logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
