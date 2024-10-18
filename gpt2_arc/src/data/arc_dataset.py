@@ -721,7 +721,8 @@ class ARCDataset(Dataset):
         return padded_grid
 
 
-    def collate_fn(self, batch):
+    @staticmethod
+    def collate_fn(batch):
         # Debugging: Check batch size
         logger.debug(f"Collating batch of size: {len(batch)}")
         
