@@ -157,16 +157,35 @@ def objective(trial, args):
             train_samples = [full_synthetic_dataset[i] for i in train_indices]
             val_samples = [full_synthetic_dataset[i] for i in val_indices]
             
-            # Create separate ARCDataset instances for training and validation
+            # Convert each sample tuple to a dictionary with 'input', 'output', and 'task_id' keys
+            train_samples_dict = [
+                {
+                    "input": sample[0],
+                    "output": sample[1],
+                    "task_id": sample[2]
+                }
+                for sample in train_samples
+            ]
+            
+            val_samples_dict = [
+                {
+                    "input": sample[0],
+                    "output": sample[1],
+                    "task_id": sample[2]
+                }
+                for sample in val_samples
+            ]
+            
+            # Create separate ARCDataset instances for training and validation using the dictionary lists
             train_data = ARCDataset(
-                data_source=train_samples,
+                data_source=train_samples_dict,
                 is_test=False,
                 num_symbols=config.model.n_embd,
                 symbol_freq=symbol_freq_dict
             )
             
             val_data = ARCDataset(
-                data_source=val_samples,
+                data_source=val_samples_dict,
                 is_test=True,
                 num_symbols=config.model.n_embd,
                 symbol_freq=symbol_freq_dict
