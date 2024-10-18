@@ -311,35 +311,54 @@ def objective(trial, args):
         torch.set_float32_matmul_precision(args.matmul_precision)
         logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
 
-        # Suggest n_head exponent and calculate n_head
-        n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
-        n_head = 2 ** n_head_exp
-        logger.debug(f"Suggested n_head: {n_head} (2^{n_head_exp})")
+        if not args.model_checkpoint:
+            # Only suggest hyperparameters that are not fixed by the checkpoint
+            # Suggest n_head exponent and calculate n_head
+            n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
+            n_head = 2 ** n_head_exp
+            logger.debug(f"Suggested n_head: {n_head} (2^{n_head_exp})")
 
-        # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
-        n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
-        n_embd = n_head * n_embd_multiplier
-        n_embd = 2 ** int(np.log2(n_embd))
-        logger.debug(f"Adjusted n_embd: {n_embd}")
+            # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
+            n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
+            n_embd = n_head * n_embd_multiplier
+            n_embd = 2 ** int(np.log2(n_embd))
+            logger.debug(f"Adjusted n_embd: {n_embd}")
 
-        # Suggest n_layer
-        n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
-        logger.debug(f"Suggested n_layer: {n_layer}")
+            # Suggest n_layer
+            n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
+            logger.debug(f"Suggested n_layer: {n_layer}")
 
-        # Suggest Mamba-specific hyperparameters
-        mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
-        d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
-        d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
+            # Suggest Mamba-specific hyperparameters
+            mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
+            d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
+            d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
 
-        include_pad_in_loss = args.include_pad_in_loss
+            # Suggest dropout rate
+            dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
+            mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
+            logger.debug(f"Suggested mamba_depth: {mamba_depth}")
 
-        # Suggest dropout rate
-        dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
-        mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
-        logger.debug(f"Suggested mamba_depth: {mamba_depth}")
+            mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
+            logger.debug(f"Suggested mamba_expand: {mamba_expand}")
+        else:
+            # If a checkpoint is used, set fixed values and do not suggest architecture-related hyperparameters
+            n_head = model_config.n_head
+            n_embd = model_config.n_embd
+            n_layer = model_config.n_layer
+            mamba_ratio = model_config.mamba_ratio
+            d_state = model_config.d_state
+            d_conv = model_config.d_conv
+            dropout = model_config.dropout
+            mamba_depth = model_config.mamba_depth
+            mamba_expand = model_config.mamba_expand
 
-        mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
-        logger.debug(f"Suggested mamba_expand: {mamba_expand}")
+            logger.debug(f"Using fixed hyperparameters from checkpoint: n_head={n_head}, n_embd={n_embd}, "
+                         f"n_layer={n_layer}, mamba_ratio={mamba_ratio}, d_state={d_state}, "
+                         f"d_conv={d_conv}, dropout={dropout}, mamba_depth={mamba_depth}, "
+                         f"mamba_expand={mamba_expand}")
+
+            # Ensure the Config uses the fixed hyperparameters
+            config = Config(model=model_config, training=training_config)
 
 
         validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
@@ -533,30 +552,44 @@ def objective(trial, args):
         num_classes = config.training.num_classes
         # Instantiate the GPT2ARC model with the constructed Config
         if args.model_checkpoint:
-            # Load additional components from the checkpoint if necessary
+            # Load the checkpoint
+            logger.info(f"Loading model from checkpoint: {args.model_checkpoint}")
+            checkpoint = torch.load(args.model_checkpoint, map_location="cpu")
+            
+            # Initialize model with the fixed configuration
             model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
-            checkpoint = torch.load(args.model_checkpoint)
-            # Extract the original state_dict
-            original_state_dict = checkpoint['state_dict']
             
-            # Create a new state_dict without the 'model.' prefix
-            new_state_dict = {}
-            for key, value in original_state_dict.items():
-                if key.startswith("model."):
-                    new_key = key[len("model."):]
-                    new_state_dict[new_key] = value
-                else:
-                    new_state_dict[key] = value
+            # Extract and adjust the state_dict
+            if 'state_dict' in checkpoint:
+                original_state_dict = checkpoint['state_dict']
+                new_state_dict = {}
+                for key, value in original_state_dict.items():
+                    if key.startswith("model."):
+                        new_key = key[len("model."):]
+                        new_state_dict[new_key] = value
+                    else:
+                        new_state_dict[key] = value
+            else:
+                new_key = 'model'  # Adjust based on your checkpoint's structure
+                new_state_dict = checkpoint
             
-            # Load the modified state_dict into the model
-            model.load_state_dict(new_state_dict, strict=True)
-            logger.debug(f"Loaded model state from checkpoint: {args.model_checkpoint}")
-
+            # Load the state_dict with strict=True to ensure all keys match
+            try:
+                model.load_state_dict(new_state_dict, strict=True)
+                logger.debug(f"Successfully loaded state_dict from checkpoint: {args.model_checkpoint}")
+            except RuntimeError as e:
+                logger.error(f"Error loading state_dict: {e}")
+                raise e
+            
             # Fix model architecture parameters to match the checkpoint
             model_config.mamba_ratio = 0.0
             model_config.n_embd = 2
             model_config.n_head = 1
             model_config.n_layer = 1
+            
+            # Update the Config object with fixed parameters
+            config = Config(model=model_config, training=training_config)
+            logger.debug(f"Config updated with fixed architectural parameters: {config}")
         else:
             model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
         
