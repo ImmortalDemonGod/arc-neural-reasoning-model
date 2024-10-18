@@ -631,6 +631,8 @@ class ARCDataset(Dataset):
         logger.debug(f"Grid shape after padding: {padded_grid.shape}")
         logger.debug(f"Padded grid with pad_symbol_idx: {self.pad_symbol_idx}, resulting shape: {padded_grid.shape}")
         return padded_grid
+    
+    
     def kronecker_scale(self, X, target_height=30, target_width=30):
         logger.debug(f"Kronecker scaling input shape: {X.shape}")
         h, w = X.shape
