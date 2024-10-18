@@ -134,8 +134,8 @@ class ARCTrainer(pl.LightningModule):
 
     def test_dataloader(self):
         if self.test_dataset is None:
-            logger.error("Test dataset is not provided")
-            return None
+            logger.error("Test dataset is not provided. Please ensure that the test dataset is correctly loaded.")
+            raise ValueError("Test dataset is not provided.")
         return DataLoader(
             self.test_dataset,
             batch_size=self.config.training.batch_size,
