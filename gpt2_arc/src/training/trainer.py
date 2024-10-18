@@ -144,7 +144,7 @@ class ARCTrainer(pl.LightningModule):
             pin_memory=self.config.training.pin_memory,
             prefetch_factor=self.config.training.prefetch_factor,
             persistent_workers=self.config.training.persistent_workers,
-            collate_fn=self.test_dataset.collate_fn  # Updated line
+            collate_fn=self.test_dataset.collate_fn
         )
 
     
