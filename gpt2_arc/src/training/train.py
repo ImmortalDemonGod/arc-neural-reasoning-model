@@ -514,7 +514,7 @@ def main(args):
             config=config,
             args=args,  # Add this line to pass args
             results_collector=results_collector,  # Pass ResultsCollector to ARCTrainer
-            test_dataset=test_data  # Correct argument name
+            test_dataset=test_data  # Pass test_dataset to ARCTrainer
         )
         trainer.log_hyperparameters()
 
