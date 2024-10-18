@@ -67,21 +67,12 @@ def evaluate(model, test_dataset, config, batch_size=32, args=None):
 
     print(f"DEBUG: Logged metrics - Avg test loss: {avg_test_loss}, Avg test accuracy: {avg_test_accuracy}, Avg diff accuracy: {avg_test_diff_accuracy}")
 
-    # Collect individual task metrics
-    individual_metrics = {}
-    for key, value in pl_trainer.callback_metrics.items():
-        if '_test_accuracy' in key or '_test_diff_accuracy' in key:
-            if isinstance(value, torch.Tensor):
-                value = value.item()
-            # Key format: 'taskid_test_accuracy' or 'taskid_test_diff_accuracy'
-            try:
-                task_id, metric_name = key.split('_test_')
-            except ValueError:
-                logger.warning(f"Unexpected metric format: {key}. Skipping.")
-                continue
-            if task_id == "default_task":
-                logger.error("'default_task' detected in individual_metrics.")
-                raise ValueError("'default_task' detected in individual_metrics. Ensure that task_ids are correctly handled.")
+    # Collect individual task metrics from ResultsCollector
+    individual_metrics = trainer.results_collector.get_task_specific_results()
+
+    # Optional: Log individual_metrics for debugging
+    logger.debug(f"DEBUG: Individual metrics retrieved: {individual_metrics}")
+    print(f"DEBUG: Individual metrics retrieved: {individual_metrics}")
 
     # Compute complete task accuracy (fraction of tasks with perfect accuracy)
     num_tasks = len(individual_metrics)
