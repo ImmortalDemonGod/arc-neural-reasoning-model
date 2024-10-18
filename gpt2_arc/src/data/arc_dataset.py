@@ -723,7 +723,19 @@ class ARCDataset(Dataset):
             return self._process_arckit_data(data_source)
         elif isinstance(data_source, str):
             logger.debug(f"Loading data from file: {data_source}")
-            # Existing file loading logic here
-            return self._process_single_task(data_source)
+            # Load the JSON content from the file
+            with open(data_source, 'r', encoding='utf-8') as f:
+                try:
+                    task_data = json.load(f)
+                    logger.debug(f"Loaded task data from {data_source}")
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON decode error in file {data_source}: {e}")
+                    raise ValueError(f"Invalid JSON format in {data_source}") from e
+        
+            # Derive task_id from the file name or content
+            task_id = os.path.splitext(os.path.basename(data_source))[0]
+            logger.debug(f"Derived task_id: {task_id} from file name")
+        
+            return self._process_single_task(task_data, task_id=task_id)
         else:
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
