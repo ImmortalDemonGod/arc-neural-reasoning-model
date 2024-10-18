@@ -12,7 +12,7 @@ import pickle
 import hashlib
 import torch
 import torch.nn.functional as F
-from torch.utils.data import Dataset, Subset
+from torch.utils.data import Dataset, Subset, WeightedRandomSampler
 import logging
 import ijson  # Import ijson for streaming JSON parsing
 from tqdm import tqdm  # Import tqdm for progress bars
