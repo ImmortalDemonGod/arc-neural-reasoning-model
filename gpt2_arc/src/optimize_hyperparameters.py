@@ -720,8 +720,8 @@ if __name__ == "__main__":
     parser.add_argument("--dropout_min", type=float, default=0.0, help="Minimum value for dropout")
     parser.add_argument("--mamba_depth_min", type=int, default=1, help="Minimum value for mamba_depth")
     parser.add_argument("--mamba_depth_max", type=int, default=1, help="Maximum value for mamba_depth")
-    parser.add_argument("--mamba_expand_min", type=int, default=1, help="Minimum value for mamba_expand")
-    parser.add_argument("--mamba_expand_max", type=int, default=1, help="Maximum value for mamba_expand")
+    parser.add_argument("--mamba_expand_min", type=int, default=2, help="Minimum value for mamba_expand")
+    parser.add_argument("--mamba_expand_max", type=int, default=2, help="Maximum value for mamba_expand")
     parser.add_argument(
         "--enable_symbol_freq",
         action="store_true",
