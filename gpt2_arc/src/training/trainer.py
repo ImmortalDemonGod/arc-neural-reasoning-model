@@ -300,8 +300,8 @@ class ARCTrainer(pl.LightningModule):
             task_accuracy = self.compute_accuracy(model_outputs[i], outputs[i])
             task_diff_accuracy = self.compute_diff_accuracy(inputs[i], outputs[i], model_outputs[i])
             self.results_collector.add_task_specific_result(task_id, {
-                "test_accuracy": task_accuracy.item(),
-                "test_diff_accuracy": task_diff_accuracy.item()
+                "test_accuracy": task_accuracy,
+                "test_diff_accuracy": task_diff_accuracy
             })
 
         # Append the result to self.test_outputs
@@ -365,14 +365,14 @@ class ARCTrainer(pl.LightningModule):
         # Calculate accuracy over all elements
         accuracy = (predictions == targets).float().mean()
         logger.debug(f"DEBUG: compute_accuracy - Accuracy: {accuracy.item()}")
-        return accuracy
+        return accuracy.item()
 
     def compute_diff_accuracy(self, inputs, targets, outputs):
         pad_symbol_idx = self.config.training.pad_symbol_idx  # Retrieve pad_symbol_idx from config
         predictions = outputs.argmax(dim=-1)
         diff_accuracy, _, _ = differential_pixel_accuracy(inputs, targets, predictions, pad_symbol_idx=pad_symbol_idx)
         logger.debug(f"Computed differential pixel accuracy (excluding padding tokens): {diff_accuracy}")
-        return diff_accuracy
+        return diff_accuracy.item()
         
     def on_validation_epoch_end(self):
         # Compute average validation loss
