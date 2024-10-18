@@ -41,7 +41,7 @@ def evaluate(model, test_dataset, config, batch_size=32, args=None):
         val_dataset=None,
         config=config,
         args=args,
-        test_dataset=test_data
+        test_dataset=test_dataset
     )
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
