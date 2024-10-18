@@ -80,8 +80,21 @@ class ResultsCollector:
         if task_id == "default_task":
             logger.error("Attempted to add metrics for 'default_task'. This should be avoided.")
             raise ValueError("Cannot add metrics for 'default_task'. Ensure that task_id is correctly assigned.")
+        if task_id not in self.task_specific_results:
+            self.task_specific_results[task_id] = {}
+        for key, value in metrics.items():
+            if key not in self.task_specific_results[task_id]:
+                self.task_specific_results[task_id][key] = []
+            self.task_specific_results[task_id][key].append(value)
 
-    def set_final_metrics(self, metrics: Dict[str, float]):
+    def get_task_specific_results(self) -> Dict[str, Dict[str, float]]:
+        """Retrieve aggregated task-specific metrics."""
+        aggregated = {}
+        for task_id, metrics in self.task_specific_results.items():
+            aggregated[task_id] = {}
+            for metric_name, values in metrics.items():
+                aggregated[task_id][metric_name] = sum(values) / len(values) if values else 0.0
+        return aggregated
         """Set the final metrics after training."""
         self.metrics = metrics
 

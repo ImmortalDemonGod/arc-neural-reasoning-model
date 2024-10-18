@@ -295,6 +295,15 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: test_step output - result: {result}")
         logger.debug(f"DEBUG: Test step result: {result}")
 
+        # Add per-task metrics to ResultsCollector
+        for i, task_id in enumerate(task_ids):
+            task_accuracy = self.compute_accuracy(model_outputs[i], outputs[i])
+            task_diff_accuracy = self.compute_diff_accuracy(inputs[i], outputs[i], model_outputs[i])
+            self.results_collector.add_task_specific_result(task_id, {
+                "test_accuracy": task_accuracy.item(),
+                "test_diff_accuracy": task_diff_accuracy.item()
+            })
+
         # Append the result to self.test_outputs
         self.test_outputs.append(result)
 
