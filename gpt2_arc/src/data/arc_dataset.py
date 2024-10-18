@@ -724,6 +724,6 @@ class ARCDataset(Dataset):
         elif isinstance(data_source, str):
             logger.debug(f"Loading data from file: {data_source}")
             # Existing file loading logic here
-            return self._process_single_file(data_source)
+            return self._process_single_task(data_source)
         else:
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
