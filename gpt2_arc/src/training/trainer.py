@@ -70,7 +70,7 @@ class ARCTrainer(pl.LightningModule):
                     self.train_dataset,
                     batch_size=self.config.training.batch_size,
                     num_workers=get_num_workers(self.config.training),
-                    shuffle=True,
+                    sampler=self.train_dataset.sampler,  # Use sampler instead of shuffle
                     pin_memory=True if self.args.use_gpu else False,
                     prefetch_factor=self.config.training.prefetch_factor,
                     persistent_workers=self.config.training.persistent_workers,

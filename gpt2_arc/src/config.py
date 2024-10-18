@@ -59,7 +59,7 @@ class TrainingConfig:
 
     # New fields for padding symbol
     pad_symbol: str = "<PAD>"
-    pad_symbol_idx: int = field(init=False, default=10)
+    pad_symbol_idx: int = field(default=10)  # Add this line
 
     def __post_init__(self):
         # Dynamically set num_classes based on symbol_freq

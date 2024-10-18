@@ -492,7 +492,7 @@ def main(args):
                 config = Config(model=model_config, training=training_config)
                 num_classes = config.training.num_classes
                 symbol_freq_dict = config.training.symbol_freq
-                model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
+                model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
                 logger.debug(f"Loaded TrainingConfig with num_classes={num_classes} from checkpoint")
             else:
                 logger.error("Checkpoint missing 'model_config' or 'training_config'.")

@@ -404,7 +404,7 @@ def objective(trial, args):
         # Instantiate the GPT2ARC model with the constructed Config
         if args.model_checkpoint:
             # Load additional components from the checkpoint if necessary
-            model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
+            model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
             checkpoint = torch.load(args.model_checkpoint)
             model.load_state_dict(checkpoint['state_dict'], strict=True)
             logger.debug(f"Loaded model state from checkpoint: {args.model_checkpoint}")

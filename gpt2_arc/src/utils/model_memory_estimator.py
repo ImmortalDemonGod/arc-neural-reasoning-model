@@ -4,8 +4,7 @@ import math
 import psutil
 
 def calculate_params(n_layers, n_heads, d_model, mamba_ratio, d_state=16, d_conv=4, mamba_depth=1, mamba_expand=2):
-    print("Executing updated calculate_params with mamba_ratio =", mamba_ratio)
-    print("DEBUG: Called calculate_params with mamba_ratio =", mamba_ratio)
+    logger.debug(f"Executing calculate_params with mamba_ratio = {mamba_ratio}")
     transformer_params_per_layer = (
         12 * d_model * d_model + 13 * d_model
     )
@@ -22,6 +21,7 @@ def calculate_params(n_layers, n_heads, d_model, mamba_ratio, d_state=16, d_conv
     
     # Total parameters
     total_params = n_layers * transformer_params_per_layer + total_mamba_params
+    logger.debug(f"Total parameters calculated: {total_params}")
     return total_params
 
 def estimate_memory_usage(total_params, batch_size, height, width, d_model, dtype_size=4):
