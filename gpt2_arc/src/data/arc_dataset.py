@@ -77,19 +77,53 @@ def set_debug_mode(debug=False):
 class ARCDataset(Dataset):
     def __init__(
         self,
-        data_source: Union[str, List[Dict], 'TaskSet'],
+        data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
         is_test: bool = False,
         num_symbols: int = 11,
+        test_split: float = 0.2,
         pad_symbol_idx: int = 10,
         symbol_freq: Optional[Dict[int, float]] = None,
+        debug: bool = False,
     ):
         self.is_test = is_test
         self.num_symbols = num_symbols
+        self.test_split = test_split
         self.pad_symbol_idx = pad_symbol_idx
         self.symbol_freq = symbol_freq if symbol_freq is not None else {}
-        logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")
-        self.data = self._load_data(data_source)
-        logger.debug(f"ARCDataset initialized with {len(self.data)} samples")
+        self.data_files = []
+        self.data_source = data_source
+        self.num_samples = 0
+        self.data = []
+        
+        self.cache_path = self._generate_cache_path(
+            data_source=self.data_source,
+            num_symbols=self.num_symbols,
+            is_test=self.is_test,
+            test_split=self.test_split
+        )
+        
+        if self._load_cache(self.cache_path):
+            logger.debug("Data loaded from cache successfully.")
+            self.num_samples = len(self.data)
+            return
+        
+        if debug:
+            self.set_debug_mode(True)
+        
+        logger.debug("Starting ARCDataset initialization")
+        logger.debug(f"data_source type: {type(data_source)}")
+        logger.debug(f"data_source content: {data_source}")
+        logger.debug(f"self.test_split is set to: {self.test_split}")
+        
+        try:
+            self.data = self._load_data(data_source)
+        except Exception as e:
+            logger.error(f"Failed to load data: {e}", exc_info=True)
+            raise
+        
+        self.num_samples = len(self.data)
+        self._compute_and_cache_statistics()
+        self._save_cache(self.cache_path)
 
 
     def _process_single_task(self, task: Dict, task_id: str) -> List[Dict]:
