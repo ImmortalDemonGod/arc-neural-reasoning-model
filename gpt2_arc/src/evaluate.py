@@ -256,7 +256,7 @@ def save_results(results, individual_metrics, output_dir, model_name, model_summ
     output_path = os.path.join(output_dir, filename)
 
     # Parse the model_summary string into JSON
-    parsed_model_summary = parse_model_summary(model_summary, checkpoint)
+    parsed_model_summary = parse_model_summary(model_summary, model_checkpoint)
 
     data_to_save = {
         "aggregate_results": results,
