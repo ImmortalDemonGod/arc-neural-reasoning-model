@@ -140,6 +140,7 @@ class GPT2ARC(pl.LightningModule):
         self.config = config
         self.symbol_freq = symbol_freq
         self.pad_symbol_idx = pad_symbol_idx
+        self.include_pad_in_loss = self.config.training.include_pad_in_loss  # Reintroduced
         self.conv1 = nn.Conv2d(
             in_channels=1,
             out_channels=self.config.model.n_embd,  # Accessing the 'model' attribute within Config
