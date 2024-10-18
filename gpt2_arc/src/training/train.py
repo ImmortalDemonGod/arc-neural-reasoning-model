@@ -120,7 +120,14 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         dataset = all_synthetic_data['dataset']
         indices = all_synthetic_data[f'{dataset_type}_indices']
         logger.info(f"Using synthetic {dataset_type} dataset with {len(indices)} samples")
-        return Subset(dataset, indices)
+        if dataset_type == 'train':
+            return dataset
+        elif dataset_type == 'val':
+            return dataset
+        elif dataset_type == 'test':
+            return dataset
+        else:
+            raise ValueError(f"Unknown dataset_type: {dataset_type}")
     else:
         logger.info(f"Loading ARC {dataset_type} dataset")
         train_set, eval_set = arckit.load_data()
@@ -418,6 +425,7 @@ def main(args):
             train_loader = DataLoader(
                 train_data,
                 batch_size=config.training.batch_size,
+                shuffle=True,
                 num_workers=get_num_workers(config.training),
                 pin_memory=config.training.pin_memory if args.use_gpu else False,
                 prefetch_factor=config.training.prefetch_factor,
@@ -428,6 +436,7 @@ def main(args):
             val_loader = DataLoader(
                 val_data,
                 batch_size=config.training.batch_size,
+                shuffle=False,
                 num_workers=get_num_workers(config.training),
                 pin_memory=config.training.pin_memory if args.use_gpu else False,
                 prefetch_factor=config.training.prefetch_factor,
@@ -438,6 +447,7 @@ def main(args):
             test_loader = DataLoader(
                 test_data,
                 batch_size=config.training.batch_size,
+                shuffle=False,
                 num_workers=get_num_workers(config.training),
                 pin_memory=config.training.pin_memory if args.use_gpu else False,
                 prefetch_factor=config.training.prefetch_factor,
