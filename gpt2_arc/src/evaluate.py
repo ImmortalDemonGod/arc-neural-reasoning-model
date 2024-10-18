@@ -101,6 +101,9 @@ def load_config_from_json(json_path):
         data = json.load(f)
     return data['config']
 
+import json
+import re
+
 def parse_model_summary(model_summary: str) -> Dict[str, Any]:
     """
     Parses the model summary string into a structured JSON format.
@@ -114,59 +117,43 @@ def parse_model_summary(model_summary: str) -> Dict[str, Any]:
     # Split the model summary into lines
     lines = model_summary.strip().split('\n')
 
-    if len(lines) < 2:
-        logger.error("Model summary does not contain sufficient lines.")
+    # Remove separator lines and empty lines
+    lines = [line for line in lines if line.strip() and not set(line.strip()) == {'-'}]
+
+    # Find the header line (the one that contains 'Name' and 'Type')
+    header_line = None
+    for i, line in enumerate(lines):
+        if 'Name' in line and 'Type' in line:
+            header_line = line
+            header_index = i
+            break
+
+    if header_line is None:
+        logger.error("Header line not found.")
         return {"layers": [], "summary": {}}
 
-    # Extract header and separator lines
-    header_line = lines[0]
-    separator_line = lines[1]
-
-    # Find positions of '|' in the header line
-    positions = [match.start() for match in re.finditer(r'\|', header_line)]
-
-    # Function to parse a line into columns based on '|' positions
-    def parse_line(line: str, positions: List[int]) -> List[str]:
-        cols = []
-        for i in range(len(positions) - 1):
-            start = positions[i] + 1
-            end = positions[i + 1]
-            col = line[start:end].strip()
-            cols.append(col)
-        # Last column after the last '|'
-        start = positions[-1] + 1
-        col = line[start:].strip()
-        cols.append(col)
-        return cols
-
-    # Get the header columns
-    header_columns = parse_line(header_line, positions)
+    # Extract header columns
+    header_columns = [col.strip() for col in re.split(r'\s*\|\s*', header_line.strip('|'))]
 
     # Initialize list to hold layer details
     layers = []
 
-    # Iterate over the data lines until a non-data line is encountered
-    for line in lines[2:]:
-        # Skip empty lines or lines composed solely of '-' characters
-        if not line.strip() or set(line.strip()) == {'-'}:
+    # Iterate over the data lines starting from the line after the header
+    for line in lines[header_index + 1:]:
+        # Stop if we reach the summary section (lines without '|')
+        if '|' not in line:
+            break
+        cols = [col.strip() for col in re.split(r'\s*\|\s*', line.strip('|'))]
+        if len(cols) == len(header_columns):
+            layer_dict = dict(zip(header_columns, cols))
+            layers.append(layer_dict)
+        else:
+            # Handle cases where there are extra '|' characters or misalignments
             continue
 
-        # Ensure the line has the correct number of '|' separators
-        line_positions = [match.start() for match in re.finditer(r'\|', line)]
-        if len(line_positions) != len(positions):
-            # Likely reached summary metrics
-            break
-
-        # Parse the line into columns
-        cols = parse_line(line, positions)
-
-        # Create a dictionary for the current layer
-        layer_dict = dict(zip(header_columns, cols))
-        layers.append(layer_dict)
-
     # Extract summary metrics from the remaining lines
-    summary_lines = lines[len(layers) + 2:]
     summary_dict = {}
+    summary_lines = lines[len(layers) + 2:]
     for line in summary_lines:
         line = line.strip()
         if not line:
@@ -193,7 +180,20 @@ def parse_model_summary(model_summary: str) -> Dict[str, Any]:
 
     return output
 
-def save_results(results, individual_metrics, output_dir, model_name, model_summary):                                                                
+def save_results(results, individual_metrics, output_dir, model_name, model_summary):
+    """
+    Saves the evaluation results along with the parsed model summary to a JSON file.
+
+    Args:
+        results (Dict[str, Any]): Aggregate evaluation metrics.
+        individual_metrics (Dict[str, Dict[str, Any]]): Per-task evaluation metrics.
+        output_dir (str): Directory to save the results.
+        model_name (str): Name of the model for file naming.
+        model_summary (str): Raw model summary string.
+    
+    Returns:
+        str: Path to the saved JSON file.
+    """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{model_name}_eval_results_{timestamp}.json"
     output_path = os.path.join(output_dir, filename)
