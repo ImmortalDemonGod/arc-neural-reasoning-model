@@ -95,6 +95,8 @@ class ResultsCollector:
             for metric_name, values in metrics.items():
                 aggregated[task_id][metric_name] = sum(values) / len(values) if values else 0.0
         return aggregated
+    
+    def set_final_metrics(self, metrics: Dict[str, float]):                                                                                          
         """Set the final metrics after training."""
         self.metrics = metrics
 
