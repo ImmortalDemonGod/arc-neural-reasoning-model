@@ -351,6 +351,14 @@ def main(args):
             train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
             val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
             test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
+            
+            # Debugging: Log the number of samples loaded
+            logger.debug(f"Loaded {len(train_data)} training samples.")
+            logger.debug(f"Loaded {len(val_data)} validation samples.")
+            logger.debug(f"Loaded {len(test_data)} test samples.")
+            
+            # Additional Assertion (Optional)
+            assert test_data is not None, "Test dataset is None after loading."
         except Exception as e:
             logger.error(f"Error loading datasets: {str(e)}")
             raise  # Re-raise the exception after logging
@@ -489,6 +497,9 @@ def main(args):
             )
             logger.debug("Created Test DataLoader")
 
+        # Ensure test_data is not None
+        assert test_data is not None, "Test dataset is None after loading."
+
         # Initialize model
         logger.info("Initializing model")
         model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
@@ -511,22 +522,26 @@ def main(args):
                 raise KeyError("Checkpoint must contain 'model_config' and 'training_config'.")
             model.load_state_dict(checkpoint['state_dict'])
 
-        # Initialize results collector
+        # Log dataset source information
+        if args.use_synthetic_data:
+            logger.info("Using synthetic data for training, validation, and testing.")
+        else:
+            logger.info("Using official ARC datasets for training, validation, and testing.")
         results_collector = ResultsCollector(config)
 
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
 
 
-        logger.debug("Initializing ARCTrainer")
+        logger.info("Initializing ARCTrainer")
         trainer = ARCTrainer(
             model=model,
             train_dataset=train_data,
             val_dataset=val_data,
             config=config,
-            args=args,  # Add this line to pass args
-            results_collector=results_collector,  # Pass ResultsCollector to ARCTrainer
-            test_dataset=test_data  # Pass test_dataset to ARCTrainer
+            args=args,
+            results_collector=results_collector,
+            test_dataset=test_data
         )
         trainer.log_hyperparameters()
 
