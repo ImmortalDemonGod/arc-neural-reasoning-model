@@ -225,6 +225,8 @@ class ARCDataset(Dataset):
                 parser = ijson.parse(f)
                 current_object = {}
                 current_key = None
+                sample_count = 0  # Initialize sample counter
+                logger.debug(f"Starting to process file: {file_path}")
                 for prefix, event, value in parser:
                     if (prefix, event) == ('', 'start_map'):
                         current_object = {}
@@ -245,7 +247,8 @@ class ARCDataset(Dataset):
                                 "output": output_tensor,
                                 "task_id": task_id
                             })
-                            logger.debug(f"Added sample with task_id: {task_id} from file {file_path}")
+                            sample_count += 1
+                            logger.debug(f"Added sample {sample_count} with task_id: {task_id} from file {file_path}")
                         except Exception as e:
                             logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
                         current_object = {}
@@ -260,6 +263,7 @@ class ARCDataset(Dataset):
                                 samples.extend(task_samples)
                             except ValidationError as ve:
                                 logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
+                logger.debug(f"Processed {sample_count} samples from file {file_path}")
         except ijson.JSONError as e:
             logger.warning(f"Malformed JSON in file {file_path}: {e}. Skipping.")
         except UnicodeDecodeError as e:
