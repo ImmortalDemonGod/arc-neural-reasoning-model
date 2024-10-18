@@ -307,7 +307,7 @@ def objective(trial, args):
                 logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
                 balance_symbols = False
                 balancing_method = "none"
-        # Existing hyperparameter suggestions when no checkpoint is provided
+        include_pad_in_loss = args.include_pad_in_loss
         torch.set_float32_matmul_precision(args.matmul_precision)
         logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
 
