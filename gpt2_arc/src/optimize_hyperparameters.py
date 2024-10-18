@@ -573,6 +573,7 @@ def objective(trial, args):
             callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback, checkpoint_callback, model_config_saver, best_epoch_tracker],
             logger=tb_logger,
             gradient_clip_val=1.0,    # Add gradient clipping
+            val_check_interval=args.val_check_interval,  # Added line
             precision=16,             # Enable Automatic Mixed Precision
             enable_checkpointing=True,
             accelerator=accelerator,
@@ -730,6 +731,16 @@ if __name__ == "__main__":
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
     parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
     parser.add_argument(
+        "--val_check_interval",
+        type=float,
+        default=1.0,
+        help=(
+            "How often to perform validation. "
+            "If a float, represents the fraction of an epoch (e.g., 0.5 for halfway through each epoch). "
+            "If an integer, represents the number of training steps."
+        )
+    )
+    parser.add_argument(
         "--model_checkpoint",
         type=str,
         default=None,
@@ -826,6 +837,12 @@ if __name__ == "__main__":
             args.storage = f"sqlite:///{os.path.abspath(args.storage)}"
     
     logger.debug(f"Optuna storage URL set to: {args.storage}")
+    
+    # Validate val_check_interval
+    if args.val_check_interval <= 0:
+        logger.error("The --val_check_interval must be a positive number.")
+        sys.exit(1)
+
     run_optimization(
         n_trials=args.n_trials,
         storage_name=args.storage,
