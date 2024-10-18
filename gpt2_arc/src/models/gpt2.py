@@ -134,15 +134,11 @@ class MambaLayer(nn.Module):
 
 
 class GPT2ARC(pl.LightningModule):
-    def __init__(self, config: Config, num_classes: int, symbol_freq: Optional[Dict[int, float]] = None):
-        # Define an example input array for model summary
-        self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
+    def __init__(self, config: Config, num_classes: int, symbol_freq: Dict[int, float], pad_symbol_idx: int):
         super().__init__()
         self.config = config
-        self.symbol_freq = symbol_freq if symbol_freq is not None else {}
-        logger.debug(f"Symbol frequencies loaded: {self.symbol_freq}")
-        self.pad_symbol_idx = self.config.training.pad_symbol_idx
-        self.include_pad_in_loss = self.config.training.include_pad_in_loss
+        self.symbol_freq = symbol_freq
+        self.pad_symbol_idx = pad_symbol_idx
         self.conv1 = nn.Conv2d(
             in_channels=1,
             out_channels=self.config.model.n_embd,  # Accessing the 'model' attribute within Config
@@ -190,39 +186,13 @@ class GPT2ARC(pl.LightningModule):
         self.fc_out = BitLinearNew(int(self.config.model.n_embd), num_classes)  # Use num_classes directly
 
         # Initialize loss function with class weights if needed
-        if self.config.training.balance_symbols and self.config.training.balancing_method == "weighting":
-            if not self.symbol_freq:
-                raise ValueError("symbol_freq must be provided when balance_symbols is True and balancing_method is 'weighting'")
-            # Prevent division by zero by adding a small epsilon to each frequency
-            epsilon = 1e-6
-            symbol_freq_values = torch.tensor([
-                freq if freq > 0 else epsilon for freq in self.symbol_freq.values()
-            ], dtype=torch.float32)
-            
-            # Compute class weights as inverse of symbol frequencies
-            class_weights = 1.0 / symbol_freq_values
-            
-            # Ensure that the length of class_weights matches num_classes
-            assert class_weights.size(0) == self.config.training.num_classes, (
-                f"class_weights length ({class_weights.size(0)}) does not match num_classes ({self.config.training.num_classes})"
-            )
-            
-            if self.config.training.include_pad_in_loss:
-                self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
-                logger.debug("Including padding class in loss calculation with class weights.")
-            else:
-                self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=self.config.training.pad_symbol_idx)
-                logger.debug("Excluding padding class from loss calculation with class weights.")
-            logger.debug(f"Class Weights: {class_weights}")  # Added line
+        if self.symbol_freq:
+            # Create a tensor of class weights based on symbol frequencies
+            class_weights = torch.tensor([self.symbol_freq.get(i, 1.0) for i in range(num_classes)], dtype=torch.float32)
+            class_weights = class_weights.to(self.device)  # Ensure weights are on the correct device
+            self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=self.pad_symbol_idx)
         else:
-            if self.config.training.include_pad_in_loss:
-                # Include padding in loss without class weights
-                self.loss_fn = nn.CrossEntropyLoss()
-                logger.debug("Including padding class in loss calculation without class weights.")
-            else:
-                # Exclude padding class from loss without class weights
-                self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.config.training.pad_symbol_idx)
-                logger.debug("Excluding padding class from loss calculation without class weights.")
+            self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.pad_symbol_idx)
         
 
         # Initialize weights
