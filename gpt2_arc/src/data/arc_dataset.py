@@ -130,6 +130,10 @@ class ARCDataset(Dataset):
         
         try:
             self.data = self._load_data(data_source)
+        
+            if not self.data:
+                logger.error("No se cargaron muestras válidas. Asegúrate de que todas las muestras tengan las claves 'input' y 'output'.")
+                raise ValueError("No se cargaron muestras válidas. Asegúrate de que todas las muestras tengan las claves 'input' y 'output'.")
         except Exception as e:
             logger.error(f"Failed to load data: {e}", exc_info=True)
             raise
@@ -166,6 +170,8 @@ class ARCDataset(Dataset):
             List[Dict]: List of processed sample dictionaries.
         """
         samples = []
+        sample_count = 0  # Initialize sample counter
+        missing_id_logged = False  # Flag to track if warning has been logged for this file
         try:
             if isinstance(task, dict):
                 # Existing processing for dictionary tasks
@@ -607,7 +613,14 @@ class ARCDataset(Dataset):
             logger.error(f"Found symbol index {max_symbol_in_data} exceeding num_symbols - 1 ({self.num_symbols - 1}).")
             raise ValueError(f"Symbol index {max_symbol_in_data} exceeds the allowed range.")
         
-        return symbol_counts / symbol_counts.sum()
+        total_symbols = symbol_counts.sum()
+        if total_symbols == 0:
+            logger.warning("Total de símbolos es 0. Evitando la división por cero.")
+            symbol_freq = np.zeros_like(symbol_counts, dtype=float)
+        else:
+            symbol_freq = symbol_counts / total_symbols
+        
+        return symbol_freq
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor], pad_value: int = 0) -> torch.Tensor:
         logger.debug(f"Preprocessing grid with initial type: {type(grid)}")
