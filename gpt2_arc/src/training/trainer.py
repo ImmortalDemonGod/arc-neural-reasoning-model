@@ -411,7 +411,6 @@ class ARCTrainer(pl.LightningModule):
         return [optimizer], [lr_scheduler]
 
     def on_fit_end(self):
-        self.results_collector.save_to_json(f"results/experiment_{self.results_collector.experiment_id}.json")
         try:
             self.writer.close()
             print("DEBUG: TensorBoard writer closed successfully.")

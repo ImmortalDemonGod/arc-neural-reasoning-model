@@ -29,6 +29,7 @@ class ResultsCollector:
         self.tensorboard_log_path = getattr(config.training, 'tensorboard_log_path', None)
         self.used_synthetic_data = getattr(config.training, 'use_synthetic_data', False)
         self.environment = self._get_environment_info()
+        self.checkpoint_path = None
         print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
         self._log_results_type("After initialization")
 
