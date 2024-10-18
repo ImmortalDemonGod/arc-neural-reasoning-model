@@ -112,6 +112,12 @@ def objective(trial, args):
         # Initialize fixed hyperparameters dictionary
         fixed_hyperparams = {}
 
+        # Initialize config and symbol_freq_dict
+        model_config = ModelConfig()
+        training_config = TrainingConfig()
+        config = Config(model=model_config, training=training_config)
+        symbol_freq_dict = {}
+
         # Load hyperparameters from checkpoint if provided
         if args.use_synthetic_data:
             if not args.synthetic_data_path:
