@@ -364,7 +364,6 @@ def main(args):
 
     # Save results regardless of wandb usage
     results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
-    results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
 
     if args.use_wandb:
         # Wandb artifact creation and logging
