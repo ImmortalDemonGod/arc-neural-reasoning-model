@@ -93,7 +93,7 @@ class ARCDataset(Dataset):
         self.data_files = []
         self.data_source = data_source
         self.num_samples = 0
-        self.data = []
+        self.data = self._load_data(data_source)                                                                                     
         
         self.cache_path = self._generate_cache_path(
             data_source=self.data_source,
@@ -111,9 +111,12 @@ class ARCDataset(Dataset):
             self.set_debug_mode(True)
         
         logger.debug("Starting ARCDataset initialization")
-        logger.debug(f"data_source type: {type(data_source)}")
+        logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")                                          
         logger.debug(f"data_source content: {data_source}")
         logger.debug(f"self.test_split is set to: {self.test_split}")
+        logger.debug(f"ARCDataset initialized with {len(self.data)} samples")
+   
+
         
         try:
             self.data = self._load_data(data_source)
