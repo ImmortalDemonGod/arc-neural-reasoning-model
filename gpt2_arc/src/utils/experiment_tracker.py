@@ -10,6 +10,9 @@ import os
 from dataclasses import asdict
 from typing import Dict, Any, Optional
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 class ExperimentTracker:
     def __init__(self, config: Dict[str, Any], project: str, entity: Optional[str] = None, use_wandb: bool = False):
         self.experiment_id = str(uuid.uuid4())
@@ -19,7 +22,6 @@ class ExperimentTracker:
         self.entity = entity
         self.run = None
         self.use_wandb = use_wandb
-        self.logger = logging.getLogger(__name__)
         self.metrics = {}
         if self.use_wandb:
             try:
@@ -117,7 +119,7 @@ class ExperimentTracker:
         if task_id not in self.task_specific_results:
             self.task_specific_results[task_id] = {}
         self.task_specific_results[task_id].update(metrics)
-        self.logger.debug(f"Added task-specific result for task_id {task_id}: {metrics}")
+        logger.debug(f"Added task-specific result for task_id {task_id}: {metrics}")
         if self.use_wandb:
             wandb.log({f"task_{task_id}": metrics})
 

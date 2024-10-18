@@ -2,6 +2,10 @@
 import torch
 import math
 import psutil
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 def calculate_params(n_layers, n_heads, d_model, mamba_ratio, d_state=16, d_conv=4, mamba_depth=1, mamba_expand=2):
     logger.debug(f"Executing calculate_params with mamba_ratio = {mamba_ratio}")

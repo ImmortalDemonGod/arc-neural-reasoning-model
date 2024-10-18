@@ -17,9 +17,6 @@ from gpt2_arc.src.config import Config
 #from zeta.nn import MambaBlock
 from gpt2_arc.src.models.mamba_block_internal import MambaBlock
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
 
 class Attention(nn.Module):
     def __init__(self, n_embd, n_head, dropout):
