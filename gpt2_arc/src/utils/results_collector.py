@@ -156,6 +156,7 @@ class ResultsCollector:
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
     def _make_serializable(self, obj):
+        """Ensure the value is serializable, handling non-serializable objects."""
         if isinstance(obj, (int, float, str, bool, type(None))):
             return obj
         elif isinstance(obj, (list, tuple)):
@@ -164,10 +165,6 @@ class ResultsCollector:
             return {k: self._make_serializable(v) for k, v in obj.items()}
         else:
             return str(obj)
-
-    def _serialize_config(self, config):
-        """Serialize the configuration dictionary."""
-        return {k: self._make_serializable(v) for k, v in config.items()}
     def _serialize_config(self, config):
         """Serialize the configuration dictionary."""
         return json.dumps(config, indent=2)
