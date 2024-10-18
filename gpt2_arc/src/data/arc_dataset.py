@@ -226,6 +226,7 @@ class ARCDataset(Dataset):
                 current_object = {}
                 current_key = None
                 sample_count = 0  # Initialize sample counter
+                sample_count = 0  # Initialize sample counter
                 logger.debug(f"Starting to process file: {file_path}")
                 for prefix, event, value in parser:
                     if (prefix, event) == ('', 'start_map'):
@@ -238,7 +239,10 @@ class ARCDataset(Dataset):
                         # Sample-Based Structure
                         task_id = current_object.get('id')
                         if not task_id:
-                            raise ValueError(f"Sample in {file_path} is missing 'id' for task_id.")
+                            # Generate a unique task_id based on the filename and a unique index
+                            filename = os.path.splitext(os.path.basename(file_path))[0]
+                            task_id = f"{filename}_sample_{sample_count}"
+                            logger.warning(f"Sample is missing 'id'. Assigning default task_id: {task_id}")
                         try:
                             input_tensor = self._preprocess_grid(current_object['input'])
                             output_tensor = self._preprocess_grid(current_object['output'])
@@ -247,6 +251,7 @@ class ARCDataset(Dataset):
                                 "output": output_tensor,
                                 "task_id": task_id
                             })
+                            sample_count += 1
                             sample_count += 1
                             logger.debug(f"Added sample {sample_count} with task_id: {task_id} from file {file_path}")
                         except Exception as e:
