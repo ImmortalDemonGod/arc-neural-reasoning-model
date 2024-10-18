@@ -709,6 +709,9 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
     parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
+    parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
+    parser.add_argument("--batch_size_min", type=int, default=1, help="Minimum value for batch_size.")
+    parser.add_argument("--batch_size_max", type=int, default=1, help="Maximum value for batch_size.")
     parser.add_argument(
         "--fast_dev_run",
         action="store_true",
@@ -720,7 +723,6 @@ if __name__ == "__main__":
         help="Enable Grokfast for gradient filtering."
     )
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
-    parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
     parser.add_argument(
         "--val_check_interval",
         type=float,
@@ -759,8 +761,6 @@ if __name__ == "__main__":
     parser.add_argument("--n_embd_multiplier_max", type=int, default=1, help="Maximum multiplier for n_embd")
     parser.add_argument("--n_layer_min", type=int, default=1, help="Minimum value for n_layer")
     parser.add_argument("--n_layer_max", type=int, default=1, help="Maximum value for n_layer")
-    parser.add_argument("--batch_size_min", type=int, default=1, help="Minimum value for batch_size")
-    parser.add_argument("--batch_size_max", type=int, default=1, help="Maximum value for batch_size")
     parser.add_argument("--learning_rate_min", type=float, default=1e-5, help="Minimum value for learning_rate")
     parser.add_argument("--learning_rate_max", type=float, default=1e-2, help="Maximum value for learning_rate")
     parser.add_argument("--max_epochs_min", type=int, default=1, help="Minimum value for max_epochs")
