@@ -615,7 +615,8 @@ def main(args):
             accelerator=accelerator,
             devices=devices,
             strategy=strategy,
-            profiler=profiler
+            profiler=profiler,
+            val_check_interval=args.val_check_interval  # Added line
         )
 
         if tb_logger:
@@ -813,6 +814,16 @@ if __name__ == "__main__":
     parser.add_argument("--model_checkpoint", type=str, help="Path to the model checkpoint to resume training")
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
     parser.add_argument(
+        "--val_check_interval",
+        type=float,
+        default=1.0,
+        help=(
+            "How often to perform validation. "
+            "If a float, represents the fraction of an epoch (e.g., 0.5 for halfway through each epoch). "
+            "If an integer, represents the number of training steps."
+        )
+    )
+    parser.add_argument(
         "--enable_symbol_freq",
         action="store_true",
         help="Enable the calculation of symbol frequencies."
@@ -866,5 +877,10 @@ if __name__ == "__main__":
     if args.mamba_ratio < 0.0:
         logger.error("Invalid value for --mamba_ratio: must be non-negative.")
         sys.exit(1)
+    # Validate the val_check_interval
+    if args.val_check_interval <= 0:
+        logger.error("The --val_check_interval must be a positive number.")
+        sys.exit(1)
+
     main(args)
 
