@@ -71,7 +71,7 @@ import arckit
 from gpt2_arc.src.utils.performance_metrics import calculate_mamba_efficiency
 
 # Set up logging
-
+args = parser.parse_args()
 log_level = getattr(logging, args.log_level.upper(), logging.INFO)
 logging.basicConfig(
     level=log_level,
