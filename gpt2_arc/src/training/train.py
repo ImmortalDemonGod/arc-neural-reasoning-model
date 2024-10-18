@@ -415,12 +415,21 @@ def main(args):
         num_classes = config.training.num_classes
         logger.info(f"Number of classes set to: {num_classes}")
         logger.info("Creating DataLoader instances")
+        from torch.utils.data import Subset
+
+        # Helper function to retrieve sampler
+        def get_sampler(dataset):
+            if isinstance(dataset, Subset):
+                return getattr(dataset.dataset, 'sampler', None)
+            return getattr(dataset, 'sampler', None)
+
         # Create Training DataLoader with WeightedRandomSampler if available
-        if train_data.sampler:
+        sampler = get_sampler(train_data)
+        if sampler:
             train_loader = DataLoader(
                 train_data,
                 batch_size=config.training.batch_size,
-                sampler=train_data.sampler,
+                sampler=sampler,
                 num_workers=get_num_workers(config.training),
                 shuffle=False,  # Disable shuffle when using sampler
                 pin_memory=config.training.pin_memory if args.use_gpu else False,

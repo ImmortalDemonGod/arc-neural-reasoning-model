@@ -551,8 +551,8 @@ def objective(trial, args):
         # Update iter_num if needed (e.g., if multiple iterations per trial)
         iter_num += 1
 
-        # Retrieve the best validation loss for optimization
-        best_val_loss = trainer.callback_metrics.get("val_loss").item()
+        # Retrieve the best validation loss from the ModelCheckpoint callback
+        best_val_loss = checkpoint_callback.best_model_score.item()
         logger.info(f"Trial {trial.number} completed. Best validation loss: {best_val_loss}")
 
         # Initialize accuracy and loss metrics
@@ -630,7 +630,7 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
 
     logger.info("Optimization completed")
 
-    if study.best_trial:
+    if study.best_trial and study.best_trial.state == optuna.trial.TrialState.COMPLETE:
         print("DEBUG: Best trial found, attempting to retrieve model summary")
         best_model_summary = study.best_trial.user_attrs.get("model_summary")
         if best_model_summary:
@@ -641,23 +641,26 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
             print("DEBUG: No model summary found for the best trial")
     else:
         logger.warning("No successful trials found. Please check the trial configurations and constraints.")
-        logger.info(f"Best trial: {study.best_trial.number}")
-        logger.info(f"Best value: {study.best_value}")
-        
-        best_trial = study.best_trial
-        best_trial.set_user_attr("mamba_ratio", best_trial.params.get("mamba_ratio"))
-        best_trial.set_user_attr("d_state", best_trial.params.get("d_state"))
-        best_trial.set_user_attr("d_conv", best_trial.params.get("d_conv"))
-
-        logger.info("Best Mamba metrics:")
-        for key in ['mamba_forward_pass_time', 'mamba_params', 'mamba_params_ratio']:
-            value = study.best_trial.user_attrs.get(key)
-            if value is not None:
+        if study.best_trial:
+            logger.info(f"Best trial: {study.best_trial.number}")
+            logger.info(f"Best value: {study.best_trial.value}")
+            
+            best_trial = study.best_trial
+            best_trial.set_user_attr("mamba_ratio", best_trial.params.get("mamba_ratio"))
+            best_trial.set_user_attr("d_state", best_trial.params.get("d_state"))
+            best_trial.set_user_attr("d_conv", best_trial.params.get("d_conv"))
+    
+            logger.info("Best Mamba metrics:")
+            for key in ['mamba_forward_pass_time', 'mamba_params', 'mamba_params_ratio']:
+                value = study.best_trial.user_attrs.get(key)
+                if value is not None:
+                    logger.info(f"  {key}: {value}")
+            
+            logger.info("Best hyperparameters:")
+            for key, value in study.best_trial.params.items():
                 logger.info(f"  {key}: {value}")
-
-        logger.info("Best hyperparameters:")
-        for key, value in study.best_params.items():
-            logger.info(f"  {key}: {value}")
+        else:
+            logger.info("No trials have been completed successfully.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
