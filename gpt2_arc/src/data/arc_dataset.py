@@ -90,6 +90,12 @@ class ARCDataset(Dataset):
         self.test_split = test_split
         self.pad_symbol_idx = pad_symbol_idx
         self.symbol_freq = symbol_freq if symbol_freq is not None else {}
+
+        logger.debug(f"Initialized ARCDataset with pad_symbol_idx: {self.pad_symbol_idx}")
+        if self.symbol_freq:
+            logger.debug("Symbol frequencies provided; initializing WeightedRandomSampler.")
+        else:
+            logger.debug("No symbol frequencies provided.")
         self.data_files = []
         self.data_source = data_source
         self.num_samples = 0
@@ -108,7 +114,12 @@ class ARCDataset(Dataset):
             return
         
         if debug:
-            self.set_debug_mode(True)
+            logger.setLevel(logging.DEBUG)
+            handler.setLevel(logging.DEBUG)
+            logger.debug("Debug mode is enabled for ARCDataset.")
+        else:
+            logger.setLevel(logging.INFO)
+            handler.setLevel(logging.INFO)
         
         logger.debug("Starting ARCDataset initialization")
         logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")                                          
@@ -126,6 +137,22 @@ class ARCDataset(Dataset):
         
         self.num_samples = len(self.data)
         self._compute_and_cache_statistics()
+
+        if self.symbol_freq:
+            # Calculate weights for each sample based on symbol frequencies
+            weights = []
+            for sample in self.data:
+                input_freq = torch.tensor([self.symbol_freq.get(symbol.item(), 0.0) for symbol in sample["input"].flatten()])
+                output_freq = torch.tensor([self.symbol_freq.get(symbol.item(), 0.0) for symbol in sample["output"].flatten()])
+                sample_freq = torch.cat((input_freq, output_freq)).mean()
+                weights.append(1.0 / (sample_freq + 1e-8))  # Add epsilon to avoid division by zero
+
+            self.sample_weights = torch.tensor(weights, dtype=torch.float)
+            self.sampler = WeightedRandomSampler(self.sample_weights, num_samples=len(self.sample_weights), replacement=True)
+            logger.debug("WeightedRandomSampler initialized based on symbol frequencies.")
+        else:
+            self.sampler = None
+            logger.debug("No symbol frequencies provided; sampler not initialized.")
         self._save_cache(self.cache_path)
 
 
@@ -401,6 +428,9 @@ class ARCDataset(Dataset):
         self._save_cache(self.cache_path)  # Ensure statistics are saved in the cache
         logger.debug("Dataset statistics computed and cached successfully")
 
+        if self.symbol_freq:
+            logger.debug(f"Sampling weights - min: {self.sample_weights.min().item()}, max: {self.sample_weights.max().item()}, mean: {self.sample_weights.mean().item()}")
+
 
     def _process_list_data(self, data_list: List[Dict], task_id: Optional[str] = None) -> List[Dict]:
         processed_data = []
@@ -592,6 +622,7 @@ class ARCDataset(Dataset):
         padded_grid = self._pad_grid_torch(grid_tensor, height=30, width=30, pad_value=self.pad_symbol_idx)
 
         logger.debug(f"Grid shape after padding: {padded_grid.shape}")
+        logger.debug(f"Padded grid with pad_symbol_idx: {self.pad_symbol_idx}, resulting shape: {padded_grid.shape}")
         return padded_grid
     def kronecker_scale(self, X, target_height=30, target_width=30):
         logger.debug(f"Kronecker scaling input shape: {X.shape}")
