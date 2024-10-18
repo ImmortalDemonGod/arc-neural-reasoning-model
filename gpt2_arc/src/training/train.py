@@ -123,6 +123,7 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         return Subset(dataset, indices)
     else:
         # ... (keep the existing code for non-synthetic data)
+        pass
 
 import random
 from torch.utils.data import Subset
