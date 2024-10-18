@@ -21,6 +21,8 @@ from gpt2_arc.src.training.train import ModelConfigSaver
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 
+from pytorch_lightning.callbacks import Callback
+
 class BestEpochTrackerCallback(Callback):
     def __init__(self):
         super().__init__()
@@ -33,7 +35,6 @@ class BestEpochTrackerCallback(Callback):
                 self.best_val_loss = current_val_loss
                 self.best_epoch = trainer.current_epoch
                 logger.debug(f"New best_val_loss: {self.best_val_loss} at epoch {self.best_epoch}")
-
 from gpt2_arc.src.utils.model_memory_estimator import (
     calculate_params,
     estimate_memory_usage,
@@ -832,17 +833,4 @@ if __name__ == "__main__":
         args=args,
         study_name=args.study_name
     )
-from pytorch_lightning.callbacks import Callback
 
-class BestEpochTrackerCallback(Callback):
-    def __init__(self):
-        super().__init__()
-        self.best_epoch = 0
-
-    def on_validation_end(self, trainer, pl_module):
-        current_val_loss = trainer.callback_metrics.get("val_loss")
-        if current_val_loss is not None:
-            if not hasattr(self, 'best_val_loss') or current_val_loss < self.best_val_loss:
-                self.best_val_loss = current_val_loss
-                self.best_epoch = trainer.current_epoch
-                logger.debug(f"New best_val_loss: {self.best_val_loss} at epoch {self.best_epoch}")
