@@ -165,14 +165,3 @@ class ResultsCollector:
             return {k: self._make_serializable(v) for k, v in obj.items()}
         else:
             return str(obj)
-    def _serialize_config(self, config):
-        """Serialize the configuration dictionary."""
-        return json.dumps(config, indent=2)
-    
-    def _make_serializable(self, value):
-        """Ensure the value is serializable, handling non-serializable objects."""
-        try:
-            json.dumps(value)
-            return value
-        except (TypeError, OverflowError):
-            return str(value)
