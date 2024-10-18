@@ -568,10 +568,13 @@ def objective(trial, args):
         )
         logger.info("Standard ModelCheckpoint callback added to the training callbacks.")
 
+        # Initialize the BestEpochTrackerCallback
+        best_epoch_tracker = BestEpochTrackerCallback()
+
         # Initialize PyTorch Lightning Trainer with the checkpoint callback
         trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
-            callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback, checkpoint_callback, model_config_saver],
+            callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback, checkpoint_callback, model_config_saver, best_epoch_tracker],
             logger=tb_logger,
             gradient_clip_val=1.0,    # Add gradient clipping
             precision=16,             # Enable Automatic Mixed Precision
@@ -615,8 +618,8 @@ def objective(trial, args):
 
         # Set final metrics
         arc_trainer.results_collector.set_final_metrics({
-            "best_val_loss": trainer.best_val_loss,
-            "best_epoch": trainer.best_epoch,
+            "best_val_loss": best_val_loss,
+            "best_epoch": trainer.current_epoch,  # Alternatively, retrieve from checkpoint_callback if available
             "final_test_loss": avg_test_loss,
             "final_test_accuracy": final_test_accuracy,             # Includes padding
             "final_test_diff_accuracy": final_test_diff_accuracy    # Excludes padding
@@ -834,3 +837,17 @@ if __name__ == "__main__":
         args=args,
         study_name=args.study_name
     )
+from pytorch_lightning.callbacks import Callback
+
+class BestEpochTrackerCallback(Callback):
+    def __init__(self):
+        super().__init__()
+        self.best_epoch = 0
+
+    def on_validation_end(self, trainer, pl_module):
+        current_val_loss = trainer.callback_metrics.get("val_loss")
+        if current_val_loss is not None:
+            if not hasattr(self, 'best_val_loss') or current_val_loss < self.best_val_loss:
+                self.best_val_loss = current_val_loss
+                self.best_epoch = trainer.current_epoch
+                logger.debug(f"New best_val_loss: {self.best_val_loss} at epoch {self.best_epoch}")
