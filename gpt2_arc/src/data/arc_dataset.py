@@ -734,20 +734,48 @@ class ARCDataset(Dataset):
         elif isinstance(data_source, TaskSet):
             return self._process_arckit_data(data_source)
         elif isinstance(data_source, str):
-            logger.debug(f"Loading data from file: {data_source}")
-            # Load the JSON content from the file
-            with open(data_source, 'r', encoding='utf-8') as f:
-                try:
-                    task_data = json.load(f)
-                    logger.debug(f"Loaded task data from {data_source}")
-                except json.JSONDecodeError as e:
-                    logger.error(f"JSON decode error in file {data_source}: {e}")
-                    raise ValueError(f"Invalid JSON format in {data_source}") from e
-        
-            # Derive task_id from the file name or content
-            task_id = os.path.splitext(os.path.basename(data_source))[0]
-            logger.debug(f"Derived task_id: {task_id} from file name")
-        
-            return self._process_single_task(task_data, task_id=task_id)
+            if os.path.isdir(data_source):
+                logger.debug(f"Loading data from directory: {data_source}")
+                return self._load_directory(data_source)
+            elif os.path.isfile(data_source):
+                logger.debug(f"Loading data from file: {data_source}")
+                return self._load_single_file(data_source)
+            else:
+                raise ValueError(f"Invalid data source path: {data_source}")
         else:
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
+    def _load_directory(self, directory_path: str) -> List[Dict]:
+        """
+        Loads all JSON files from the specified directory and processes them.
+
+        Args:
+            directory_path (str): Path to the directory containing JSON files.
+
+        Returns:
+            List[Dict]: List of processed samples from all JSON files in the directory.
+        """
+        all_samples = []
+        for root, _, files in os.walk(directory_path):
+            for file in files:
+                if file.endswith('.json'):
+                    file_path = os.path.join(root, file)
+                    logger.debug(f"Processing file: {file_path}")
+                    all_samples.extend(self._load_single_file(file_path))
+        logger.debug(f"Loaded {len(all_samples)} samples from directory {directory_path}")
+        return all_samples
+
+    def _load_single_file(self, file_path: str) -> List[Dict]:
+        """
+        Loads and processes a single JSON file.
+
+        Args:
+            file_path (str): Path to the JSON file.
+
+        Returns:
+            List[Dict]: List of processed samples from the JSON file.
+        """
+        try:
+            return self._process_single_file_streaming(file_path)
+        except Exception as e:
+            logger.error(f"Error processing file {file_path}: {e}", exc_info=True)
+            return []
