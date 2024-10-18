@@ -35,7 +35,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def evaluate(model, test_dataset, config, batch_size=32, args=None):
-    trainer = ARCTrainer(model, None, test_dataset, config=config, args=args)
+    trainer = ARCTrainer(
+        model=model,
+        train_dataset=None,
+        val_dataset=None,
+        config=config,
+        args=args,
+        test_dataset=test_data
+    )
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
     logger.debug(f"DEBUG: Raw results from test: {results}")
