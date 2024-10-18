@@ -379,17 +379,24 @@ def objective(trial, args):
             n_embd = n_head * n_embd_multiplier
             n_embd = 2 ** int(np.log2(n_embd))
             n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
-            mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
-            d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
-            d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
-            dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
-            mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
-            mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
+            # Remove mamba_ratio from suggestions since it's fixed
+            # mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
+            # d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
+            # d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
+            # dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
+            # mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
+            # mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
         else:
-            # If a checkpoint is used, skip suggesting hyperparameters that are fixed
-            # Only suggest optimizer-related hyperparameters like learning_rate and batch_size
-            learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
-            batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
+            # If a checkpoint is used, set fixed values and do not suggest architecture-related hyperparameters
+            n_head = model_config.n_head
+            n_embd = model_config.n_embd
+            n_layer = model_config.n_layer
+            mamba_ratio = model_config.mamba_ratio
+            d_state = model_config.d_state
+            d_conv = model_config.d_conv
+            dropout = model_config.dropout
+            mamba_depth = model_config.mamba_depth
+            mamba_expand = model_config.mamba_expand
         n_head = min(n_head, 2 ** args.n_head_exp_max)
         n_embd = min(n_embd, 2 ** int(np.log2(args.n_embd_multiplier_max * n_head)))
         n_layer = min(n_layer, args.n_layer_max)
@@ -544,6 +551,12 @@ def objective(trial, args):
             # Load the modified state_dict into the model
             model.load_state_dict(new_state_dict, strict=True)
             logger.debug(f"Loaded model state from checkpoint: {args.model_checkpoint}")
+
+            # Fix model architecture parameters to match the checkpoint
+            model_config.mamba_ratio = 0.0
+            model_config.n_embd = 2
+            model_config.n_head = 1
+            model_config.n_layer = 1
         else:
             model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
         
