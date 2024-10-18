@@ -204,9 +204,49 @@ def objective(trial, args):
                 raise optuna.exceptions.TrialPruned()
         else:
             # Existing ARC data loading logic
-            train_set, eval_set = arckit.load_data()
-            train_data = ARCDataset(train_set)
-            val_data = ARCDataset(eval_set)
+            # Load all arckit data without internal splitting
+            logger.info("Loading arckit data for manual splitting into training and validation sets")
+            full_train_set, full_eval_set = arckit.load_data()  # Adjust based on the actual return structure
+
+            # Combine the train and eval sets if necessary
+            all_data = list(full_train_set) + list(full_eval_set)  # Modify based on how arckit.load_data() returns data
+
+            total_samples = len(all_data)
+            train_ratio = 0.8
+            val_ratio = 0.2
+            train_size = int(train_ratio * total_samples)
+            val_size = total_samples - train_size
+
+            # Set a fixed random seed for reproducibility
+            random.seed(trial.number)  # Using trial.number ensures different splits across trials but reproducible within a trial
+
+            # Shuffle indices and split
+            indices = list(range(total_samples))
+            random.shuffle(indices)
+
+            train_indices = indices[:train_size]
+            val_indices = indices[train_size:]
+
+            # Create subsets based on the shuffled indices
+            train_subset = [all_data[i] for i in train_indices]
+            val_subset = [all_data[i] for i in val_indices]
+
+            # Initialize ARCDataset instances for training and validation
+            train_data = ARCDataset(
+                data_source=train_subset,
+                is_test=False,
+                num_symbols=config.model.n_embd,  # Ensure this matches your configuration
+                symbol_freq=symbol_freq_dict  # Pass the symbol frequency dictionary if applicable
+            )
+
+            val_data = ARCDataset(
+                data_source=val_subset,
+                is_test=True,
+                num_symbols=config.model.n_embd,  # Ensure this matches your configuration
+                symbol_freq=symbol_freq_dict  # Pass the symbol frequency dictionary if applicable
+            )
+
+            logger.debug(f"Manually split arckit data: {len(train_data)} for training, {len(val_data)} for validation")
 
         # Create configuration
         model_config = ModelConfig()
