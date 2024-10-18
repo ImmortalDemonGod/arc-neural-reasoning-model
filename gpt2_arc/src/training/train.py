@@ -417,74 +417,44 @@ def main(args):
         logger.info("Creating DataLoader instances")
         from torch.utils.data import Subset
 
-        # Helper function to retrieve sampler
-        def get_sampler(dataset):
-            if isinstance(dataset, Subset):
-                return getattr(dataset.dataset, 'sampler', None)
-            return getattr(dataset, 'sampler', None)
-
-        # Create Training DataLoader with WeightedRandomSampler if available
-        sampler = get_sampler(train_data)
-        if sampler:
-            train_loader = DataLoader(
-                train_data,
-                batch_size=config.training.batch_size,
-                sampler=sampler,
-                num_workers=get_num_workers(config.training),
-                shuffle=False,  # Disable shuffle when using sampler
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers
-            )
-            logger.debug("Using WeightedRandomSampler for Training DataLoader.")
-        else:
-            train_loader = DataLoader(
-                train_data,
-                batch_size=config.training.batch_size,
-                shuffle=True,
-                num_workers=get_num_workers(config.training),
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers
-            )
-            logger.debug("Shuffling enabled for Training DataLoader.")
-
-        # Create Validation DataLoader
-        val_loader = DataLoader(
-            val_data,
+        # Create Training DataLoader
+        logger.debug("Creating Training DataLoader")
+        train_loader = DataLoader(
+            train_data,
             batch_size=config.training.batch_size,
-            shuffle=False,  # Typically, no shuffle for validation
+            shuffle=True,
             num_workers=get_num_workers(config.training),
             pin_memory=config.training.pin_memory if args.use_gpu else False,
             prefetch_factor=config.training.prefetch_factor,
             persistent_workers=config.training.persistent_workers
         )
-        logger.debug("Shuffling disabled for Validation DataLoader.")
-
-        # Create Test DataLoader with similar logic
-        if test_data.sampler:
-            test_loader = DataLoader(
-                test_data,
-                batch_size=config.training.batch_size,
-                sampler=test_data.sampler,
-                num_workers=get_num_workers(config.training),
-                shuffle=False,
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers
-            )
-            logger.debug("Using WeightedRandomSampler for Test DataLoader.")
-        else:
-            test_loader = DataLoader(
-                test_data,
-                batch_size=config.training.batch_size,
-                shuffle=False,
-                num_workers=get_num_workers(config.training),
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers
-            )
-            logger.debug("Shuffling disabled for Test DataLoader.")
+        logger.debug("Created Training DataLoader")
+        
+        # Create Validation DataLoader
+        logger.debug("Creating Validation DataLoader")
+        val_loader = DataLoader(
+            val_data,
+            batch_size=config.training.batch_size,
+            shuffle=False,
+            num_workers=get_num_workers(config.training),
+            pin_memory=config.training.pin_memory if args.use_gpu else False,
+            prefetch_factor=config.training.prefetch_factor,
+            persistent_workers=config.training.persistent_workers
+        )
+        logger.debug("Created Validation DataLoader")
+        
+        # Create Test DataLoader
+        logger.debug("Creating Test DataLoader")
+        test_loader = DataLoader(
+            test_data,
+            batch_size=config.training.batch_size,
+            shuffle=False,
+            num_workers=get_num_workers(config.training),
+            pin_memory=config.training.pin_memory if args.use_gpu else False,
+            prefetch_factor=config.training.prefetch_factor,
+            persistent_workers=config.training.persistent_workers
+        )
+        logger.debug("Created Test DataLoader")
 
         # Initialize model
         logger.info("Initializing model")
