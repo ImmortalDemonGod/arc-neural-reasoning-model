@@ -104,56 +104,91 @@ def load_config_from_json(json_path):
 import json
 import re
 
-def parse_model_summary(model_summary: str) -> Dict[str, Any]:
+
+def parse_model_summary(model_summary: str, model_checkpoint: str) -> Dict[str, Any]:
     """
-    Parses the model summary string into a structured JSON format.
+    Parses the model summary string into a structured JSON format and adds model file size.
 
     Args:
         model_summary (str): The raw model summary string.
+        model_checkpoint (str): Path to the model checkpoint file.
 
     Returns:
-        Dict[str, Any]: A dictionary containing 'layers' and 'summary'.
+        Dict[str, Any]: A dictionary containing 'layers', 'summary', and 'filesize'.
     """
     # Split the model summary into lines
     lines = model_summary.strip().split('\n')
 
-    # Remove separator lines and empty lines
-    lines = [line for line in lines if line.strip() and not set(line.strip()) == {'-'}]
-
-    # Find the header line (the one that contains 'Name' and 'Type')
-    header_line = None
-    for i, line in enumerate(lines):
-        if 'Name' in line and 'Type' in line:
-            header_line = line
-            header_index = i
-            break
-
-    if header_line is None:
-        logger.error("Header line not found.")
+    if len(lines) < 2:
+        print("Model summary does not contain sufficient lines.")
         return {"layers": [], "summary": {}}
 
-    # Extract header columns
-    header_columns = [col.strip() for col in re.split(r'\s*\|\s*', header_line.strip('|'))]
+    # Find the header line and the separator line
+    header_line = None
+    separator_line = None
+    for idx, line in enumerate(lines):
+        if 'Name' in line and 'Type' in line:
+            header_line = line
+            separator_line = lines[idx + 1] if idx + 1 < len(lines) else None
+            data_start_idx = idx + 2  # Data starts after header and separator
+            break
+
+    if header_line is None or separator_line is None:
+        print("Header or separator line not found.")
+        return {"layers": [], "summary": {}}
+
+    # Use the positions of '|' to determine the column boundaries
+    positions = [match.start() for match in re.finditer(r'\|', header_line)]
+
+    # Function to parse a line into columns based on '|' positions
+    def parse_line(line: str, positions: List[int]) -> List[str]:
+        cols = []
+        for i in range(len(positions) - 1):
+            start = positions[i] + 1
+            end = positions[i + 1]
+            col = line[start:end].strip()
+            cols.append(col)
+        # Last column after the last '|'
+        start = positions[-1] + 1
+        col = line[start:].strip()
+        cols.append(col)
+        return cols
+
+    # Get the header columns
+    header_columns = parse_line(header_line, positions)
 
     # Initialize list to hold layer details
     layers = []
 
-    # Iterate over the data lines starting from the line after the header
-    for line in lines[header_index + 1:]:
-        # Stop if we reach the summary section (lines without '|')
-        if '|' not in line:
+    # Iterate over the data lines until a non-data line is encountered
+    for line in lines[data_start_idx:]:
+        # Stop if we reach the separator line (line with dashes)
+        if set(line.strip()) == {'-'}:
+            # Summary section starts after this line
+            summary_start_idx = lines.index(line) + 1
             break
-        cols = [col.strip() for col in re.split(r'\s*\|\s*', line.strip('|'))]
-        if len(cols) == len(header_columns):
-            layer_dict = dict(zip(header_columns, cols))
-            layers.append(layer_dict)
-        else:
-            # Handle cases where there are extra '|' characters or misalignments
+
+        # Skip empty lines
+        if not line.strip():
             continue
 
+        # Parse the line into columns
+        cols = parse_line(line, positions)
+
+        # Ensure the number of columns matches the header
+        if len(cols) != len(header_columns):
+            continue  # Skip lines that don't match the expected format
+
+        # Create a dictionary for the current layer
+        layer_dict = dict(zip(header_columns, cols))
+        layers.append(layer_dict)
+    else:
+        # If we didn't break out of the loop, set summary_start_idx to the end
+        summary_start_idx = len(lines)
+
     # Extract summary metrics from the remaining lines
+    summary_lines = lines[summary_start_idx:]
     summary_dict = {}
-    summary_lines = lines[len(layers) + 2:]
     for line in summary_lines:
         line = line.strip()
         if not line:
@@ -171,6 +206,26 @@ def parse_model_summary(model_summary: str) -> Dict[str, Any]:
             except ValueError:
                 pass  # Keep as string if conversion fails
             summary_dict[key.strip()] = value
+        else:
+            # Handle lines that may have the key and value in reverse order
+            match = re.match(r"(.+)\s+(\d+\.?\d*)", line)
+            if match:
+                key, value = match.groups()
+                try:
+                    if '.' in value:
+                        value = float(value)
+                    else:
+                        value = int(value)
+                except ValueError:
+                    pass
+                summary_dict[key.strip()] = value
+
+    # Get model file size
+    try:
+        filesize = os.path.getsize(model_checkpoint)
+        summary_dict["Model File Size (bytes)"] = filesize
+    except Exception as e:
+        print(f"Error getting model file size: {e}")
 
     # Combine layers and summary into the final output
     output = {
@@ -180,7 +235,8 @@ def parse_model_summary(model_summary: str) -> Dict[str, Any]:
 
     return output
 
-def save_results(results, individual_metrics, output_dir, model_name, model_summary):
+
+def save_results(results, individual_metrics, output_dir, model_name, model_summary, checkpoint):
     """
     Saves the evaluation results along with the parsed model summary to a JSON file.
 
@@ -199,7 +255,7 @@ def save_results(results, individual_metrics, output_dir, model_name, model_summ
     output_path = os.path.join(output_dir, filename)
 
     # Parse the model_summary string into JSON
-    parsed_model_summary = parse_model_summary(model_summary)
+    parsed_model_summary = parse_model_summary(model_summary, checkpoint)
 
     data_to_save = {
         "aggregate_results": results,
@@ -363,7 +419,7 @@ def main(args):
         logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
 
     # Save results regardless of wandb usage
-    results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
+    results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary, checkpoint)
 
     if args.use_wandb:
         # Wandb artifact creation and logging
