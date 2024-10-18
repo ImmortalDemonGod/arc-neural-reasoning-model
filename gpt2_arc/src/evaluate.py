@@ -13,7 +13,6 @@ import wandb
 import numpy as np
 from datetime import datetime
 from pytorch_lightning.utilities.model_summary import ModelSummary
-from gpt2_arc.src.utils.parser import parse_model_summary
 from torchsummary import summary
 from pytorch_lightning.utilities.model_summary import ModelSummary
 
@@ -115,14 +114,14 @@ def parse_model_summary(model_summary: str, model_checkpoint: str) -> Dict[str, 
         model_checkpoint (str): Path to the model checkpoint file.
 
     Returns:
-        Dict[str, Any]: A dictionary containing 'layers', 'summary', and 'filesize'.
+        Dict[str, Any]: A dictionary containing 'header', 'layers', 'summary', and 'filesize'.
     """
     # Split the model summary into lines
     lines = model_summary.strip().split('\n')
 
     if len(lines) < 2:
         print("Model summary does not contain sufficient lines.")
-        return {"layers": [], "summary": {}}
+        return {"layers": [], "summary": {}, "header": []}
 
     # Find the header line and the separator line
     header_line = None
@@ -136,7 +135,7 @@ def parse_model_summary(model_summary: str, model_checkpoint: str) -> Dict[str, 
 
     if header_line is None or separator_line is None:
         print("Header or separator line not found.")
-        return {"layers": [], "summary": {}}
+        return {"layers": [], "summary": {}, "header": []}
 
     # Use the positions of '|' to determine the column boundaries
     positions = [match.start() for match in re.finditer(r'\|', header_line)]
@@ -228,13 +227,15 @@ def parse_model_summary(model_summary: str, model_checkpoint: str) -> Dict[str, 
     except Exception as e:
         print(f"Error getting model file size: {e}")
 
-    # Combine layers and summary into the final output
+    # Combine header, layers, and summary into the final output
     output = {
+        "header": header_columns,
         "layers": layers,
         "summary": summary_dict
     }
 
     return output
+
 
 
 def save_results(results, individual_metrics, output_dir, model_name, model_summary, model_checkpoint):
