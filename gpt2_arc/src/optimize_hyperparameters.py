@@ -561,7 +561,7 @@ def objective(trial, args):
         avg_test_loss = 0.0  # Default value if not calculated
 
         # Set final metrics
-        trainer.results_collector.set_final_metrics({
+        arc_trainer.results_collector.set_final_metrics({
             "best_val_loss": trainer.best_val_loss,
             "best_epoch": trainer.best_epoch,
             "final_test_loss": avg_test_loss,
