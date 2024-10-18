@@ -191,6 +191,8 @@ def parse_model_summary(model_summary: str) -> Dict[str, Any]:
         "summary": summary_dict
     }
 
+def save_results(results, individual_metrics, output_dir, model_name, model_summary):                                                                
+
     return output
 
 def save_results(results, individual_metrics, output_dir, model_name, model_summary):                                                                
