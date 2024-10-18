@@ -13,6 +13,7 @@ import wandb
 import numpy as np
 from datetime import datetime
 from pytorch_lightning.utilities.model_summary import ModelSummary
+from gpt2_arc.src.utils.parser import parse_model_summary
 from torchsummary import summary
 from pytorch_lightning.utilities.model_summary import ModelSummary
 
@@ -236,7 +237,7 @@ def parse_model_summary(model_summary: str, model_checkpoint: str) -> Dict[str, 
     return output
 
 
-def save_results(results, individual_metrics, output_dir, model_name, model_summary, checkpoint):
+def save_results(results, individual_metrics, output_dir, model_name, model_summary, model_checkpoint):
     """
     Saves the evaluation results along with the parsed model summary to a JSON file.
 
@@ -419,7 +420,7 @@ def main(args):
         logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
 
     # Save results regardless of wandb usage
-    results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary, checkpoint)
+    results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary, args.model_checkpoint)
 
     if args.use_wandb:
         # Wandb artifact creation and logging
