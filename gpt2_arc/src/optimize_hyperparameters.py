@@ -1,5 +1,6 @@
 # gpt2_arc/src/optimize_hyperparameters.py
 import argparse
+import random
 import logging
 import optuna
 import logging
@@ -17,6 +18,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 #from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.training.trainer import NanLossPruningCallback
 from gpt2_arc.src.training.train import ModelConfigSaver
+from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 
 from gpt2_arc.src.utils.model_memory_estimator import (
@@ -111,10 +113,61 @@ def objective(trial, args):
         fixed_hyperparams = {}
 
         # Load hyperparameters from checkpoint if provided
-        # Load data
-        train_set, eval_set = arckit.load_data()
-        train_data = ARCDataset(train_set)
-        val_data = ARCDataset(eval_set)
+        if args.use_synthetic_data:
+            if not args.synthetic_data_path:
+                raise ValueError("Synthetic data path not provided")
+            logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
+            
+            # Initialize the full synthetic dataset
+            full_synthetic_dataset = ARCDataset(
+                data_source=args.synthetic_data_path,
+                is_test=False,
+                num_symbols=config.model.n_embd,
+                symbol_freq=symbol_freq_dict
+            )
+            
+            total_samples = len(full_synthetic_dataset)
+            logger.info(f"Total synthetic samples loaded: {total_samples}")
+            
+            # Define split ratios (e.g., 80% train, 20% validation)
+            train_ratio = 0.8
+            val_ratio = 0.2
+            train_size = int(train_ratio * total_samples)
+            val_size = total_samples - train_size
+            
+            # Generate shuffled indices
+            indices = list(range(total_samples))
+            random.shuffle(indices)
+            
+            train_indices = indices[:train_size]
+            val_indices = indices[train_size:]
+            
+            # Extract train and validation samples based on the shuffled indices
+            train_samples = [full_synthetic_dataset[i] for i in train_indices]
+            val_samples = [full_synthetic_dataset[i] for i in val_indices]
+            
+            # Create separate ARCDataset instances for training and validation
+            train_data = ARCDataset(
+                data_source=train_samples,
+                is_test=False,
+                num_symbols=config.model.n_embd,
+                symbol_freq=symbol_freq_dict
+            )
+            
+            val_data = ARCDataset(
+                data_source=val_samples,
+                is_test=True,
+                num_symbols=config.model.n_embd,
+                symbol_freq=symbol_freq_dict
+            )
+            
+            logger.debug(f"Synthetic training data size: {len(train_data)}")
+            logger.debug(f"Synthetic validation data size: {len(val_data)}")
+        else:
+            # Existing ARC data loading logic
+            train_set, eval_set = arckit.load_data()
+            train_data = ARCDataset(train_set)
+            val_data = ARCDataset(eval_set)
 
         # Create configuration
         model_config = ModelConfig()

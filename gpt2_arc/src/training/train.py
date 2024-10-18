@@ -165,7 +165,6 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
     return dataset
 
 import random
-from torch.utils.data import Subset
 
 def load_and_split_synthetic_data(args, config):
     """
