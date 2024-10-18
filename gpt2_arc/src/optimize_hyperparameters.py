@@ -203,15 +203,15 @@ def objective(trial, args):
                 logger.error(f"Trial {trial.number}: Validation dataset is empty. Pruning the trial.")
                 raise optuna.exceptions.TrialPruned()
         else:
-            # Existing ARC data loading logic
             # Load all arckit data without internal splitting
             logger.info("Loading arckit data for manual splitting into training and validation sets")
-            full_train_set, full_eval_set = arckit.load_data()  # Adjust based on the actual return structure
+            full_train_set, full_eval_set = arckit.load_data()  # Ensure this returns TaskSet objects
 
-            # Combine the train and eval sets if necessary
-            all_data = list(full_train_set) + list(full_eval_set)  # Modify based on how arckit.load_data() returns data
+            # Combine the tasks from both TaskSets
+            combined_tasks = list(full_train_set.tasks) + list(full_eval_set.tasks)
+            logger.debug(f"Total tasks loaded: {len(combined_tasks)}")
 
-            total_samples = len(all_data)
+            total_samples = len(combined_tasks)
             train_ratio = 0.8
             val_ratio = 0.2
             train_size = int(train_ratio * total_samples)
@@ -220,27 +220,29 @@ def objective(trial, args):
             # Set a fixed random seed for reproducibility
             random.seed(trial.number)  # Using trial.number ensures different splits across trials but reproducible within a trial
 
-            # Shuffle indices and split
-            indices = list(range(total_samples))
-            random.shuffle(indices)
+            # Shuffle the combined tasks
+            random.shuffle(combined_tasks)
+            logger.debug("Shuffled the combined tasks.")
 
-            train_indices = indices[:train_size]
-            val_indices = indices[train_size:]
+            # Split the tasks into training and validation
+            train_tasks = combined_tasks[:train_size]
+            val_tasks = combined_tasks[train_size:]
+            logger.debug(f"Training tasks count: {len(train_tasks)}, Validation tasks count: {len(val_tasks)}")
 
-            # Create subsets based on the shuffled indices
-            train_subset = [all_data[i] for i in train_indices]
-            val_subset = [all_data[i] for i in val_indices]
+            # Create new TaskSet objects for training and validation
+            train_taskset = arckit.data.TaskSet(tasks=train_tasks)
+            val_taskset = arckit.data.TaskSet(tasks=val_tasks)
 
             # Initialize ARCDataset instances for training and validation
             train_data = ARCDataset(
-                data_source=train_subset,
+                data_source=train_taskset,
                 is_test=False,
                 num_symbols=config.model.n_embd,  # Ensure this matches your configuration
                 symbol_freq=symbol_freq_dict  # Pass the symbol frequency dictionary if applicable
             )
 
             val_data = ARCDataset(
-                data_source=val_subset,
+                data_source=val_taskset,
                 is_test=True,
                 num_symbols=config.model.n_embd,  # Ensure this matches your configuration
                 symbol_freq=symbol_freq_dict  # Pass the symbol frequency dictionary if applicable
