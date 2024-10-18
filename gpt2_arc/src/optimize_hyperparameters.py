@@ -689,9 +689,9 @@ if __name__ == "__main__":
         help="Name of the Optuna study."
     )
 
-    parser.add_argument("--n_embd_max", type=int, default=4, help="Maximum value for n_embd")
-    parser.add_argument("--n_head_min", type=int, default=2, help="Minimum value for n_head")
-    parser.add_argument("--n_head_max", type=int, default=4, help="Maximum value for n_head")
+    parser.add_argument("--n_embd_max", type=int, default=1, help="Maximum value for n_embd")
+    parser.add_argument("--n_head_min", type=int, default=1, help="Minimum value for n_head")
+    parser.add_argument("--n_head_max", type=int, default=1, help="Maximum value for n_head")
     parser.add_argument("--n_head_exp_min", type=int, default=1, help="Minimum exponent for n_head (2^x)")
     parser.add_argument("--n_head_exp_max", type=int, default=1, help="Maximum exponent for n_head (2^x)")
     parser.add_argument("--n_embd_multiplier_min", type=int, default=1, help="Minimum multiplier for n_embd")
@@ -699,25 +699,25 @@ if __name__ == "__main__":
     parser.add_argument("--n_layer_min", type=int, default=1, help="Minimum value for n_layer")
     parser.add_argument("--n_layer_max", type=int, default=1, help="Maximum value for n_layer")
     parser.add_argument("--batch_size_min", type=int, default=1, help="Minimum value for batch_size")
-    parser.add_argument("--batch_size_max", type=int, default=2, help="Maximum value for batch_size")
+    parser.add_argument("--batch_size_max", type=int, default=1, help="Maximum value for batch_size")
     parser.add_argument("--learning_rate_min", type=float, default=1e-5, help="Minimum value for learning_rate")
     parser.add_argument("--learning_rate_max", type=float, default=1e-2, help="Maximum value for learning_rate")
     parser.add_argument("--max_epochs_min", type=int, default=1, help="Minimum value for max_epochs")
-    parser.add_argument("--max_epochs_max", type=int, default=2, help="Maximum value for max_epochs")
+    parser.add_argument("--max_epochs_max", type=int, default=1, help="Maximum value for max_epochs")
 
     parser.add_argument("--mamba_ratio_min", type=float, default=1.0, help="Minimum value for mamba_ratio")
     parser.add_argument("--mamba_ratio_max", type=float, default=8.0, help="Maximum value for mamba_ratio")
     parser.add_argument("--mamba_ratio_step", type=float, default=0.25, help="Step size for mamba_ratio")
     parser.add_argument("--d_state_min", type=int, default=1, help="Minimum value for d_state")
-    parser.add_argument("--d_state_max", type=int, default=2, help="Maximum value for d_state")
+    parser.add_argument("--d_state_max", type=int, default=1, help="Maximum value for d_state")
     parser.add_argument("--d_conv_min", type=int, default=1, help="Minimum value for d_conv")
-    parser.add_argument("--d_conv_max", type=int, default=2, help="Maximum value for d_conv")
+    parser.add_argument("--d_conv_max", type=int, default=1, help="Maximum value for d_conv")
 
     parser.add_argument("--dropout_min", type=float, default=0.0, help="Minimum value for dropout")
     parser.add_argument("--mamba_depth_min", type=int, default=1, help="Minimum value for mamba_depth")
-    parser.add_argument("--mamba_depth_max", type=int, default=2, help="Maximum value for mamba_depth")
+    parser.add_argument("--mamba_depth_max", type=int, default=1, help="Maximum value for mamba_depth")
     parser.add_argument("--mamba_expand_min", type=int, default=1, help="Minimum value for mamba_expand")
-    parser.add_argument("--mamba_expand_max", type=int, default=2, help="Maximum value for mamba_expand")
+    parser.add_argument("--mamba_expand_max", type=int, default=1, help="Maximum value for mamba_expand")
     parser.add_argument(
         "--enable_symbol_freq",
         action="store_true",
