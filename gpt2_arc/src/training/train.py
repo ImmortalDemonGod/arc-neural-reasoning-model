@@ -406,8 +406,47 @@ def main(args):
                 collate_fn=ARCDataset.collate_fn
             )
         else:
-            # ... (keep the existing code for non-synthetic data)
-            pass
+            # Create Training DataLoader
+            logger.debug("Creating Training DataLoader")
+            train_loader = DataLoader(
+                train_data,
+                batch_size=config.training.batch_size,
+                shuffle=True,
+                num_workers=get_num_workers(config.training),
+                pin_memory=config.training.pin_memory if args.use_gpu else False,
+                prefetch_factor=config.training.prefetch_factor,
+                persistent_workers=config.training.persistent_workers,
+                collate_fn=ARCDataset.collate_fn
+            )
+            logger.debug("Created Training DataLoader")
+
+            # Create Validation DataLoader
+            logger.debug("Creating Validation DataLoader")
+            val_loader = DataLoader(
+                val_data,
+                batch_size=config.training.batch_size,
+                shuffle=False,
+                num_workers=get_num_workers(config.training),
+                pin_memory=config.training.pin_memory if args.use_gpu else False,
+                prefetch_factor=config.training.prefetch_factor,
+                persistent_workers=config.training.persistent_workers,
+                collate_fn=ARCDataset.collate_fn
+            )
+            logger.debug("Created Validation DataLoader")
+
+            # Create Test DataLoader
+            logger.debug("Creating Test DataLoader")
+            test_loader = DataLoader(
+                test_data,
+                batch_size=config.training.batch_size,
+                shuffle=False,
+                num_workers=get_num_workers(config.training),
+                pin_memory=config.training.pin_memory if args.use_gpu else False,
+                prefetch_factor=config.training.prefetch_factor,
+                persistent_workers=config.training.persistent_workers,
+                collate_fn=ARCDataset.collate_fn
+            )
+            logger.debug("Created Test DataLoader")
 
         # Initialize model
         logger.info("Initializing model")
