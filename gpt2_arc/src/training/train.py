@@ -120,14 +120,7 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         dataset = all_synthetic_data['dataset']
         indices = all_synthetic_data[f'{dataset_type}_indices']
         logger.info(f"Using synthetic {dataset_type} dataset with {len(indices)} samples")
-        if dataset_type == 'train':
-            return dataset
-        elif dataset_type == 'val':
-            return dataset
-        elif dataset_type == 'test':
-            return dataset
-        else:
-            raise ValueError(f"Unknown dataset_type: {dataset_type}")
+        return dataset
     else:
         logger.info(f"Loading ARC {dataset_type} dataset")
         train_set, eval_set = arckit.load_data()
