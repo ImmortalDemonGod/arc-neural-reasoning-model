@@ -174,6 +174,15 @@ def objective(trial, args):
             
             logger.debug(f"Synthetic training data size: {len(train_data)}")
             logger.debug(f"Synthetic validation data size: {len(val_data)}")
+
+            # Check if training and validation datasets are empty
+            if len(train_data) == 0:
+                logger.error(f"Trial {trial.number}: Training dataset is empty. Pruning the trial.")
+                raise optuna.exceptions.TrialPruned()
+
+            if len(val_data) == 0:
+                logger.error(f"Trial {trial.number}: Validation dataset is empty. Pruning the trial.")
+                raise optuna.exceptions.TrialPruned()
         else:
             # Existing ARC data loading logic
             train_set, eval_set = arckit.load_data()

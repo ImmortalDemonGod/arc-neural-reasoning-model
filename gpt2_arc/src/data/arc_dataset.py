@@ -176,6 +176,8 @@ class ARCDataset(Dataset):
             if isinstance(task, dict):
                 # Existing processing for dictionary tasks
                 for ex in task.get('train', []):
+                    logger.debug(f"Processing training example keys: {ex.keys()}")
+                    logger.debug(f"Processing example keys: {ex.keys()}")
                     input_tensor = self._preprocess_grid(ex['input'])
                     output_tensor = self._preprocess_grid(ex['output'])
                     samples.append({
