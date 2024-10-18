@@ -174,7 +174,7 @@ def load_and_split_synthetic_data(args, config):
         config: Configuration object containing model and training settings.
 
     Returns:
-        dict: A dictionary containing 'train', 'val', and 'test' datasets.
+        dict: A dictionary containing 'dataset', 'train_indices', 'val_indices', and 'test_indices'.
     """
     logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
     # Initialize ARCDataset with the synthetic data directory
@@ -202,24 +202,19 @@ def load_and_split_synthetic_data(args, config):
     val_indices = indices[train_end:val_end]
     test_indices = indices[val_end:]
 
-    # Create Subsets of the synthetic dataset
-    train_dataset = Subset(synthetic_dataset, train_indices)
-    val_dataset = Subset(synthetic_dataset, val_indices)
-    test_dataset = Subset(synthetic_dataset, test_indices)
-
-    data_splits = {
-        'train': train_dataset,
-        'val': val_dataset,
-        'test': test_dataset
-    }
-
     logger.debug(
         f"Synthetic data split into "
-        f"{len(train_dataset)} training, "
-        f"{len(val_dataset)} validation, and "
-        f"{len(test_dataset)} test samples"
+        f"{len(train_indices)} training, "
+        f"{len(val_indices)} validation, and "
+        f"{len(test_indices)} test samples"
     )
-    return data_splits
+
+    return {
+        'dataset': synthetic_dataset,
+        'train_indices': train_indices,
+        'val_indices': val_indices,
+        'test_indices': test_indices
+    }
 
 
 def main(args):
