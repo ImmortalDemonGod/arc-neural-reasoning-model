@@ -731,19 +731,3 @@ class ARCDataset(Dataset):
             return self._process_single_file(data_source)
         else:
             raise ValueError(f"Unsupported data_source type: {type(data_source)}")
-    def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
-        processed_data = []
-        logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
-        for task in taskset.tasks:
-            logger.debug(f"Processing task: {task.id}")
-            logger.debug(f"Train samples: {len(task.train)}, Test samples: {len(task.test)}")
-            for ex in task.train + task.test:
-                input_grid = self._preprocess_grid(ex[0])
-                output_grid = self._preprocess_grid(ex[1])
-                processed_data.append({
-                    "input": input_grid,
-                    "output": output_grid,
-                    "task_id": task.id
-                })
-        logger.debug(f"Processed {len(processed_data)} samples from TaskSet")
-        return processed_data
