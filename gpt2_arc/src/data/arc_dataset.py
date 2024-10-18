@@ -3,6 +3,10 @@ import os
 import json
 import random
 from typing import Union, List, Dict, Tuple, Any, Optional
+from typing import List, Dict, Union, Optional
+import logging
+
+logger = logging.getLogger(__name__)
 import numpy as np
 import pickle
 import hashlib
@@ -73,133 +77,19 @@ def set_debug_mode(debug=False):
 class ARCDataset(Dataset):
     def __init__(
         self,
-        data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
+        data_source: Union[str, List[Dict], 'TaskSet'],
         is_test: bool = False,
-        num_symbols: int = 11,  # Updated to match the number of classes
-        test_split: float = 0.2,
-        pad_symbol_idx: int = 10,  # Add this parameter with a default value
-        symbol_freq: Optional[Dict[int, float]] = None,  # New parameter added
-        debug=False,
+        num_symbols: int = 11,
+        pad_symbol_idx: int = 10,
+        symbol_freq: Optional[Dict[int, float]] = None,
     ):
-        self.symbol_freq = symbol_freq if symbol_freq is not None else {}
-        self.test_split = test_split
         self.is_test = is_test
         self.num_symbols = num_symbols
-        self.pad_symbol_idx = pad_symbol_idx  # Store it as an instance variable
-        assert 0 <= self.pad_symbol_idx <= 10, "pad_symbol_idx must be within the range of 0 to 10"
-        self.data_files = []  # Initialize data_files as an empty list
-        self.data_source = data_source
-        self.num_samples = 0
-        self.data = []
-        self.symbol_freq = symbol_freq  # Assign the symbol_freq parameter
-
-        self.cache_path = self._generate_cache_path(
-            data_source=self.data_source,
-            num_symbols=self.num_symbols,
-            is_test=self.is_test,
-            test_split=self.test_split
-        )
-
-        if self._load_cache(self.cache_path):
-            logger.debug("Data loaded from cache successfully.")
-            self.num_samples = len(self.data)
-            return  # Exit initialization if cache is loaded
-
-        if debug:
-            set_debug_mode(True)
-        logger.debug("Starting ARCDataset initialization")
-        logger.debug(f"data_source type: {type(data_source)}")
-        logger.debug(f"data_source content: {data_source}")
-        logger.debug(f"self.test_split is set to: {self.test_split}")
-
-        try:
-            if isinstance(data_source, str):
-                if os.path.isdir(data_source):
-                    logger.debug("Initializing dataset with data from directory")
-                    self.data_dir = data_source
-                    self.data_files = [
-                        os.path.join(data_source, f)
-                        for f in os.listdir(data_source)
-                        if f.endswith('.json')
-                    ]
-                    random.shuffle(self.data_files)
-                    # Determine the number of workers based on CPU count
-                    cpu_count = multiprocessing.cpu_count() or 1
-                    max_workers = min(4, cpu_count + 1)  # Adjusted heuristic for ThreadPoolExecutor
-                    
-                    logger.debug(f"Using ThreadPoolExecutor with {max_workers} workers for parallel processing.")
-
-                    # Initialize tqdm progress bar and process files in parallel
-                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                        # Submit all file processing tasks
-                        future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in self.data_files}
-                        
-                        # Wrap the as_completed iterator with tqdm for the progress bar
-                        for future in tqdm(
-                            as_completed(future_to_file),
-                            total=len(future_to_file),
-                            desc="Loading JSON Files",
-                            unit="file",
-                            file=sys.stdout,
-                            ncols=100,              # Optional: Set width of the progress bar
-                            mininterval=0.5,        # Optional: Minimum interval between updates
-                            colour='green'          # Optional: Set progress bar color (requires tqdm >=4.46.0)
-                        ):
-                            file_path = future_to_file[future]
-                            try:
-                                samples = future.result()
-                                self.data.extend(samples)  # No lock needed
-                                logger.debug(f"Added {len(samples)} samples from file {file_path}")
-                            except Exception as exc:
-                                logger.error(f"{file_path} generated an exception: {exc}", exc_info=True)
-                elif os.path.isfile(data_source):
-                    with open(data_source, 'r') as f:
-                        task_data = json.load(f)
-                    if isinstance(task_data, dict):
-                        task_id = task_data.get('id', "default_task")
-                        samples = self._process_single_task(task_data, task_id=task_id)
-                        self.data.extend(samples)
-                    elif isinstance(task_data, list):
-                        samples = self._process_list_data(task_data, task_id="default_task")
-                        self.data.extend(samples)
-                    else:
-                        logger.error(f"Unexpected data format in file {data_source}: {type(task_data)}")
-                else:
-                    raise FileNotFoundError(f"Data source file or directory not found: {data_source}")
-            elif TaskSet is not None and isinstance(data_source, TaskSet):
-                logger.debug(f"TaskSet attributes before access: {dir(data_source)}")
-                logger.debug(f"Does TaskSet have 'dataset' attribute? {hasattr(data_source, 'dataset')}")
-                samples = self._process_arckit_data(data_source)
-                self.data.extend(samples)
-            elif isinstance(data_source, Subset):
-                logger.debug("Processing data from Subset")
-                subset_indices = data_source.indices
-                underlying_dataset = data_source.dataset
-                samples = []
-                for idx in subset_indices:
-                    item = underlying_dataset[idx]
-                    input_tensor = self._preprocess_grid(item[0])
-                    output_tensor = self._preprocess_grid(item[1])
-                    task_id = item[2] if len(item) > 2 else None
-                    assert task_id is not None, "Task ID must be provided for each sample."
-                    samples.append({
-                        "input": input_tensor,
-                        "output": output_tensor,
-                        "task_id": task_id
-                    })
-                self.data.extend(samples)
-            elif isinstance(data_source, list):
-                samples = self._process_list_data(data_source, task_id="default_task")
-                self.data.extend(samples)
-            else:
-                logger.error(f"Unsupported data_source type: {type(data_source)}")
-        except Exception as e:
-            logger.error(f"Failed to initialize ARCDataset: {e}", exc_info=True)
-            raise
-
-        self.num_samples = len(self.data)
-        self._compute_and_cache_statistics()
-        self._save_cache(self.cache_path)
+        self.pad_symbol_idx = pad_symbol_idx
+        self.symbol_freq = symbol_freq if symbol_freq is not None else {}
+        logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")
+        self.data = self._load_data(data_source)
+        logger.debug(f"ARCDataset initialized with {len(self.data)} samples")
 
 
     def _process_single_task(self, task: Dict, task_id: str) -> List[Dict]:
@@ -475,29 +365,27 @@ class ARCDataset(Dataset):
         logger.debug("Dataset statistics computed and cached successfully")
 
 
-    def _process_list_data(self, data_list: List[Dict]) -> List[Dict]:
+    def _process_list_data(self, data_list: List[Dict], task_id: Optional[str] = None) -> List[Dict]:
         processed_data = []
+        logger.debug(f"Processing list data with {len(data_list)} items")
         for idx, example in enumerate(data_list):
-            if 'input' in example and 'output' in example and isinstance(example['input'], (list, np.ndarray)) and isinstance(example['output'], (list, np.ndarray)):
-                # Preprocess the grids
+            if 'input' in example and 'output' in example:
                 input_grid = self._preprocess_grid(example['input'])
                 output_grid = self._preprocess_grid(example['output'])
-
-                # Extract task_id from the example data
-                task_id_sample = example.get('task_id')
-
+                
+                task_id_sample = task_id if task_id else example.get('task_id')
                 if not task_id_sample or task_id_sample == "default_task":
                     task_id_sample = f"default_task_{idx}"
                     logger.warning(f"Sample at index {idx} has invalid 'task_id'. Assigning new task_id: {task_id_sample}")
+                
                 processed_data.append({
                     "input": input_grid,
                     "output": output_grid,
                     "task_id": task_id_sample
                 })
             else:
-                logger.warning(f"Example at index {idx} missing 'input' or 'output' keys or has incorrect types.")
-                # Optionally, skip or raise an error
-                # raise ValueError("Unexpected item format in data_source.")
+                logger.warning(f"Example at index {idx} missing 'input' or 'output' keys. Skipping.")
+        logger.debug(f"Processed {len(processed_data)} samples")
         return processed_data
 
 
@@ -763,3 +651,31 @@ class ARCDataset(Dataset):
     
 
         return padded_inputs, padded_outputs, list(task_ids)
+    def _load_data(self, data_source):
+        logger.debug(f"Loading data from source type: {type(data_source)}")
+        if isinstance(data_source, list):
+            return self._process_list_data(data_source)
+        elif isinstance(data_source, TaskSet):
+            return self._process_arckit_data(data_source)
+        elif isinstance(data_source, str):
+            logger.debug(f"Loading data from file: {data_source}")
+            # Existing file loading logic here
+            return self._process_single_file(data_source)
+        else:
+            raise ValueError(f"Unsupported data_source type: {type(data_source)}")
+    def _process_arckit_data(self, taskset: 'TaskSet') -> List[Dict]:
+        processed_data = []
+        logger.debug(f"Processing TaskSet with {len(taskset.tasks)} tasks")
+        for task in taskset.tasks:
+            logger.debug(f"Processing task: {task.id}")
+            logger.debug(f"Train samples: {len(task.train)}, Test samples: {len(task.test)}")
+            for ex in task.train + task.test:
+                input_grid = self._preprocess_grid(ex[0])
+                output_grid = self._preprocess_grid(ex[1])
+                processed_data.append({
+                    "input": input_grid,
+                    "output": output_grid,
+                    "task_id": task.id
+                })
+        logger.debug(f"Processed {len(processed_data)} samples from TaskSet")
+        return processed_data
