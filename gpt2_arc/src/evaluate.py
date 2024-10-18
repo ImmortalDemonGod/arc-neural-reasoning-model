@@ -34,8 +34,8 @@ from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def evaluate(model, test_dataset, config, batch_size=32):
-    trainer = ARCTrainer(model, None, test_dataset, config=config)
+def evaluate(model, test_dataset, config, batch_size=32, args=None):
+    trainer = ARCTrainer(model, None, test_dataset, config=config, args=args)
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
     logger.debug(f"DEBUG: Raw results from test: {results}")
@@ -240,7 +240,7 @@ def main(args):
     )
 
     # Evaluate the model
-    results, individual_metrics = evaluate(model, test_data, config, args.batch_size)
+    results, individual_metrics = evaluate(model, test_data, config, args.batch_size, args)
 
     logger.debug(f"DEBUG: Evaluation results: {results}")
     logger.debug(f"DEBUG: Individual metrics: {individual_metrics}")
