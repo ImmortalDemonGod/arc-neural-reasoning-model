@@ -307,7 +307,11 @@ def main(args):
                 use_synthetic_data=args.use_synthetic_data,
                 synthetic_data_path=args.synthetic_data_path,
                 include_pad_in_loss=args.include_pad_in_loss,
-                include_pad_in_accuracy=args.include_pad_in_accuracy
+                include_pad_in_accuracy=args.include_pad_in_accuracy,
+                num_workers=args.num_workers,
+                prefetch_factor=args.prefetch_factor,
+                persistent_workers=not args.no_persistent_workers,
+                pin_memory=args.pin_memory
             )
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
@@ -359,7 +363,7 @@ def main(args):
         # Concurrently load datasets using ProcessPoolExecutor
         logger.info("Loading datasets concurrently using ProcessPoolExecutor")
 
-        with ProcessPoolExecutor(max_workers=3) as executor:
+        with ProcessPoolExecutor(max_workers=2) as executor:
             future_train = executor.submit(load_dataset, args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
             future_val = executor.submit(load_dataset, args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
             future_test = executor.submit(load_dataset, args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
@@ -415,7 +419,11 @@ def main(args):
             include_pad_in_loss=args.include_pad_in_loss,
             symbol_freq=symbol_freq_dict,
             balance_symbols=balance_symbols,
-            balancing_method=balancing_method
+            balancing_method=balancing_method,
+            num_workers=args.num_workers,
+            prefetch_factor=args.prefetch_factor,
+            persistent_workers=not args.no_persistent_workers,
+            pin_memory=args.pin_memory
         )
         config = Config(model=model_config, training=training_config)
 
