@@ -358,8 +358,7 @@ def objective(trial, args):
         batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
         learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
         max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
-
-        else:
+    else:
             # If a checkpoint is used, set fixed values and do not suggest architecture-related hyperparameters
             n_head = model_config.n_head
             n_embd = model_config.n_embd
