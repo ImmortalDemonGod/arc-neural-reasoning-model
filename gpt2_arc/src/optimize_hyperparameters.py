@@ -609,7 +609,7 @@ def objective(trial, args):
         else:
             logger.warning(f"Trial {trial.number}: No checkpoints were saved. Assigning a high validation loss.")
             best_val_loss = float('inf')
-            raise optuna.exceptions.TrialPruned("No checkpoints were saved during the trial.")
+            return best_val_loss  # This will assign a poor score but won't raise a pruning exception
         logger.info(f"Trial {trial.number} completed. Best validation loss: {best_val_loss}")
         logger.debug("Starting training")
         trainer.fit(arc_trainer)
