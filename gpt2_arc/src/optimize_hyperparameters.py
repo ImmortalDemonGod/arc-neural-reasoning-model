@@ -424,6 +424,7 @@ def objective(trial, args):
             d_conv=d_conv,
             mamba_depth=mamba_depth,
             mamba_expand=mamba_expand
+            enable_progress_bar=not args.no_progress_bar  # <-- Added this line
         )
         # Improve memory estimation by considering additional factors like optimizer state and activation memory
         safety_margin = 0.1  # 10% safety margin
@@ -979,6 +980,11 @@ if __name__ == "__main__":
     parser.add_argument("--dropout_max", type=float, default=0.5, help="Maximum value for dropout")
     parser.add_argument("--dropout_step", type=float, default=0.1, help="Step size for dropout")
     parser.add_argument("--use_gpu", action="store_true", help="Flag to indicate whether to use GPU for training.")
+    parser.add_argument(
+        "--no_progress_bar",
+        action="store_true",
+        help="Disable the progress bar during training."
+    )
     parser.add_argument("--use_synthetic_data", action="store_true", help="Flag to indicate whether to use synthetic data for training.")
     parser.add_argument(
         "--matmul_precision",
