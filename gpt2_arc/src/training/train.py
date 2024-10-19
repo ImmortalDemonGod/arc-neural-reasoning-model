@@ -17,6 +17,7 @@ from lightning.pytorch.profilers import PyTorchProfiler
 from pytorch_lightning.callbacks import Callback
 from torch.profiler import ProfilerActivity
 from torch.utils.data import DataLoader, WeightedRandomSampler
+import random
 
 # Define the base directory for the arc-neural-reasoning-model
 arc_model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -164,7 +165,6 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         )
     return dataset
 
-import random
 
 def load_and_split_synthetic_data(args, config):
     """
@@ -421,81 +421,6 @@ def main(args):
         logger.info("Creating DataLoader instances")
         from torch.utils.data import Subset
 
-        if args.use_synthetic_data:
-            train_loader = DataLoader(
-                train_data,
-                batch_size=config.training.batch_size,
-                shuffle=True,
-                num_workers=config.training.num_workers,
-                pin_memory=config.training.pin_memory if torch.cuda.is_available() else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers,
-                collate_fn=ARCDataset.collate_fn
-            )
-
-            val_loader = DataLoader(
-                val_data,
-                batch_size=config.training.batch_size,
-                shuffle=False,
-                num_workers=get_num_workers(config.training),
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers,
-                collate_fn=ARCDataset.collate_fn
-            )
-
-            test_loader = DataLoader(
-                test_data,
-                batch_size=config.training.batch_size,
-                shuffle=False,
-                num_workers=get_num_workers(config.training),
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers,
-                collate_fn=ARCDataset.collate_fn
-            )
-        else:
-            # Create Training DataLoader
-            logger.debug("Creating Training DataLoader")
-            train_loader = DataLoader(
-                train_data,
-                batch_size=config.training.batch_size,
-                shuffle=True,
-                num_workers=get_num_workers(config.training),
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers,
-                collate_fn=ARCDataset.collate_fn
-            )
-            logger.debug("Created Training DataLoader")
-
-            # Create Validation DataLoader
-            logger.debug("Creating Validation DataLoader")
-            val_loader = DataLoader(
-                val_data,
-                batch_size=config.training.batch_size,
-                shuffle=False,
-                num_workers=get_num_workers(config.training),
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers,
-                collate_fn=ARCDataset.collate_fn
-            )
-            logger.debug("Created Validation DataLoader")
-
-            # Create Test DataLoader
-            logger.debug("Creating Test DataLoader")
-            test_loader = DataLoader(
-                test_data,
-                batch_size=config.training.batch_size,
-                shuffle=False,
-                num_workers=get_num_workers(config.training),
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers,
-                collate_fn=ARCDataset.collate_fn
-            )
-            logger.debug("Created Test DataLoader")
 
         # Ensure test_data is not None
         assert test_data is not None, "Test dataset is None after loading."
