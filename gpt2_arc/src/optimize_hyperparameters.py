@@ -565,8 +565,8 @@ def objective(trial, args):
 
         # Initialize the checkpoint callback with descriptive filename
         checkpoint_callback = ModelCheckpoint(
-            dirpath="checkpoints",
-            filename=f"{'tuning-' if args.model_checkpoint else ''}trial_{{trial_num}}-epoch_{{epoch:02d}}-val_loss_{{val_loss:.4f}}",
+            dirpath=f"checkpoints/trial_{trial.number}",
+            filename=f"{'tuning-' if args.model_checkpoint else ''}epoch_{{epoch:02d}}-val_loss_{{val_loss:.4f}}",
             save_top_k=3,
             monitor="val_loss",
             mode="min",
