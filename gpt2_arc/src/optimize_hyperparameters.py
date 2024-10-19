@@ -352,8 +352,6 @@ def objective(trial, args):
             config = Config(model=model_config, training=training_config)
 
 
-        validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
-
         # Use grokfast based on command line argument
         use_grokfast = args.use_grokfast
 
@@ -397,7 +395,6 @@ def objective(trial, args):
             mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
 
             # Validate hyperparameters
-            validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
         else:
             # If a checkpoint is used, set fixed values and do not suggest architecture-related hyperparameters
             n_head = model_config.n_head
@@ -410,8 +407,8 @@ def objective(trial, args):
             mamba_depth = model_config.mamba_depth
             mamba_expand = model_config.mamba_expand
 
-            # Validate hyperparameters
-            validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
+        # Validate hyperparameters
+        validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
 
         # Check if the model will fit in memory
         # Adjust the total number of layers to include Mamba layers
