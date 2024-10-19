@@ -17,6 +17,7 @@ from lightning.pytorch.profilers import PyTorchProfiler
 from pytorch_lightning.callbacks import Callback
 from torch.profiler import ProfilerActivity
 from torch.utils.data import DataLoader, WeightedRandomSampler
+import concurrent.futures
 import random
 from tqdm import tqdm
 
@@ -355,23 +356,27 @@ def main(args):
         else:
             all_synthetic_data = None
 
-        try:
-            # Load datasets
-            logger.info("Loading datasets")
-            train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
-            val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
-            test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
+        # Concurrently load datasets using ThreadPoolExecutor
+        logger.info("Loading datasets concurrently")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            future_train = executor.submit(load_dataset, args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
+            future_val = executor.submit(load_dataset, args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
+            future_test = executor.submit(load_dataset, args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
             
-            # Debugging: Log the number of samples loaded
-            logger.debug(f"Loaded {len(train_data)} training samples.")
-            logger.debug(f"Loaded {len(val_data)} validation samples.")
-            logger.debug(f"Loaded {len(test_data)} test samples.")
-            
-            # Additional Assertion (Optional)
-            assert test_data is not None, "Test dataset is None after loading."
-        except Exception as e:
-            logger.error(f"Error loading datasets: {str(e)}")
-            raise  # Re-raise the exception after logging
+            # Retrieve the loaded datasets
+            try:
+                train_data = future_train.result()
+                val_data = future_val.result()
+                test_data = future_test.result()
+            except Exception as e:
+                logger.error(f"Error loading datasets concurrently: {e}")
+                raise
+
+        # Debugging: Log the number of samples loaded
+        logger.debug(f"Loaded {len(train_data)} training samples.")
+        logger.debug(f"Loaded {len(val_data)} validation samples.")
+        logger.debug(f"Loaded {len(test_data)} test samples.")
 
         if args.enable_symbol_freq:
             logger.debug("Calculating symbol frequencies as it is enabled.")
