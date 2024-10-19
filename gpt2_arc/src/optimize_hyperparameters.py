@@ -539,18 +539,11 @@ def objective(trial, args):
             logger.info(f"Loading model from checkpoint: {args.model_checkpoint}")
             checkpoint = torch.load(args.model_checkpoint, map_location="cpu")
 
-            # Extract model and training configurations from the checkpoint
-            if 'hyper_parameters' in checkpoint:
-                hyper_params = checkpoint['hyper_parameters']
-                model_config = ModelConfig(**hyper_params['model'])
-                training_config = TrainingConfig(**hyper_params['training'])
-                logger.debug("Extracted model and training configuration from checkpoint hyperparameters.")
-            elif 'config' in checkpoint:
-                # Assuming 'config' contains serialized Config object
-                config_data = checkpoint['config']
-                model_config = ModelConfig(**config_data['model'])
-                training_config = TrainingConfig(**config_data['training'])
-                logger.debug("Extracted model and training configuration from checkpoint config.")
+            # Extract model configuration from the checkpoint
+            if 'model_config' in checkpoint:
+                model_config_dict = checkpoint['model_config']
+                model_config = ModelConfig(**model_config_dict)
+                logger.debug("Extracted model configuration from checkpoint.")
             else:
                 logger.error("Model configuration not found in checkpoint. Cannot proceed.")
                 raise ValueError("Model configuration not found in checkpoint.")
