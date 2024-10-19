@@ -106,143 +106,16 @@ def objective(trial, args):
 
         # Load hyperparameters from checkpoint if provided
         if args.use_synthetic_data:
-            if not args.synthetic_data_path:
-                raise ValueError("Synthetic data path not provided")
-            logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
-            
-            # Initialize the full synthetic dataset
-            full_synthetic_dataset = ARCDataset(
-                data_source=args.synthetic_data_path,
-                is_test=False,
-                num_symbols=config.model.n_embd,
-                symbol_freq=symbol_freq_dict
-            )
-            
-            total_samples = len(full_synthetic_dataset)
-            logger.info(f"Total synthetic samples loaded: {total_samples}")
-            
-            # Define split ratios (80% train, 10% validation, 10% test)
-            train_ratio = 0.8
-            val_ratio = 0.1
-            test_ratio = 0.1
-            train_size = int(train_ratio * total_samples)
-            val_size = int(val_ratio * total_samples)
-            test_size = total_samples - train_size - val_size
-            
-            # Generate shuffled indices
-            indices = list(range(total_samples))
-            random.shuffle(indices)
-            
-            train_indices = indices[:train_size]
-            val_indices = indices[train_size:train_size + val_size]
-            test_indices = indices[train_size + val_size:]
-            
-            # Extract train, validation, and test samples based on the shuffled indices
-            train_samples = [full_synthetic_dataset[i] for i in train_indices]
-            val_samples = [full_synthetic_dataset[i] for i in val_indices]
-            
-            # Convert each sample tuple to a dictionary with 'input', 'output', and 'task_id' keys
-            train_samples_dict = [
-                {
-                    "input": sample[0],
-                    "output": sample[1],
-                    "task_id": sample[2]
-                }
-                for sample in train_samples
-            ]
-            
-            test_samples = [full_synthetic_dataset[i] for i in test_indices]
-
-            val_samples_dict = [
-                {
-                    "input": sample[0],
-                    "output": sample[1],
-                    "task_id": sample[2]
-                }
-                for sample in val_samples
-            ]
-            
-            # Create separate ARCDataset instances for training, validation, and test using the dictionary lists
-            train_data = ARCDataset(
-                data_source=train_samples_dict,
-                is_test=False,
-                num_symbols=config.model.n_embd,
-                symbol_freq=symbol_freq_dict
-            )
-            
-            val_data = ARCDataset(
-                data_source=val_samples_dict,
-                is_test=True,
-                num_symbols=config.model.n_embd,
-                symbol_freq=symbol_freq_dict
-            )
-            
-            test_samples_dict = [
-                {
-                    "input": sample[0],
-                    "output": sample[1],
-                    "task_id": sample[2]
-                }
-                for sample in test_samples
-            ]
-
-            # Optionally, create test_data if needed
-            # test_data = ARCDataset(
-            #     data_source=test_samples_dict,
-            #     is_test=True,
-            #     num_symbols=config.model.n_embd,
-            #     symbol_freq=symbol_freq_dict
-            # )
-
-            logger.debug(f"Synthetic training data size: {len(train_data)}")
-            logger.debug(f"Synthetic validation data size: {len(val_data)}")
-            # logger.debug(f"Synthetic test data size: {len(test_data)}")
-
-            # Check if training and validation datasets are empty
-            if len(train_data) == 0:
-                logger.error(f"Trial {trial.number}: Training dataset is empty. Pruning the trial.")
-                raise optuna.exceptions.TrialPruned()
-
-            if len(val_data) == 0:
-                logger.error(f"Trial {trial.number}: Validation dataset is empty. Pruning the trial.")
-                raise optuna.exceptions.TrialPruned()
+            logger.info("Using synthetic data for training, validation, and testing.")
+            all_synthetic_data = load_and_split_synthetic_data(args, config)
+            train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
+            val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
+            test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
         else:
-            # Load all arckit data without internal splitting
-            logger.info("Loading arckit data for manual splitting into training and validation sets")
-            full_train_set, full_eval_set = arckit.load_data()  # Ensure this returns TaskSet objects
-
-            # Use the original training and evaluation TaskSets without combining
-            train_taskset = full_train_set
-            val_taskset = full_eval_set  # Use full_eval_set directly for validation
-
-            # If you need a separate test set, handle it accordingly
-            test_taskset = None  # Modify as per your requirements
-
-            # Initialize ARCDataset instances without combining tasks
-            train_data = ARCDataset(
-                data_source=train_taskset,
-                is_test=False,
-                num_symbols=config.model.n_embd,
-                symbol_freq=symbol_freq_dict
-            )
-
-            val_data = ARCDataset(
-                data_source=val_taskset,
-                is_test=True,
-                num_symbols=config.model.n_embd,
-                symbol_freq=symbol_freq_dict
-            )
-
-            # Initialize test_data if needed
-            # test_data = ARCDataset(
-            #     data_source=test_taskset,
-            #     is_test=True,
-            #     num_symbols=config.model.n_embd,
-            #     symbol_freq=symbol_freq_dict
-            # )
-
-            logger.debug(f"Manually split arckit data: {len(train_data)} for training, {len(val_data)} for validation")
-            # logger.debug(f"Manually split arckit data: {len(test_data)} for testing")
+            logger.info("Using official ARC datasets for training, validation, and testing.")
+            train_data = load_dataset(args, config, dataset_type='train')
+            val_data = load_dataset(args, config, dataset_type='val')
+            test_data = load_dataset(args, config, dataset_type='test')
 
         # Create configuration
         model_config = ModelConfig()
