@@ -1044,7 +1044,7 @@ if __name__ == "__main__":
     
     logger.debug(f"Random seed set to: {args.random_seed}")
 
-   run_optimization(
+    run_optimization(
         n_trials=args.n_trials,
         storage_name=args.storage,
         n_jobs=args.n_jobs,
