@@ -106,18 +106,6 @@ def objective(trial, args, train_data, val_data, test_data):
         config = Config(model=model_config, training=training_config)
         symbol_freq_dict = {}
 
-        # Load hyperparameters from checkpoint if provided
-        if args.use_synthetic_data:
-            logger.info("Using synthetic data for training, validation, and testing.")
-            all_synthetic_data = load_and_split_synthetic_data(args, config)
-            train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
-            val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
-            test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
-        else:
-            logger.info("Using official ARC datasets for training, validation, and testing.")
-            train_data = load_dataset(args, config, dataset_type='train')
-            val_data = load_dataset(args, config, dataset_type='val')
-            test_data = load_dataset(args, config, dataset_type='test')
 
         # Create configuration
         model_config = ModelConfig()
