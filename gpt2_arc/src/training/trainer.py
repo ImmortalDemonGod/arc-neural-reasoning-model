@@ -39,7 +39,11 @@ class ARCTrainer(pl.LightningModule):
         logger.debug("Initializing ARCTrainer")
         super().__init__()
         self.model = model
-        self.model = torch.compile(self.model, mode="reduce-overhead")
+        if args.accelerator != "cpu":
+            logger.info("Compiling the model with torch.compile for improved performance.")
+            self.model = torch.compile(self.model, mode="reduce-overhead")
+        else:
+            logger.info("Using CPU; skipping torch.compile to avoid unnecessary overhead.")
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.config = config
