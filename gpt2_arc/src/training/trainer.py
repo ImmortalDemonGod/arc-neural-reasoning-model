@@ -43,11 +43,11 @@ class ARCTrainer(pl.LightningModule):
         # Determine the device type based on the model's parameters
         device = next(self.model.parameters()).device
         logger.debug(f"ARCTrainer initialization on device: {device}")
-        if device.type != "cpu":
+        if not args.fast_dev_run and device.type != "cpu":
             logger.info("Compiling the model with torch.compile for improved performance.")
             self.model = torch.compile(self.model, mode="reduce-overhead")
         else:
-            logger.info("Using CPU; skipping torch.compile to avoid unnecessary overhead.")
+            logger.info("torch.compile not applied (fast_dev_run=True or using CPU).")
         logger.debug(f"Model is on device: {device}")
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
