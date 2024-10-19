@@ -38,12 +38,17 @@ class ARCTrainer(pl.LightningModule):
     def __init__(self, model, train_dataset, val_dataset, config: Config, args, results_collector=None, test_dataset=None):
         logger.debug("Initializing ARCTrainer")
         super().__init__()
+        logger.debug(f"ARCTrainer received args.accelerator: {args.accelerator}")
         self.model = model
-        if args.accelerator != "cpu":
+        # Determine the device type based on the model's parameters
+        device = next(self.model.parameters()).device
+        logger.debug(f"ARCTrainer initialization on device: {device}")
+        if device.type != "cpu":
             logger.info("Compiling the model with torch.compile for improved performance.")
             self.model = torch.compile(self.model, mode="reduce-overhead")
         else:
             logger.info("Using CPU; skipping torch.compile to avoid unnecessary overhead.")
+        logger.debug(f"Model is on device: {device}")
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.config = config
