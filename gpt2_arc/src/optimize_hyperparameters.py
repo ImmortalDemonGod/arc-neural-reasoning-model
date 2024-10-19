@@ -577,14 +577,26 @@ def objective(trial, args):
 
             # Load the state_dict from the checkpoint
             if 'state_dict' in checkpoint:
-                state_dict = checkpoint['state_dict']
+                # Remove the "model." prefix from state dict keys
+                state_dict = {k.replace('model.', ''): v for k, v in checkpoint['state_dict'].items()}
             else:
                 state_dict = checkpoint  # Adjust based on how you saved your model
 
-            # Load the state_dict into the model
+            # Load the state_dict into the model with strict=False
             try:
-                model.load_state_dict(state_dict, strict=True)
+                missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
                 logger.debug(f"Successfully loaded state_dict from checkpoint: {args.model_checkpoint}")
+                if missing_keys:
+                    logger.warning(f"Missing keys when loading state_dict: {missing_keys}")
+                if unexpected_keys:
+                    logger.warning(f"Unexpected keys when loading state_dict: {unexpected_keys}")
+
+                # Handle specific missing keys if necessary
+                if "loss_fn.weight" in missing_keys:
+                    logger.debug("'loss_fn.weight' not found in state_dict. Initializing with default weights.")
+                    default_weights = torch.ones(config.model.num_classes)
+                    model.loss_fn.weight = default_weights
+                    logger.debug(f"'loss_fn.weight' initialized with weights: {default_weights}")
             except RuntimeError as e:
                 logger.error(f"Error loading state_dict: {e}")
                 raise e
