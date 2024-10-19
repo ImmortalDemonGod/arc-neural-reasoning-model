@@ -182,6 +182,13 @@ def load_and_split_synthetic_data(args, config):
     Returns:
         dict: A dictionary containing 'dataset', 'train_indices', 'val_indices', and 'test_indices'.
     """
+    # Ensure required attributes are present
+    required_attrs = ['train_split', 'val_split', 'test_split']
+    for attr in required_attrs:
+        if not hasattr(args, attr):
+            logger.error(f"Missing required argument: {attr}")
+            raise AttributeError(f"'Namespace' object has no attribute '{attr}'")
+
     logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
     synthetic_dataset = ARCDataset(
         data_source=args.synthetic_data_path,

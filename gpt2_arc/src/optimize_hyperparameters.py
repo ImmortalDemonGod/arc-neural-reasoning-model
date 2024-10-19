@@ -786,6 +786,9 @@ if __name__ == "__main__":
         help="Name of the Optuna study."
     )
 
+    parser.add_argument("--train_split", type=float, default=0.8, help="Proportion of data to use for training")
+    parser.add_argument("--val_split", type=float, default=0.1, help="Proportion of data to use for validation")
+    parser.add_argument("--test_split", type=float, default=0.1, help="Proportion of data to use for testing")
     parser.add_argument("--n_embd_max", type=int, default=1, help="Maximum value for n_embd")
     parser.add_argument(
         "--num_workers",
@@ -889,6 +892,9 @@ if __name__ == "__main__":
     )
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
+
+    # Log parsed arguments for debugging
+    logger.debug(f"Parsed arguments: {vars(args)}")
     logger.setLevel(log_level)
 
     # Ensure the storage_name has the correct SQLite prefix and handle relative paths
