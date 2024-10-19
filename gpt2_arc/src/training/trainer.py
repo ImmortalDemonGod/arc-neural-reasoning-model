@@ -133,8 +133,8 @@ class ARCTrainer(pl.LightningModule):
         dataloader = DataLoader(
             self.val_dataset,
             batch_size=self.config.training.batch_size,
-            num_workers=get_num_workers(self.config.training),
-            pin_memory=self.config.training.pin_memory,
+            num_workers=self.config.training.num_workers,  # Updated num_workers
+            pin_memory=self.config.training.pin_memory,    # Updated pin_memory
             prefetch_factor=self.config.training.prefetch_factor,
             persistent_workers=self.config.training.persistent_workers,
             collate_fn=self.val_dataset.collate_fn

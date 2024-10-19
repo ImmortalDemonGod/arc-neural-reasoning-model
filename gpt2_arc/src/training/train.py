@@ -752,8 +752,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_workers",
         type=int,
-        default=None,
-        help="Number of worker threads for DataLoader. If not set, uses configuration default (total CPU count)."
+        default=4,  # Increased from None/1 to 4
+        help="Number of worker threads for DataLoader. Increasing this can speed up data loading."
     )
     parser.add_argument(
         "--prefetch_factor",
@@ -767,14 +767,15 @@ if __name__ == "__main__":
         help="Disable persistent workers in DataLoader."
     )
     parser.add_argument(
-        "--no_pin_memory",
+        "--pin_memory",
         action="store_true",
-        help="Disable pin_memory in DataLoader."
+        help="Enable pin_memory in DataLoader for faster GPU data transfer."
     )
+    parser.set_defaults(pin_memory=True)  # Enable by default if using GPU
     parser.add_argument("--n_embd", type=int, default=12, help="Embedding size for the model.")
     parser.add_argument("--n_head", type=int, default=1, help="Number of attention heads for profiling")
     parser.add_argument("--n_layer", type=int, default=1, help="Number of transformer layers for profiling")
-    parser.add_argument("--batch_size", type=int, default=1, help="Batch size for profiling")
+    parser.add_argument("--batch_size", type=int, default=16, help="Batch size for profiling")  # Increased from 1 to 16
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max_epochs", type=int, required=True, help="Maximum number of epochs")
     parser.add_argument("--mamba_ratio", type=float, default=0.0, help="Mamba ratio (float value)")
