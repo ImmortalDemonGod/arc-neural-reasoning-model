@@ -21,8 +21,6 @@ from gpt2_arc.src.training.train import ModelConfigSaver
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 
-from pytorch_lightning.callbacks import Callback
-
 class BestEpochTrackerCallback(Callback):
     def __init__(self):
         super().__init__()
@@ -87,25 +85,6 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
     return True
 
 
-def calculate_symbol_freq(dataset):
-    """Calculate the frequency of each symbol in the dataset."""
-    symbol_counts = {}
-    total_symbols = 0
-    for input_tensor, output_tensor, task_id in dataset:
-        # Assuming symbols are represented as integers in the tensors
-        input_symbols = input_tensor.flatten().tolist()
-        output_symbols = output_tensor.flatten().tolist()
-        symbols = input_symbols + output_symbols
-        for symbol in symbols:
-            symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
-            total_symbols += 1
-    
-    if total_symbols == 0:
-        raise ValueError("The dataset contains no symbols to calculate frequencies.")
-    
-    # Calculate normalized frequencies
-    symbol_freq = {symbol: count / total_symbols for symbol, count in symbol_counts.items()}
-    return symbol_freq
 
 
 
