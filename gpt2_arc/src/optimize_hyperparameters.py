@@ -18,6 +18,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, Callback
 from pytorch_lightning.loggers import TensorBoardLogger
 #from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.training.trainer import NanLossPruningCallback
+from functools import partial  # Import partial
 from gpt2_arc.src.training.train import load_dataset, load_and_split_synthetic_data
 from gpt2_arc.src.training.train import ModelConfigSaver
 from gpt2_arc.src.data.arc_dataset import ARCDataset
@@ -90,7 +91,7 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
 
 
 
-def objective(trial, args):
+def objective(trial, args, train_data, val_data, test_data):
     model = None
     trainer = None
     arc_trainer = None
@@ -702,7 +703,26 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     )
     sampler = TPESampler(n_startup_trials=5)
 
-    study = optuna.create_study(
+    # Initialize configuration
+    model_config = ModelConfig()
+    training_config = TrainingConfig()
+    config = Config(model=model_config, training=training_config)
+
+    logger.info("Loading datasets once before optimization...")
+    if args.use_synthetic_data:
+        logger.info("Using synthetic data for training, validation, and testing.")
+        all_synthetic_data = load_and_split_synthetic_data(args, config)
+        train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
+        val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
+        test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
+    else:
+        logger.info("Using official ARC datasets for training, validation, and testing.")
+        train_data = load_dataset(args, config, dataset_type='train')
+        val_data = load_dataset(args, config, dataset_type='val')
+        test_data = load_dataset(args, config, dataset_type='test')
+
+    # Create a partial objective function that includes preloaded datasets
+    objective_partial = partial(objective, args=args, train_data=train_data, val_data=val_data, test_data=test_data)
         study_name=study_name,
         storage=storage_name,
         load_if_exists=True,
@@ -719,7 +739,7 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
             n_jobs = max(n_jobs, available_gpus)
         else:
             n_jobs = 1  # Limit to 1 to prevent memory issues
-    study.optimize(partial(objective, args=args), n_trials=n_trials, n_jobs=n_jobs)
+    study.optimize(objective_partial, n_trials=n_trials, n_jobs=n_jobs)  # Use the partial function
 
     logger.info("Optimization completed")
 
