@@ -501,7 +501,11 @@ def objective(trial, args):
                 include_pad_in_loss=include_pad_in_loss,
                 symbol_freq=symbol_freq_dict,
                 balance_symbols=balance_symbols,
-                balancing_method=balancing_method
+                balancing_method=balancing_method,
+                num_workers=args.num_workers if args.num_workers is not None else multiprocessing.cpu_count(),
+                prefetch_factor=args.prefetch_factor,
+                persistent_workers=not args.no_persistent_workers,
+                pin_memory=not args.no_pin_memory
             )
 
         config = Config(model=model_config, training=training_config)
@@ -884,6 +888,28 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("--n_embd_max", type=int, default=1, help="Maximum value for n_embd")
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=None,
+        help="Number of worker threads for DataLoader. If not set, uses configuration default (total CPU count)."
+    )
+    parser.add_argument(
+        "--prefetch_factor",
+        type=int,
+        default=2,
+        help="Number of batches to prefetch per worker."
+    )
+    parser.add_argument(
+        "--no_persistent_workers",
+        action="store_true",
+        help="Disable persistent workers in DataLoader."
+    )
+    parser.add_argument(
+        "--no_pin_memory",
+        action="store_true",
+        help="Disable pin_memory in DataLoader."
+    )
     parser.add_argument("--n_head_min", type=int, default=1, help="Minimum value for n_head")
     parser.add_argument("--n_head_max", type=int, default=1, help="Maximum value for n_head")
     parser.add_argument("--n_head_exp_min", type=int, default=1, help="Minimum exponent for n_head (2^x)")

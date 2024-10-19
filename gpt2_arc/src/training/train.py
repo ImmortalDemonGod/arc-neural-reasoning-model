@@ -426,8 +426,8 @@ def main(args):
                 train_data,
                 batch_size=config.training.batch_size,
                 shuffle=True,
-                num_workers=get_num_workers(config.training),
-                pin_memory=config.training.pin_memory if args.use_gpu else False,
+                num_workers=config.training.num_workers,
+                pin_memory=config.training.pin_memory if torch.cuda.is_available() else False,
                 prefetch_factor=config.training.prefetch_factor,
                 persistent_workers=config.training.persistent_workers,
                 collate_fn=ARCDataset.collate_fn
