@@ -18,6 +18,7 @@ from pytorch_lightning.callbacks import Callback
 from torch.profiler import ProfilerActivity
 from torch.utils.data import DataLoader, WeightedRandomSampler
 import random
+from tqdm import tqdm
 
 # Define the base directory for the arc-neural-reasoning-model
 arc_model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -131,12 +132,16 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         else:
             # Extract samples from eval_set
             samples = []
-            for task in eval_set.tasks:
+            for task in tqdm(eval_set.tasks, desc=f"Processing tasks for {dataset_type} dataset"):
                 # Combine train and test examples from each task
-                for ex in task.train:
-                    samples.append({'input': ex[0], 'output': ex[1], 'task_id': task.id})
-                for ex in task.test:
-                    samples.append({'input': ex[0], 'output': ex[1], 'task_id': task.id})
+                samples.extend([
+                    {'input': ex[0], 'output': ex[1], 'task_id': task.id}
+                    for ex in task.train
+                ])
+                samples.extend([
+                    {'input': ex[0], 'output': ex[1], 'task_id': task.id}
+                    for ex in task.test
+                ])
 
             total_samples = len(samples)
             val_size = int(total_samples * args.val_split / (args.val_split + args.test_split))
@@ -178,7 +183,6 @@ def load_and_split_synthetic_data(args, config):
         dict: A dictionary containing 'dataset', 'train_indices', 'val_indices', and 'test_indices'.
     """
     logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
-    # Initialize ARCDataset with the synthetic data directory
     synthetic_dataset = ARCDataset(
         data_source=args.synthetic_data_path,
         is_test=False,
@@ -186,7 +190,6 @@ def load_and_split_synthetic_data(args, config):
         pad_symbol_idx=config.training.pad_symbol_idx,
         symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
     )
-
     total_samples = len(synthetic_dataset)
     logger.info(f"Total synthetic samples loaded: {total_samples}")
 
