@@ -585,6 +585,15 @@ def main(args):
 
         logger.info("Model training completed successfully.")
 
+        # Define DataLoader for test data
+        test_loader = DataLoader(
+            test_data,
+            batch_size=config.training.batch_size,
+            shuffle=False,
+            num_workers=config.training.num_workers,
+            pin_memory=config.training.pin_memory
+        )
+
         # After training, run test
         logger.info("Starting model evaluation on test dataset.")
         logger.info("Running model evaluation")

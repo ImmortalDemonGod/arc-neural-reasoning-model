@@ -610,26 +610,35 @@ def objective(trial, args):
         for name, module in model.named_modules():
             logger.debug(f"{name}: {'train' if module.training else 'eval'}")
 
-        # Update iter_num if needed (e.g., if multiple iterations per trial)
-        iter_num += 1
+        # Define DataLoader for test data
+        test_loader = DataLoader(
+            test_data,
+            batch_size=config.training.batch_size,
+            shuffle=False,
+            num_workers=config.training.num_workers,
+            pin_memory=config.training.pin_memory
+        )
 
-        # Retrieve the best validation loss from the ModelCheckpoint callback
-        best_val_loss = checkpoint_callback.best_model_score.item()
-        logger.info(f"Trial {trial.number} completed. Best validation loss: {best_val_loss}")
+        # Evaluate the model on test data
+        logger.info("Evaluating model on test dataset.")
+        test_results = trainer.test(model=arc_trainer, dataloaders=test_loader)
 
-        # Initialize accuracy and loss metrics
-        final_test_accuracy = 0.0  # Default value if not calculated
-        final_test_diff_accuracy = 0.0  # Default value if not calculated
-        avg_test_loss = 0.0  # Default value if not calculated
+        # Process test results
+        if test_results:
+            avg_test_loss = sum(result['test_loss'] for result in test_results) / len(test_results)
+            avg_test_accuracy = sum(result['test_accuracy'] for result in test_results) / len(test_results)
+            avg_test_diff_accuracy = sum(result['test_diff_accuracy'] for result in test_results) / len(test_results)
 
-        # Set final metrics
-        arc_trainer.results_collector.set_final_metrics({
-            "best_val_loss": best_val_loss,
-            "best_epoch": trainer.current_epoch,  # Alternatively, retrieve from checkpoint_callback if available
-            "final_test_loss": avg_test_loss,
-            "final_test_accuracy": final_test_accuracy,             # Includes padding
-            "final_test_diff_accuracy": final_test_diff_accuracy    # Excludes padding
-        })
+            logger.info(f"Test results - Loss: {avg_test_loss:.4f}, Accuracy: {avg_test_accuracy:.4f}, Diff Accuracy: {avg_test_diff_accuracy:.4f}")
+
+            # Update final metrics with actual test results
+            arc_trainer.results_collector.set_final_metrics({
+                "best_val_loss": best_val_loss,
+                "best_epoch": trainer.current_epoch,
+                "final_test_loss": avg_test_loss,
+                "final_test_accuracy": avg_test_accuracy,
+                "final_test_diff_accuracy": avg_test_diff_accuracy
+            })
 
         return best_val_loss
 
