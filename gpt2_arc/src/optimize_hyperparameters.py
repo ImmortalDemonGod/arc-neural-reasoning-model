@@ -210,34 +210,12 @@ def objective(trial, args):
             logger.info("Loading arckit data for manual splitting into training and validation sets")
             full_train_set, full_eval_set = arckit.load_data()  # Ensure this returns TaskSet objects
 
-            # Combine the tasks from both TaskSets
-            combined_tasks = list(full_train_set.tasks) + list(full_eval_set.tasks)
-            logger.debug(f"Total tasks loaded: {len(combined_tasks)}")
+            # Use the original training and evaluation TaskSets without combining
+            train_taskset = full_train_set
+            val_taskset = full_eval_set  # Use full_eval_set directly for validation
 
-            total_samples = len(combined_tasks)
-            train_ratio = 0.8
-            val_ratio = 0.1
-            test_ratio = 0.1
-            train_size = int(train_ratio * total_samples)
-            val_size = int(val_ratio * total_samples)
-            test_size = total_samples - train_size - val_size
-
-            # Set a fixed random seed for reproducibility
-            random.seed(trial.number)  # Using trial.number ensures different splits across trials but reproducible within a trial
-
-            # Shuffle the combined tasks
-            random.shuffle(combined_tasks)
-            logger.debug("Shuffled the combined tasks.")
-
-            # Split the tasks into training, validation, and test
-            train_tasks = combined_tasks[:train_size]
-            val_tasks = combined_tasks[train_size:train_size + val_size]
-            test_tasks = combined_tasks[train_size + val_size:]
-            logger.debug(f"Training tasks count: {len(train_tasks)}, Validation tasks count: {len(val_tasks)}")
-
-            # Create new TaskSet objects for training, validation, and test
-            train_taskset = arckit.data.TaskSet(tasks=train_tasks)
-            val_taskset = arckit.data.TaskSet(tasks=val_tasks)
+            # If you need a separate test set, handle it accordingly
+            test_taskset = None  # Modify as per your requirements
 
             # Initialize ARCDataset instances without combining tasks
             train_data = ARCDataset(
