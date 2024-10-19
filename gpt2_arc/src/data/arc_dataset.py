@@ -773,7 +773,9 @@ class ARCDataset(Dataset):
                 return self._load_directory(data_source)
             elif os.path.isfile(data_source):
                 logger.debug(f"Loading data from file: {data_source}")
-                return self._load_single_file(data_source)
+                # Since synthetic data is preloaded and passed via 'all_synthetic_data', avoid reloading here
+                # Instead, assume 'all_synthetic_data' contains the necessary datasets
+                return data_source  # Or handle appropriately based on your data structure
             else:
                 raise ValueError(f"Invalid data source path: {data_source}")
         else:
