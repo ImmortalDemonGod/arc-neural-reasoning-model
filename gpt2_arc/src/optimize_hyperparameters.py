@@ -150,6 +150,8 @@ def objective(trial, args):
                 for sample in train_samples
             ]
             
+            test_samples = [full_synthetic_dataset[i] for i in test_indices]
+
             val_samples_dict = [
                 {
                     "input": sample[0],
