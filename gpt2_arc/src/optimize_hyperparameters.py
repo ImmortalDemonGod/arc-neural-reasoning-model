@@ -1,5 +1,6 @@
 # gpt2_arc/src/optimize_hyperparameters.py
 import argparse
+import multiprocessing
 import random
 import optuna
 import logging
