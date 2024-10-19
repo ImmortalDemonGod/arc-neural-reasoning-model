@@ -239,22 +239,22 @@ def objective(trial, args):
             train_taskset = arckit.data.TaskSet(tasks=train_tasks)
             val_taskset = arckit.data.TaskSet(tasks=val_tasks)
 
-            # Initialize ARCDataset instances for training and validation
+            # Initialize ARCDataset instances without combining tasks
             train_data = ARCDataset(
                 data_source=train_taskset,
                 is_test=False,
-                num_symbols=config.model.n_embd,  # Ensure this matches your configuration
-                symbol_freq=symbol_freq_dict  # Pass the symbol frequency dictionary if applicable
+                num_symbols=config.model.n_embd,
+                symbol_freq=symbol_freq_dict
             )
 
             val_data = ARCDataset(
                 data_source=val_taskset,
                 is_test=True,
-                num_symbols=config.model.n_embd,  # Ensure this matches your configuration
-                symbol_freq=symbol_freq_dict  # Pass the symbol frequency dictionary if applicable
+                num_symbols=config.model.n_embd,
+                symbol_freq=symbol_freq_dict
             )
 
-            # Optionally, create test_data if needed
+            # Initialize test_data if needed
             # test_data = ARCDataset(
             #     data_source=test_taskset,
             #     is_test=True,
