@@ -723,6 +723,8 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
 
     # Create a partial objective function that includes preloaded datasets
     objective_partial = partial(objective, args=args, train_data=train_data, val_data=val_data, test_data=test_data)
+
+    study = optuna.create_study(
         study_name=study_name,
         storage=storage_name,
         load_if_exists=True,
