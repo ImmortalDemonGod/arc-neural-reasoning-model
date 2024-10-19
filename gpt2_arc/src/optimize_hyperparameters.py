@@ -423,7 +423,7 @@ def objective(trial, args):
             d_state=d_state,
             d_conv=d_conv,
             mamba_depth=mamba_depth,
-            mamba_expand=mamba_expand
+            mamba_expand=mamba_expand,
             enable_progress_bar=not args.no_progress_bar  # <-- Added this line
         )
         # Improve memory estimation by considering additional factors like optimizer state and activation memory
