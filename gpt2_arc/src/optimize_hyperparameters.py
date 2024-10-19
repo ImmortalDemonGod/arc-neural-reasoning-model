@@ -538,27 +538,52 @@ def objective(trial, args):
             # Load the checkpoint
             logger.info(f"Loading model from checkpoint: {args.model_checkpoint}")
             checkpoint = torch.load(args.model_checkpoint, map_location="cpu")
-            
-            # Initialize model with the fixed configuration
-            model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
-            
-            # Extract and adjust the state_dict
-            if 'state_dict' in checkpoint:
-                original_state_dict = checkpoint['state_dict']
-                new_state_dict = {}
-                for key, value in original_state_dict.items():
-                    if key.startswith("model."):
-                        new_key = key[len("model."):]
-                        new_state_dict[new_key] = value
-                    else:
-                        new_state_dict[key] = value
+
+            # Extract model and training configurations from the checkpoint
+            if 'hyper_parameters' in checkpoint:
+                hyper_params = checkpoint['hyper_parameters']
+                model_config = ModelConfig(**hyper_params['model'])
+                training_config = TrainingConfig(**hyper_params['training'])
+                logger.debug("Extracted model and training configuration from checkpoint hyperparameters.")
+            elif 'config' in checkpoint:
+                # Assuming 'config' contains serialized Config object
+                config_data = checkpoint['config']
+                model_config = ModelConfig(**config_data['model'])
+                training_config = TrainingConfig(**config_data['training'])
+                logger.debug("Extracted model and training configuration from checkpoint config.")
             else:
-                new_key = 'model'  # Adjust based on your checkpoint's structure
-                new_state_dict = checkpoint
-            
-            # Load the state_dict with strict=True to ensure all keys match
+                logger.error("Model configuration not found in checkpoint. Cannot proceed.")
+                raise ValueError("Model configuration not found in checkpoint.")
+
+            # Set hyperparameters from the extracted model_config
+            n_head = model_config.n_head
+            n_embd = model_config.n_embd
+            n_layer = model_config.n_layer
+            mamba_ratio = model_config.mamba_ratio
+            d_state = model_config.d_state
+            d_conv = model_config.d_conv
+            dropout = model_config.dropout
+            mamba_depth = model_config.mamba_depth
+            mamba_expand = model_config.mamba_expand
+
+            # Validate hyperparameters
+            validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
+
+            # Reconstruct the config with the extracted model_config and training_config
+            config = Config(model=model_config, training=training_config)
+
+            # Instantiate the model with the exact configuration used during training
+            model = GPT2ARC(config=config, num_classes=model_config.num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
+
+            # Load the state_dict from the checkpoint
+            if 'state_dict' in checkpoint:
+                state_dict = checkpoint['state_dict']
+            else:
+                state_dict = checkpoint  # Adjust based on how you saved your model
+
+            # Load the state_dict into the model
             try:
-                model.load_state_dict(new_state_dict, strict=True)
+                model.load_state_dict(state_dict, strict=True)
                 logger.debug(f"Successfully loaded state_dict from checkpoint: {args.model_checkpoint}")
             except RuntimeError as e:
                 logger.error(f"Error loading state_dict: {e}")
