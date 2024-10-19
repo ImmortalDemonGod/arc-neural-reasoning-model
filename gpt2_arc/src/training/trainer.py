@@ -39,6 +39,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug("Initializing ARCTrainer")
         super().__init__()
         self.model = model
+        self.model = torch.compile(self.model, mode="reduce-overhead")
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.config = config
