@@ -17,6 +17,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, Callback
 from pytorch_lightning.loggers import TensorBoardLogger
 #from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.training.trainer import NanLossPruningCallback
+from gpt2_arc.src.training.train import load_dataset, load_and_split_synthetic_data
 from gpt2_arc.src.training.train import ModelConfigSaver
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.utils.results_collector import ResultsCollector
