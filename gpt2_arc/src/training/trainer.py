@@ -166,77 +166,42 @@ class ARCTrainer(pl.LightningModule):
         return None
 
     def training_step(self, batch, batch_idx):
-        logger.debug(f"Training step - Batch type: {type(batch)}, length: {len(batch)}")
+        logger.debug(f"Starting training step {batch_idx}")
+        inputs, targets, _ = batch
+        logger.debug(f"Inputs shape: {inputs.shape}, Targets shape: {targets.shape}")
         
-        if isinstance(batch, (list, tuple)) and len(batch) >= 2:
-            inputs, labels = batch[:2]
-            task_ids = batch[2] if len(batch) > 2 else None
-        elif isinstance(batch, dict):
-            inputs = batch.get("input_ids")
-            labels = batch.get("labels")
-            task_ids = batch.get("task_ids")
-        else:
-            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
-
-        # Ensure inputs and labels are the correct type
-        inputs = inputs.float()
-        labels = labels.long()
-
         outputs = self(inputs)
-        loss = self.compute_loss(outputs, labels)
+        logger.debug(f"Outputs shape: {outputs.shape}")
         
-        if hasattr(self, 'log'):
-            self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.train_losses.append(loss.item())
-        self.results_collector.update_train_metrics(self.current_epoch, {"loss": loss.item()})
+        loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
+        logger.debug(f"Loss computed: {loss.item()}")
         
-        tb_logger = self.get_tensorboard_logger()
-        if tb_logger:
-            tb_logger.add_scalar('train/loss', loss.item(), self.global_step)
-            logger.debug(f"DEBUG: Logged training loss: {loss.item()} at step {self.global_step}")
-        else:
-            logger.debug("DEBUG: Failed to log training loss. No TensorBoard logger available.")
+        preds = torch.argmax(outputs, dim=-1)
+        accuracy = (preds == targets).float().mean()
+        logger.debug(f"Training accuracy: {accuracy.item()}")
+
+        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train_accuracy', accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         
         return loss
 
-    def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        logger.debug(f"Validation step - Batch type: {type(batch)}, length: {len(batch)}")
+    def validation_step(self, batch, batch_idx):
+        logger.debug(f"Starting validation step {batch_idx}")
+        inputs, targets, _ = batch
+        logger.debug(f"Validation Inputs shape: {inputs.shape}, Targets shape: {targets.shape}")
         
-        if isinstance(batch, (list, tuple)):
-            if len(batch) < 2:
-                logger.error(f"Missing inputs or labels in batch. Inputs: {batch[0] if len(batch) > 0 else None}, Labels: {batch[1] if len(batch) > 1 else None}")
-                raise ValueError("Batch must contain inputs and labels.")
-            inputs, labels = batch[:2]
-            task_ids = batch[2] if len(batch) > 2 else None
-        elif isinstance(batch, dict):
-            inputs = batch.get("input_ids")
-            labels = batch.get("labels")
-            task_ids = batch.get("task_ids")
-            if inputs is None or labels is None:
-                logger.error(f"Missing inputs or labels in batch. Inputs: {inputs}, Labels: {labels}")
-                raise ValueError("Batch must contain inputs and labels.")
-        else:
-            logger.error(f"Unexpected batch format: {type(batch)}. Content: {batch}")
-            raise ValueError(f"Unexpected batch format: {type(batch)}. Content: {batch}")
-
-        # Ensure inputs and labels are the correct type
-        inputs = inputs.float()
-        labels = labels.long()
-
         outputs = self(inputs)
-        loss = self.compute_loss(outputs, labels)
+        logger.debug(f"Validation Outputs shape: {outputs.shape}")
         
-        if hasattr(self, 'log'):
-            self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-            logger.debug(f"Logged val_loss: {loss.item()} at epoch {self.current_epoch}")
-        self.logged_metrics["val_loss"] = loss.item()
-        self.results_collector.update_val_metrics(self.current_epoch, {"loss": loss.item()})
+        loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
+        logger.debug(f"Validation loss computed: {loss.item()}")
         
-        try:
-            self.writer.add_scalar('val/loss', loss.item(), self.current_epoch)
-            logger.debug(f"DEBUG: Logged validation loss: {loss.item()} for epoch {self.current_epoch}")
-        except Exception as e:
-            logger.error(f"DEBUG: Error logging validation step: {str(e)}")
+        preds = torch.argmax(outputs, dim=-1)
+        accuracy = (preds == targets).float().mean()
+        logger.debug(f"Validation accuracy: {accuracy.item()}")
+
+        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_accuracy', accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         
         return loss
 
