@@ -401,8 +401,7 @@ def objective(trial, args):
             d_state=d_state,
             d_conv=d_conv,
             mamba_depth=mamba_depth,
-            mamba_expand=mamba_expand,
-            enable_progress_bar=not args.no_progress_bar  # <-- Added this line
+            mamba_expand=mamba_expand
         )
         # Improve memory estimation by considering additional factors like optimizer state and activation memory
         safety_margin = 0.1  # 10% safety margin
@@ -714,6 +713,7 @@ def objective(trial, args):
             accelerator=accelerator,
             devices=devices,
             strategy=strategy,
+            enable_progress_bar=not args.no_progress_bar
         )
         print("DEBUG: Trainer created for Optuna trial with TensorBoard logger")
         logger.debug(f"Trainer created with config: {trainer.state}")
