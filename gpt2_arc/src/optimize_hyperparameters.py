@@ -370,16 +370,6 @@ def objective(trial, args):
             dropout = model_config.dropout
             mamba_depth = model_config.mamba_depth
             mamba_expand = model_config.mamba_expand
-            # If a checkpoint is used, set fixed values and do not suggest architecture-related hyperparameters
-            n_head = model_config.n_head
-            n_embd = model_config.n_embd
-            n_layer = model_config.n_layer
-            mamba_ratio = model_config.mamba_ratio
-            d_state = model_config.d_state
-            d_conv = model_config.d_conv
-            dropout = model_config.dropout
-            mamba_depth = model_config.mamba_depth
-            mamba_expand = model_config.mamba_expand
 
         # Validate hyperparameters
         validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
@@ -422,15 +412,38 @@ def objective(trial, args):
 
         logger.debug(f"Suggested dropout rate: {dropout}")
 
-        # Calculate Symbol Frequencies
-        if args.use_synthetic_data:
-            logger.debug("Calculating symbol frequencies for synthetic training set")
-            symbol_freq = train_data.get_symbol_frequencies()
-        else:
-            logger.debug("Calculating symbol frequencies for ARC training set")
-            symbol_freq = train_data.get_symbol_frequencies()
+        # Calculate Symbol Frequencies once after data loading
+        try:
+            if args.use_synthetic_data:
+                logger.debug("Calculating symbol frequencies for synthetic training set")
+                symbol_freq = train_data.get_symbol_frequencies()
+            else:
+                logger.debug("Calculating symbol frequencies for ARC training set")
+                symbol_freq = train_data.get_symbol_frequencies()
 
-        logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+            logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+
+            if isinstance(symbol_freq, np.ndarray):
+                symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
+                logger.debug("Converted symbol_freq from NumPy array to dictionary.")
+            elif isinstance(symbol_freq, dict):
+                symbol_freq_dict = symbol_freq.copy()
+                logger.debug("Copied symbol_freq as a dictionary.")
+            else:
+                raise TypeError(f"Unexpected type for symbol_freq: {type(symbol_freq)}. Expected dict or np.ndarray.")
+
+            pad_symbol_idx = config.training.pad_symbol_idx
+            symbol_freq_dict.pop(pad_symbol_idx, None)
+            logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
+
+            assert isinstance(symbol_freq_dict, dict), f"symbol_freq_dict must be a dict, but got {type(symbol_freq_dict)}."
+            assert len(symbol_freq_dict) == config.training.num_classes - 1, (
+                f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+            )
+
+        except Exception as e:
+            logger.error(f"Symbol frequency calculation failed: {str(e)}", exc_info=True)
+            raise optuna.exceptions.TrialPruned(f"Symbol frequency calculation failed: {str(e)}")
 
         if args.model_checkpoint:
             # Use fixed hyperparameters from the checkpoint
@@ -734,11 +747,13 @@ def objective(trial, args):
             logger.error(f"Trial {trial.number}: A runtime error occurred: {str(e)}", exc_info=True)
             raise RuntimeError(f"Trial {trial.number}: A runtime error occurred: {str(e)}")
     except Exception as e:
+        # Improved exception handling for symbol frequency issues
         if "symbol_freq" in str(e):
-            logger.error(f"Trial {trial.number}: 'symbol_freq' is missing. Ensure it is calculated and passed correctly.", exc_info=True)
+            logger.error(f"Trial {trial.number}: 'symbol_freq' is missing or invalid. Ensure it is calculated and passed correctly.", exc_info=True)
+            raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: 'symbol_freq' is missing or invalid.")
         else:
             logger.error(f"Trial {trial.number}: An unexpected error occurred: {str(e)}", exc_info=True)
-        raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: An unexpected error occurred: {str(e)}")
+            raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: An unexpected error occurred: {str(e)}")
     finally:
         # Ensure Proper Cleanup Between Trials
         logger.debug(f"Cleaning up after trial {trial.number}")
