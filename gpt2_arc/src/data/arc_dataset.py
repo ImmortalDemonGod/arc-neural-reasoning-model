@@ -806,14 +806,16 @@ class ARCDataset(Dataset):
             # Submit all file processing tasks to the executor
             future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in file_paths}
 
-            for future in as_completed(future_to_file):
-                fp = future_to_file[future]
-                try:
-                    samples = future.result()
-                    all_samples.extend(samples)
-                    logger.debug(f"Completed processing file: {fp} with {len(samples)} samples")
-                except Exception as e:
-                    logger.error(f"Error processing file {fp}: {e}", exc_info=True)
+            with tqdm(total=len(file_paths), desc="Loading synthetic data", unit="file") as pbar:
+                for future in as_completed(future_to_file):
+                    fp = future_to_file[future]
+                    try:
+                        samples = future.result()
+                        all_samples.extend(samples)
+                        logger.debug(f"Completed processing file: {fp} with {len(samples)} samples")
+                    except Exception as e:
+                        logger.error(f"Error processing file {fp}: {e}", exc_info=True)
+                    pbar.update(1)
         logger.debug(f"Loaded {len(all_samples)} samples from directory {directory_path}")
         return all_samples
 
