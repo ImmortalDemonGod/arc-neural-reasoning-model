@@ -120,20 +120,23 @@ def objective(trial, args):
             total_samples = len(full_synthetic_dataset)
             logger.info(f"Total synthetic samples loaded: {total_samples}")
             
-            # Define split ratios (e.g., 80% train, 20% validation)
+            # Define split ratios (80% train, 10% validation, 10% test)
             train_ratio = 0.8
-            val_ratio = 0.2
+            val_ratio = 0.1
+            test_ratio = 0.1
             train_size = int(train_ratio * total_samples)
-            val_size = total_samples - train_size
+            val_size = int(val_ratio * total_samples)
+            test_size = total_samples - train_size - val_size
             
             # Generate shuffled indices
             indices = list(range(total_samples))
             random.shuffle(indices)
             
             train_indices = indices[:train_size]
-            val_indices = indices[train_size:]
+            val_indices = indices[train_size:train_size + val_size]
+            test_indices = indices[train_size + val_size:]
             
-            # Extract train and validation samples based on the shuffled indices
+            # Extract train, validation, and test samples based on the shuffled indices
             train_samples = [full_synthetic_dataset[i] for i in train_indices]
             val_samples = [full_synthetic_dataset[i] for i in val_indices]
             
@@ -156,7 +159,7 @@ def objective(trial, args):
                 for sample in val_samples
             ]
             
-            # Create separate ARCDataset instances for training and validation using the dictionary lists
+            # Create separate ARCDataset instances for training, validation, and test using the dictionary lists
             train_data = ARCDataset(
                 data_source=train_samples_dict,
                 is_test=False,
@@ -171,8 +174,26 @@ def objective(trial, args):
                 symbol_freq=symbol_freq_dict
             )
             
+            test_samples_dict = [
+                {
+                    "input": sample[0],
+                    "output": sample[1],
+                    "task_id": sample[2]
+                }
+                for sample in test_samples
+            ]
+
+            # Optionally, create test_data if needed
+            # test_data = ARCDataset(
+            #     data_source=test_samples_dict,
+            #     is_test=True,
+            #     num_symbols=config.model.n_embd,
+            #     symbol_freq=symbol_freq_dict
+            # )
+
             logger.debug(f"Synthetic training data size: {len(train_data)}")
             logger.debug(f"Synthetic validation data size: {len(val_data)}")
+            # logger.debug(f"Synthetic test data size: {len(test_data)}")
 
             # Check if training and validation datasets are empty
             if len(train_data) == 0:
@@ -193,9 +214,11 @@ def objective(trial, args):
 
             total_samples = len(combined_tasks)
             train_ratio = 0.8
-            val_ratio = 0.2
+            val_ratio = 0.1
+            test_ratio = 0.1
             train_size = int(train_ratio * total_samples)
-            val_size = total_samples - train_size
+            val_size = int(val_ratio * total_samples)
+            test_size = total_samples - train_size - val_size
 
             # Set a fixed random seed for reproducibility
             random.seed(trial.number)  # Using trial.number ensures different splits across trials but reproducible within a trial
@@ -204,12 +227,13 @@ def objective(trial, args):
             random.shuffle(combined_tasks)
             logger.debug("Shuffled the combined tasks.")
 
-            # Split the tasks into training and validation
+            # Split the tasks into training, validation, and test
             train_tasks = combined_tasks[:train_size]
-            val_tasks = combined_tasks[train_size:]
+            val_tasks = combined_tasks[train_size:train_size + val_size]
+            test_tasks = combined_tasks[train_size + val_size:]
             logger.debug(f"Training tasks count: {len(train_tasks)}, Validation tasks count: {len(val_tasks)}")
 
-            # Create new TaskSet objects for training and validation
+            # Create new TaskSet objects for training, validation, and test
             train_taskset = arckit.data.TaskSet(tasks=train_tasks)
             val_taskset = arckit.data.TaskSet(tasks=val_tasks)
 
@@ -228,7 +252,16 @@ def objective(trial, args):
                 symbol_freq=symbol_freq_dict  # Pass the symbol frequency dictionary if applicable
             )
 
+            # Optionally, create test_data if needed
+            # test_data = ARCDataset(
+            #     data_source=test_taskset,
+            #     is_test=True,
+            #     num_symbols=config.model.n_embd,
+            #     symbol_freq=symbol_freq_dict
+            # )
+
             logger.debug(f"Manually split arckit data: {len(train_data)} for training, {len(val_data)} for validation")
+            # logger.debug(f"Manually split arckit data: {len(test_data)} for testing")
 
         # Create configuration
         model_config = ModelConfig()
@@ -635,6 +668,10 @@ def objective(trial, args):
         )
 
         # Set up PyTorch Lightning trainer with custom pruning callback
+        if args.no_progress_bar:
+            logger.info("Disabling progress bar.")
+        else:
+            logger.info("Enabling progress bar.")
         pruning_callback = CustomPruningCallback(trial, monitor="val_loss")
         early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=3, verbose=False, mode="min")
         # Determine accelerator parameters based on the --accelerator argument
@@ -792,6 +829,7 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     )
 
     logger.info(f"Starting optimization with {n_trials} trials using {n_jobs} parallel jobs")
+    logger.info(f"Data Splitting Ratios - Train: 80%, Validation: 10%, Test: 10%")
     if args.use_gpu:
         available_gpus = torch.cuda.device_count()
         if available_gpus > 1:
@@ -851,6 +889,7 @@ if __name__ == "__main__":
         help="Enable Grokfast for gradient filtering."
     )
     parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
+    parser.add_argument("--random_seed", type=int, default=42, help="Random seed for reproducibility.")
     parser.add_argument(
         "--val_check_interval",
         type=float,
@@ -978,6 +1017,7 @@ if __name__ == "__main__":
     )
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
+    logger.setLevel(log_level)
 
     # Ensure the storage_name has the correct SQLite prefix and handle relative paths
     import os  # Ensure os is imported at the top of the file
@@ -995,7 +1035,16 @@ if __name__ == "__main__":
         logger.error("The --val_check_interval must be a positive number.")
         sys.exit(1)
 
-    run_optimization(
+    # Set random seeds for reproducibility
+    random.seed(args.random_seed)
+    np.random.seed(args.random_seed)
+    torch.manual_seed(args.random_seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.random_seed)
+    
+    logger.debug(f"Random seed set to: {args.random_seed}")
+
+   run_optimization(
         n_trials=args.n_trials,
         storage_name=args.storage,
         n_jobs=args.n_jobs,
