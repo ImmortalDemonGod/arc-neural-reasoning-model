@@ -458,28 +458,3 @@ class ARCTrainer(pl.LightningModule):
             print(f"DEBUG: Successfully logged hyperparameters: {hparams}")
         except Exception as e:
             print(f"DEBUG: Error logging hyperparameters: {str(e)}")
-import torch
-from pytorch_lightning import LightningModule
-
-class ARCTrainer(LightningModule):
-    def __init__(self, model, loss_fn):
-        super().__init__()
-        self.model = model
-        self.loss_fn = loss_fn
-
-    def validation_step(self, batch, batch_idx):
-        """
-        Perform a validation step and log the validation loss.
-        
-        Args:
-            batch: The input batch.
-            batch_idx: Index of the batch.
-        
-        Returns:
-            The validation loss.
-        """
-        inputs, targets = batch
-        outputs = self.model(inputs)
-        loss = self.loss_fn(outputs, targets)
-        self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        return loss
