@@ -228,6 +228,7 @@ class ARCTrainer(pl.LightningModule):
         
         if hasattr(self, 'log'):
             self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            logger.debug(f"Logged val_loss: {loss.item()} at epoch {self.current_epoch}")
         self.logged_metrics["val_loss"] = loss.item()
         self.results_collector.update_val_metrics(self.current_epoch, {"loss": loss.item()})
         

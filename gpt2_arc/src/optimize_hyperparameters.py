@@ -603,7 +603,13 @@ def objective(trial, args):
             logger.debug(f"{name}: {'train' if module.training else 'eval'}")
 
         # Retrieve the best validation loss from the ModelCheckpoint callback
-        best_val_loss = checkpoint_callback.best_model_score.item()
+        if checkpoint_callback.best_model_score is not None:
+            best_val_loss = checkpoint_callback.best_model_score.item()
+            logger.info(f"Trial {trial.number}: Best validation loss: {best_val_loss}")
+        else:
+            logger.warning(f"Trial {trial.number}: No checkpoints were saved. Assigning a high validation loss.")
+            best_val_loss = float('inf')
+            raise optuna.exceptions.TrialPruned("No checkpoints were saved during the trial.")
         logger.info(f"Trial {trial.number} completed. Best validation loss: {best_val_loss}")
         logger.debug("Starting training")
         trainer.fit(arc_trainer)
@@ -683,7 +689,17 @@ from functools import partial
 
 def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1, args=None, study_name="gpt2_arc_optimization_v2"):
 
-    pruner = PercentilePruner(percentile=25, n_startup_trials=5, n_warmup_steps=2, interval_steps=1)
+    if n_trials < 10:
+        n_startup_trials = 1
+    else:
+        n_startup_trials = 5
+
+    pruner = PercentilePruner(
+        percentile=25, 
+        n_startup_trials=n_startup_trials, 
+        n_warmup_steps=2, 
+        interval_steps=1
+    )
     sampler = TPESampler(n_startup_trials=5)
 
     study = optuna.create_study(
