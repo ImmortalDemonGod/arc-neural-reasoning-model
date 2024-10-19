@@ -18,6 +18,7 @@ import ijson  # Import ijson for streaming JSON parsing
 from tqdm import tqdm  # Import tqdm for progress bars
 import sys  # Import sys for handling tqdm output
 from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
+from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
 import multiprocessing  # To determine CPU count
 from threading import Lock
 from jsonschema import validate, ValidationError
@@ -788,12 +789,31 @@ class ARCDataset(Dataset):
             List[Dict]: List of processed samples from all JSON files in the directory.
         """
         all_samples = []
+        file_paths = []
+
+        # Collect all JSON file paths
         for root, _, files in os.walk(directory_path):
             for file in files:
                 if file.endswith('.json'):
                     file_path = os.path.join(root, file)
-                    logger.debug(f"Processing file: {file_path}")
-                    all_samples.extend(self._load_single_file(file_path))
+                    file_paths.append(file_path)
+                    logger.debug(f"Queued file for processing: {file_path}")
+
+        # Define the number of threads (adjust based on your system's resources)
+        max_workers = min(32, os.cpu_count() + 4)  # Example adjustment
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all file processing tasks to the executor
+            future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in file_paths}
+
+            for future in as_completed(future_to_file):
+                fp = future_to_file[future]
+                try:
+                    samples = future.result()
+                    all_samples.extend(samples)
+                    logger.debug(f"Completed processing file: {fp} with {len(samples)} samples")
+                except Exception as e:
+                    logger.error(f"Error processing file {fp}: {e}", exc_info=True)
         logger.debug(f"Loaded {len(all_samples)} samples from directory {directory_path}")
         return all_samples
 
