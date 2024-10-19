@@ -7,6 +7,7 @@ import logging
 import sys
 import os
 import torch
+from torch.utils.data import DataLoader
 import gc
 import pytorch_lightning as pl
 import numpy as np
@@ -601,7 +602,9 @@ def objective(trial, args):
         for name, module in model.named_modules():
             logger.debug(f"{name}: {'train' if module.training else 'eval'}")
 
-        # Train and evaluate
+        # Retrieve the best validation loss from the ModelCheckpoint callback
+        best_val_loss = checkpoint_callback.best_model_score.item()
+        logger.info(f"Trial {trial.number} completed. Best validation loss: {best_val_loss}")
         logger.debug("Starting training")
         trainer.fit(arc_trainer)
 
