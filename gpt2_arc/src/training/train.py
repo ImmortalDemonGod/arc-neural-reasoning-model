@@ -583,9 +583,10 @@ def main(args):
 
         # Add the standard ModelCheckpoint callback
         if not args.no_checkpointing:
+            checkpoint_filename = f"{'resume-' if args.model_checkpoint else ''}checkpoint-{{epoch:02d}}-{{val_loss:.4f}}"
             checkpoint_callback = ModelCheckpoint(
                 dirpath="checkpoints",
-                filename="checkpoint-{epoch:02d}-{val_loss:.4f}",
+                filename=checkpoint_filename,
                 save_top_k=3,
                 monitor="val_loss",
                 mode="min",
