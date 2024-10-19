@@ -323,7 +323,7 @@ def objective(trial, args):
             mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
             logger.debug(f"Suggested mamba_expand: {mamba_expand}")
 
-            logger.debug(f"Using fixed hyperparameters from checkpoint: n_head={n_head}, n_embd={n_embd}, "
+            logger.debug(f"Using suggested hyperparameters: n_head={n_head}, n_embd={n_embd}, "
                          f"n_layer={n_layer}, mamba_ratio={mamba_ratio}, d_state={d_state}, "
                          f"d_conv={d_conv}, dropout={dropout}, mamba_depth={mamba_depth}, "
                          f"mamba_expand={mamba_expand}")
@@ -359,22 +359,6 @@ def objective(trial, args):
         learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
         max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
 
-        if not args.model_checkpoint:
-            # Only suggest hyperparameters that are not fixed by the checkpoint
-            n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
-            n_head = 2 ** n_head_exp
-            n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
-            n_embd = n_head * n_embd_multiplier
-            n_embd = 2 ** int(np.log2(n_embd))
-            n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
-            mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
-            d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
-            d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
-            dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
-            mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
-            mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
-
-            # Validate hyperparameters
         else:
             # If a checkpoint is used, set fixed values and do not suggest architecture-related hyperparameters
             n_head = model_config.n_head
