@@ -104,7 +104,7 @@ class TestSyntheticDataLoading(unittest.TestCase):
         )
         
         # Determine the expected number of samples in the large file
-        expected_samples = self._count_json_samples(large_file_path)
+        expected_samples = self._count_json_samples(self.temp_dir)
         self.assertEqual(len(dataset), expected_samples)
     
     def test_empty_file_handling(self):
