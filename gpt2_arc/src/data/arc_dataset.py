@@ -356,7 +356,7 @@ class ARCDataset(Dataset):
         Returns:
             List[Dict]: List of processed samples from the file.
         """
-        return self._process_single_file_streaming(file_path)
+        return self._process_single_file_streaming
     
     
     def _save_cache(self, cache_path: str, data_only=False):
