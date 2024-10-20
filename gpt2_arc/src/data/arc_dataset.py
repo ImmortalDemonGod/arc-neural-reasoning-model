@@ -178,6 +178,7 @@ class ARCDataset(Dataset):
         sample_count = 0  # Initialize sample counter
         missing_id_logged = False  # Flag to track if warning has been logged for this file
         try:
+            logger.info(f"Starting to process synthetic data file: {file_path}")  # Added logging statement
             if isinstance(task, dict):
                 # Existing processing for dictionary tasks
                 for ex in task.get('train', []):
