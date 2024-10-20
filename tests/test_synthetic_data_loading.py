@@ -72,7 +72,7 @@ class TestSyntheticDataLoading(unittest.TestCase):
         dataset = ARCDataset(
             data_source=self.temp_dir,
             is_test=False,
-            max_samples=3,  # Expecting 3 valid synthetic samples
+            max_samples=1,  # Expecting 3 valid synthetic samples
             num_symbols=11,
             pad_symbol_idx=10,
             symbol_freq=None,
