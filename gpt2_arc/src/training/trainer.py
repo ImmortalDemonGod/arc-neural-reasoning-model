@@ -173,7 +173,7 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(inputs)
         logger.debug(f"Outputs shape: {outputs.shape}")
         
-        loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
+        loss = self.compute_loss(outputs, targets)
         logger.debug(f"Loss computed: {loss.item()}")
         
         preds = torch.argmax(outputs, dim=-1)
@@ -193,7 +193,7 @@ class ARCTrainer(pl.LightningModule):
         outputs = self(inputs)
         logger.debug(f"Validation Outputs shape: {outputs.shape}")
         
-        loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
+        loss = self.compute_loss(outputs, targets)
         logger.debug(f"Validation loss computed: {loss.item()}")
         
         preds = torch.argmax(outputs, dim=-1)
