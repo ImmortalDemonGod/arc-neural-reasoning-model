@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 import json
-import cysimdjson  # Add this line with your other imports
+from cysimdjson import JSONParser, JSONDict, JSONArray
 import numpy as np
 import pickle
 import hashlib
@@ -191,10 +191,11 @@ class ARCDataset(Dataset):
                     parsed_py = parsed_json  # Direct assignment
 
                     # Convert cysimdjson types to standard Python types
-                    if isinstance(parsed_py, cysimdjson.JSONArray):
-                        parsed_py = list(parsed_py)
-                    elif isinstance(parsed_py, cysimdjson.JSONObject):
-                        parsed_py = dict(parsed_py)
+                    if isinstance(parsed_py, (list, dict, JSONArray, JSONDict)):
+                        if isinstance(parsed_py, JSONArray):
+                            parsed_py = list(parsed_py)
+                        elif isinstance(parsed_py, JSONDict):
+                            parsed_py = dict(parsed_py)
                 except Exception as e:
                     logger.exception(f"cysimdjson failed to parse file {file_path}. Attempting standard json parser.")
                     logger.error(f"Exception type: {type(e).__name__}")
@@ -254,21 +255,10 @@ class ARCDataset(Dataset):
                 logger.debug(f"Total samples to process from {file_path}: {len(data_iterable)}")
 
                 for ex in data_iterable:
-                    # Log the keys of each example
-                    if isinstance(ex, dict):
-                        logger.debug(f"Processing example with keys: {list(ex.keys())}")
-                    else:
-                        logger.warning(f"Expected example to be a dict, but got {type(ex)}. Skipping example.")
-                        continue  # Skip non-dict examples
-
-                    # Handle cases where 'input' and 'output' might be nested differently
-                    input_key = next((k for k in ex.keys() if k.lower() == 'input'), None)
-                    output_key = next((k for k in ex.keys() if k.lower() == 'output'), None)
-
-                    if input_key and output_key:
+                    if 'input' in ex and 'output' in ex:
                         try:
-                            input_tensor = self._preprocess_grid(ex[input_key])
-                            output_tensor = self._preprocess_grid(ex[output_key])
+                            input_tensor = self._preprocess_grid(ex['input'])
+                            output_tensor = self._preprocess_grid(ex['output'])
                             task_id = ex.get('id', f"default_task_{sample_count}")
                             if not isinstance(task_id, str) or not task_id:
                                 if not missing_id_logged:
@@ -289,7 +279,6 @@ class ARCDataset(Dataset):
                             )
                     else:
                         logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
-                        logger.debug(f"Sample keys: {list(ex.keys())}")
 
         except Exception as e:  # Catch all exceptions related to parsing
             logger.exception(f"Failed to process file {file_path}: {e}", exc_info=True)
