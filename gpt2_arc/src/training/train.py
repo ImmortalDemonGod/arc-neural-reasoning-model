@@ -380,8 +380,8 @@ def main(args):
 
         try:
             train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
-            val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=None)
-            test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=None)
+            val_data = load_dataset(args, config, dataset_type='val')      # Removed all_synthetic_data
+            test_data = load_dataset(args, config, dataset_type='test')    # Removed all_synthetic_data
         except Exception as e:
             logger.error(f"Error loading datasets: {e}")
             raise
