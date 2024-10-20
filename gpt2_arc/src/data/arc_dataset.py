@@ -262,7 +262,10 @@ class ARCDataset(Dataset):
                                 })
                                 sample_count += 1
                             except Exception as e:
-                                logger.error(f"Error preprocessing sample in file {file_path}: {e}", exc_info=True)
+                                logger.error(
+                                    f"Error preprocessing sample {sample_count} (Task ID: {task_id}) in file {file_path}: {e}",
+                                    exc_info=True
+                                )
                         else:
                             logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
                 elif isinstance(parsed_py, dict):
@@ -287,7 +290,10 @@ class ARCDataset(Dataset):
                             })
                             sample_count += 1
                         except Exception as e:
-                            logger.error(f"Error preprocessing training sample in file {file_path}: {e}", exc_info=True)
+                            logger.error(
+                                f"Error preprocessing training sample {sample_count} (Task ID: {task_id}) in file {file_path}: {e}",
+                                exc_info=True
+                            )
                     
                     for ex in parsed_py.get('test', []):
                         try:
@@ -308,7 +314,10 @@ class ARCDataset(Dataset):
                             })
                             sample_count += 1
                         except Exception as e:
-                            logger.error(f"Error preprocessing testing sample in file {file_path}: {e}", exc_info=True)
+                            logger.error(
+                                f"Error preprocessing testing sample {sample_count} (Task ID: {task_id}) in file {file_path}: {e}",
+                                exc_info=True
+                            )
                 else:
                     logger.warning(f"Unexpected JSON structure in file {file_path}. Skipping.")
             logger.info(f"Finished processing synthetic data file: {file_path}. Extracted {len(samples)} samples.")
