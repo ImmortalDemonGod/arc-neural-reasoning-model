@@ -194,10 +194,10 @@ class ARCDataset(Dataset):
                     parsed_json = self.json_parser.parse(f.read())
                     # Direct Conversion Using as_list() and as_dict()
                     if parsed_json.is_array():
-                        parsed_py = parsed_json.as_list()
+                        parsed_py = parsed_json.as_list(recursive=True)
                         logger.debug(f"Parsed JSON is a list with {len(parsed_py)} items.")
                     elif parsed_json.is_object():
-                        parsed_py = parsed_json.as_dict()
+                        parsed_py = parsed_json.as_dict(recursive=True)
                         logger.debug(f"Parsed JSON is a dict with keys: {list(parsed_py.keys())}")
                     else:
                         logger.warning(f"Parsed JSON is neither a list nor a dict for file {file_path}: {type(parsed_json)}. Skipping file.")
