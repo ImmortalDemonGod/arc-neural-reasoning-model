@@ -7,6 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 import json
+import cysimdjson  # Add this line with your other imports
 import numpy as np
 import pickle
 import hashlib
@@ -103,6 +104,8 @@ class ARCDataset(Dataset):
         self.num_samples = 0
 
         
+        self.json_parser = cysimdjson.JSONParser()  # Initialize the JSON parser here
+
         self.cache_path = self._generate_cache_path(
             data_source=self.data_source,
             num_symbols=self.num_symbols,
