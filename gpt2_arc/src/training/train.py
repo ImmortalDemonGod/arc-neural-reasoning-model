@@ -525,7 +525,7 @@ def main(args):
 
         # Add the standard ModelCheckpoint callback
         if not args.no_checkpointing:
-            checkpoint_filename = f"{'resume-' if args.model_checkpoint else ''}checkpoint-{{epoch:02d}}-{{val_loss:.4f}}"
+            checkpoint_filename = f"{'resume-' if args.model_checkpoint else ''}checkpoint-step_{{step}}-val_loss_{{val_loss:.4f}}"
             checkpoint_callback = ModelCheckpoint(
                 dirpath="checkpoints",
                 filename=checkpoint_filename,
