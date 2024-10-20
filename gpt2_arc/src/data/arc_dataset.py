@@ -9,7 +9,6 @@ import logging
 logger = logging.getLogger(__name__)
 import json
 import cysimdjson
-from cysimdjson import JSONError
 import numpy as np
 import pickle
 import hashlib
@@ -239,7 +238,7 @@ class ARCDataset(Dataset):
                     # Attempt to parse with cysimdjson
                     parsed_json = self.json_parser.parse(f.read())
                     parsed_py = self._cysimdjson_to_native(parsed_json)
-                except JSONError as e:
+                except Exception as e:
                     logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Attempting standard json parser.")
                     f.seek(0)  # Reset file pointer to the beginning
                     try:
