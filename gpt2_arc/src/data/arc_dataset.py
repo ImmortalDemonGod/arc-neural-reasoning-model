@@ -189,13 +189,16 @@ class ARCDataset(Dataset):
                     # Attempt to parse with cysimdjson
                     parsed_json = self.json_parser.parse(f.read())
                     # Convert cysimdjson Document to standard Python types
-                    if parsed_json.is_array():
+                    try:
                         parsed_py = list(parsed_json)
-                    elif parsed_json.is_object():
-                        parsed_py = dict(parsed_json)
-                    else:
-                        logger.warning(f"Parsed JSON is neither a list nor a dict for file {file_path}: {type(parsed_json)}. Skipping file.")
-                        return samples
+                        logger.debug(f"Successfully converted parsed_json to list for file {file_path}.")
+                    except TypeError:
+                        try:
+                            parsed_py = dict(parsed_json)
+                            logger.debug(f"Successfully converted parsed_json to dict for file {file_path}.")
+                        except TypeError:
+                            logger.warning(f"Could not convert parsed JSON to list or dict for file {file_path}. Skipping file.")
+                            return samples
                 except Exception as e:
                     logger.exception(f"cysimdjson failed to parse file {file_path}. Attempting standard json parser.")
                     logger.error(f"Exception type: {type(e).__name__}")
