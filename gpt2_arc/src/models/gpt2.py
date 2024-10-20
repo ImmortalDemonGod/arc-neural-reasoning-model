@@ -309,14 +309,11 @@ class GPT2ARC(pl.LightningModule):
         return loss
     
     def forward(self, input_ids, attention_mask=None):
-        if not torch._dynamo.is_compiling():
-            logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
+        logger.debug(f"GPT2ARC forward - Input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         
-        # Check if input_ids is already in the correct shape
         if input_ids.dim() == 4:
             x = input_ids.float()
         else:
-            # Reshape input_ids to [batch_size, 1, height, width]
             batch_size = input_ids.size(0)
             seq_length = input_ids.size(1)
             height = width = int(seq_length ** 0.5)
@@ -325,12 +322,11 @@ class GPT2ARC(pl.LightningModule):
         x = self.conv1(x)
         logger.debug(f"After conv1 shape: {x.shape}")
         b, c, h, w = x.size()
-        x = x.view(b, c, h * w)  # Flatten spatial dimensions
-        x = x.permute(0, 2, 1)  # Rearrange to (batch_size, sequence_length, channels)
+        x = x.view(b, c, h * w)
+        x = x.permute(0, 2, 1)
         logger.debug(f"Reshaped for transformer blocks: {x.shape}")
 
         for i, block in enumerate(self.blocks):
-            # Check if the block is a TransformerBlock or MambaLayer
             if isinstance(block, TransformerBlock):
                 x = block(x, attention_mask)
                 logger.debug(f"After TransformerBlock {i + 1}: shape {x.shape}")
@@ -339,5 +335,6 @@ class GPT2ARC(pl.LightningModule):
                 logger.debug(f"After MambaLayer {i + 1}: shape {x.shape}")
         
         x = self.ln_f(x)
-        x = self.fc_out(x)  # Apply final linear layer
+        x = self.fc_out(x)
+        logger.debug(f"GPT2ARC forward - Final output shape: {x.shape}, dtype: {x.dtype}")
         return x
