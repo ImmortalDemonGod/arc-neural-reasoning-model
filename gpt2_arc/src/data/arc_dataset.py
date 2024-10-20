@@ -206,14 +206,17 @@ class ARCDataset(Dataset):
                         return samples  # Skip this file as both parsers failed
 
                 # Log the type and some content of parsed_py for debugging
-                logger.debug(f"Parsed JSON type from {file_path}: {type(parsed_py)}")
+                logger.debug(f"Parsed JSON type for {file_path}: {type(parsed_py)}")
                 if isinstance(parsed_py, list):
-                    logger.debug(f"Parsed JSON list from {file_path} contains {len(parsed_py)} items.")
+                    logger.debug(f"Parsed JSON list length for {file_path}: {len(parsed_py)}")
+                    for i, item in enumerate(parsed_py[:3]):
+                        logger.debug(f"Sample {i} in list: keys = {list(item.keys())}")
                 elif isinstance(parsed_py, dict):
-                    logger.debug(f"Parsed JSON dict from {file_path} contains keys: {list(parsed_py.keys())}")
+                    logger.debug(f"Parsed JSON dict keys for {file_path}: {list(parsed_py.keys())}")
+                    for key, value in list(parsed_py.items())[:3]:
+                        logger.debug(f"Key: {key}, Type of value: {type(value)}")
                 else:
-                    logger.warning(f"Unexpected JSON structure in file {file_path}: {type(parsed_py)}. Skipping.")
-                    return samples
+                    logger.warning(f"Parsed JSON is neither a list nor a dict for file {file_path}: {type(parsed_py)}")
 
                 # Determine how to extract samples based on JSON structure
                 if isinstance(parsed_py, list):
@@ -287,16 +290,7 @@ class ARCDataset(Dataset):
         Returns:
             List[Dict]: List of processed samples from the file.
         """
-        """
-        Wrapper method to process a single file in parallel.
-        
-        Args:
-            file_path (str): Path to the JSON file.
-            
-        Returns:
-            List[Dict]: List of processed samples from the file.
-        """
-        return self._process_single_file_streaming
+        return self._process_single_file_streaming(file_path)
     
     
     def _save_cache(self, cache_path: str, data_only=False):
