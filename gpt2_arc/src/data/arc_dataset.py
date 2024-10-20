@@ -163,55 +163,8 @@ class ARCDataset(Dataset):
 
         logger.debug("ARCDataset initialization completed.")
 
-    def _process_single_task(self, task: Union[Dict, List], task_id: str) -> List[Dict]:
-        """
-        Processes a single task dictionary or list and returns a list of samples.
-        
-        Args:
-            task (Union[Dict, List]): The task data containing 'input' and 'output', or a list of such dictionaries.
-            task_id (str): Identifier for the task.
-        
-        Returns:
-            List[Dict]: List of processed sample dictionaries.
-        """
-        samples = []
-        try:
-            if isinstance(task, dict):
-                # Existing processing for dictionary tasks
-                for ex in task.get('train', []):
-                    logger.debug(f"Processing training example keys: {ex.keys()}")
-                    logger.debug(f"Processing example keys: {ex.keys()}")
-                    input_tensor = self._preprocess_grid(ex['input'])
-                    output_tensor = self._preprocess_grid(ex['output'])
-                    samples.append({
-                        "input": input_tensor,
-                        "output": output_tensor,
-                        "task_id": task_id
-                    })
-                
-                for ex in task.get('test', []):
-                    input_tensor = self._preprocess_grid(ex['input'])
-                    output_tensor = self._preprocess_grid(ex['output'])
-                    samples.append({
-                        "input": input_tensor,
-                        "output": output_tensor,
-                        "task_id": task_id
-                    })
-            elif isinstance(task, list):
-                # New processing for list-type tasks
-                for ex in task:
-                    input_tensor = self._preprocess_grid(ex['input'])
-                    output_tensor = self._preprocess_grid(ex['output'])
-                    samples.append({
-                        "input": input_tensor,
-                        "output": output_tensor,
-                        "task_id": task_id
-                    })
-            else:
-                raise ValueError(f"Unsupported task type: {type(task)}")
-        except Exception as e:
-            logger.error(f"Error processing task {task_id}: {e}", exc_info=True)
-        return samples
+    def _cysimdjson_to_native(self, parsed_json):
+        return parsed_json
     
     
     def _process_single_file_streaming(self, file_path: str) -> List[Dict]:
