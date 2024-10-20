@@ -173,6 +173,7 @@ def load_and_split_synthetic_data(args, config):
     synthetic_dataset = ARCDataset(
         data_source=args.synthetic_data_path,
         is_test=False,
+        max_samples=args.max_train_samples,  # Pass the new argument here
         num_symbols=config.training.num_symbols,
         pad_symbol_idx=config.training.pad_symbol_idx,
         symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
@@ -664,6 +665,12 @@ if __name__ == "__main__":
         help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
     )
     parser.add_argument("--optuna_storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
+    parser.add_argument(
+        "--max_train_samples",
+        type=int,
+        default=None,
+        help="Maximum number of training samples to load. Use None to load all samples."
+    )
     parser.add_argument(
         "--num_workers",
         type=int,

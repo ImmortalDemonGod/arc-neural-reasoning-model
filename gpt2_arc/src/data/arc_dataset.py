@@ -81,6 +81,7 @@ class ARCDataset(Dataset):
         self,
         data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
         is_test: bool = False,
+        max_samples: Optional[int] = None,  # Add this parameter
         num_symbols: int = 11,
         test_split: float = 0.2,
         pad_symbol_idx: int = 10,
@@ -128,6 +129,10 @@ class ARCDataset(Dataset):
                 logger.error(f"Failed to load data: {e}", exc_info=True)
                 raise
 
+            # Apply sample limit if specified
+            if max_samples is not None:
+                self.data = self.data[:max_samples]
+                logger.debug(f"Limited dataset to {max_samples} samples.")
             self.num_samples = len(self.data)
             self._compute_and_cache_statistics()
             self._save_cache(self.cache_path)
