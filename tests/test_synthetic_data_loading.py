@@ -55,7 +55,7 @@ class TestSyntheticDataLoading(unittest.TestCase):
                     count = len(data)
                 elif isinstance(data, dict):
                     # Common keys that contain sample lists
-                    for key in ['train', 'test', 'samples', 'entries']:
+                    for key in ['train', 'test', 'samples', 'entries', 'inputs', 'outputs']:
                         if key in data and isinstance(data[key], list):
                             count += len(data[key])
             except json.JSONDecodeError:

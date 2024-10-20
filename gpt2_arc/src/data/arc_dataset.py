@@ -88,6 +88,10 @@ class ARCDataset(Dataset):
         symbol_freq: Optional[Dict[int, float]] = None,
         debug: bool = False,
     ):
+        # Define acceptable key names for input and output
+        self.INPUT_KEYS = ['input', 'inputs']
+        self.OUTPUT_KEYS = ['output', 'outputs']
+
         self.is_test = is_test
         self.num_symbols = num_symbols
         self.test_split = test_split
@@ -268,9 +272,9 @@ class ARCDataset(Dataset):
                     logger.warning(f"Expected example to be a dict, but got {type(ex)}. Skipping example.")
                     continue  # Skip non-dict examples
 
-                # Handle cases where 'input' and 'output' might be nested differently
-                input_key = next((k for k in ex.keys() if k.lower() == 'input'), None)
-                output_key = next((k for k in ex.keys() if k.lower() == 'output'), None)
+                # Handle cases where 'input' and 'output' might be nested differently with variations
+                input_key = next((k for k in ex.keys() if k.lower() in self.INPUT_KEYS), None)
+                output_key = next((k for k in ex.keys() if k.lower() in self.OUTPUT_KEYS), None)
 
                 if input_key and output_key:
                     try:
