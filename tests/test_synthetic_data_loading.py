@@ -3,21 +3,38 @@ import os
 import json
 import torch
 from gpt2_arc.src.data.arc_dataset import ARCDataset
+import tempfile
+import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 class TestSyntheticDataLoading(unittest.TestCase):
     def setUp(self):
         """
-        Set up the test to use existing synthetic data from the specified directory.
+        Set up a temporary directory for synthetic data and initialize necessary attributes.
         """
-        self.synthetic_data_dir = "/workspaces/arc-neural-reasoning-model/gpt2_arc/src/data/SyntheticARC/small_tasks"
-        self.large_file_path = "/workspaces/arc-neural-reasoning-model/gpt2_arc/src/data/SyntheticARC/small_tasks/1c786137.json"
-        self.assertTrue(os.path.isfile(self.large_file_path), f"Large synthetic data file does not exist: {self.large_file_path}")
-    
+        self.temp_dir = tempfile.mkdtemp()
+        self.synthetic_data_dir = self.temp_dir
+
+        # Clear existing cache related to ARCDataset
+        cache_dir = os.path.join(os.path.dirname(__file__), '../src/data/cache')
+        if os.path.exists(cache_dir):
+            cache_files = [f for f in os.listdir(cache_dir) if f.startswith('arc_dataset_cache_') and f.endswith('.pkl')]
+            for cache_file in cache_files:
+                cache_path = os.path.join(cache_dir, cache_file)
+                try:
+                    os.remove(cache_path)
+                    self.addCleanup(os.remove, cache_path)  # Ensure cache is removed even if tests fail
+                    logger.debug(f"Removed cache file: {cache_path}")
+                except Exception as e:
+                    logger.error(f"Failed to remove cache file {cache_path}: {e}")
+
     def tearDown(self):
         """
         Remove the temporary directory after tests.
         """
-        # No need to remove directory as it's existing synthetic data
+        shutil.rmtree(self.temp_dir)
     
     def test_dataset_loading(self):
         """
