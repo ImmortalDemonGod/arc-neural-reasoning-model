@@ -702,8 +702,8 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
         logger.info("Using synthetic data for training, validation, and testing.")
         all_synthetic_data = load_and_split_synthetic_data(args, config)
         train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
-        val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
-        test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
+        val_data = load_dataset(args, config, dataset_type='val')      # Removed all_synthetic_data
+        test_data = load_dataset(args, config, dataset_type='test')    # Removed all_synthetic_data
     else:
         logger.info("Using official ARC datasets for training, validation, and testing.")
         train_data = load_dataset(args, config, dataset_type='train')
