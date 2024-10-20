@@ -266,11 +266,14 @@ class ARCDataset(Dataset):
                     else:
                         logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
 
-    except Exception as e:  # Catch all exceptions related to parsing
-        logger.error(f"Failed to process file {file_path}: {e}", exc_info=True)
+        except Exception as e:  # Catch all exceptions related to parsing
+            logger.error(f"Failed to process file {file_path}: {e}", exc_info=True)
 
-    logger.info(f"Finished processing synthetic data file: {file_path}. Extracted {len(samples)} samples.")
-    return samples
+        logger.info(f"Finished processing synthetic data file: {file_path}. Extracted {len(samples)} samples.")
+        return samples
+    
+    
+    def _process_single_file_parallel(self, file_path: str) -> List[Dict]:
 
         """
         Wrapper method to process a single file in parallel.
