@@ -230,7 +230,7 @@ def load_and_split_synthetic_data(args, config):
         symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
     )
     total_samples = len(synthetic_dataset)
-    logger.info(f"Total synthetic samples loaded: {total_samples}")
+    logger.debug(f"Total synthetic samples loaded: {total_samples}")
 
     # Shuffle the indices
     indices = list(range(total_samples))
@@ -241,7 +241,7 @@ def load_and_split_synthetic_data(args, config):
         train_indices = indices
         val_indices = []
         test_indices = []
-        logger.debug("All synthetic data assigned to training set. No validation or test splits.")
+        logger.debug("All synthetic data assigned to training set.")
     else:
         train_end = int(args.train_split * total_samples)
         val_end = train_end + int(args.val_split * total_samples)
@@ -251,12 +251,7 @@ def load_and_split_synthetic_data(args, config):
     val_indices = indices[train_end:val_end]
     test_indices = indices[val_end:]
 
-    logger.debug(
-        f"Synthetic data split into "
-        f"{len(train_indices)} training, "
-        f"{len(val_indices)} validation, and "
-        f"{len(test_indices)} test samples"
-    )
+    logger.debug(f"Synthetic data split into {len(train_indices)} training, {len(val_indices)} validation, and {len(test_indices)} test samples.")
 
     # Create subsets
     train_dataset = Subset(synthetic_dataset, train_indices)
@@ -270,6 +265,8 @@ def load_and_split_synthetic_data(args, config):
     }
 
     logger.debug(f"Synthetic data returned with keys: {list(synthetic_data_dict.keys())}")
+    for key, dataset in synthetic_data_dict.items():
+        logger.debug(f"{key} contains {len(dataset)} samples.")
     return synthetic_data_dict
 
 
