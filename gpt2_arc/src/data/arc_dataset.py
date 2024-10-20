@@ -283,7 +283,7 @@ class ARCDataset(Dataset):
                             logger.warning(f"Sample missing valid 'id'. Assigned task_id: {task_id}")
                             missing_id_logged = True
                         else:
-                            task_id = f"default_task_{sample_count}")
+                            task_id = f"default_task_{sample_count}"
                     
                     # Add prefix if not already present
                     if isinstance(task_id, str) and not (task_id.startswith('synthetic_task_') or task_id.startswith('default_task')):
