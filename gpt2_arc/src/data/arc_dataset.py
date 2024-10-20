@@ -251,7 +251,7 @@ class ARCDataset(Dataset):
                                         logger.warning(f"Sample missing valid 'id'. Assigned task_id: {task_id}")
                                         missing_id_logged = True
                                     else:
-                                        task_id = f"default_task_{sample_count}")
+                                        task_id = f"default_task_{sample_count}"
                                 samples.append({
                                     "input": input_tensor,
                                     "output": output_tensor,
@@ -276,7 +276,7 @@ class ARCDataset(Dataset):
                                     logger.warning(f"Task missing valid 'id'. Assigned task_id: {task_id}")
                                     missing_id_logged = True
                                 else:
-                                    task_id = f"default_task_{sample_count}")
+                                    task_id = f"default_task_{sample_count}"
                             samples.append({
                                 "input": input_tensor,
                                 "output": output_tensor,
@@ -297,7 +297,7 @@ class ARCDataset(Dataset):
                                     logger.warning(f"Task missing valid 'id'. Assigned task_id: {task_id}")
                                     missing_id_logged = True
                                 else:
-                                    task_id = f"default_task_{sample_count}")
+                                    task_id = f"default_task_{sample_count}"
                             samples.append({
                                 "input": input_tensor,
                                 "output": output_tensor,
