@@ -12,6 +12,7 @@ from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 from ..utils.results_collector import ResultsCollector
 from torch.utils.data import DataLoader
+from gpt2_arc.src.data.arc_dataset import ARCDataset
 
 logger = logging.getLogger(__name__)
 from torch.utils.tensorboard import SummaryWriter
