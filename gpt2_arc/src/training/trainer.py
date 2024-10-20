@@ -168,7 +168,9 @@ class ARCTrainer(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         logger.debug(f"Starting training step {batch_idx}")
         inputs, targets, _ = batch
-        logger.debug(f"Inputs shape: {inputs.shape}, Targets shape: {targets.shape}")
+        logger.debug(f"Inputs shape: {inputs.shape}, Targets shape: {targets.shape}, Targets dtype: {targets.dtype}")
+        targets = targets.long()  # Ensure targets are of type Long
+        logger.debug(f"Targets dtype after casting: {targets.dtype}")
         
         outputs = self(inputs)
         logger.debug(f"Outputs shape: {outputs.shape}")
@@ -188,7 +190,9 @@ class ARCTrainer(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         logger.debug(f"Starting validation step {batch_idx}")
         inputs, targets, _ = batch
-        logger.debug(f"Validation Inputs shape: {inputs.shape}, Targets shape: {targets.shape}")
+        logger.debug(f"Validation Inputs shape: {inputs.shape}, Targets shape: {targets.shape}, Targets dtype: {targets.dtype}")
+        targets = targets.long()  # Ensure targets are of type Long
+        logger.debug(f"Targets dtype after casting: {targets.dtype}")
         
         outputs = self(inputs)
         logger.debug(f"Validation Outputs shape: {outputs.shape}")
@@ -224,7 +228,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Received task_ids: {task_ids}")
 
         inputs = inputs.float()
-        outputs = outputs.long()
+        outputs = outputs.long()  # Ensure outputs are of type Long
 
         attention_mask = torch.ones(inputs.size(0), inputs.size(2) * inputs.size(3), dtype=torch.float32, device=inputs.device)
 
@@ -396,6 +400,7 @@ class ARCTrainer(pl.LightningModule):
 
 
     def compute_loss(self, outputs, labels):
+        labels = labels.long()  # Ensure labels are of type Long
         loss = self.model.loss_fn(
             outputs.view(-1, outputs.size(-1)), labels.view(-1)
         )
