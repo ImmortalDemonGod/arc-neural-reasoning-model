@@ -264,9 +264,23 @@ def load_and_split_synthetic_data(args, config):
         'test_dataset': test_dataset
     }
 
+    # Log the keys and lengths of each dataset
     logger.debug(f"Synthetic data returned with keys: {list(synthetic_data_dict.keys())}")
     for key, dataset in synthetic_data_dict.items():
         logger.debug(f"{key} contains {len(dataset)} samples.")
+
+    # Add Assertions to Ensure All Required Keys Are Present
+    required_keys = {'train_dataset', 'val_dataset', 'test_dataset'}
+    missing_keys = required_keys - synthetic_data_dict.keys()
+    if missing_keys:
+        logger.error(f"The following required keys are missing from synthetic_data_dict: {missing_keys}")
+        raise KeyError(f"Missing keys in synthetic data: {missing_keys}")
+
+    # Optional: Assert Each Dataset Exists
+    for key in required_keys:
+        if synthetic_data_dict[key] is None:
+            logger.error(f"'{key}' is None. This should not happen.")
+            raise ValueError(f"'{key}' is None in synthetic data split.")
     return synthetic_data_dict
 
 
