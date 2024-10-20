@@ -111,6 +111,27 @@ class ModelConfigSaver(Callback):
         checkpoint['model_config'] = self.config.model.__dict__
 
         
+def prepare_val_or_test_data(eval_set, args, is_validation=True):
+    """
+    Prepare validation or test data from the arckit evaluation set.
+
+    Args:
+        eval_set: The evaluation TaskSet from arckit.load_data().
+        args: Parsed command-line arguments.
+        is_validation: Boolean indicating whether it's validation data.
+
+    Returns:
+        List of dictionaries with keys 'input', 'output', and 'task_id'.
+    """
+    logger.debug(f"Preparing {'validation' if is_validation else 'test'} data from arckit evaluation set")
+    samples = []
+    for task in tqdm(eval_set.tasks, desc=f"Processing tasks for {'validation' if is_validation else 'test'} dataset"):
+        for ex in task.train if is_validation else task.test:
+            sample = {'input': ex[0], 'output': ex[1], 'task_id': task.id}
+            samples.append(sample)
+    logger.debug(f"Prepared {len(samples)} samples for {'validation' if is_validation else 'test'} dataset")
+    return samples
+
 def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
     logger.debug(f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}")
 
