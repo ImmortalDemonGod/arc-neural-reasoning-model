@@ -8,6 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 import json
+import cysimdjson
 from cysimdjson import JSONError
 import numpy as np
 import pickle
@@ -173,6 +174,7 @@ class ARCDataset(Dataset):
         Returns:
             List[Dict]: List of processed sample dictionaries.
         """
+        samples = []
         try:
             if isinstance(task, dict):
                 # Existing processing for dictionary tasks
@@ -343,10 +345,11 @@ class ARCDataset(Dataset):
         Returns:
             Union[dict, list, primitive]: Native Python data structure.
         """
-        if isinstance(parsed_json, cysimdjson.JSONObject):
-            return {k: self._cysimdjson_to_native(v) for k, v in parsed_json.items()}
-        elif isinstance(parsed_json, cysimdjson.JSONArray):
-            return [self._cysimdjson_to_native(item) for item in parsed_json]
+        if isinstance(parsed_json, cysimdjson.JSONValue):
+            if parsed_json.is_object():
+                return {k: self._cysimdjson_to_native(v) for k, v in parsed_json.items()}
+            elif parsed_json.is_array():
+                return [self._cysimdjson_to_native(item) for item in parsed_json]
         elif isinstance(parsed_json, (int, float, str, bool)):
             return parsed_json
         elif parsed_json is None:
