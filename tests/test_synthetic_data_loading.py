@@ -76,7 +76,6 @@ class TestSyntheticDataLoading(unittest.TestCase):
         
         dataset = ARCDataset(
             data_source=data_source,
-            data_source=data_source,
             is_test=False,
             max_samples=None,  # Load all samples
             num_symbols=11,
