@@ -323,20 +323,16 @@ class ARCDataset(Dataset):
         Returns:
             Union[dict, list, primitive]: Native Python data structure.
         """
-        if parsed_json.is_object():
+        if isinstance(parsed_json, cysimdjson.JSONObject):
             return {k: self._cysimdjson_to_native(v) for k, v in parsed_json.items()}
-        elif parsed_json.is_array():
+        elif isinstance(parsed_json, cysimdjson.JSONArray):
             return [self._cysimdjson_to_native(item) for item in parsed_json]
-        elif parsed_json.is_number():
-            return parsed_json.get_number()
-        elif parsed_json.is_string():
-            return parsed_json.get_string()
-        elif parsed_json.is_bool():
-            return parsed_json.get_bool()
-        elif parsed_json.is_null():
+        elif isinstance(parsed_json, (int, float, str, bool)):
+            return parsed_json
+        elif parsed_json is None:
             return None
         else:
-            logger.warning(f"Unknown JSON type encountered: {parsed_json.type}")
+            logger.warning(f"Unknown JSON type encountered: {type(parsed_json)}")
             return None
         """
         Wrapper method to process a single file in parallel.
