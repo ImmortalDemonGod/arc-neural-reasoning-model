@@ -485,6 +485,7 @@ class ARCDataset(Dataset):
         return os.path.join(cache_dir, cache_filename)
 
     def _load_cache(self, cache_path: str) -> bool:
+        logger.debug(f"Attempting to load cache from: {cache_path}")
         if os.path.exists(cache_path):
             try:
                 with open(cache_path, 'rb') as f:
@@ -492,10 +493,12 @@ class ARCDataset(Dataset):
                 self.data = cache_data.get("data", [])
                 self.statistics = cache_data.get("statistics", {})
                 self.num_samples = len(self.data)
-                logger.debug(f"Loaded cached data from {cache_path}")
+                logger.info(f"Successfully loaded cache from {cache_path} with {self.num_samples} samples.")
                 return True
             except Exception as e:
-                logger.error(f"Failed to load cache from {cache_path}: {e}")
+                logger.error(f"Failed to load cache from {cache_path}: {e}", exc_info=True)
+        else:
+            logger.warning(f"Cache file does not exist at: {cache_path}. Proceeding without cache.")
         return False
 
     def _compute_and_cache_statistics(self):
