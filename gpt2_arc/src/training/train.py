@@ -124,7 +124,7 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
     Returns:
         Dataset: Loaded dataset (ARCDataset or Subset of ARCDataset).
     """
-    if args.use_synthetic_data:
+    if dataset_type == 'train' and args.use_synthetic_data:
         if all_synthetic_data is None:
             raise ValueError("Synthetic data not loaded")
         dataset = all_synthetic_data['dataset']
