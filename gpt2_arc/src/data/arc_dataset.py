@@ -101,6 +101,10 @@ class ARCDataset(Dataset):
         self.data_files = []
         self.data_source = data_source
         self.num_samples = 0
+
+        # Initialize cysimdjson JSONParser
+        self.json_parser = cysimdjson.JSONParser()
+        logger.debug("Initialized cysimdjson.JSONParser instance")
         
         self.cache_path = self._generate_cache_path(
             data_source=self.data_source,
@@ -227,58 +231,48 @@ class ARCDataset(Dataset):
                 logger.warning(f"Empty JSON file detected: {file_path}. Skipping.")
                 return samples
             
-            with open(file_path, 'r', encoding='utf-8') as f:
-                # Use ijson for efficient streaming if the file is large
-                parser = ijson.parse(f)
-                current_object = {}
-                current_key = None
-                logger.debug(f"Starting to process file: {file_path}")
-                for prefix, event, value in parser:
-                    if (prefix, event) == ('', 'start_map'):
-                        current_object = {}
-                    elif event == 'map_key':
-                        current_key = value
-                    elif event in ('string', 'number', 'boolean', 'null'):
-                        current_object[current_key] = value
-                    elif 'input' in current_object and 'output' in current_object:
-                        # Sample-Based Structure
-                        task_id = current_object.get('id')
-                        if not task_id:
-                            if not missing_id_logged:
-                                # Generate a unique task_id based on the filename and a unique index
-                                filename = os.path.splitext(os.path.basename(file_path))[0]
-                                task_id = f"{filename}_sample_{sample_count}"
-                                #logger.warning(f"Sample is missing 'id'. Assigning default task_id: {task_id}")
-                                missing_id_logged = True  # Set flag to prevent further warnings for this file
-                            else:
-                                # Assign task_id without logging the warning again
-                                filename = os.path.splitext(os.path.basename(file_path))[0]
-                                task_id = f"{filename}_sample_{sample_count}"
-                        try:
-                            input_tensor = self._preprocess_grid(current_object['input'])
-                            output_tensor = self._preprocess_grid(current_object['output'])
+        with open(file_path, 'r', encoding='utf-8') as f:
+            # Use cysimdjson for efficient parsing
+            try:
+                parsed_json = self.json_parser.parse(f.read())
+                # Assume the JSON structure is a list of samples or a single task object
+                if isinstance(parsed_json, list):
+                    for ex in parsed_json:
+                        if 'input' in ex and 'output' in ex:
+                            input_tensor = self._preprocess_grid(ex['input'])
+                            output_tensor = self._preprocess_grid(ex['output'])
                             samples.append({
                                 "input": input_tensor,
                                 "output": output_tensor,
-                                "task_id": task_id
+                                "task_id": ex.get('id', f"default_task_{sample_count}")
                             })
                             sample_count += 1
-                            logger.debug(f"Added sample {sample_count} with task_id: {task_id} from file {file_path}")
-                        except Exception as e:
-                            logger.error(f"Error processing sample in file {file_path}: {e}", exc_info=True)
-                        current_object = {}
-                    elif (prefix, event) == ('', 'end_map'):
-                        # Determine the structure based on keys
-                        if 'train' in current_object and 'test' in current_object:
-                            # Task-Based Structure
-                            try:
-                                validate(instance=current_object, schema=TASK_SCHEMA)
-                                task_id = current_object.get('id', os.path.splitext(os.path.basename(file_path))[0])
-                                task_samples = self._process_single_task(current_object, task_id=task_id)
-                                samples.extend(task_samples)
-                            except ValidationError as ve:
-                                logger.warning(f"Schema validation error in file {file_path}: {ve.message}. Skipping task.")
-                logger.debug(f"Processed {sample_count} samples from file {file_path}")
+                        else:
+                            logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
+                elif isinstance(parsed_json, dict):
+                    # Existing processing for dictionary tasks
+                    for ex in parsed_json.get('train', []):
+                        logger.debug(f"Processing training example keys: {ex.keys()}")
+                        input_tensor = self._preprocess_grid(ex['input'])
+                        output_tensor = self._preprocess_grid(ex['output'])
+                        samples.append({
+                            "input": input_tensor,
+                            "output": output_tensor,
+                            "task_id": parsed_json.get('id', f"default_task_{sample_count}")
+                        })
+                    
+                    for ex in parsed_json.get('test', []):
+                        input_tensor = self._preprocess_grid(ex['input'])
+                        output_tensor = self._preprocess_grid(ex['output'])
+                        samples.append({
+                            "input": input_tensor,
+                            "output": output_tensor,
+                            "task_id": parsed_json.get('id', f"default_task_{sample_count}")
+                        })
+                else:
+                    logger.warning(f"Unexpected JSON structure in file {file_path}. Skipping.")
+            except cysimdjson.JSONParseError as e:
+                logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Skipping.")
         except ijson.JSONError as e:
             logger.warning(f"Malformed JSON in file {file_path}: {e}. Skipping.")
         except UnicodeDecodeError as e:
