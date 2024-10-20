@@ -157,6 +157,7 @@ class TestSyntheticDataLoading(unittest.TestCase):
         self.assertEqual(len(dataset.sampler), len(dataset))
     
     def _count_json_samples(self, directory):
+        logger = logging.getLogger(__name__)
         count = 0
         for filename in os.listdir(directory):
             if filename.endswith('.json'):
