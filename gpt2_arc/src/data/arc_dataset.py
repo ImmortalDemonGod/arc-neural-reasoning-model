@@ -238,7 +238,7 @@ class ARCDataset(Dataset):
                 try:
                     # Attempt to parse with cysimdjson
                     parsed_json = self.json_parser.parse(f.read())
-                    parsed_py = self._cysimdjson_to_native(parsed_json)
+                    parsed_py = parsed_json
                 except Exception as e:
                     logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Attempting standard json parser.")
                     f.seek(0)  # Reset file pointer to the beginning
@@ -335,28 +335,6 @@ class ARCDataset(Dataset):
 
         return samples
 
-    def _cysimdjson_to_native(self, parsed_json):
-        """
-        Recursively converts cysimdjson parsed objects to native Python lists and dicts.
-        
-        Args:
-            parsed_json (cysimdjson.cysimdjson.JSONValue): Parsed JSON object.
-        
-        Returns:
-            Union[dict, list, primitive]: Native Python data structure.
-        """
-        if isinstance(parsed_json, cysimdjson.JSONValue):
-            if parsed_json.is_object():
-                return {k: self._cysimdjson_to_native(v) for k, v in parsed_json.items()}
-            elif parsed_json.is_array():
-                return [self._cysimdjson_to_native(item) for item in parsed_json]
-        elif isinstance(parsed_json, (int, float, str, bool)):
-            return parsed_json
-        elif parsed_json is None:
-            return None
-        else:
-            logger.warning(f"Unknown JSON type encountered: {type(parsed_json)}")
-            return None
         """
         Wrapper method to process a single file in parallel.
         
