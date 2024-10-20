@@ -91,7 +91,7 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
 
 
 
-def objective(trial, args, train_data, val_data, test_data):
+def objective(trial, args):
     model = None
     trainer = None
     arc_trainer = None
@@ -663,20 +663,9 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     config = Config(model=model_config, training=training_config)
 
     logger.info("Loading datasets once before optimization...")
-    if args.use_synthetic_data:
-        logger.info("Using synthetic data exclusively for training; validation and testing datasets are loaded from ARCKIT.")
-        all_synthetic_data = load_and_split_synthetic_data(args, config)
-        train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
-        val_data = load_dataset(args, config, dataset_type='val')      # Removed all_synthetic_data
-        test_data = load_dataset(args, config, dataset_type='test')    # Removed all_synthetic_data
-    else:
-        logger.info("Using official ARC datasets for training, validation, and testing.")
-        train_data = load_dataset(args, config, dataset_type='train')
-        val_data = load_dataset(args, config, dataset_type='val')
-        test_data = load_dataset(args, config, dataset_type='test')
 
     # Create a partial objective function that includes preloaded datasets
-    objective_partial = partial(objective, args=args, train_data=train_data, val_data=val_data, test_data=test_data)
+    objective_partial = partial(objective, args=args)
 
     study = optuna.create_study(
         study_name=study_name,
