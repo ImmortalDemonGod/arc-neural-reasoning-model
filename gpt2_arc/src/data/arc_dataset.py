@@ -851,7 +851,7 @@ class ARCDataset(Dataset):
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all file processing tasks to the executor
-            future_to_file = {executor.submit(self._process_single_file_parallel, fp): fp for fp in file_paths}
+            future_to_file = {executor.submit(self._process_single_file_streaming, fp): fp for fp in file_paths}
 
             with tqdm(total=len(file_paths), desc="Loading synthetic data", unit="file") as pbar:
                 for future in as_completed(future_to_file):
