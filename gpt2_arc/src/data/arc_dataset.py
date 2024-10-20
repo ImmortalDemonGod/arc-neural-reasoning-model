@@ -225,17 +225,8 @@ class ARCDataset(Dataset):
                     # Attempt to extract samples from common keys like 'data', 'samples', 'train', 'test'
                     if 'samples' in parsed_py:
                         data_iterable = parsed_py['samples']
-                    elif 'train' in parsed_py or 'test' in parsed_py:
-                        # Handle 'train' and 'test' splits separately
-                        data_iterable = parsed_py.get('train', []) + parsed_py.get('test', [])
-                    elif 'data' in parsed_py:
-                        data_iterable = parsed_py['data']
-                    else:
-                        logger.warning(f"No recognizable keys found in JSON dict for file {file_path}. Skipping.")
-                        return samples
-                else:
-                    logger.warning(f"Parsed JSON type not recognized for file {file_path}. Skipping.")
-                    return samples
+                    elif 'entries' in parsed_py:
+                        data_iterable = parsed_py['entries']
 
                 logger.debug(f"Total samples to process from {file_path}: {len(data_iterable)}")
 
