@@ -187,7 +187,7 @@ class ARCDataset(Dataset):
                 try:
                     # Attempt to parse with cysimdjson
                     parsed_json = self.json_parser.parse(f.read())
-                    parsed_py = self._cysimdjson_to_native(parsed_json)
+                    parsed_py = parsed_json  # Asignación directa
                 except Exception as e:
                     logger.exception(f"cysimdjson failed to parse file {file_path}. Attempting standard json parser.")
                     logger.error(f"Exception type: {type(e).__name__}")
