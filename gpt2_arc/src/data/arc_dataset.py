@@ -15,7 +15,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, Subset, WeightedRandomSampler
 import logging
 import ijson  # Import ijson for streaming JSON parsing
-import cysimdjson  # New import added
+import json  # Temporarily switch to json for better error messages
 from tqdm import tqdm  # Import tqdm for progress bars
 import sys  # Import sys for handling tqdm output
 from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
@@ -103,9 +103,6 @@ class ARCDataset(Dataset):
         self.data_source = data_source
         self.num_samples = 0
 
-        # Initialize cysimdjson JSONParser
-        self.json_parser = cysimdjson.JSONParser()
-        logger.debug("Initialized cysimdjson.JSONParser instance")
         
         self.cache_path = self._generate_cache_path(
             data_source=self.data_source,
@@ -174,7 +171,6 @@ class ARCDataset(Dataset):
         Returns:
             List[Dict]: List of processed sample dictionaries.
         """
-        samples = []
         try:
             if isinstance(task, dict):
                 # Existing processing for dictionary tasks
@@ -235,14 +231,11 @@ class ARCDataset(Dataset):
             return samples
 
         try:
-            with open(file_path, 'rb') as f:  # Open in binary mode
-                # Use cysimdjson for efficient parsing
-                parsed_json = self.json_parser.parse(f.read())
-                # Convert parsed_json to native Python structures
-                parsed_py = self._cysimdjson_to_native(parsed_json)
+            with open(file_path, 'r', encoding='utf-8') as f:  # Open in text mode for json
+                parsed_json = json.load(f)  # Use json.load for parsing
                 
-                if isinstance(parsed_py, list):
-                    for ex in parsed_py:
+                if isinstance(parsed_json, list):
+                    for ex in parsed_json:
                         if 'input' in ex and 'output' in ex:
                             try:
                                 input_tensor = self._preprocess_grid(ex['input'])
@@ -268,9 +261,8 @@ class ARCDataset(Dataset):
                                 )
                         else:
                             logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
-                elif isinstance(parsed_py, dict):
-                    # Existing processing for dictionary tasks
-                    for ex in parsed_py.get('train', []):
+                elif isinstance(parsed_json, dict):
+                    for ex in parsed_json.get('train', []):
                         try:
                             logger.debug(f"Processing training example keys: {ex.keys()}")
                             input_tensor = self._preprocess_grid(ex['input'])
@@ -321,8 +313,8 @@ class ARCDataset(Dataset):
                 else:
                     logger.warning(f"Unexpected JSON structure in file {file_path}. Skipping.")
             logger.info(f"Finished processing synthetic data file: {file_path}. Extracted {len(samples)} samples.")
-        except Exception as e:  # Catch all exceptions related to parsing
-            logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Skipping.")
+        except json.JSONDecodeError as e:  # Catch JSON parsing errors
+            logger.error(f"JSON parsing failed for file {file_path}: {e}. Skipping.")
 
         return samples
 

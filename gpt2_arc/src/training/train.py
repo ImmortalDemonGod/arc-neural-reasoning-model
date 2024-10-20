@@ -154,6 +154,9 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
             pad_symbol_idx=config.training.pad_symbol_idx,
             symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
         )
+    if len(dataset) == 0:
+        logger.error(f"No samples loaded for {dataset_type} dataset. Please check your data source.")
+        raise ValueError(f"No samples loaded for {dataset_type} dataset.")
     logger.debug(f"{dataset_type.capitalize()} dataset loaded with {len(dataset)} samples")
 
     return dataset
@@ -181,6 +184,7 @@ def load_and_split_synthetic_data(args, config):
     )
     total_samples = len(synthetic_dataset)
     logger.debug(f"Total synthetic samples loaded: {total_samples}")
+    assert total_samples > 0, "No synthetic samples were loaded. Please check your synthetic data files."
 
     return {'train_dataset': synthetic_dataset}
 
