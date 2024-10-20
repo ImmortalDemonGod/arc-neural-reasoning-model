@@ -101,24 +101,23 @@ def objective(trial, args, all_synthetic_data):
         model_config = ModelConfig()
         training_config = TrainingConfig()
         config = Config(model=model_config, training=training_config)
-        # Use pre-loaded synthetic data
+        # Use pre-loaded synthetic data for training
         if args.use_synthetic_data:
             if all_synthetic_data is None:
                 logger.error("Synthetic data not loaded. 'all_synthetic_data' is None.")
                 raise ValueError("Synthetic data not loaded.")
-            logger.debug(f"Trial {trial.number}: Synthetic data loaded with keys: {list(all_synthetic_data.keys())}")
+            logger.debug(f"Trial {trial.number}: Synthetic data keys: {list(all_synthetic_data.keys())}")
             if 'train_dataset' not in all_synthetic_data:
                 logger.error("'all_synthetic_data' is missing the 'train_dataset' key.")
                 raise KeyError("'train_dataset' key not found in synthetic data.")
-            synthetic_data = all_synthetic_data
-            logger.debug(f"Trial {trial.number}: Synthetic data loaded with {len(synthetic_data['train_dataset'])} training samples")
+            train_data = all_synthetic_data['train_dataset']
+            logger.debug(f"Trial {trial.number}: Synthetic training data loaded with {len(train_data)} samples")
         else:
-            synthetic_data = None
+            train_data = load_dataset(args, config, dataset_type='train')
 
-        # Load datasets
-        train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=synthetic_data)
-        val_data = load_dataset(args, config, dataset_type='val')      # No need to pass all_synthetic_data
-        test_data = load_dataset(args, config, dataset_type='test')    # No need to pass all_synthetic_data
+        # Load validation and test data from arckit
+        val_data = load_dataset(args, config, dataset_type='val')
+        test_data = load_dataset(args, config, dataset_type='test')
 
         # Log dataset sizes
         logger.debug(f"Trial {trial.number}: Loaded {len(train_data)} training samples.")
@@ -692,7 +691,8 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     if args.use_synthetic_data:
         logger.info("Loading synthetic data once before starting trials.")
         all_synthetic_data = load_and_split_synthetic_data(args, config)
-        logger.debug(f"All synthetic data loaded with {len(all_synthetic_data['train_dataset'])} training samples")
+        logger.debug(f"Synthetic data loaded. Keys: {list(all_synthetic_data.keys())}")
+        logger.debug(f"train_dataset contains {len(all_synthetic_data['train_dataset'])} samples.")
     else:
         all_synthetic_data = None
 

@@ -112,116 +112,58 @@ class ModelConfigSaver(Callback):
 
         
 def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
-    logger.debug(
-        f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}, "
-        f"all_synthetic_data={'provided' if all_synthetic_data else 'None'}"
-    )
-    
-    # Ensure dataset_type is one of the expected types
-    valid_types = {'train', 'val', 'test'}
-    dataset_type_lower = dataset_type.lower()
-    if dataset_type_lower not in valid_types:
-        logger.error(f"Unknown dataset_type: {dataset_type}")
-        raise ValueError(f"Unknown dataset_type: {dataset_type}")
-    
-    if dataset_type_lower == 'train':
-        if args.use_synthetic_data:
-            if all_synthetic_data is None or 'train_dataset' not in all_synthetic_data:
-                logger.error("Synthetic data not loaded for training.")
-                raise ValueError("Synthetic data not loaded for training")
-            dataset = all_synthetic_data['train_dataset']
-            logger.info(f"Using synthetic training dataset with {len(dataset)} samples")
-        else:
+    logger.debug(f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}")
+
+    if dataset_type.lower() == 'train' and args.use_synthetic_data:
+        if all_synthetic_data is None:
+            logger.error("Synthetic data not loaded for training.")
+            raise ValueError("Synthetic data not loaded for training")
+        if 'train_dataset' not in all_synthetic_data:
+            logger.error("'all_synthetic_data' is missing the 'train_dataset' key.")
+            raise KeyError("'train_dataset' key not found in synthetic data.")
+        dataset = all_synthetic_data['train_dataset']
+        logger.info(f"Using synthetic training dataset with {len(dataset)} samples")
+    else:
+        # Load from official ARC datasets
+        if dataset_type.lower() == 'train':
             logger.info("Loading official ARC training dataset")
             train_set, _ = arckit.load_data()
-            dataset = ARCDataset(
-                data_source=train_set,
-                is_test=False,
-                num_symbols=config.training.num_symbols,
-                pad_symbol_idx=config.training.pad_symbol_idx,
-                symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
-            )
-            logger.debug(f"Official training dataset loaded with {len(dataset)} samples")
-    
-    elif dataset_type_lower == 'val':
-        logger.info("Loading official ARC validation dataset")
-        _, eval_set = arckit.load_data()
-        samples = []
-        for task in tqdm(eval_set.tasks, desc="Processing tasks for validation dataset"):
-            samples.extend([
-                {'input': ex[0], 'output': ex[1], 'task_id': task.id}
-                for ex in task.train
-            ])
-            samples.extend([
-                {'input': ex[0], 'output': ex[1], 'task_id': task.id}
-                for ex in task.test
-            ])
-    
-        total_samples = len(samples)
-        val_size = int(total_samples * args.val_split / (args.val_split + args.test_split))
-        random.shuffle(samples)
-        val_samples = samples[:val_size]
+            data_source = train_set
+        elif dataset_type.lower() == 'val':
+            logger.info("Loading official ARC validation dataset")
+            _, eval_set = arckit.load_data()
+            data_source = prepare_val_or_test_data(eval_set, args, is_validation=True)
+        elif dataset_type.lower() == 'test':
+            logger.info("Loading official ARC test dataset")
+            _, eval_set = arckit.load_data()
+            data_source = prepare_val_or_test_data(eval_set, args, is_validation=False)
+        else:
+            raise ValueError(f"Unknown dataset_type: {dataset_type}")
+
         dataset = ARCDataset(
-            data_source=val_samples,
-            is_test=False,
+            data_source=data_source,
+            is_test=(dataset_type.lower() == 'test'),
             num_symbols=config.training.num_symbols,
             pad_symbol_idx=config.training.pad_symbol_idx,
             symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
         )
-        logger.debug(f"Official validation dataset loaded with {len(dataset)} samples")
-    
-    elif dataset_type_lower == 'test':
-        logger.info("Loading official ARC test dataset")
-        _, eval_set = arckit.load_data()
-        samples = []
-        for task in tqdm(eval_set.tasks, desc="Processing tasks for test dataset"):
-            samples.extend([
-                {'input': ex[0], 'output': ex[1], 'task_id': task.id}
-                for ex in task.train
-            ])
-            samples.extend([
-                {'input': ex[0], 'output': ex[1], 'task_id': task.id}
-                for ex in task.test
-            ])
-    
-        total_samples = len(samples)
-        val_size = int(total_samples * args.val_split / (args.val_split + args.test_split))
-        test_size = total_samples - val_size
-        random.shuffle(samples)
-        test_samples = samples[val_size:]
-        dataset = ARCDataset(
-            data_source=test_samples,
-            is_test=True,
-            num_symbols=config.training.num_symbols,
-            pad_symbol_idx=config.training.pad_symbol_idx,
-            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
-        )
-        logger.debug(f"Official test dataset loaded with {len(dataset)} samples")
-    
+        logger.debug(f"Official {dataset_type.lower()} dataset loaded with {len(dataset)} samples")
+
     return dataset
 
 
 def load_and_split_synthetic_data(args, config):
     """
-    Load synthetic data using ARCDataset and split it into train, val, and test sets.
+    Load synthetic data using ARCDataset. Returns a dictionary containing only 'train_dataset'.
 
     Args:
         args: Parsed command-line arguments.
-        config: Configuration object containing model and training settings.
+        config: Configuration object.
 
     Returns:
-        dict: A dictionary containing 'dataset', 'train_indices', 'val_indices', and 'test_indices'.
+        dict: {'train_dataset': synthetic_train_dataset}
     """
-    # Ensure required attributes are present
-    required_attrs = ['train_split', 'val_split', 'test_split']
-    for attr in required_attrs:
-        if not hasattr(args, attr):
-            logger.error(f"Missing required argument: {attr}")
-            raise AttributeError(f"'Namespace' object has no attribute '{attr}'")
-
-    if args.train_split == 1.0 and args.val_split == 0.0 and args.test_split == 0.0:
-        logger.info("Using entire synthetic dataset for training without validation or test splits.")
-        
+    logger.debug("Entering load_and_split_synthetic_data function")
     synthetic_dataset = ARCDataset(
         data_source=args.synthetic_data_path,
         is_test=False,
@@ -232,55 +174,15 @@ def load_and_split_synthetic_data(args, config):
     total_samples = len(synthetic_dataset)
     logger.debug(f"Total synthetic samples loaded: {total_samples}")
 
-    # Shuffle the indices
-    indices = list(range(total_samples))
-    random.shuffle(indices)
-
-    # Calculate split indices
-    if args.train_split == 1.0 and args.val_split == 0.0 and args.test_split == 0.0:
-        train_indices = indices
-        val_indices = []
-        test_indices = []
-        logger.debug("All synthetic data assigned to training set.")
-    else:
-        train_end = int(args.train_split * total_samples)
-        val_end = train_end + int(args.val_split * total_samples)
-
-    # Split the indices
-    train_indices = indices[:train_end]
-    val_indices = indices[train_end:val_end]
-    test_indices = indices[val_end:]
-
-    logger.debug(f"Synthetic data split into {len(train_indices)} training, {len(val_indices)} validation, and {len(test_indices)} test samples.")
-
-    # Create subsets
-    train_dataset = Subset(synthetic_dataset, train_indices)
-    val_dataset = Subset(synthetic_dataset, val_indices)
-    test_dataset = Subset(synthetic_dataset, test_indices)
-
     synthetic_data_dict = {
-        'train_dataset': train_dataset,
-        'val_dataset': val_dataset,
-        'test_dataset': test_dataset
+        'train_dataset': synthetic_dataset
     }
 
-    # Log the keys and lengths of each dataset
-    logger.debug(f"Synthetic data returned with keys: {list(synthetic_data_dict.keys())}")
+    logger.debug(f"Synthetic data dictionary keys: {list(synthetic_data_dict.keys())}")
     for key, dataset in synthetic_data_dict.items():
         logger.debug(f"{key} contains {len(dataset)} samples.")
 
-    # Add Assertions to Ensure All Required Keys Are Present
-    required_keys = {'train_dataset', 'val_dataset', 'test_dataset'}
-    missing_keys = required_keys - synthetic_data_dict.keys()
-    if missing_keys:
-        logger.error(f"The following required keys are missing from synthetic_data_dict: {missing_keys}")
-        raise KeyError(f"Missing keys in synthetic data: {missing_keys}")
-
-    # Optional: Assert Each Dataset Exists
-    for key in required_keys:
-        if synthetic_data_dict[key] is None:
-            logger.error(f"'{key}' is None. This should not happen.")
-            raise ValueError(f"'{key}' is None in synthetic data split.")
+    logger.debug("Exiting load_and_split_synthetic_data function")
     return synthetic_data_dict
 
 
@@ -426,10 +328,15 @@ def main(args):
             logger.error(f"Error loading datasets: {e}")
             raise
 
-        # Debugging: Log the number of samples loaded
-        logger.debug(f"Loaded {len(train_data)} training samples.")
-        logger.debug(f"Loaded {len(val_data)} validation samples.")
-        logger.debug(f"Loaded {len(test_data)} test samples.")
+        # Log the source of each dataset
+        logger.info(f"Training dataset source: {'synthetic data' if args.use_synthetic_data else 'official ARC data'}")
+        logger.info(f"Validation dataset source: official ARC data")
+        logger.info(f"Test dataset source: official ARC data")
+        
+        # Log the number of samples in each dataset
+        logger.debug(f"Number of training samples: {len(train_data)}")
+        logger.debug(f"Number of validation samples: {len(val_data)}")
+        logger.debug(f"Number of test samples: {len(test_data)}")
 
         if args.enable_symbol_freq:
             logger.debug("Calculating symbol frequencies as it is enabled.")
@@ -912,3 +819,23 @@ if __name__ == "__main__":
 
     main(args)
 
+def prepare_val_or_test_data(eval_set, args, is_validation=True):
+    """
+    Prepare validation or test data from the arckit evaluation set.
+
+    Args:
+        eval_set: The evaluation TaskSet from arckit.load_data().
+        args: Parsed command-line arguments.
+        is_validation: Boolean indicating whether it's validation data.
+
+    Returns:
+        List of dictionaries with keys 'input', 'output', and 'task_id'.
+    """
+    logger.debug(f"Preparing {'validation' if is_validation else 'test'} data from arckit evaluation set")
+    samples = []
+    for task in tqdm(eval_set.tasks, desc=f"Processing tasks for {'validation' if is_validation else 'test'} dataset"):
+        for ex in task.train if is_validation else task.test:
+            sample = {'input': ex[0], 'output': ex[1], 'task_id': task.id}
+            samples.append(sample)
+    logger.debug(f"Prepared {len(samples)} samples for {'validation' if is_validation else 'test'} dataset")
+    return samples
