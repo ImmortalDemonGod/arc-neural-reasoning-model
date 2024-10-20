@@ -382,7 +382,8 @@ def main(args):
             num_workers=args.num_workers,
             prefetch_factor=args.prefetch_factor,
             persistent_workers=not args.no_persistent_workers,
-            pin_memory=args.pin_memory
+            pin_memory=args.pin_memory,
+            use_synthetic_data=args.use_synthetic_data  # Added line
         )
         config = Config(model=model_config, training=training_config)
 
