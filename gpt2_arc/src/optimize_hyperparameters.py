@@ -101,14 +101,22 @@ def objective(trial, args):
         model_config = ModelConfig()
         training_config = TrainingConfig()
         config = Config(model=model_config, training=training_config)
+        # Load synthetic data only once per trial
         if args.use_synthetic_data:
             all_synthetic_data = load_and_split_synthetic_data(args, config)
+            logger.debug(f"Trial {trial.number}: Synthetic data loaded with {len(all_synthetic_data['train_dataset'])} training samples")
         else:
             all_synthetic_data = None
 
+        # Load datasets
         train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
-        val_data = load_dataset(args, config, dataset_type='val')
-        test_data = load_dataset(args, config, dataset_type='test')
+        val_data = load_dataset(args, config, dataset_type='val')      # No need to pass all_synthetic_data
+        test_data = load_dataset(args, config, dataset_type='test')    # No need to pass all_synthetic_data
+
+        # Log dataset sizes
+        logger.debug(f"Trial {trial.number}: Loaded {len(train_data)} training samples.")
+        logger.debug(f"Trial {trial.number}: Loaded {len(val_data)} validation samples.")
+        logger.debug(f"Trial {trial.number}: Loaded {len(test_data)} test samples.")
         fixed_hyperparams = {}
 
         # Initialize config and symbol_freq_dict
