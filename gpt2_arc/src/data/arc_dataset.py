@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 import json
-from cysimdjson import JSONParser
+from cysimdjson import JSONParser, JSONDict, JSONArray
 import numpy as np
 import pickle
 import hashlib
@@ -191,8 +191,11 @@ class ARCDataset(Dataset):
                     parsed_py = parsed_json  # Direct assignment
 
                     # Convert cysimdjson types to standard Python types
-                    if isinstance(parsed_py, (list, dict)):
-                        pass  # No conversion needed since parsed_py is already a native type
+                    if isinstance(parsed_py, (list, dict, JSONArray, JSONDict)):
+                        if isinstance(parsed_py, JSONArray):
+                            parsed_py = list(parsed_py)
+                        elif isinstance(parsed_py, JSONDict):
+                            parsed_py = dict(parsed_py)
                     else:
                         logger.warning(f"Parsed JSON is neither a list nor a dict for file {file_path}: {type(parsed_py)}. Skipping file.")
                         return samples
