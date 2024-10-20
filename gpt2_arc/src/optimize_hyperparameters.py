@@ -591,6 +591,9 @@ def objective(trial, args, train_data, val_data, test_data):
         for name, module in model.named_modules():
             logger.debug(f"{name}: {'train' if module.training else 'eval'}")
 
+        logger.debug("Starting training")
+        trainer.fit(arc_trainer)
+
         # Retrieve the best validation loss from the ModelCheckpoint callback
         if checkpoint_callback.best_model_score is not None:
             best_val_loss = checkpoint_callback.best_model_score.item()
@@ -598,10 +601,8 @@ def objective(trial, args, train_data, val_data, test_data):
         else:
             logger.warning(f"Trial {trial.number}: No checkpoints were saved. Assigning a high validation loss.")
             best_val_loss = float('inf')
-            return best_val_loss  # This will assign a poor score but won't raise a pruning exception
+
         logger.info(f"Trial {trial.number} completed. Best validation loss: {best_val_loss}")
-        logger.debug("Starting training")
-        trainer.fit(arc_trainer)
 
         # Enhanced Logging: Log model mode after training
         logger.info("After training:")
