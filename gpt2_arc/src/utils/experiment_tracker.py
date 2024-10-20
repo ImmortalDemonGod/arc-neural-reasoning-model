@@ -1,4 +1,5 @@
 # gpt2_arc/src/utils/experiment_tracker.py
+import logging
 import wandb
 import json
 import time
@@ -8,6 +9,9 @@ import platform
 import os
 from dataclasses import asdict
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class ExperimentTracker:
     def __init__(self, config: Dict[str, Any], project: str, entity: Optional[str] = None, use_wandb: bool = False):
@@ -38,9 +42,9 @@ class ExperimentTracker:
         self.checkpoint_path = None
 
         # Add debug logging
-        print(f"ExperimentTracker initialized with config: {json.dumps(self.config, indent=2)}")
-        print(f"Project: {project}, Entity: {entity}")
-        print(f"use_wandb: {self.use_wandb}")
+        logger.debug(f"ExperimentTracker initialized with config: {json.dumps(self.config, indent=2)}")
+        logger.debug(f"Project: {project}, Entity: {entity}")
+        logger.debug(f"use_wandb: {self.use_wandb}")
 
     def _get_environment_info(self) -> Dict[str, str]:
         return {
@@ -115,6 +119,7 @@ class ExperimentTracker:
         if task_id not in self.task_specific_results:
             self.task_specific_results[task_id] = {}
         self.task_specific_results[task_id].update(metrics)
+        logger.debug(f"Added task-specific result for task_id {task_id}: {metrics}")
         if self.use_wandb:
             wandb.log({f"task_{task_id}": metrics})
 
@@ -159,9 +164,18 @@ class ExperimentTracker:
             "timestamp": self.timestamp,
             "final_train_loss": self.results["train"][-1]["loss"] if self.results["train"] else None,
             "final_val_loss": self.results["validation"][-1]["loss"] if self.results["validation"] else None,
-            "test_accuracy": self.results["test"].get("accuracy"),
-            "config": self._serialize_config(self.config)
+            "test_loss": self.results["test"].get("avg_loss"),
+            "test_acc_with_pad": self.results["test"].get("avg_acc_with_pad"),
+            "test_acc_without_pad": self.results["test"].get("avg_acc_without_pad"),
+            "best_val_loss": self.results.get("best_val_loss"),
+            "best_val_epoch": self.results.get("best_val_epoch"),
+            "learning_rate": self.config.get("training", {}).get("learning_rate"),
+            "batch_size": self.config.get("training", {}).get("batch_size"),
+            "training_duration": self.results.get("training_duration"),
+            "config": self._serialize_config(self.config),
+            "tensorboard_log_path": self.tensorboard_log_path
         }
+        self.logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
     def _make_serializable(self, obj):
@@ -178,16 +192,9 @@ class ExperimentTracker:
         return {k: self._make_serializable(v) for k, v in config.items()}
 
     def log_metric(self, name: str, value: float, step: Optional[int] = None):
-        if self.use_wandb:
-            try:
-                wandb.log({name: value}, step=step)
-                print(f"Logged metric to wandb: {name}={value}, step={step}")
-            except Exception as e:
-                print(f"Error logging metric to wandb: {str(e)}")
-        
-        # Always log locally as a fallback
-        self.metrics[name] = value
-        print(f"Logged metric locally: {name}={value}, step={step}")
+        if name.startswith("default_task_"):
+            logger.error("Attempted to log metric under 'default_task'. This should be avoided.")
+            raise ValueError("Cannot log metrics under 'default_task'. Ensure that task_id is correctly assigned.")
 
 # Add a simple test
 if __name__ == "__main__":

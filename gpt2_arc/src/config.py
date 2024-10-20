@@ -1,3 +1,4 @@
+# gpt2_arc/src/config.py
 from typing import Optional, Dict
 from dataclasses import dataclass, asdict, field
 import multiprocessing
@@ -8,6 +9,17 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logs
 
 @dataclass
 class ModelConfig:
+    n_embd: int = 256          # Reduced from 768 to 256
+    n_head: int = 2            # Increased from 1 to 2
+    n_layer: int = 2           # Increased from 12 to 2
+    num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
+    dropout: float = 0.1
+    mamba_ratio: float = 0.0
+    d_state: int = 4
+    d_conv: int = 1
+    mamba_depth: int = 1
+    mamba_expand: int = 2
+
     def __post_init__(self):
         assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
         assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
@@ -16,26 +28,20 @@ class ModelConfig:
         assert self.d_conv >= 1, f"d_conv ({self.d_conv}) must be at least 1"
         assert self.mamba_depth >= 1, f"mamba_depth ({self.mamba_depth}) must be at least 1"
         assert self.mamba_expand >= 2, f"mamba_expand ({self.mamba_expand}) must be at least 2"
-    n_embd: int = 768
-    n_head: int = 12
-    n_layer: int = 12
-    dropout: float = 0.1
-    mamba_ratio: float = 1.0  # Number of Mamba layers per Transformer layer
-    d_state: int = 16          # Mamba state dimension
-    d_conv: int = 4            # Mamba convolution dimension
-    mamba_depth: int = 1       # Depth of each Mamba layer
-    mamba_expand: int = 2      # Expand factor for each Mamba layer
+        logger.debug("ModelConfig initialized successfully")
 
 @dataclass
 class TrainingConfig:
-    # Existing fields...
-    batch_size: int = 32
-    learning_rate: float = 1e-4
-    max_epochs: int = 10
-    num_workers: int = multiprocessing.cpu_count() // 2 if multiprocessing.cpu_count() else 4
-    symbol_freq: Optional[Dict] = None
-    prefetch_factor: int = 2
-    persistent_workers: bool = True
+    batch_size: int = 16             # Reduced from 32 to 16
+    learning_rate: float = 1e-4      # Keep as is or adjust if necessary
+    max_epochs: int = 1              # Already set for fast dev run
+    num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
+    num_symbols: int = 11  # Ensure num_symbols is set to 11
+    num_workers: int = 1             # Reduced from multiprocessing.cpu_count() to 1
+    symbol_freq: Optional[Dict[int, float]] = None
+    pin_memory: bool = False         # Disable if not using GPU
+    prefetch_factor: int = 1         # Reduced from 2 to 1
+    persistent_workers: bool = False # Ensure workers do not stay alive
     use_gpu: bool = True
     log_level: str = "INFO"
     use_synthetic_data: bool = False
@@ -48,22 +54,19 @@ class TrainingConfig:
     balancing_method: str = "weighting"
     synthetic_data_path: Optional[str] = None
     include_pad_in_loss: bool = True  # Whether to include the padding class in the loss calculation
+    include_pad_in_accuracy: bool = True  # Whether to include the padding class in accuracy calculations
+    tensorboard_log_path: Optional[str] = None  # Default to None if not set
 
     # New fields for padding symbol
     pad_symbol: str = "<PAD>"
-    pad_symbol_idx: int = field(init=False)
+    pad_symbol_idx: int = field(default=10)  # Add this line
 
     def __post_init__(self):
         # Dynamically set num_classes based on symbol_freq
-        if self.symbol_freq:
-            max_existing_idx = max(int(k) for k in self.symbol_freq.keys())
-            self.pad_symbol_idx = max_existing_idx + 1
-            self.num_classes = max_existing_idx + 2  # +1 for padding
-        else:
-            # Default number of classes if symbol_freq is not provided
-            self.pad_symbol_idx = 10  # Assuming 10 symbols (0-9)
-            self.num_classes = 11  # 10 symbols + 1 padding
+        self.pad_symbol_idx = 10  # Set to the default padding index
         print(f"TrainingConfig initialized with {self.num_classes} classes and PAD symbol index {self.pad_symbol_idx}")
+        print(f"include_pad_in_loss: {self.include_pad_in_loss}")  # Added debug statement
+        print(f"include_pad_in_accuracy: {self.include_pad_in_accuracy}")  # Added debug statement
 
 @dataclass
 class EvaluationConfig:

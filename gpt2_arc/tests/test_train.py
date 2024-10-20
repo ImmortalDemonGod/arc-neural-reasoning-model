@@ -61,14 +61,14 @@ from src.config import Config, ModelConfig, TrainingConfig
 @pytest.fixture
 def model():
     config = Config(model=ModelConfig(), training=TrainingConfig())
-    return GPT2ARC(config.model)
+    return GPT2ARC(config.model, num_classes=config.training.num_classes)
 
 
 @pytest.fixture
 def trainer():
     model_config = ModelConfig(n_embd=64, n_head=2, n_layer=1)
     config = Config(model=model_config, training=TrainingConfig(batch_size=32, learning_rate=1e-4, max_epochs=2))
-    model = GPT2ARC(config.model)
+    model = GPT2ARC(config.model, num_classes=config.training.num_classes)
     return ARCTrainer(model, None, None, config)
 
 
@@ -136,18 +136,18 @@ def test_gpt2arc_attention_mask(model):
 # New tests for train.py
 
 
-def test_logging(mock_args, mock_dataset, model, mock_pl_trainer):
+def test_logging(mock_args, mock_dataset, model, mock_pl_trainer, config):
     print("Entering test_logging")
     with patch(
         "gpt2_arc.src.training.train.ARCDataset", return_value=mock_dataset
-    ), patch("gpt2_arc.src.training.train.GPT2ARC", return_value=model), patch(
-        "gpt2_arc.src.training.train.ARCTrainer"
+    ), patch("gpt2_arc.src.training.train.GPT2ARC", autospec=True, return_value=model), patch(
+        "gpt2_arc.src.training.train.ARCTrainer", autospec=True
     ), patch(
     ) as mock_ARCTrainer, patch(
         "gpt2_arc.src.training.train.pl.Trainer", return_value=mock_pl_trainer
     ), patch("gpt2_arc.src.training.train.TensorBoardLogger") as mock_logger, patch(
         "gpt2_arc.src.training.train.ModelCheckpoint"
-    ), patch("torch.utils.data.DataLoader") as mock_dataloader:
+    ), patch("torch.utils.data.DataLoader", autospec=True) as mock_dataloader:
         mock_dataloader.return_value = MagicMock()
 
         # Set up the ARCTrainer mock instance
@@ -321,7 +321,7 @@ def test_gpu_not_available(mock_args):
     ), patch("gpt2_arc.src.training.train.GPT2ARC"), patch(
         "gpt2_arc.src.training.train.ARCTrainer"
         "gpt2_arc.src.training.train.ARCTrainer"
-    ), patch("gpt2_arc.src.training.train.pl.Trainer") as mock_trainer, \
+    ), patch("gpt2_arc.src.training.train.pl.Trainer", autospec=True) as mock_trainer, \
          patch("gpt2_arc.src.utils.results_collector.ResultsCollector.get_summary") as mock_get_summary:
 
         # Mock the get_summary method to return a serializable dictionary

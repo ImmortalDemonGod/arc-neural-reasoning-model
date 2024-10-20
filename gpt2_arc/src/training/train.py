@@ -1,5 +1,13 @@
 # gpt2_arc/src/training/train.py
 import argparse
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,  # Set logging level to DEBUG
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+from typing import Optional
 import multiprocessing
 import sys
 import logging
@@ -11,10 +19,14 @@ import optuna
 import arckit
 import numpy as np
 import torch
+from concurrent.futures import ThreadPoolExecutor
 from lightning.pytorch.profilers import PyTorchProfiler
 from pytorch_lightning.callbacks import Callback
 from torch.profiler import ProfilerActivity
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader, WeightedRandomSampler, Subset
+import concurrent.futures
+import random
+from tqdm import tqdm
 
 # Define the base directory for the arc-neural-reasoning-model
 arc_model_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -32,16 +44,13 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.config import Config, ModelConfig, TrainingConfig
-from gpt2_arc.src.training.trainer import ARCTrainer
+from gpt2_arc.src.training.trainer import ARCTrainer, get_num_workers
+logger = logging.getLogger(__name__)
+logger.debug(f"Imported get_num_workers from training_helpers: {get_num_workers}")
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 from gpt2_arc.src.utils import GrokfastCallback
 
-def get_num_workers():
-    try:
-        return multiprocessing.cpu_count() // 2  # Use half of the available CPUs
-    except NotImplementedError:
-        return 4  # Default fallback
 logger = logging.getLogger(__name__)
 
 class ConfigSavingModelCheckpoint(ModelCheckpoint):
@@ -100,10 +109,96 @@ class ModelConfigSaver(Callback):
             checkpoint (dict): The checkpoint dictionary to be modified.
         """
         checkpoint['model_config'] = self.config.model.__dict__
+
+        
+def prepare_val_or_test_data(eval_set, args, is_validation=True):
+    """
+    Prepare validation or test data from the arckit evaluation set.
+
+    Args:
+        eval_set: The evaluation TaskSet from arckit.load_data().
+        args: Parsed command-line arguments.
+        is_validation: Boolean indicating whether it's validation data.
+
+    Returns:
+        List of dictionaries with keys 'input', 'output', and 'task_id'.
+    """
+    logger.debug(f"Preparing {'validation' if is_validation else 'test'} data from arckit evaluation set")
+    samples = []
+    for task in tqdm(eval_set.tasks, desc=f"Processing tasks for {'validation' if is_validation else 'test'} dataset"):
+        for ex in task.train if is_validation else task.test:
+            sample = {'input': ex[0], 'output': ex[1], 'task_id': task.id}
+            samples.append(sample)
+    logger.debug(f"Prepared {len(samples)} samples for {'validation' if is_validation else 'test'} dataset")
+    return samples
+
+def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
+    logger.debug(f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}")
+
+    if dataset_type.lower() == 'train':
+        dataset = all_synthetic_data['train_dataset'] if args.use_synthetic_data else ARCDataset(
+            data_source=arckit.load_data()[0],
+            is_test=False,
+            max_samples=args.max_train_samples,
+            num_symbols=config.training.num_symbols,
+            pad_symbol_idx=config.training.pad_symbol_idx,
+            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+        )
+    else:
+        _, eval_set = arckit.load_data()
+        data_source = prepare_val_or_test_data(eval_set, args, is_validation=(dataset_type.lower() == 'val'))
+        dataset = ARCDataset(
+            data_source=data_source,
+            is_test=(dataset_type.lower() == 'test'),
+            num_symbols=config.training.num_symbols,
+            pad_symbol_idx=config.training.pad_symbol_idx,
+            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+        )
+    if len(dataset) == 0:
+        logger.error(f"No samples loaded for {dataset_type} dataset. Please check your data source.")
+        raise ValueError(f"No samples loaded for {dataset_type} dataset.")
+    logger.debug(f"{dataset_type.capitalize()} dataset loaded with {len(dataset)} samples")
+
+    return dataset
+
+
+def load_and_split_synthetic_data(args, config):
+    """
+    Load synthetic data using ARCDataset. Returns a dictionary containing only 'train_dataset'.
+
+    Args:
+        args: Parsed command-line arguments.
+        config: Configuration object.
+
+    Returns:
+        dict: {'train_dataset': synthetic_train_dataset}
+    """
+    logger.debug("Entering load_and_split_synthetic_data function")
+    synthetic_dataset = ARCDataset(
+        data_source=args.synthetic_data_path,
+        is_test=False,
+        max_samples=args.max_train_samples,  # Pass the new argument here
+        num_symbols=config.training.num_symbols,
+        pad_symbol_idx=config.training.pad_symbol_idx,
+        symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+    )
+    total_samples = len(synthetic_dataset)
+    logger.debug(f"Total synthetic samples loaded: {total_samples}")
+    assert total_samples > 0, "No synthetic samples were loaded. Please check your synthetic data files."
+
+    return {'train_dataset': synthetic_dataset}
+
+
 def main(args):
-    # Set float32 matrix multiplication precision
+    if args.use_synthetic_data and not args.synthetic_data_path:
+        raise ValueError("--synthetic_data_path must be provided when using synthetic data.")
+
+    total_split = args.train_split + args.val_split + args.test_split
+    if not abs(total_split - 1.0) < 1e-6:
+        raise ValueError("Train, validation, and test splits must sum to 1.0")
     torch.set_float32_matmul_precision(args.matmul_precision)
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
+    logger.debug(f"Command line arguments: {args}")
     log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'DEBUG', logging.DEBUG)
     logging.basicConfig(
         level=log_level,
@@ -121,6 +216,7 @@ def main(args):
     logger.setLevel(logging.DEBUG)  # Ensure logger is set to DEBUG
     
     logger.info("Starting main function")
+    logger.debug("Initializing PyTorch Lightning Trainer")
     logger.debug(f"Command line arguments: {args}")
 
     trainer = None  # Initialize trainer to None
@@ -156,7 +252,11 @@ def main(args):
                 n_embd=n_embd,
                 n_head=n_head,
                 n_layer=best_params['n_layer'],
-                dropout=best_params['dropout']
+                dropout=best_params['dropout'],
+                num_workers=args.num_workers if args.num_workers is not None else multiprocessing.cpu_count(),
+                prefetch_factor=args.prefetch_factor,
+                persistent_workers=not args.no_persistent_workers,
+                pin_memory=not args.no_pin_memory,
             )
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
@@ -165,12 +265,18 @@ def main(args):
                 use_gpu=args.use_gpu,
                 log_level=args.log_level,
                 use_synthetic_data=args.use_synthetic_data,
-                synthetic_data_path=args.synthetic_data_path
+                synthetic_data_path=args.synthetic_data_path,
+                include_pad_in_loss=args.include_pad_in_loss,
+                include_pad_in_accuracy=args.include_pad_in_accuracy,
+                num_workers=args.num_workers,
+                prefetch_factor=args.prefetch_factor,
+                persistent_workers=not args.no_persistent_workers,
+                pin_memory=args.pin_memory
             )
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
                 learning_rate=best_params['learning_rate'],
-                max_epochs=args.max_epochs  # Always use the user-provided max_epochs
+                max_epochs=args.max_epochs,  # Always use the user-provided max_epochs
             )
         else:
             logger.info("Using provided or default hyperparameters")
@@ -178,12 +284,12 @@ def main(args):
                 n_embd=args.n_embd,
                 n_head=args.n_head,
                 n_layer=args.n_layer,
+                dropout=args.dropout,
                 mamba_ratio=args.mamba_ratio,
                 d_state=args.d_state,
                 d_conv=args.d_conv,
-                dropout=args.dropout,
                 mamba_depth=args.mamba_depth,
-                mamba_expand=args.mamba_expand
+                mamba_expand=args.mamba_expand,
             )
             training_config = TrainingConfig(
                 batch_size=args.batch_size,
@@ -198,177 +304,157 @@ def main(args):
                 grokfast_alpha=args.grokfast_alpha,
                 grokfast_lamb=args.grokfast_lamb,
                 grokfast_window_size=args.grokfast_window_size,
-                include_pad_in_loss=args.include_pad_in_loss  # Pass the new flag
             )
         
         config = Config(model=model_config, training=training_config)
         logger.debug(f"Configuration: {config}")
 
-        # Load data
-        logger.info("Loading data")
+        # Validate split ratios sum to 1.0
+        total_split = args.train_split + args.val_split + args.test_split
+        if not abs(total_split - 1.0) < 1e-6:
+            raise ValueError("Train, validation, and test splits must sum to 1.0")
+
         if args.use_synthetic_data:
-            if not args.synthetic_data_path:
-                raise ValueError("Synthetic data path not provided")
-            logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
-            synthetic_files = os.listdir(args.synthetic_data_path)
-            logger.debug(f"Total files in synthetic data path: {len(synthetic_files)}")
-            logger.debug(f"Sample files: {synthetic_files[:5]}... (total {len(synthetic_files)})")
-            train_data = ARCDataset(args.synthetic_data_path)
-            synthetic_files = os.listdir(args.synthetic_data_path)
-            logger.debug(f"Listing files in synthetic data path for validation: {synthetic_files[:5]}... (total {len(synthetic_files)})")
-            val_data = ARCDataset(args.synthetic_data_path, is_test=True)
+            # Load and split synthetic data
+            all_synthetic_data = load_and_split_synthetic_data(args, config)
         else:
-            logger.info("Loading ARC dataset")
-            train_set, eval_set = arckit.load_data()
-            train_data = ARCDataset(train_set)
-            val_data = ARCDataset(eval_set)
+            all_synthetic_data = None
 
-        # Access dataset statistics
-        train_grid_stats = train_data.get_grid_size_stats()
-        train_symbol_freq = train_data.get_symbol_frequencies()
+        # Sequentially load datasets to avoid memory allocation issues
+        logger.info("Loading datasets sequentially to avoid memory allocation issues")
 
-        val_grid_stats = val_data.get_grid_size_stats()
-        val_symbol_freq = val_data.get_symbol_frequencies()
+        try:
+            train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
+            val_data = load_dataset(args, config, dataset_type='val')      # Removed all_synthetic_data
+            test_data = load_dataset(args, config, dataset_type='test')    # Removed all_synthetic_data
+        except Exception as e:
+            logger.error(f"Error loading datasets: {e}")
+            raise
 
-        # Convert train_symbol_freq from numpy array to dictionary with string keys
-        train_symbol_freq_dict = {str(idx): float(freq) for idx, freq in enumerate(train_symbol_freq)}
+        # Log the source of each dataset
+        logger.info(f"Training dataset source: {'synthetic data' if args.use_synthetic_data else 'official ARC data'}")
+        logger.info(f"Validation dataset source: official ARC data")
+        logger.info(f"Test dataset source: official ARC data")
+        
+        # Log the number of samples in each dataset
+        logger.debug(f"Number of training samples: {len(train_data)}")
+        logger.debug(f"Number of validation samples: {len(val_data)}")
+        logger.debug(f"Number of test samples: {len(test_data)}")
 
-        # Update the TrainingConfig with the symbol_freq dictionary
-        training_config.symbol_freq = train_symbol_freq_dict
+        if args.enable_symbol_freq:
+            logger.debug("Calculating symbol frequencies as it is enabled.")
+            if args.use_synthetic_data:
+                logger.debug("Calculating symbol frequencies for synthetic training set")
+                symbol_freq = train_data.get_symbol_frequencies()
+            else:
+                logger.debug("Calculating symbol frequencies for ARC training set")
+                symbol_freq = train_data.get_symbol_frequencies()
 
-        logger.info(f"Train Grid Size Stats: {train_grid_stats}")
-        logger.info(f"Train Symbol Frequencies: {train_symbol_freq_dict}")
-        logger.info(f"Validation Grid Size Stats: {val_grid_stats}")
-        logger.info(f"Validation Symbol Frequencies: {val_symbol_freq}")
+            symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
+            pad_symbol_idx = config.training.pad_symbol_idx
+            symbol_freq_dict.pop(pad_symbol_idx, None)
+            logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
 
-        # Initialize experiment tracker
-        tracker = ExperimentTracker(config, project=args.project)
+            assert len(symbol_freq_dict) == config.training.num_classes - 1, (
+                f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+            )
+            balance_symbols = True
+            balancing_method = "weighting"
+        else:
+            symbol_freq_dict = {}
+            logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
+            balance_symbols = False
+            balancing_method = "none"
 
-        # Log dataset statistics to ExperimentTracker
-        tracker.log_metric("train_max_grid_height", train_grid_stats.get("max_height", 0))
-        tracker.log_metric("train_max_grid_width", train_grid_stats.get("max_width", 0))
-        tracker.log_metric("train_symbol_frequencies", train_symbol_freq)
+        training_config = TrainingConfig(
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+            max_epochs=args.max_epochs,
+            use_grokfast=args.use_grokfast,
+            grokfast_type=args.grokfast_type,
+            grokfast_alpha=args.grokfast_alpha,
+            grokfast_lamb=args.grokfast_lamb,
+            grokfast_window_size=args.grokfast_window_size,
+            include_pad_in_loss=args.include_pad_in_loss,
+            symbol_freq=symbol_freq_dict,
+            balance_symbols=balance_symbols,
+            balancing_method=balancing_method,
+            num_workers=args.num_workers,
+            prefetch_factor=args.prefetch_factor,
+            persistent_workers=not args.no_persistent_workers,
+            pin_memory=args.pin_memory,
+            use_synthetic_data=args.use_synthetic_data  # Added line
+        )
+        config = Config(model=model_config, training=training_config)
 
-        tracker.log_metric("val_max_grid_height", val_grid_stats.get("max_height", 0))
-        tracker.log_metric("val_max_grid_width", val_grid_stats.get("max_width", 0))
-        tracker.log_metric("val_symbol_frequencies", val_symbol_freq)
-
-        # Example: Adjust model configuration based on grid size stats
-        max_grid_height = max(train_grid_stats.get("max_height", 30), val_grid_stats.get("max_height", 30))
-        max_grid_width = max(train_grid_stats.get("max_width", 30), val_grid_stats.get("max_width", 30))
-        logger.debug(f"Adjusted max grid size - Height: {max_grid_height}, Width: {max_grid_width}")
+        # Calculate symbol frequencies if enabled
+        if args.enable_symbol_freq:
+            if args.use_synthetic_data:
+                logger.debug("Calculating symbol frequencies for synthetic training set")
+                train_symbol_freq = train_data.get_symbol_frequencies()
+            else:
+                logger.debug("Calculating symbol frequencies for ARC training set")
+                train_symbol_freq = train_data.get_symbol_frequencies()
+        else:
+            train_symbol_freq = {}
 
         # Set the number of classes based on TrainingConfig
         num_classes = config.training.num_classes
         logger.info(f"Number of classes set to: {num_classes}")
-
-        num_train_samples = train_data.get_num_samples()
-        num_val_samples = val_data.get_num_samples()
-        logger.info(f"Number of training examples: {num_train_samples}")
-        logger.info(f"Number of validation examples: {num_val_samples}")
-        
-        if num_train_samples == 0 or num_val_samples == 0:
-            logger.error("The dataset is empty. Please check the synthetic data path or dataset contents.")
-            return
-
-        logger.debug(f"Train data size: {train_data.get_num_samples()}, Validation data size: {val_data.get_num_samples()}")
-
-        # Set the number of classes
-        num_classes = 10
-        logger.info(f"Number of classes set to: {num_classes}")
-
-        # Create DataLoader instances
         logger.info("Creating DataLoader instances")
-        # Create DataLoader instances
-        logger.info("Creating DataLoader instances")
-        if config.training.balance_symbols:
-            if config.training.balancing_method == "weighting":
-                # Compute class weights (inverse of frequencies)
-                class_weights = 1.0 / torch.tensor(train_symbol_freq, dtype=torch.float)
-                # Removed WeightedRandomSampler as it is not appropriate for multi-class samples
-                train_loader = DataLoader(
-                    train_data,
-                    batch_size=config.training.batch_size,
-                    num_workers=get_num_workers(),
-                    shuffle=True,  # Enable shuffle
-                    pin_memory=True if args.use_gpu else False,
-                    prefetch_factor=config.training.prefetch_factor,
-                    persistent_workers=config.training.persistent_workers
-                )
-                logger.debug("Class weights applied in loss function. WeightedRandomSampler removed.")
-            elif config.training.balancing_method == "oversampling":
-                # Placeholder for oversampling implementation
-                logger.info("Oversampling method selected, but not yet implemented.")
-                # Implement oversampling logic here if desired
-                train_loader = DataLoader(
-                    train_data,
-                    batch_size=config.training.batch_size,
-                    num_workers=get_num_workers(),
-                    shuffle=True,  # Enable shuffle if not using a sampler
-                    pin_memory=True if args.use_gpu else False,
-                    prefetch_factor=config.training.prefetch_factor,
-                    persistent_workers=config.training.persistent_workers
-                )
-            else:
-                logger.warning(f"Unknown balancing method: {config.training.balancing_method}. Skipping balancing.")
-                train_loader = DataLoader(
-                    train_data,
-                    batch_size=config.training.batch_size,
-                    num_workers=get_num_workers(),
-                    shuffle=True,  # Enable shuffle
-                    pin_memory=True if args.use_gpu else False,
-                    prefetch_factor=config.training.prefetch_factor,
-                    persistent_workers=config.training.persistent_workers
-                )
-        else:
-            train_loader = DataLoader(
-                train_data,
-                batch_size=config.training.batch_size,
-                num_workers=get_num_workers(),
-                shuffle=True,  # Enable shuffle
-                pin_memory=True if args.use_gpu else False,
-                prefetch_factor=config.training.prefetch_factor,
-                persistent_workers=config.training.persistent_workers
-            )
-        val_loader = DataLoader(
-            val_data,
-            batch_size=config.training.batch_size,
-            num_workers=get_num_workers(),
-            pin_memory=True if args.use_gpu else False,
-            prefetch_factor=config.training.prefetch_factor,
-            persistent_workers=config.training.persistent_workers
-        )
-        logger.debug(f"DataLoaders created with batch size {args.batch_size}")
+        from torch.utils.data import Subset
+
+
+        # Ensure test_data is not None
+        assert test_data is not None, "Test dataset is None after loading."
 
         # Initialize model
         logger.info("Initializing model")
-        model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=train_symbol_freq_dict)
+        model = GPT2ARC(
+            config=config,
+            num_classes=config.training.num_classes,  # Use num_classes from config
+            symbol_freq=symbol_freq_dict,
+            pad_symbol_idx=config.training.pad_symbol_idx
+        )
         logger.debug(f"Model initialized with config: {model_config}")
 
         # Load the checkpoint if specified
         if args.model_checkpoint:
             logger.info(f"Loading model from checkpoint: {args.model_checkpoint}")
             checkpoint = torch.load(args.model_checkpoint)
-            if 'model_config' in checkpoint:
+            if 'model_config' in checkpoint and 'training_config' in checkpoint:
                 model_config = ModelConfig(**checkpoint['model_config'])
-                model = GPT2ARC(config=model_config)
+                training_config = TrainingConfig(**checkpoint['training_config'])
+                config = Config(model=model_config, training=training_config)
+                num_classes = config.training.num_classes
+                symbol_freq_dict = config.training.symbol_freq
+                model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
+                logger.debug(f"Loaded TrainingConfig with num_classes={num_classes} from checkpoint")
+            else:
+                logger.error("Checkpoint missing 'model_config' or 'training_config'.")
+                raise KeyError("Checkpoint must contain 'model_config' and 'training_config'.")
             model.load_state_dict(checkpoint['state_dict'])
 
-        # Initialize results collector
+        # Log dataset source information
+        if args.use_synthetic_data:
+            logger.info("Using synthetic data for training, validation, and testing.")
+        else:
+            logger.info("Using official ARC datasets for training, validation, and testing.")
         results_collector = ResultsCollector(config)
 
         # Initialize experiment tracker
         tracker = ExperimentTracker(config, project=args.project)
 
-        logger.debug("Initializing ExperimentTracker")
-        tracker = ExperimentTracker(config, project=args.project)
 
-        logger.debug("Initializing ARCTrainer")
+        logger.info("Initializing ARCTrainer")
         trainer = ARCTrainer(
             model=model,
             train_dataset=train_data,
             val_dataset=val_data,
-            config=config
+            config=config,
+            args=args,
+            results_collector=results_collector,
+            test_dataset=test_data
         )
         trainer.log_hyperparameters()
 
@@ -410,9 +496,10 @@ def main(args):
 
         # Add the standard ModelCheckpoint callback
         if not args.no_checkpointing:
+            checkpoint_filename = f"{'resume-' if args.model_checkpoint else ''}checkpoint-step_{{step}}-val_loss_{{val_loss:.4f}}"
             checkpoint_callback = ModelCheckpoint(
                 dirpath="checkpoints",
-                filename="checkpoint-{epoch:02d}-{val_loss:.4f}",
+                filename=checkpoint_filename,
                 save_top_k=3,
                 monitor="val_loss",
                 mode="min",
@@ -457,7 +544,8 @@ def main(args):
             accelerator=accelerator,
             devices=devices,
             strategy=strategy,
-            profiler=profiler
+            profiler=profiler,
+            val_check_interval=args.val_check_interval  # Added line
         )
 
         if tb_logger:
@@ -469,24 +557,42 @@ def main(args):
             logger.info(f"Initial CUDA memory allocated: {torch.cuda.memory_allocated()} bytes")
             logger.info(f"Initial CUDA memory reserved: {torch.cuda.memory_reserved()} bytes")
 
+        logger.info("Starting model training")
+        logger.debug("Training parameters: ")
+        logger.debug(f"Batch size: {config.training.batch_size}, Learning rate: {config.training.learning_rate}, Max epochs: {config.training.max_epochs}")
+
         # Train the model
         logger.info("Starting model training")
-        pl_trainer.fit(trainer, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        # Update the fit call to exclude DataLoaders
+        pl_trainer.fit(trainer)
 
         # Log memory usage after training
         if args.use_gpu and torch.cuda.is_available():
             logger.info(f"CUDA memory allocated after training: {torch.cuda.memory_allocated()} bytes")
             logger.info(f"CUDA memory reserved after training: {torch.cuda.memory_reserved()} bytes")
 
+        logger.info("Model training completed successfully.")
+
+        # Define DataLoader for test data
+        test_loader = DataLoader(
+            test_data,
+            batch_size=config.training.batch_size,
+            shuffle=False,
+            num_workers=config.training.num_workers,
+            pin_memory=config.training.pin_memory
+        )
+
         # After training, run test
+        logger.info("Starting model evaluation on test dataset.")
         logger.info("Running model evaluation")
-        test_results = pl_trainer.test(trainer)
+        logger.debug("Preparing to run Trainer.test()")
+        test_results = pl_trainer.test(model=trainer, dataloaders=test_loader)
         if test_results:
             avg_test_loss = sum(result['avg_test_loss'] for result in test_results) / len(test_results)
             avg_test_accuracy = sum(result['avg_test_accuracy'] for result in test_results) / len(test_results)
             avg_test_diff_accuracy = sum(result['avg_test_diff_accuracy'] for result in test_results) / len(test_results)
 
-            logger.info(f"Test results - Loss: {avg_test_loss}, Accuracy: {avg_test_accuracy}, Diff Accuracy: {avg_test_diff_accuracy}")
+            logger.info(f"Test results - Loss: {avg_test_loss:.4f}, Accuracy: {avg_test_accuracy:.4f}, Diff Accuracy: {avg_test_diff_accuracy:.4f}")
 
             results = {
                 "avg_test_loss": avg_test_loss,
@@ -506,7 +612,8 @@ def main(args):
             "best_val_loss": trainer.best_val_loss,
             "best_epoch": trainer.best_epoch,
             "final_test_loss": avg_test_loss,
-            "final_test_accuracy": avg_test_accuracy
+            "final_test_accuracy": avg_test_accuracy,
+            "final_test_diff_accuracy": avg_test_diff_accuracy
         })
 
         # Save the final model with configuration
@@ -515,7 +622,10 @@ def main(args):
         os.makedirs("checkpoints", exist_ok=True)
         torch.save({
             'state_dict': trainer.model.state_dict(),
-            'model_config': trainer.config.model.__dict__
+            'model_config': trainer.config.model.__dict__,
+            'training_config': trainer.config.training.__dict__,
+            'pad_symbol_idx': trainer.config.training.pad_symbol_idx,
+            'symbol_freq': trainer.config.training.symbol_freq
         }, model_path)
         trainer.results_collector.set_checkpoint_path(model_path)
         logger.debug(f"Model and configuration saved to: {model_path}")
@@ -561,10 +671,39 @@ if __name__ == "__main__":
         help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically."
     )
     parser.add_argument("--optuna_storage", type=str, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
-    parser.add_argument("--n_embd", type=int, default=4, help="Embedding dimension for profiling")
+    parser.add_argument(
+        "--max_train_samples",
+        type=int,
+        default=None,
+        help="Maximum number of training samples to load. Use None to load all samples."
+    )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=4,  # Increased from None/1 to 4
+        help="Number of worker threads for DataLoader. Increasing this can speed up data loading."
+    )
+    parser.add_argument(
+        "--prefetch_factor",
+        type=int,
+        default=2,
+        help="Number of batches to prefetch per worker."
+    )
+    parser.add_argument(
+        "--no_persistent_workers",
+        action="store_true",
+        help="Disable persistent workers in DataLoader."
+    )
+    parser.add_argument(
+        "--pin_memory",
+        action="store_true",
+        help="Enable pin_memory in DataLoader for faster GPU data transfer."
+    )
+    parser.set_defaults(pin_memory=True)  # Enable by default if using GPU
+    parser.add_argument("--n_embd", type=int, default=12, help="Embedding size for the model.")
     parser.add_argument("--n_head", type=int, default=1, help="Number of attention heads for profiling")
     parser.add_argument("--n_layer", type=int, default=1, help="Number of transformer layers for profiling")
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for profiling")
+    parser.add_argument("--batch_size", type=int, default=16, help="Batch size for profiling")  # Increased from 1 to 16
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max_epochs", type=int, required=True, help="Maximum number of epochs")
     parser.add_argument("--mamba_ratio", type=float, default=0.0, help="Mamba ratio (float value)")
@@ -578,9 +717,17 @@ if __name__ == "__main__":
     parser.add_argument("--use_grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
     parser.add_argument(
         "--include_pad_in_loss",
+        dest="include_pad_in_loss",
         action="store_true",
-        help="Include the padding class in the loss calculation. If not set, the padding class will be excluded."
+        help="Include the padding class in the loss calculation."
     )
+    parser.add_argument(
+        "--no_include_pad_in_loss",
+        dest="include_pad_in_loss",
+        action="store_false",
+        help="Exclude the padding class from the loss calculation."
+    )
+    parser.set_defaults(include_pad_in_loss=True)
     parser.add_argument(
         "--grokfast_type",
         type=str,
@@ -611,9 +758,28 @@ if __name__ == "__main__":
     parser.add_argument("--no_progress-bar", action="store_true", help="Disable progress bar")
     parser.add_argument("--model_checkpoint", type=str, help="Path to the model checkpoint to resume training")
     parser.add_argument("--project", type=str, default="gpt2-arc", help="W&B project name")
+    parser.add_argument(
+        "--val_check_interval",
+        type=float,
+        default=0.01,
+        help=(
+            "How often to perform validation. "
+            "If a float, represents the fraction of an epoch (e.g., 0.5 for halfway through each epoch). "
+            "If an integer, represents the number of training steps."
+        )
+    )
+    parser.add_argument(
+        "--enable_symbol_freq",
+        action="store_true",
+        help="Enable the calculation of symbol frequencies."
+    )
+    parser.set_defaults(enable_symbol_freq=False)
     parser.add_argument("--results_dir", type=str, default="./results", help="Directory to save results")
     parser.add_argument("--run_name", type=str, default="default_run", help="Name of the run for saving results")
     parser.add_argument("--use_synthetic_data", action="store_true", help="Use synthetic data for training")
+    parser.add_argument("--train_split", type=float, default=0.8, help="Proportion of data to use for training")
+    parser.add_argument("--val_split", type=float, default=0.1, help="Proportion of data to use for validation")
+    parser.add_argument("--test_split", type=float, default=0.1, help="Proportion of data to use for testing")
     parser.add_argument(
         "--matmul_precision",
         type=str,
@@ -643,6 +809,12 @@ if __name__ == "__main__":
         default="profile",
         help="Filename for profiler output."
     )
+    parser.add_argument(
+        "--include_pad_in_accuracy",
+        type=lambda x: (str(x).lower() in ['true', '1', 't', 'y', 'yes']),
+        default=True,
+        help="Whether to include the padding class in accuracy calculations. (True/False)"
+    )
     
     args = parser.parse_args()
 
@@ -650,5 +822,10 @@ if __name__ == "__main__":
     if args.mamba_ratio < 0.0:
         logger.error("Invalid value for --mamba_ratio: must be non-negative.")
         sys.exit(1)
+    # Validate the val_check_interval
+    if args.val_check_interval <= 0:
+        logger.error("The --val_check_interval must be a positive number.")
+        sys.exit(1)
+
     main(args)
 

@@ -1,16 +1,36 @@
 # gpt2_arc/src/utils/helpers.py
 import torch
+import logging
+
+logger = logging.getLogger(__name__)
 
 def differential_pixel_accuracy(input, target, prediction, pad_symbol_idx=10):
-    print(f"Differential pixel accuracy - Input shape: {input.shape}, Target shape: {target.shape}, Prediction shape: {prediction.shape}")
+    logger.debug(f"Differential pixel accuracy - Input shape: {input.shape}, Target shape: {target.shape}, Prediction shape: {prediction.shape}")
     
     assert isinstance(input, torch.Tensor) and isinstance(target, torch.Tensor) and isinstance(prediction, torch.Tensor), "All inputs must be torch.Tensor"
     assert input.numel() == target.numel() == prediction.numel(), "Input, target, and prediction must have the same number of elements"
 
-    input = input.view_as(target)
+    """
+    Compute differential pixel accuracy, excluding padding tokens.
+
+    Args:
+        input (torch.Tensor): Input tensor for the model.
+        target (torch.Tensor): Ground truth labels.
+        prediction (torch.Tensor): Model predictions.
+        pad_symbol_idx (int): Index of the padding token to exclude from calculations.
+
+    Returns:
+        tuple: A tuple containing:
+            - accuracy (float): Differential pixel accuracy.
+            - input_target_diff (torch.Tensor): Tensor indicating where input differs from target.
+            - correct_diff_predictions (torch.Tensor): Tensor indicating correct predictions of differing pixels.
+    """
+    device = input.device
+    target = target.to(device)
+    prediction = prediction.to(device)
     prediction = prediction.view_as(target)
     
-    print(f"Reshaped - Input: {input.shape}, Target: {target.shape}, Prediction: {prediction.shape}")
+    logger.debug(f"Reshaped - Input: {input.shape}, Target: {target.shape}, Prediction: {prediction.shape}")
 
     # Exclude padding tokens by creating a valid mask
     valid_mask = target != pad_symbol_idx
@@ -20,13 +40,13 @@ def differential_pixel_accuracy(input, target, prediction, pad_symbol_idx=10):
     total_diff_pixels = input_target_diff.sum().item()
     correct_diff_pixels = correct_diff_predictions.sum().item()
 
-    print(f"Total different pixels: {total_diff_pixels}")
-    print(f"Correctly predicted different pixels: {correct_diff_pixels}")
+    logger.debug(f"Total different pixels: {total_diff_pixels}")
+    logger.debug(f"Correctly predicted different pixels: {correct_diff_pixels}")
 
     if total_diff_pixels > 0:
         accuracy = correct_diff_pixels / total_diff_pixels
     else:
         accuracy = 1.0  # If no pixels differ, consider it 100% accurate
 
-    print(f"Calculated accuracy: {accuracy}")
+    logger.debug(f"Calculated accuracy: {accuracy}")
     return accuracy, input_target_diff, correct_diff_predictions

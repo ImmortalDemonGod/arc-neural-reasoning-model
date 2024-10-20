@@ -6,14 +6,16 @@ import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch import nn
-from typing import Dict
+from typing import Dict, Optional
 import torch.nn.init as init
 from bitnet import BitLinearNew
+from torch.utils.data import DataLoader
 
-from zeta.nn import MambaBlock
-
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+from gpt2_arc.src.data.arc_dataset import ARCDataset
+from gpt2_arc.src.config import Config
+#from zeta.nn import MambaBlock
+from gpt2_arc.src.models.mamba_block_internal import MambaBlock
 
 
 class Attention(nn.Module):
@@ -30,6 +32,7 @@ class Attention(nn.Module):
 
     def forward(self, x, mask=None):
         B, T, C = x.size()
+        logger.debug(f"Model input shape: {x.shape}")
         if not torch._dynamo.is_compiling():
             logger.debug(f"Attention input shape: {x.shape}")
         k = self.key(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
@@ -94,6 +97,7 @@ class TransformerBlock(nn.Module):
         x = x + ff_output
         if not torch._dynamo.is_compiling():
             logger.debug(f"TransformerBlock output shape: {x.shape}")
+        logger.debug(f"Final output shape: {x.shape}")
         return x
 
 
@@ -126,17 +130,16 @@ class MambaLayer(nn.Module):
             logger.debug(f"MambaLayer output shape: {output.shape}")
         return output
 
-from gpt2_arc.src.config import Config
+
 
 class GPT2ARC(pl.LightningModule):
-    def __init__(self, config: Config, num_classes: int, symbol_freq: Dict[str, float] = None):
-        # Define an example input array for model summary
-        self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
+    def __init__(self, config: Config, num_classes: int, symbol_freq: Optional[Dict[int, float]] = None, pad_symbol_idx: int = 10):
         super().__init__()
+        self.example_input_array = torch.zeros(1, 1, 6, 6)  # Adjust dimensions as needed
         self.config = config
-        self.symbol_freq = symbol_freq
-        self.pad_symbol_idx = self.config.training.pad_symbol_idx
-        self.include_pad_in_loss = self.config.training.include_pad_in_loss
+        self.symbol_freq = symbol_freq if symbol_freq is not None else {}
+        self.pad_symbol_idx = pad_symbol_idx  # Add this line
+        self.include_pad_in_loss = self.config.training.include_pad_in_loss  # Reintroduced
         self.conv1 = nn.Conv2d(
             in_channels=1,
             out_channels=self.config.model.n_embd,  # Accessing the 'model' attribute within Config
@@ -181,35 +184,17 @@ class GPT2ARC(pl.LightningModule):
         self.ln_f = nn.LayerNorm(self.config.model.n_embd)
         assert isinstance(self.config.model.n_embd, int), "model.n_embd must be an integer"
         assert isinstance(num_classes, int), "num_classes must be an integer"
-        self.fc_out = BitLinearNew(int(self.config.model.n_embd), int(self.config.training.num_classes))  # Dynamic number of classes
+        self.fc_out = BitLinearNew(int(self.config.model.n_embd), num_classes)  # Use num_classes directly
 
         # Initialize loss function with class weights if needed
-        if self.config.training.balance_symbols and self.config.training.balancing_method == "weighting":
-            if not self.symbol_freq:
-                raise ValueError("symbol_freq must be provided when balance_symbols is True and balancing_method is 'weighting'")
-            class_weights = 1.0 / torch.tensor(list(symbol_freq.values()), dtype=torch.float)
-            # Append a weight for the padding class (index 10)
-            padding_weight = torch.tensor([0.0], dtype=torch.float)
-            class_weights = torch.cat([class_weights, padding_weight])
-            logger.debug(f"Appended padding weight: {padding_weight.item()}. Updated class_weights shape: {class_weights.shape}")
-            if self.config.training.include_pad_in_loss:
-                # Include padding in loss by not ignoring it
-                self.loss_fn = nn.CrossEntropyLoss(weight=class_weights)
-                logger.debug("Including padding class in loss calculation.")
-            else:
-                # Exclude padding class from loss
-                self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=self.config.training.pad_symbol_idx)
-                logger.debug("Excluding padding class from loss calculation.")
-            logger.debug(f"Class Weights: {class_weights}")  # Added line
+        if self.symbol_freq:
+            # Create a tensor of class weights based on symbol frequencies
+            class_weights = torch.tensor([self.symbol_freq.get(i, 1.0) for i in range(num_classes)], dtype=torch.float32)
+            class_weights = class_weights.to(self.device)  # Ensure weights are on the correct device
+            self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, ignore_index=self.pad_symbol_idx)
         else:
-            if self.config.training.include_pad_in_loss:
-                # Include padding in loss without class weights
-                self.loss_fn = nn.CrossEntropyLoss()
-                logger.debug("Including padding class in loss calculation without class weights.")
-            else:
-                # Exclude padding class from loss without class weights
-                self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.config.training.pad_symbol_idx)
-                logger.debug("Excluding padding class from loss calculation without class weights.")
+            self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.pad_symbol_idx)
+        
 
         # Initialize weights
         self.apply(self._init_weights)
@@ -237,19 +222,43 @@ class GPT2ARC(pl.LightningModule):
         
         preds = torch.argmax(outputs, dim=-1)
         
-        if self.include_pad_in_loss:
-            correct = (preds == targets).float()
-            total = torch.numel(targets)
-        else:
-            mask = targets != self.pad_symbol_idx
-            correct = (preds == targets).float() * mask
-            total = mask.sum()
+        # Accuracy including padding
+        correct_with_pad = (preds == targets).float()
+        total_with_pad = torch.numel(targets)
+        acc_with_pad = correct_with_pad.sum() / total_with_pad if total_with_pad > 0 else torch.tensor(0.0)
         
-        acc = correct.sum() / total if total > 0 else torch.tensor(0.0)
+        # Accuracy excluding padding
+        mask = targets != self.pad_symbol_idx
+        correct_without_pad = (preds == targets).float() * mask
+        total_without_pad = mask.sum()
+        acc_without_pad = correct_without_pad.sum() / total_without_pad if total_without_pad > 0 else torch.tensor(0.0)
         
+        # Log both accuracies: with padding and without padding
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log('train_acc', acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train_acc_with_pad', acc_with_pad, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train_acc_without_pad', acc_without_pad, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
+
+    def test_dataloader(self):
+        # Initialize the test dataset
+        test_dataset = ARCDataset(
+            data_source=self.config.test_data_path,  # Ensure this path is correctly set in your configuration
+            is_test=True,
+            num_symbols=self.config.training.num_symbols,
+            pad_symbol_idx=self.config.training.pad_symbol_idx,
+            symbol_freq=self.config.training.symbol_freq,
+            debug=self.config.debug
+        )
+        
+        # Create and return the DataLoader
+        logger.debug("Entering GPT2ARC.test_dataloader")
+        dataloader = DataLoader(
+            test_dataset,
+            batch_size=self.config.training.batch_size,
+            num_workers=self.config.training.num_workers,
+            shuffle=False,  # Typically, shuffling is not needed for test data
+            pin_memory=self.config.training.use_gpu  # Optimize memory usage based on GPU availability
+        )
 
     def validation_step(self, batch, batch_idx):
         inputs, targets, _ = batch
@@ -258,18 +267,21 @@ class GPT2ARC(pl.LightningModule):
         
         preds = torch.argmax(outputs, dim=-1)
         
-        if self.include_pad_in_loss:
-            correct = (preds == targets).float()
-            total = torch.numel(targets)
-        else:
-            mask = targets != self.pad_symbol_idx
-            correct = (preds == targets).float() * mask
-            total = mask.sum()
+        # Accuracy including padding
+        correct_with_pad = (preds == targets).float()
+        total_with_pad = torch.numel(targets)
+        acc_with_pad = correct_with_pad.sum() / total_with_pad if total_with_pad > 0 else torch.tensor(0.0)
         
-        acc = correct.sum() / total if total > 0 else torch.tensor(0.0)
+        # Accuracy excluding padding
+        mask = targets != self.pad_symbol_idx
+        correct_without_pad = (preds == targets).float() * mask
+        total_without_pad = mask.sum()
+        acc_without_pad = correct_without_pad.sum() / total_without_pad if total_without_pad > 0 else torch.tensor(0.0)
         
+        # Log both accuracies
         self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        self.log('val_acc', acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc_with_pad', acc_with_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc_without_pad', acc_without_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -279,29 +291,29 @@ class GPT2ARC(pl.LightningModule):
         
         preds = torch.argmax(outputs, dim=-1)
         
-        if self.include_pad_in_loss:
-            correct = (preds == targets).float()
-            total = torch.numel(targets)
-        else:
-            mask = targets != self.pad_symbol_idx
-            correct = (preds == targets).float() * mask
-            total = mask.sum()
+        # Accuracy including padding
+        correct_with_pad = (preds == targets).float()
+        total_with_pad = torch.numel(targets)
+        acc_with_pad = correct_with_pad.sum() / total_with_pad if total_with_pad > 0 else torch.tensor(0.0)
         
-        acc = correct.sum() / total if total > 0 else torch.tensor(0.0)
+        # Accuracy excluding padding
+        mask = targets != self.pad_symbol_idx
+        correct_without_pad = (preds == targets).float() * mask
+        total_without_pad = mask.sum()
+        acc_without_pad = correct_without_pad.sum() / total_without_pad if total_without_pad > 0 else torch.tensor(0.0)
         
+        # Log both accuracies
         self.log('test_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        self.log('test_acc', acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('test_acc_with_pad', acc_with_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log('test_acc_without_pad', acc_without_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
     def forward(self, input_ids, attention_mask=None):
-        if not torch._dynamo.is_compiling():
-            logger.debug(f"GPT2ARC input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
+        logger.debug(f"GPT2ARC forward - Input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         
-        # Check if input_ids is already in the correct shape
         if input_ids.dim() == 4:
             x = input_ids.float()
         else:
-            # Reshape input_ids to [batch_size, 1, height, width]
             batch_size = input_ids.size(0)
             seq_length = input_ids.size(1)
             height = width = int(seq_length ** 0.5)
@@ -310,12 +322,11 @@ class GPT2ARC(pl.LightningModule):
         x = self.conv1(x)
         logger.debug(f"After conv1 shape: {x.shape}")
         b, c, h, w = x.size()
-        x = x.view(b, c, h * w)  # Flatten spatial dimensions
-        x = x.permute(0, 2, 1)  # Rearrange to (batch_size, sequence_length, channels)
+        x = x.view(b, c, h * w)
+        x = x.permute(0, 2, 1)
         logger.debug(f"Reshaped for transformer blocks: {x.shape}")
 
         for i, block in enumerate(self.blocks):
-            # Check if the block is a TransformerBlock or MambaLayer
             if isinstance(block, TransformerBlock):
                 x = block(x, attention_mask)
                 logger.debug(f"After TransformerBlock {i + 1}: shape {x.shape}")
@@ -324,5 +335,6 @@ class GPT2ARC(pl.LightningModule):
                 logger.debug(f"After MambaLayer {i + 1}: shape {x.shape}")
         
         x = self.ln_f(x)
-        x = self.fc_out(x)  # Apply final linear layer
+        x = self.fc_out(x)
+        logger.debug(f"GPT2ARC forward - Final output shape: {x.shape}, dtype: {x.dtype}")
         return x

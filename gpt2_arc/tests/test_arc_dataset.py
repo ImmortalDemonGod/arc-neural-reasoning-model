@@ -47,8 +47,12 @@ def mock_taskset():
     mock_taskset = Mock(spec=TaskSet)
     mock_taskset.tasks = [mock_task]
     return mock_taskset
-def test_dataset_statistics_computation(sample_data):
-    dataset = ARCDataset(sample_data, debug=True)
+def test_no_default_task_id(sample_data):
+    dataset = ARCDataset(sample_data)
+    for idx in range(len(dataset)):
+        _, _, task_id = dataset[idx]
+        assert task_id != "default_task", f"Sample at index {idx} has 'default_task' as task_id."
+    dataset = ARCDataset(sample_data, num_symbols=11, pad_symbol_idx=10, debug=True)
     
     # Retrieve statistics
     grid_size_stats = dataset.get_grid_size_stats()
@@ -78,7 +82,7 @@ def test_dataset_statistics_computation(sample_data):
         assert symbol_frequencies.get(symbol, 0.0) == freq, f"Frequency for symbol {symbol} should be {freq}"
 
 def test_dataset_statistics_caching(sample_data):
-    dataset = ARCDataset(sample_data, debug=True)
+    dataset = ARCDataset(sample_data, num_symbols=11, pad_symbol_idx=10, debug=True)
     
     # Ensure that statistics are cached
     assert hasattr(dataset, 'statistics'), "Dataset should have a 'statistics' attribute after caching"
@@ -494,3 +498,32 @@ def test_arc_dataset_with_arckit_data_get_task_id():
     assert len(collated_task_ids) == 2, "Batch size should be 2"
     assert collated_inputs.shape[0] == 2, "Batch size should be 2"
     assert collated_outputs.shape[0] == 2, "Batch size should be 2"
+def test_symbol_frequencies_with_pad():
+    # Sample data includes padded symbols implicitly
+    sample_data = [
+        {'input': [[1, 0], [0, 1]], 'output': [[0, 1], [1, 0]]},
+        {'input': [[0, 1], [1, 0]], 'output': [[1, 0], [0, 1]]},
+        {'input': 5, 'output': [[1, 2], [2, 1]]}  # Integer input to be converted to 1x1 grid
+    ]
+    dataset = ARCDataset(sample_data, num_symbols=11, pad_symbol_idx=10, debug=True)
+    
+    symbol_frequencies = dataset.get_symbol_frequencies()
+    
+    # Calculate expected symbol counts
+    # Each grid is 30x30
+    grid_size = 30 * 30
+    total_symbols = grid_size * 2  # input and output per sample
+    # Actual symbols from data
+    actual_counts = {
+        0: 4,   # From first two samples
+        1: 4,
+        2: 2,
+        5: 1,
+        10: 30*30*2 - (4 + 4 + 2 + 1)  # Remaining are pad symbols
+    }
+    expected_frequencies = {k: 0.0 for k in range(11)}
+    for symbol, count in actual_counts.items():
+        expected_frequencies[symbol] = count / total_symbols
+    
+    for symbol, freq in expected_frequencies.items():
+        assert np.isclose(symbol_frequencies.get(symbol, 0.0), freq), f"Frequency for symbol {symbol} should be {freq}"

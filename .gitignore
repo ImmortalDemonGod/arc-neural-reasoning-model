@@ -177,3 +177,4 @@ wandb/*
 runs/*
 results/*
 EXPERIMENTAL/*
+gpt2_arc/dev/*

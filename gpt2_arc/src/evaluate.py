@@ -3,6 +3,8 @@ import sys
 import sys
 import os
 import json
+import re
+from typing import Dict, Any, List
 import argparse
 import pytorch_lightning as pl
 import os
@@ -27,14 +29,22 @@ import logging
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.models.gpt2 import GPT2ARC
 from gpt2_arc.src.training.trainer import ARCTrainer
+from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def evaluate(model, test_dataset, config, batch_size=32):
-    trainer = ARCTrainer(model, None, test_dataset, config=config)
+def evaluate(model, test_dataset, config, batch_size=32, args=None):
+    trainer = ARCTrainer(
+        model=model,
+        train_dataset=None,
+        val_dataset=None,
+        config=config,
+        args=args,
+        test_dataset=test_dataset
+    )
     pl_trainer = pl.Trainer(accelerator='gpu' if torch.cuda.is_available() else 'cpu')
     results = pl_trainer.test(trainer)
     logger.debug(f"DEBUG: Raw results from test: {results}")
@@ -47,9 +57,9 @@ def evaluate(model, test_dataset, config, batch_size=32):
     if avg_test_loss is not None:
         avg_test_loss = avg_test_loss.item()
     if avg_test_accuracy is not None:
-        avg_test_accuracy = avg_test_accuracy.item()
+        avg_test_accuracy = avg_test_accuracy.item() if isinstance(avg_test_accuracy, torch.Tensor) else avg_test_accuracy
     if avg_test_diff_accuracy is not None:
-        avg_test_diff_accuracy = avg_test_diff_accuracy.item()
+        avg_test_diff_accuracy = avg_test_diff_accuracy.item() if isinstance(avg_test_diff_accuracy, torch.Tensor) else avg_test_diff_accuracy
 
     aggregated_results = {
         'test_loss': avg_test_loss,
@@ -59,17 +69,12 @@ def evaluate(model, test_dataset, config, batch_size=32):
 
     print(f"DEBUG: Logged metrics - Avg test loss: {avg_test_loss}, Avg test accuracy: {avg_test_accuracy}, Avg diff accuracy: {avg_test_diff_accuracy}")
 
-    # Collect individual task metrics
-    individual_metrics = {}
-    for key, value in pl_trainer.callback_metrics.items():
-        if '_test_accuracy' in key or '_test_diff_accuracy' in key:
-            if isinstance(value, torch.Tensor):
-                value = value.item()
-            # Key format: 'taskid_test_accuracy' or 'taskid_test_diff_accuracy'
-            task_id, metric_name = key.split('_test_')
-            if task_id not in individual_metrics:
-                individual_metrics[task_id] = {}
-            individual_metrics[task_id][f'test_{metric_name}'] = value
+    # Collect individual task metrics from ResultsCollector
+    individual_metrics = trainer.results_collector.get_task_specific_results()
+
+    # Optional: Log individual_metrics for debugging
+    logger.debug(f"DEBUG: Individual metrics retrieved: {individual_metrics}")
+    print(f"DEBUG: Individual metrics retrieved: {individual_metrics}")
 
     # Compute complete task accuracy (fraction of tasks with perfect accuracy)
     num_tasks = len(individual_metrics)
@@ -96,15 +101,168 @@ def load_config_from_json(json_path):
         data = json.load(f)
     return data['config']
 
-def save_results(results, individual_metrics, output_dir, model_name, model_summary):
+import json
+import re
+
+
+def parse_model_summary(model_summary: str, model_checkpoint: str) -> Dict[str, Any]:
+    """
+    Parses the model summary string into a structured JSON format and adds model file size.
+
+    Args:
+        model_summary (str): The raw model summary string.
+        model_checkpoint (str): Path to the model checkpoint file.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing 'header', 'layers', 'summary', and 'filesize'.
+    """
+    # Split the model summary into lines
+    lines = model_summary.strip().split('\n')
+
+    if len(lines) < 2:
+        print("Model summary does not contain sufficient lines.")
+        return {"layers": [], "summary": {}, "header": []}
+
+    # Find the header line and the separator line
+    header_line = None
+    separator_line = None
+    for idx, line in enumerate(lines):
+        if 'Name' in line and 'Type' in line:
+            header_line = line
+            separator_line = lines[idx + 1] if idx + 1 < len(lines) else None
+            data_start_idx = idx + 2  # Data starts after header and separator
+            break
+
+    if header_line is None or separator_line is None:
+        print("Header or separator line not found.")
+        return {"layers": [], "summary": {}, "header": []}
+
+    # Use the positions of '|' to determine the column boundaries
+    positions = [match.start() for match in re.finditer(r'\|', header_line)]
+
+    # Function to parse a line into columns based on '|' positions
+    def parse_line(line: str, positions: List[int]) -> List[str]:
+        cols = []
+        for i in range(len(positions) - 1):
+            start = positions[i] + 1
+            end = positions[i + 1]
+            col = line[start:end].strip()
+            cols.append(col)
+        # Last column after the last '|'
+        start = positions[-1] + 1
+        col = line[start:].strip()
+        cols.append(col)
+        return cols
+
+    # Get the header columns
+    header_columns = parse_line(header_line, positions)
+
+    # Initialize list to hold layer details
+    layers = []
+
+    # Iterate over the data lines until a non-data line is encountered
+    for line in lines[data_start_idx:]:
+        # Stop if we reach the separator line (line with dashes)
+        if set(line.strip()) == {'-'}:
+            # Summary section starts after this line
+            summary_start_idx = lines.index(line) + 1
+            break
+
+        # Skip empty lines
+        if not line.strip():
+            continue
+
+        # Parse the line into columns
+        cols = parse_line(line, positions)
+
+        # Ensure the number of columns matches the header
+        if len(cols) != len(header_columns):
+            continue  # Skip lines that don't match the expected format
+
+        # Create a dictionary for the current layer
+        layer_dict = dict(zip(header_columns, cols))
+        layers.append(layer_dict)
+    else:
+        # If we didn't break out of the loop, set summary_start_idx to the end
+        summary_start_idx = len(lines)
+
+    # Extract summary metrics from the remaining lines
+    summary_lines = lines[summary_start_idx:]
+    summary_dict = {}
+    for line in summary_lines:
+        line = line.strip()
+        if not line:
+            continue
+        # Match lines like "195       Trainable params"
+        match = re.match(r"(\d+\.?\d*)\s+(.+)", line)
+        if match:
+            value, key = match.groups()
+            # Convert numeric values to float or int where appropriate
+            try:
+                if '.' in value:
+                    value = float(value)
+                else:
+                    value = int(value)
+            except ValueError:
+                pass  # Keep as string if conversion fails
+            summary_dict[key.strip()] = value
+        else:
+            # Handle lines that may have the key and value in reverse order
+            match = re.match(r"(.+)\s+(\d+\.?\d*)", line)
+            if match:
+                key, value = match.groups()
+                try:
+                    if '.' in value:
+                        value = float(value)
+                    else:
+                        value = int(value)
+                except ValueError:
+                    pass
+                summary_dict[key.strip()] = value
+
+    # Get model file size
+    try:
+        filesize = os.path.getsize(model_checkpoint)
+        summary_dict["Model File Size (bytes)"] = filesize
+    except Exception as e:
+        print(f"Error getting model file size: {e}")
+
+    # Combine header, layers, and summary into the final output
+    output = {
+        "header": header_columns,
+        "layers": layers,
+        "summary": summary_dict
+    }
+
+    return output
+
+
+
+def save_results(results, individual_metrics, output_dir, model_name, model_summary, model_checkpoint):
+    """
+    Saves the evaluation results along with the parsed model summary to a JSON file.
+
+    Args:
+        results (Dict[str, Any]): Aggregate evaluation metrics.
+        individual_metrics (Dict[str, Dict[str, Any]]): Per-task evaluation metrics.
+        output_dir (str): Directory to save the results.
+        model_name (str): Name of the model for file naming.
+        model_summary (str): Raw model summary string.
+    
+    Returns:
+        str: Path to the saved JSON file.
+    """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{model_name}_eval_results_{timestamp}.json"
     output_path = os.path.join(output_dir, filename)
 
+    # Parse the model_summary string into JSON
+    parsed_model_summary = parse_model_summary(model_summary, model_checkpoint)
+
     data_to_save = {
         "aggregate_results": results,
         "individual_metrics": {task_id: metrics for task_id, metrics in individual_metrics.items()},
-        "model_summary": str(model_summary)  # Convert ModelSummary to string
+        "model_summary": parsed_model_summary  # Use the parsed JSON
     }
 
     logger.debug(f"DEBUG: Data to be saved: {data_to_save}")
@@ -160,11 +318,26 @@ def main(args):
     config.training.symbol_freq = symbol_freq
 
     # Initialize the model with the complete Config object and symbol frequencies
-    model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq, pad_symbol_idx=config.training.pad_symbol_idx)
+    model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq)
     try:
         # Remove the "model." prefix from state dict keys
         state_dict = {k.replace('model.', ''): v for k, v in checkpoint['state_dict'].items()}
-        model.load_state_dict(state_dict)
+        missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+
+        # Check if 'loss_fn.weight' is missing and initialize it if necessary
+        if "loss_fn.weight" in missing_keys:
+            logger.debug("'loss_fn.weight' not found in state_dict. Initializing with default weights.")
+            num_classes = config.training.num_classes  # Ensure this is correctly retrieved from your config
+            default_weights = torch.ones(num_classes)
+            model.loss_fn.weight = default_weights
+            logger.debug(f"'loss_fn.weight' initialized with weights: {default_weights}")
+
+        # Optionally, log any unexpected keys for further debugging
+        if unexpected_keys:
+            logger.warning(f"Unexpected keys in state_dict: {unexpected_keys}")
+
+        # Print all keys in the model's state dictionary
+        print("Model state_dict keys:", list(model.state_dict().keys()))
     except Exception as e:
         logger.error(f"Error while loading state_dict: {e}")
         logger.error(f"Available keys in checkpoint: {list(checkpoint.keys())}")
@@ -220,7 +393,7 @@ def main(args):
     )
 
     # Evaluate the model
-    results, individual_metrics = evaluate(model, test_data, config, args.batch_size, pad_symbol_idx=config.training.pad_symbol_idx)
+    results, individual_metrics = evaluate(model, test_data, config, args.batch_size, args)
 
     logger.debug(f"DEBUG: Evaluation results: {results}")
     logger.debug(f"DEBUG: Individual metrics: {individual_metrics}")
@@ -248,7 +421,7 @@ def main(args):
         logger.info(f"Task {task_id}: Accuracy = {metrics['test_accuracy']:.4f}, Diff Accuracy = {metrics['test_diff_accuracy']:.4f}")
 
     # Save results regardless of wandb usage
-    results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary)
+    results_path = save_results(results, individual_metrics, args.output_dir, model_name, model_summary, args.model_checkpoint)
 
     if args.use_wandb:
         # Wandb artifact creation and logging

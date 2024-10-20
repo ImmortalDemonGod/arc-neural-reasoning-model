@@ -1,21 +1,41 @@
 # gpt2_arc/src/optimize_hyperparameters.py
 import argparse
+import multiprocessing
+import random
 import optuna
 import logging
 import sys
 import os
 import torch
+from torch.utils.data import DataLoader
 import gc
 import pytorch_lightning as pl
 import numpy as np
 from pytorch_lightning.utilities.model_summary import ModelSummary
 from optuna.pruners import PercentilePruner
 from optuna.samplers import TPESampler
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, Callback
 from pytorch_lightning.loggers import TensorBoardLogger
+#from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.training.trainer import NanLossPruningCallback
+from functools import partial  # Import partial
+from gpt2_arc.src.training.train import load_dataset, load_and_split_synthetic_data
 from gpt2_arc.src.training.train import ModelConfigSaver
+from gpt2_arc.src.data.arc_dataset import ARCDataset
+from gpt2_arc.src.utils.results_collector import ResultsCollector
 
+class BestEpochTrackerCallback(Callback):
+    def __init__(self):
+        super().__init__()
+        self.best_epoch = 0
+
+    def on_validation_end(self, trainer, pl_module):
+        current_val_loss = trainer.callback_metrics.get("val_loss")
+        if current_val_loss is not None:
+            if not hasattr(self, 'best_val_loss') or current_val_loss < self.best_val_loss:
+                self.best_val_loss = current_val_loss
+                self.best_epoch = trainer.current_epoch
+                logger.debug(f"New best_val_loss: {self.best_val_loss} at epoch {self.best_epoch}")
 from gpt2_arc.src.utils.model_memory_estimator import (
     calculate_params,
     estimate_memory_usage,
@@ -52,9 +72,7 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 import arckit
 from gpt2_arc.src.utils.performance_metrics import calculate_mamba_efficiency
 
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+
 
 def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout):
     """Validate that hyperparameters meet necessary constraints."""
@@ -70,68 +88,143 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
     return True
 
 
-def calculate_symbol_freq(dataset):
-    """Calculate the frequency of each symbol in the dataset."""
-    symbol_counts = {}
-    total_symbols = 0
-    for input_tensor, output_tensor, task_id in dataset:
-        # Assuming symbols are represented as integers in the tensors
-        input_symbols = input_tensor.flatten().tolist()
-        output_symbols = output_tensor.flatten().tolist()
-        symbols = input_symbols + output_symbols
-        for symbol in symbols:
-            symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
-            total_symbols += 1
-    
-    if total_symbols == 0:
-        raise ValueError("The dataset contains no symbols to calculate frequencies.")
-    
-    # Calculate normalized frequencies
-    symbol_freq = {symbol: count / total_symbols for symbol, count in symbol_counts.items()}
-    return symbol_freq
 
 
 
-def objective(trial, args):
+def objective(trial, args, all_synthetic_data):
     model = None
     trainer = None
     arc_trainer = None
     logger.info(f"Starting trial {trial.number}")
     try:
-        # Set float32 matrix multiplication precision
+        # Initialize config
+        model_config = ModelConfig()
+        training_config = TrainingConfig()
+        config = Config(model=model_config, training=training_config)
+        # Use pre-loaded synthetic data for training
+        train_data = all_synthetic_data['train_dataset'] if args.use_synthetic_data else load_dataset(args, config, dataset_type='train')
+
+        # Load validation and test data from arckit
+        val_data = load_dataset(args, config, dataset_type='val')
+        test_data = load_dataset(args, config, dataset_type='test')
+
+        # Log dataset sizes
+        logger.debug(f"Trial {trial.number}: Loaded {len(train_data)} training samples.")
+        logger.debug(f"Trial {trial.number}: Loaded {len(val_data)} validation samples.")
+        logger.debug(f"Trial {trial.number}: Loaded {len(test_data)} test samples.")
+        fixed_hyperparams = {}
+
+        # Initialize config and symbol_freq_dict
+        model_config = ModelConfig()
+        training_config = TrainingConfig()
+        config = Config(model=model_config, training=training_config)
+        symbol_freq_dict = {}
+
+
+        # Create configuration
+        model_config = ModelConfig()
+        training_config = TrainingConfig()
+        config = Config(model=model_config, training=training_config)
+
+
+        if args.fast_dev_run:
+            # Disable symbol frequency balancing for fast development run
+            symbol_freq_dict = {}
+            balance_symbols = False
+            balancing_method = "none"
+            logger.debug("fast_dev_run is enabled. Disabling symbol frequency balancing.")
+        else:
+            if args.enable_symbol_freq:
+                # Calculate Symbol Frequencies
+                if args.use_synthetic_data:
+                    logger.debug("Calculating symbol frequencies for synthetic training set")
+                    symbol_freq = train_data.get_symbol_frequencies()
+                else:
+                    logger.debug("Calculating symbol frequencies for ARC training set")
+                    symbol_freq = train_data.get_symbol_frequencies()
+
+                logger.debug(f"Computed symbol frequencies: {symbol_freq}")
+
+                # Directly copy symbol_freq to symbol_freq_dict
+                # Ensure symbol_freq_dict is a dictionary
+                if isinstance(symbol_freq, np.ndarray):
+                    # If symbol_freq is a NumPy array, convert it to a dictionary
+                    symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
+                    logger.debug("Converted symbol_freq from NumPy array to dictionary.")
+                elif isinstance(symbol_freq, dict):
+                    symbol_freq_dict = symbol_freq.copy()
+                    logger.debug("Copied symbol_freq as a dictionary.")
+                else:
+                    raise TypeError(f"Unexpected type for symbol_freq: {type(symbol_freq)}. Expected dict or np.ndarray.")
+
+                # Assert that symbol_freq_dict is indeed a dictionary
+                assert isinstance(symbol_freq_dict, dict), f"symbol_freq_dict must be a dict, but got {type(symbol_freq_dict)}."
+
+                # Remove the padding symbol from symbol_freq_dict
+                pad_symbol_idx = config.training.pad_symbol_idx
+                symbol_freq_dict.pop(pad_symbol_idx, None)
+                logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
+
+                # Debugging: Check keys and their types
+                logger.debug(f"Keys in symbol_freq_dict after popping padding symbol: {list(symbol_freq_dict.keys())}")
+                logger.debug(f"Types of keys in symbol_freq_dict: {set(type(k) for k in symbol_freq_dict.keys())}")
+
+                # Ensure the length of symbol_freq_dict matches num_classes - 1
+                assert len(symbol_freq_dict) == config.training.num_classes - 1, (
+                    f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
+                )
+                balance_symbols = True
+                balancing_method = "weighting"
+            else:
+                symbol_freq_dict = {}
+                logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
+                balance_symbols = False
+                balancing_method = "none"
+        include_pad_in_loss = args.include_pad_in_loss
         torch.set_float32_matmul_precision(args.matmul_precision)
         logger.info(f"Trial {trial.number}: Set float32 matmul precision to: {args.matmul_precision}")
-        n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
-        n_head = 2 ** n_head_exp
-        logger.debug(f"Suggested n_head: {n_head} (2^{n_head_exp})")
 
-        # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
-        n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
-        n_embd = n_head * n_embd_multiplier
-        n_embd = 2 ** int(np.log2(n_embd))
-        logger.debug(f"Adjusted n_embd: {n_embd}")
+        if not args.model_checkpoint:
+            # Only suggest hyperparameters that are not fixed by the checkpoint
+            # Suggest n_head exponent and calculate n_head
+            n_head_exp = trial.suggest_int("n_head_exp", args.n_head_exp_min, args.n_head_exp_max)
+            n_head = 2 ** n_head_exp
+            logger.debug(f"Suggested n_head: {n_head} (2^{n_head_exp})")
 
-        # Suggest n_layer
-        n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
-        logger.debug(f"Suggested n_layer: {n_layer}")
+            # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
+            n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
+            n_embd = n_head * n_embd_multiplier
+            n_embd = 2 ** int(np.log2(n_embd))
+            logger.debug(f"Adjusted n_embd: {n_embd}")
 
-        # Suggest Mamba-specific hyperparameters
-        mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
-        d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
-        d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
+            # Suggest n_layer
+            n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
+            logger.debug(f"Suggested n_layer: {n_layer}")
 
-        # Suggest dropout rate
-        dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
-        mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
-        logger.debug(f"Suggested mamba_depth: {mamba_depth}")
+            # Suggest Mamba-specific hyperparameters
+            mamba_ratio = trial.suggest_float("mamba_ratio", args.mamba_ratio_min, args.mamba_ratio_max, step=args.mamba_ratio_step)
+            d_state = trial.suggest_int("d_state", args.d_state_min, args.d_state_max)
+            d_conv = trial.suggest_int("d_conv_min", args.d_conv_min, args.d_conv_max)
 
-        mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
-        logger.debug(f"Suggested mamba_expand: {mamba_expand}")
+            # Suggest dropout rate
+            dropout = trial.suggest_float("dropout", args.dropout_min, args.dropout_max, step=args.dropout_step)
+            mamba_depth = trial.suggest_int("mamba_depth", args.mamba_depth_min, args.mamba_depth_max)
+            logger.debug(f"Suggested mamba_depth: {mamba_depth}")
 
-        validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
+            mamba_expand = trial.suggest_int("mamba_expand", args.mamba_expand_min, args.mamba_expand_max)
+            logger.debug(f"Suggested mamba_expand: {mamba_expand}")
 
-        # Suggest whether to use Grokfast
-        use_grokfast = trial.suggest_categorical("use_grokfast", [True, False])
+            logger.debug(f"Using suggested hyperparameters: n_head={n_head}, n_embd={n_embd}, "
+                         f"n_layer={n_layer}, mamba_ratio={mamba_ratio}, d_state={d_state}, "
+                         f"d_conv={d_conv}, dropout={dropout}, mamba_depth={mamba_depth}, "
+                         f"mamba_expand={mamba_expand}")
+
+            # Ensure the Config uses the fixed hyperparameters
+            config = Config(model=model_config, training=training_config)
+
+
+        # Use grokfast based on command line argument
+        use_grokfast = args.use_grokfast
 
         if use_grokfast:
             # Suggest Grokfast type based on command-line choices
@@ -156,18 +249,21 @@ def objective(trial, args):
         batch_size = trial.suggest_int("batch_size", args.batch_size_min, args.batch_size_max)
         learning_rate = trial.suggest_float("learning_rate", args.learning_rate_min, args.learning_rate_max, log=True)
         max_epochs = trial.suggest_int("max_epochs", args.max_epochs_min, args.max_epochs_max)
+        
+        # If a checkpoint is used, set fixed values and do not suggest architecture-related hyperparameters
+        if args.model_checkpoint:
+            n_head = model_config.n_head
+            n_embd = model_config.n_embd
+            n_layer = model_config.n_layer
+            mamba_ratio = model_config.mamba_ratio
+            d_state = model_config.d_state
+            d_conv = model_config.d_conv
+            dropout = model_config.dropout
+            mamba_depth = model_config.mamba_depth
+            mamba_expand = model_config.mamba_expand
 
-        # Ensure hyperparameters are within the new limits
-        n_head = min(n_head, 2 ** args.n_head_exp_max)
-        n_embd = min(n_embd, 2 ** int(np.log2(args.n_embd_multiplier_max * n_head)))
-        n_layer = min(n_layer, args.n_layer_max)
-        mamba_ratio = min(mamba_ratio, args.mamba_ratio_max)
-        d_state = min(d_state, args.d_state_max)
-        d_conv = min(d_conv, args.d_conv_max)
-        batch_size = min(batch_size, args.batch_size_max)
-        # Optionally, log the clamped values
-        logger.debug(f"Clamped hyperparameters: n_head={n_head}, n_embd={n_embd}, n_layer={n_layer}, \
-            mamba_ratio={mamba_ratio}, d_state={d_state}, d_conv={d_conv}, batch_size={batch_size}")
+        # Validate hyperparameters
+        validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
 
         # Check if the model will fit in memory
         # Adjust the total number of layers to include Mamba layers
@@ -185,6 +281,8 @@ def objective(trial, args):
             mamba_depth=mamba_depth,
             mamba_expand=mamba_expand
         )
+        # Improve memory estimation by considering additional factors like optimizer state and activation memory
+        safety_margin = 0.1  # 10% safety margin
         estimated_memory = estimate_memory_usage(
             total_params=total_params,
             batch_size=batch_size,
@@ -193,6 +291,7 @@ def objective(trial, args):
             d_model=n_embd
         )
         available_memory = get_available_memory()
+        estimated_memory *= (1 + safety_margin)
 
         logger.debug(f"Trial {trial.number}: Estimated memory usage: {estimated_memory:.2f} GB")
         logger.debug(f"Trial {trial.number}: Available memory: {available_memory:.2f} GB")
@@ -204,28 +303,56 @@ def objective(trial, args):
 
         logger.debug(f"Suggested dropout rate: {dropout}")
 
-        model_config = ModelConfig(
-            n_embd=n_embd,
-            n_head=n_head,
-            n_layer=n_layer,
-            dropout=dropout,
-            mamba_ratio=mamba_ratio,
-            d_state=d_state,
-            d_conv=d_conv
-        )
-        logger.debug(f"Model config: {model_config}")
 
-        # Create TrainingConfig with Grokfast parameters from args
-        training_config = TrainingConfig(
-            batch_size=batch_size,
-            learning_rate=learning_rate,
-            max_epochs=max_epochs,
-            use_grokfast=use_grokfast,
-            grokfast_type=grokfast_type,
-            grokfast_alpha=grokfast_alpha,
-            grokfast_lamb=grokfast_lamb,
-            grokfast_window_size=grokfast_window_size
-        )
+        if args.model_checkpoint:
+            # Use fixed hyperparameters from the checkpoint
+            model_config = ModelConfig(**fixed_hyperparams)
+            training_config = TrainingConfig(
+                num_classes=config.model.num_classes,
+                batch_size=batch_size,
+                learning_rate=learning_rate,
+                max_epochs=max_epochs,
+                use_grokfast=use_grokfast,
+                grokfast_type=grokfast_type,
+                grokfast_alpha=grokfast_alpha,
+                grokfast_lamb=grokfast_lamb,
+                grokfast_window_size=grokfast_window_size,
+                include_pad_in_loss=include_pad_in_loss,
+                symbol_freq=symbol_freq_dict,
+                balance_symbols=balance_symbols,
+                balancing_method="weighting" if balance_symbols else "none"
+            )
+        else:
+            # Use suggested hyperparameters
+            model_config = ModelConfig(
+                n_embd=n_embd,
+                n_head=n_head,
+                n_layer=n_layer,
+                dropout=dropout,
+                mamba_ratio=mamba_ratio,
+                d_state=d_state,
+                d_conv=d_conv,
+                mamba_depth=mamba_depth,
+                mamba_expand=mamba_expand
+            )
+            training_config = TrainingConfig(
+                batch_size=batch_size,
+                learning_rate=learning_rate,
+                max_epochs=max_epochs,
+                use_grokfast=use_grokfast,
+                grokfast_type=grokfast_type,
+                grokfast_alpha=grokfast_alpha,
+                grokfast_lamb=grokfast_lamb,
+                grokfast_window_size=grokfast_window_size,
+                include_pad_in_loss=include_pad_in_loss,
+                symbol_freq=symbol_freq_dict,
+                balance_symbols=balance_symbols,
+                balancing_method=balancing_method,
+                num_workers=args.num_workers if args.num_workers is not None else multiprocessing.cpu_count(),
+                prefetch_factor=args.prefetch_factor,
+                persistent_workers=not args.no_persistent_workers,
+                pin_memory=not args.no_pin_memory
+            )
 
         config = Config(model=model_config, training=training_config)
         config.estimated_memory = estimated_memory
@@ -241,30 +368,6 @@ def objective(trial, args):
         # Instantiate the ModelConfigSaver callback with the current config
         model_config_saver = ModelConfigSaver(config)
 
-        # Load data
-        if args.use_synthetic_data:
-            if not args.synthetic_data_path:
-                raise ValueError("Synthetic data path not provided")
-            logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
-            train_data = ARCDataset(
-                data_source=args.synthetic_data_path,
-                is_test=False,
-                num_symbols=config.model.n_embd
-            )
-            val_data = ARCDataset(
-                data_source=args.synthetic_data_path,
-                is_test=True,
-                num_symbols=config.model.n_embd
-            )
-            logger.debug(f"Synthetic training data size: {len(train_data)}")
-            logger.debug(f"Synthetic validation data size: {len(val_data)}")
-        else:
-            logger.info("Loading ARC dataset")
-            train_set, eval_set = arckit.load_data()
-            train_data = ARCDataset(train_set)
-            val_data = ARCDataset(eval_set)
-            logger.debug(f"ARC training data size: {len(train_data)}")
-            logger.debug(f"ARC validation data size: {len(val_data)}")
 
         # Calculate Symbol Frequencies
         if args.use_synthetic_data:
@@ -276,22 +379,73 @@ def objective(trial, args):
 
         logger.debug(f"Computed symbol frequencies: {symbol_freq}")
 
-        # Convert symbol_freq from NumPy array to dictionary
-        symbol_freq_dict = {str(i): float(freq) for i, freq in enumerate(symbol_freq)}
-        logger.debug(f"Converted symbol frequencies to dictionary: {symbol_freq_dict}")
-
-        # Assign the converted symbol_freq to the training configuration
-        config.training.symbol_freq = symbol_freq_dict
-
-        # Validate that symbol_freq_dict is not empty
-        if not symbol_freq_dict:
-            logger.error("symbol_freq_dict is empty. Cannot proceed with balance_symbols=True and balancing_method='weighting'.")
-            raise ValueError("symbol_freq must be provided and non-empty when balance_symbols is True and balancing_method is 'weighting'.")
 
         # Create model and trainer
         logger.debug("Creating model and trainer")
-        num_classes = 10  # Set this to the appropriate number of classes for your task
-        model = GPT2ARC(config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
+        num_classes = config.training.num_classes
+        # Instantiate the GPT2ARC model with the constructed Config
+        if args.model_checkpoint:
+            # Load the checkpoint
+            logger.info(f"Loading model from checkpoint: {args.model_checkpoint}")
+            checkpoint = torch.load(args.model_checkpoint, map_location="cpu")
+
+            # Extract model configuration from the checkpoint
+            if 'model_config' in checkpoint:
+                model_config_dict = checkpoint['model_config']
+                model_config = ModelConfig(**model_config_dict)
+                logger.debug("Extracted model configuration from checkpoint.")
+            else:
+                logger.error("Model configuration not found in checkpoint. Cannot proceed.")
+                raise ValueError("Model configuration not found in checkpoint.")
+
+            # Set hyperparameters from the extracted model_config
+            n_head = model_config.n_head
+            n_embd = model_config.n_embd
+            n_layer = model_config.n_layer
+            mamba_ratio = model_config.mamba_ratio
+            d_state = model_config.d_state
+            d_conv = model_config.d_conv
+            dropout = model_config.dropout
+            mamba_depth = model_config.mamba_depth
+            mamba_expand = model_config.mamba_expand
+
+            # Validate hyperparameters
+            validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout)
+
+            # Reconstruct the config with the extracted model_config and training_config
+            config = Config(model=model_config, training=training_config)
+
+            # Instantiate the model with the exact configuration used during training
+            model = GPT2ARC(config=config, num_classes=model_config.num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
+
+            # Load the state_dict from the checkpoint
+            if 'state_dict' in checkpoint:
+                # Remove the "model." prefix from state dict keys
+                state_dict = {k.replace('model.', ''): v for k, v in checkpoint['state_dict'].items()}
+            else:
+                state_dict = checkpoint  # Adjust based on how you saved your model
+
+            # Load the state_dict into the model with strict=False
+            try:
+                missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
+                logger.debug(f"Successfully loaded state_dict from checkpoint: {args.model_checkpoint}")
+                if missing_keys:
+                    logger.warning(f"Missing keys when loading state_dict: {missing_keys}")
+                if unexpected_keys:
+                    logger.warning(f"Unexpected keys when loading state_dict: {unexpected_keys}")
+
+                # Handle specific missing keys if necessary
+                if "loss_fn.weight" in missing_keys:
+                    logger.debug("'loss_fn.weight' not found in state_dict. Initializing with default weights.")
+                    default_weights = torch.ones(config.model.num_classes)
+                    model.loss_fn.weight = default_weights
+                    logger.debug(f"'loss_fn.weight' initialized with weights: {default_weights}")
+            except RuntimeError as e:
+                logger.error(f"Error loading state_dict: {e}")
+                raise e
+            
+        else:
+            model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict)
         
         # Generate model summary
         print("DEBUG: Attempting to generate model summary")
@@ -323,9 +477,24 @@ def objective(trial, args):
             trial.set_user_attr(key, value)
             logger.debug(f"Mamba metric - {key}: {value}")
 
-        arc_trainer = ARCTrainer(model, train_data, val_data, config)
+        # Initialize the ResultsCollector
+        results_collector = ResultsCollector(config)
+
+        arc_trainer = ARCTrainer(
+            model=model,
+            train_dataset=train_data,
+            val_dataset=val_data,
+            config=config,
+            args=args,  # Add this line to pass args
+            compile_model=False,  # Disable model compilation
+            results_collector=results_collector  # Pass ResultsCollector to ARCTrainer
+        )
 
         # Set up PyTorch Lightning trainer with custom pruning callback
+        if args.no_progress_bar:
+            logger.info("Disabling progress bar.")
+        else:
+            logger.info("Enabling progress bar.")
         pruning_callback = CustomPruningCallback(trial, monitor="val_loss")
         early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=0.00, patience=3, verbose=False, mode="min")
         # Determine accelerator parameters based on the --accelerator argument
@@ -364,25 +533,30 @@ def objective(trial, args):
 
         # Initialize the checkpoint callback with descriptive filename
         checkpoint_callback = ModelCheckpoint(
-            dirpath="checkpoints",
-            filename="trial_{trial_num}-epoch_{epoch:02d}-val_loss_{val_loss:.4f}",
+            dirpath=f"checkpoints/trial_{trial.number}",
+            filename=f"{'tuning-' if args.model_checkpoint else ''}step_{{step}}-val_loss_{{val_loss:.4f}}",
             save_top_k=3,
             monitor="val_loss",
             mode="min",
         )
         logger.info("Standard ModelCheckpoint callback added to the training callbacks.")
 
+        # Initialize the BestEpochTrackerCallback
+        best_epoch_tracker = BestEpochTrackerCallback()
+
         # Initialize PyTorch Lightning Trainer with the checkpoint callback
         trainer = pl.Trainer(
             max_epochs=config.training.max_epochs,
-            callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback, checkpoint_callback, model_config_saver],
+            callbacks=[pruning_callback, early_stop_callback, nan_loss_pruning_callback, checkpoint_callback, model_config_saver, best_epoch_tracker],
             logger=tb_logger,
             gradient_clip_val=1.0,    # Add gradient clipping
+            val_check_interval=args.val_check_interval,  # Added line
             precision=16,             # Enable Automatic Mixed Precision
             enable_checkpointing=True,
             accelerator=accelerator,
             devices=devices,
             strategy=strategy,
+            enable_progress_bar=not args.no_progress_bar
         )
         print("DEBUG: Trainer created for Optuna trial with TensorBoard logger")
         logger.debug(f"Trainer created with config: {trainer.state}")
@@ -396,21 +570,53 @@ def objective(trial, args):
         for name, module in model.named_modules():
             logger.debug(f"{name}: {'train' if module.training else 'eval'}")
 
-        # Train and evaluate
         logger.debug("Starting training")
         trainer.fit(arc_trainer)
+
+        # Retrieve the best validation loss from the ModelCheckpoint callback
+        if checkpoint_callback.best_model_score is not None:
+            best_val_loss = checkpoint_callback.best_model_score.item()
+            logger.info(f"Trial {trial.number}: Best validation loss: {best_val_loss}")
+        else:
+            logger.warning(f"Trial {trial.number}: No checkpoints were saved. Assigning a high validation loss.")
+            best_val_loss = float('inf')
+
+        logger.info(f"Trial {trial.number} completed. Best validation loss: {best_val_loss}")
 
         # Enhanced Logging: Log model mode after training
         logger.info("After training:")
         for name, module in model.named_modules():
             logger.debug(f"{name}: {'train' if module.training else 'eval'}")
 
-        # Update iter_num if needed (e.g., if multiple iterations per trial)
-        iter_num += 1
+        # Define DataLoader for test data
+        test_loader = DataLoader(
+            test_data,
+            batch_size=config.training.batch_size,
+            shuffle=False,
+            num_workers=config.training.num_workers,
+            pin_memory=config.training.pin_memory
+        )
 
-        # Retrieve the best validation loss for optimization
-        best_val_loss = trainer.callback_metrics.get("val_loss").item()
-        logger.info(f"Trial {trial.number} completed. Best validation loss: {best_val_loss}")
+        # Evaluate the model on test data
+        logger.info("Evaluating model on test dataset.")
+        test_results = trainer.test(model=arc_trainer, dataloaders=test_loader)
+
+        # Process test results
+        if test_results:
+            avg_test_loss = sum(result['avg_test_loss'] for result in test_results) / len(test_results)
+            avg_test_accuracy = sum(result['avg_test_accuracy'] for result in test_results) / len(test_results)
+            avg_test_diff_accuracy = sum(result['avg_test_diff_accuracy'] for result in test_results) / len(test_results)
+
+            logger.info(f"Test results - Loss: {avg_test_loss:.4f}, Accuracy: {avg_test_accuracy:.4f}, Diff Accuracy: {avg_test_diff_accuracy:.4f}")
+
+            # Update final metrics with actual test results
+            arc_trainer.results_collector.set_final_metrics({
+                "best_val_loss": best_val_loss,
+                "best_epoch": trainer.current_epoch,
+                "final_test_loss": avg_test_loss,
+                "final_test_accuracy": avg_test_accuracy,
+                "final_test_diff_accuracy": avg_test_diff_accuracy
+            })
 
         return best_val_loss
 
@@ -424,11 +630,13 @@ def objective(trial, args):
             logger.error(f"Trial {trial.number}: A runtime error occurred: {str(e)}", exc_info=True)
             raise RuntimeError(f"Trial {trial.number}: A runtime error occurred: {str(e)}")
     except Exception as e:
+        # Improved exception handling for symbol frequency issues
         if "symbol_freq" in str(e):
-            logger.error(f"Trial {trial.number}: 'symbol_freq' is missing. Ensure it is calculated and passed correctly.", exc_info=True)
+            logger.error(f"Trial {trial.number}: 'symbol_freq' is missing or invalid. Ensure it is calculated and passed correctly.", exc_info=True)
+            raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: 'symbol_freq' is missing or invalid.")
         else:
             logger.error(f"Trial {trial.number}: An unexpected error occurred: {str(e)}", exc_info=True)
-        raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: An unexpected error occurred: {str(e)}")
+            raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: An unexpected error occurred: {str(e)}")
     finally:
         # Ensure Proper Cleanup Between Trials
         logger.debug(f"Cleaning up after trial {trial.number}")
@@ -441,6 +649,8 @@ def objective(trial, args):
         gc.collect()
         torch.cuda.empty_cache()
         logger.debug(f"Cleanup completed for trial {trial.number}")
+        gc.collect()
+        torch.cuda.empty_cache()
 
 
 
@@ -448,8 +658,30 @@ from functools import partial
 
 def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1, args=None, study_name="gpt2_arc_optimization_v2"):
 
-    pruner = PercentilePruner(percentile=25, n_startup_trials=5, n_warmup_steps=2, interval_steps=1)
+    if n_trials < 10:
+        n_startup_trials = 1
+    else:
+        n_startup_trials = 5
+
+    pruner = PercentilePruner(
+        percentile=25, 
+        n_startup_trials=n_startup_trials, 
+        n_warmup_steps=2, 
+        interval_steps=1
+    )
     sampler = TPESampler(n_startup_trials=5)
+
+    # Initialize configuration
+    model_config = ModelConfig()
+    training_config = TrainingConfig()
+    config = Config(model=model_config, training=training_config)
+
+    all_synthetic_data = load_and_split_synthetic_data(args, config) if args.use_synthetic_data else None
+    if all_synthetic_data:
+        logger.info(f"Synthetic data loaded with {len(all_synthetic_data['train_dataset'])} samples.")
+
+    # Create a partial objective function that includes all_synthetic_data
+    objective_partial = partial(objective, args=args, all_synthetic_data=all_synthetic_data)
 
     study = optuna.create_study(
         study_name=study_name,
@@ -461,11 +693,18 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     )
 
     logger.info(f"Starting optimization with {n_trials} trials using {n_jobs} parallel jobs")
-    study.optimize(partial(objective, args=args), n_trials=n_trials, n_jobs=n_jobs)
+    logger.info(f"Data Splitting Ratios - Train: 80%, Validation: 10%, Test: 10%")
+    if args.use_gpu:
+        available_gpus = torch.cuda.device_count()
+        if available_gpus > 1:
+            n_jobs = max(n_jobs, available_gpus)
+        else:
+            n_jobs = 1  # Limit to 1 to prevent memory issues
+    study.optimize(objective_partial, n_trials=n_trials, n_jobs=n_jobs)  # Use the partial function
 
     logger.info("Optimization completed")
 
-    if study.best_trial:
+    if study.best_trial and study.best_trial.state == optuna.trial.TrialState.COMPLETE:
         print("DEBUG: Best trial found, attempting to retrieve model summary")
         best_model_summary = study.best_trial.user_attrs.get("model_summary")
         if best_model_summary:
@@ -476,69 +715,141 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
             print("DEBUG: No model summary found for the best trial")
     else:
         logger.warning("No successful trials found. Please check the trial configurations and constraints.")
-        logger.info(f"Best trial: {study.best_trial.number}")
-        logger.info(f"Best value: {study.best_value}")
-        
-        best_trial = study.best_trial
-        best_trial.set_user_attr("mamba_ratio", best_trial.params.get("mamba_ratio"))
-        best_trial.set_user_attr("d_state", best_trial.params.get("d_state"))
-        best_trial.set_user_attr("d_conv", best_trial.params.get("d_conv"))
-
-        logger.info("Best Mamba metrics:")
-        for key in ['mamba_forward_pass_time', 'mamba_params', 'mamba_params_ratio']:
-            value = study.best_trial.user_attrs.get(key)
-            if value is not None:
+        if study.best_trial:
+            logger.info(f"Best trial: {study.best_trial.number}")
+            logger.info(f"Best value: {study.best_trial.value}")
+            
+            best_trial = study.best_trial
+            best_trial.set_user_attr("mamba_ratio", best_trial.params.get("mamba_ratio"))
+            best_trial.set_user_attr("d_state", best_trial.params.get("d_state"))
+            best_trial.set_user_attr("d_conv", best_trial.params.get("d_conv"))
+    
+            logger.info("Best Mamba metrics:")
+            for key in ['mamba_forward_pass_time', 'mamba_params', 'mamba_params_ratio']:
+                value = study.best_trial.user_attrs.get(key)
+                if value is not None:
+                    logger.info(f"  {key}: {value}")
+            
+            logger.info("Best hyperparameters:")
+            for key, value in study.best_trial.params.items():
                 logger.info(f"  {key}: {value}")
-
-        logger.info("Best hyperparameters:")
-        for key, value in study.best_params.items():
-            logger.info(f"  {key}: {value}")
+        else:
+            logger.info("No trials have been completed successfully.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
+    parser.add_argument("--max_train_samples", type=int, default=None, help="Maximum number of training samples to load. Use None to load all samples.")
     parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
-    parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
     parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
+    parser.add_argument("--batch_size_min", type=int, default=1, help="Minimum value for batch_size.")
+    parser.add_argument("--batch_size_max", type=int, default=1, help="Maximum value for batch_size.")
+    parser.add_argument(
+        "--fast_dev_run",
+        action="store_true",
+        help="Run a fast development test."
+    )
+    parser.add_argument(
+        "--use_grokfast",
+        action="store_true",
+        help="Enable Grokfast for gradient filtering."
+    )
+    parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
+    parser.add_argument("--random_seed", type=int, default=42, help="Random seed for reproducibility.")
+    parser.add_argument(
+        "--val_check_interval",
+        type=float,
+        default=0.01,
+        help=(
+            "How often to perform validation. "
+            "If a float, represents the fraction of an epoch (e.g., 0.5 for halfway through each epoch). "
+            "If an integer, represents the number of training steps."
+        )
+    )
+    parser.add_argument(
+        "--model_checkpoint",
+        type=str,
+        default=None,
+        help="Path to the model checkpoint to resume optimization from."
+    )
+    parser.add_argument(
+        "--include_pad_in_loss",
+        type=lambda x: (str(x).lower() in ['true', '1', 't', 'y', 'yes']),
+        default=True,
+        help="Whether to include the padding class in the loss calculation. (True/False)"
+    )
     parser.add_argument(
         "--study_name",
         type=str,
-        default="gpt2_arc_optimization_v2",
+        default="gpt2_arc_optimization_v3",
         help="Name of the Optuna study."
     )
 
-    parser.add_argument("--n_embd_min", type=int, default=4, help="Minimum value for n_embd")
-    parser.add_argument("--n_embd_max", type=int, default=8, help="Maximum value for n_embd")
-    parser.add_argument("--n_head_min", type=int, default=2, help="Minimum value for n_head")
-    parser.add_argument("--n_head_max", type=int, default=16, help="Maximum value for n_head")
+    parser.add_argument("--train_split", type=float, default=0.8, help="Proportion of data to use for training")
+    parser.add_argument("--val_split", type=float, default=0.1, help="Proportion of data to use for validation")
+    parser.add_argument("--test_split", type=float, default=0.1, help="Proportion of data to use for testing")
+    parser.add_argument("--n_embd_max", type=int, default=1, help="Maximum value for n_embd")
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=None,
+        help="Number of worker threads for DataLoader. If not set, uses configuration default (total CPU count)."
+    )
+    parser.add_argument(
+        "--prefetch_factor",
+        type=int,
+        default=2,
+        help="Number of batches to prefetch per worker."
+    )
+    parser.add_argument(
+        "--no_persistent_workers",
+        action="store_true",
+        help="Disable persistent workers in DataLoader."
+    )
+    parser.add_argument(
+        "--no_pin_memory",
+        action="store_true",
+        help="Disable pin_memory in DataLoader."
+    )
+    parser.add_argument("--n_head_min", type=int, default=1, help="Minimum value for n_head")
+    parser.add_argument("--n_head_max", type=int, default=1, help="Maximum value for n_head")
     parser.add_argument("--n_head_exp_min", type=int, default=1, help="Minimum exponent for n_head (2^x)")
-    parser.add_argument("--n_head_exp_max", type=int, default=3, help="Maximum exponent for n_head (2^x)")
+    parser.add_argument("--n_head_exp_max", type=int, default=1, help="Maximum exponent for n_head (2^x)")
     parser.add_argument("--n_embd_multiplier_min", type=int, default=1, help="Minimum multiplier for n_embd")
-    parser.add_argument("--n_embd_multiplier_max", type=int, default=2, help="Maximum multiplier for n_embd")
-    parser.add_argument("--n_layer_min", type=int, default=4, help="Minimum value for n_layer")
-    parser.add_argument("--n_layer_max", type=int, default=8, help="Maximum value for n_layer")
-    parser.add_argument("--batch_size_min", type=int, default=32, help="Minimum value for batch_size")
-    parser.add_argument("--batch_size_max", type=int, default=128, help="Maximum value for batch_size")
+    parser.add_argument("--n_embd_multiplier_max", type=int, default=1, help="Maximum multiplier for n_embd")
+    parser.add_argument("--n_layer_min", type=int, default=1, help="Minimum value for n_layer")
+    parser.add_argument("--n_layer_max", type=int, default=1, help="Maximum value for n_layer")
     parser.add_argument("--learning_rate_min", type=float, default=1e-5, help="Minimum value for learning_rate")
     parser.add_argument("--learning_rate_max", type=float, default=1e-2, help="Maximum value for learning_rate")
     parser.add_argument("--max_epochs_min", type=int, default=1, help="Minimum value for max_epochs")
-    parser.add_argument("--max_epochs_max", type=int, default=20, help="Maximum value for max_epochs")
+    parser.add_argument("--max_epochs_max", type=int, default=10, help="Maximum value for max_epochs")
 
-    parser.add_argument("--mamba_ratio_min", type=float, default=0.0, help="Minimum value for mamba_ratio")
+    parser.add_argument("--mamba_ratio_min", type=float, default=1.0, help="Minimum value for mamba_ratio")
     parser.add_argument("--mamba_ratio_max", type=float, default=8.0, help="Maximum value for mamba_ratio")
     parser.add_argument("--mamba_ratio_step", type=float, default=0.25, help="Step size for mamba_ratio")
     parser.add_argument("--d_state_min", type=int, default=1, help="Minimum value for d_state")
-    parser.add_argument("--d_state_max", type=int, default=2, help="Maximum value for d_state")
+    parser.add_argument("--d_state_max", type=int, default=1, help="Maximum value for d_state")
     parser.add_argument("--d_conv_min", type=int, default=1, help="Minimum value for d_conv")
-    parser.add_argument("--d_conv_max", type=int, default=2, help="Maximum value for d_conv")
+    parser.add_argument("--d_conv_max", type=int, default=1, help="Maximum value for d_conv")
 
     parser.add_argument("--dropout_min", type=float, default=0.0, help="Minimum value for dropout")
     parser.add_argument("--mamba_depth_min", type=int, default=1, help="Minimum value for mamba_depth")
-    parser.add_argument("--mamba_depth_max", type=int, default=3, help="Maximum value for mamba_depth")
+    parser.add_argument("--mamba_depth_max", type=int, default=1, help="Maximum value for mamba_depth")
     parser.add_argument("--mamba_expand_min", type=int, default=2, help="Minimum value for mamba_expand")
-    parser.add_argument("--mamba_expand_max", type=int, default=4, help="Maximum value for mamba_expand")
+    parser.add_argument("--mamba_expand_max", type=int, default=2, help="Maximum value for mamba_expand")
+    parser.add_argument(
+        "--enable_symbol_freq",
+        action="store_true",
+        help="Enable the calculation of symbol frequencies."
+    )
+    parser.set_defaults(enable_symbol_freq=False)
     parser.add_argument("--dropout_max", type=float, default=0.5, help="Maximum value for dropout")
     parser.add_argument("--dropout_step", type=float, default=0.1, help="Step size for dropout")
     parser.add_argument("--use_gpu", action="store_true", help="Flag to indicate whether to use GPU for training.")
+    parser.add_argument(
+        "--no_progress_bar",
+        action="store_true",
+        help="Disable the progress bar during training."
+    )
     parser.add_argument("--use_synthetic_data", action="store_true", help="Flag to indicate whether to use synthetic data for training.")
     parser.add_argument(
         "--matmul_precision",
@@ -568,6 +879,21 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
+    
+    log_level = getattr(logging, args.log_level.upper(), logging.INFO)
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler()
+        ]
+    )
+    logger = logging.getLogger(__name__)
+    logger.setLevel(log_level)
+
+    # Log parsed arguments for debugging
+    logger.debug(f"Parsed arguments: {vars(args)}")
+    logger.setLevel(log_level)
 
     # Ensure the storage_name has the correct SQLite prefix and handle relative paths
     import os  # Ensure os is imported at the top of the file
@@ -579,6 +905,21 @@ if __name__ == "__main__":
             args.storage = f"sqlite:///{os.path.abspath(args.storage)}"
     
     logger.debug(f"Optuna storage URL set to: {args.storage}")
+    
+    # Validate val_check_interval
+    if args.val_check_interval <= 0:
+        logger.error("The --val_check_interval must be a positive number.")
+        sys.exit(1)
+
+    # Set random seeds for reproducibility
+    random.seed(args.random_seed)
+    np.random.seed(args.random_seed)
+    torch.manual_seed(args.random_seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.random_seed)
+    
+    logger.debug(f"Random seed set to: {args.random_seed}")
+
     run_optimization(
         n_trials=args.n_trials,
         storage_name=args.storage,
@@ -586,3 +927,4 @@ if __name__ == "__main__":
         args=args,
         study_name=args.study_name
     )
+
