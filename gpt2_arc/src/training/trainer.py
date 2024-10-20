@@ -167,6 +167,7 @@ class ARCTrainer(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         logger.debug(f"Starting training step {batch_idx}")
+        logger.debug(f"Batch input shape: {batch[0].shape}, Batch target shape: {batch[1].shape}")
         inputs, targets, _ = batch
         logger.debug(f"Inputs shape: {inputs.shape}, Targets shape: {targets.shape}, Targets dtype: {targets.dtype}")
         targets = targets.long()  # Ensure targets are of type Long
@@ -191,6 +192,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Starting validation step {batch_idx}")
         inputs, targets, _ = batch
         logger.debug(f"Validation Inputs shape: {inputs.shape}, Targets shape: {targets.shape}, Targets dtype: {targets.dtype}")
+        logger.debug(f"Validation batch input shape: {batch[0].shape}, Validation batch target shape: {batch[1].shape}")
         targets = targets.long()  # Ensure targets are of type Long
         logger.debug(f"Targets dtype after casting: {targets.dtype}")
         
@@ -214,6 +216,7 @@ class ARCTrainer(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         logger.debug(f"DEBUG: test_step input - batch: {batch}, batch_idx: {batch_idx}")
+        logger.debug(f"Test batch input shape: {batch[0].shape}, Test batch target shape: {batch[1].shape}")
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
 
         # Unpack batch
