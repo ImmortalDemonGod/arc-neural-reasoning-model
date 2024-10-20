@@ -77,25 +77,6 @@ def set_debug_mode(debug=False):
         handler.setLevel(logging.ERROR)
 
 class ARCDataset(Dataset):
-    def _convert_cysimdjson_to_python(self, obj):
-        """
-        Recursively converts cysimdjson objects to native Python types.
-
-        Args:
-            obj: The cysimdjson JSON object.
-
-        Returns:
-            A Python dict or list with native types.
-        """
-        if isinstance(obj, list):
-            logger.debug("Converting cysimdjson JSONArray to Python list.")
-            return [self._convert_cysimdjson_to_python(item) for item in obj]
-        elif hasattr(obj, 'keys'):
-            logger.debug("Converting cysimdjson JSONObject to Python dict.")
-            return {k: self._convert_cysimdjson_to_python(v) for k, v in obj.items()}
-        else:
-            logger.debug(f"Returning primitive type: {type(obj)} with value: {obj}")
-            return obj
     def __init__(
         self,
         data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
@@ -207,110 +188,118 @@ class ARCDataset(Dataset):
                 try:
                     # Attempt to parse with cysimdjson
                     parsed_json = self.json_parser.parse(f.read())
-                    # Convert cysimdjson Document to standard Python types
-                    parsed_py = self._convert_cysimdjson_to_python(parsed_json)
-                    logger.debug(f"Converted parsed_py to native Python types: {type(parsed_py)}")
-                except Exception as e:
-                    logger.exception(f"cysimdjson failed to parse file {file_path}. Attempting standard json parser.")
-                    logger.error(f"Exception type: {type(e).__name__}")
-
-                    # Read a larger snippet of the file for debugging
-                    f.seek(0)
-                    file_snippet = f.read(2048).decode('utf-8', errors='replace')  # Read first 2KB
-                    logger.debug(f"Snippet from {file_path} for debugging:\n{file_snippet}\n")
-                    
-                    f.seek(0)  # Reset file pointer to the beginning
-                    try:
-                        parsed_py = json.load(f)
-                        logger.info(f"Successfully parsed {file_path} with standard json parser.")
-                        
-                        # Log the type and structure of parsed_py
-                        logger.debug(f"Type of parsed_py: {type(parsed_py)}")
-                        if isinstance(parsed_py, list):
-                            logger.debug(f"Parsed JSON is a list with {len(parsed_py)} items.")
-                            if parsed_py:
-                                logger.debug(f"First item in list: {parsed_py[0]}")
-                        elif isinstance(parsed_py, dict):
-                            logger.debug(f"Parsed JSON is a dict with keys: {list(parsed_py.keys())}")
-                            for key in ['samples', 'data', 'entries', 'train', 'test']:
-                                if key in parsed_py and isinstance(parsed_py[key], list):
-                                    logger.debug(f"Key '{key}' contains {len(parsed_py[key])} items.")
-                                    if parsed_py[key]:
-                                        logger.debug(f"First item under '{key}': {parsed_py[key][0]}")
-    
-                    except json.JSONDecodeError as je:
-                        logger.error(f"Standard json parser failed to parse file {file_path}: {je}. Skipping file.")
-                        return samples  # Skip this file as both parsers failed
-                    except Exception as je:
-                        logger.exception(f"Unexpected error during standard json parsing of file {file_path}: {je}. Skipping file.")
-                        return samples  # Skip this file due to unexpected parsing error
-
-                # Proceed with data extraction as per the existing logic
-                # Determine how to extract samples based on JSON structure
-                if isinstance(parsed_py, list):
-                    data_iterable = parsed_py
-                elif isinstance(parsed_py, dict):
-                    # Attempt to extract samples from common keys like 'data', 'samples', 'train', 'test'
-                    if 'samples' in parsed_py:
-                        data_iterable = parsed_py['samples']
-                    elif 'entries' in parsed_py:
-                        data_iterable = parsed_py['entries']
-                    elif 'train' in parsed_py:
-                        data_iterable = parsed_py['train']
-                    elif 'test' in parsed_py:
-                        data_iterable = parsed_py['test']
+                    # Direct Conversion Using as_list() and as_dict()
+                    if parsed_json.is_array():
+                        parsed_py = parsed_json.as_list()
+                        logger.debug(f"Parsed JSON is a list with {len(parsed_py)} items.")
+                    elif parsed_json.is_object():
+                        parsed_py = parsed_json.as_dict()
+                        logger.debug(f"Parsed JSON is a dict with keys: {list(parsed_py.keys())}")
                     else:
-                        logger.warning(f"No recognizable keys found in {file_path}. Skipping file.")
+                        logger.warning(f"Parsed JSON is neither a list nor a dict for file {file_path}: {type(parsed_json)}. Skipping file.")
                         return samples
-                else:
-                    logger.warning(f"Parsed JSON is neither a list nor a dict for file {file_path}: {type(parsed_py)}. Skipping file.")
-                    return samples
 
-                logger.debug(f"Total samples to process from {file_path}: {len(data_iterable)}")
+            except Exception as e:
+                logger.exception(f"cysimdjson failed to parse file {file_path}. Attempting standard json parser.")
+                logger.error(f"Exception type: {type(e).__name__}")
 
-                for ex in data_iterable:
-                    # Log the keys of each example
-                    if isinstance(ex, dict):
-                        logger.debug(f"Processing example with keys: {list(ex.keys())}")
-                    else:
-                        logger.warning(f"Expected example to be a dict, but got {type(ex)}. Skipping example.")
-                        continue  # Skip non-dict examples
+                # Read a larger snippet of the file for debugging
+                f.seek(0)
+                file_snippet = f.read(2048).decode('utf-8', errors='replace')  # Read first 2KB
+                logger.debug(f"Snippet from {file_path} for debugging:\n{file_snippet}\n")
+                
+                f.seek(0)  # Reset file pointer to the beginning
+                try:
+                    parsed_py = json.load(f)
+                    logger.info(f"Successfully parsed {file_path} with standard json parser.")
+                    
+                    # Log the type and structure of parsed_py
+                    logger.debug(f"Type of parsed_py: {type(parsed_py)}")
+                    if isinstance(parsed_py, list):
+                        logger.debug(f"Parsed JSON is a list with {len(parsed_py)} items.")
+                        if parsed_py:
+                            logger.debug(f"First item in list: {parsed_py[0]}")
+                    elif isinstance(parsed_py, dict):
+                        logger.debug(f"Parsed JSON is a dict with keys: {list(parsed_py.keys())}")
+                        for key in ['samples', 'data', 'entries', 'train', 'test']:
+                            if key in parsed_py and isinstance(parsed_py[key], list):
+                                logger.debug(f"Key '{key}' contains {len(parsed_py[key])} items.")
+                                if parsed_py[key]:
+                                    logger.debug(f"First item under '{key}': {parsed_py[key][0]}")
+    
+                except json.JSONDecodeError as je:
+                    logger.error(f"Standard json parser failed to parse file {file_path}: {je}. Skipping file.")
+                    return samples  # Skip this file as both parsers failed
+                except Exception as je:
+                    logger.exception(f"Unexpected error during standard json parsing of file {file_path}: {je}. Skipping file.")
+                    return samples  # Skip this file due to unexpected parsing error
 
-                    # Handle cases where 'input' and 'output' might be nested differently
-                    input_key = next((k for k in ex.keys() if k.lower() == 'input'), None)
-                    output_key = next((k for k in ex.keys() if k.lower() == 'output'), None)
+        # Proceed with data extraction as per the existing logic
+        # Determine how to extract samples based on JSON structure
+        if isinstance(parsed_py, list):
+            data_iterable = parsed_py
+        elif isinstance(parsed_py, dict):
+            # Attempt to extract samples from common keys like 'data', 'samples', 'train', 'test'
+            if 'samples' in parsed_py:
+                data_iterable = parsed_py['samples']
+            elif 'entries' in parsed_py:
+                data_iterable = parsed_py['entries']
+            elif 'train' in parsed_py:
+                data_iterable = parsed_py['train']
+            elif 'test' in parsed_py:
+                data_iterable = parsed_py['test']
+            else:
+                logger.warning(f"No recognizable keys found in {file_path}. Skipping file.")
+                return samples
+        else:
+            logger.warning(f"Parsed JSON is neither a list nor a dict for file {file_path}: {type(parsed_py)}. Skipping file.")
+            return samples
 
-                    if input_key and output_key:
-                        try:
-                            input_tensor = self._preprocess_grid(ex[input_key])
-                            output_tensor = self._preprocess_grid(ex[output_key])
-                            task_id = ex.get('id', f"default_task_{sample_count}")
-                            if not isinstance(task_id, str) or not task_id:
-                                if not missing_id_logged:
-                                    task_id = f"default_task_{sample_count}"
-                                    logger.warning(f"Sample missing valid 'id'. Assigned task_id: {task_id}")
-                                    missing_id_logged = True
-                                else:
-                                    task_id = f"default_task_{sample_count}"
-                            samples.append({
-                                "input": input_tensor,
-                                "output": output_tensor,
-                                "task_id": task_id
-                            })
-                            sample_count += 1
-                        except Exception as e:
-                            logger.exception(
-                                f"Error preprocessing sample {sample_count} (Task ID: {task_id}) in file {file_path}: {e}"
-                            )
-                    else:
-                        logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
-                        logger.debug(f"Sample keys: {list(ex.keys())}")
+        logger.debug(f"Total samples to process from {file_path}: {len(data_iterable)}")
 
-        except Exception as e:  # Catch all exceptions related to parsing
-            logger.exception(f"Failed to process file {file_path}: {e}", exc_info=True)
+        for ex in data_iterable:
+            # Log the keys of each example
+            if isinstance(ex, dict):
+                logger.debug(f"Processing example with keys: {list(ex.keys())}")
+            else:
+                logger.warning(f"Expected example to be a dict, but got {type(ex)}. Skipping example.")
+                continue  # Skip non-dict examples
 
-        logger.info(f"Finished processing synthetic data file: {file_path}. Extracted {len(samples)} samples.")
-        return samples
+            # Handle cases where 'input' and 'output' might be nested differently
+            input_key = next((k for k in ex.keys() if k.lower() == 'input'), None)
+            output_key = next((k for k in ex.keys() if k.lower() == 'output'), None)
+
+            if input_key and output_key:
+                try:
+                    input_tensor = self._preprocess_grid(ex[input_key])
+                    output_tensor = self._preprocess_grid(ex[output_key])
+                    task_id = ex.get('id', f"default_task_{sample_count}")
+                    if not isinstance(task_id, str) or not task_id:
+                        if not missing_id_logged:
+                            task_id = f"default_task_{sample_count}"
+                            logger.warning(f"Sample missing valid 'id'. Assigned task_id: {task_id}")
+                            missing_id_logged = True
+                        else:
+                            task_id = f"default_task_{sample_count}"
+                    samples.append({
+                        "input": input_tensor,
+                        "output": output_tensor,
+                        "task_id": task_id
+                    })
+                    sample_count += 1
+                except Exception as e:
+                    logger.exception(
+                        f"Error preprocessing sample {sample_count} (Task ID: {task_id}) in file {file_path}: {e}"
+                    )
+            else:
+                logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
+                logger.debug(f"Sample keys: {list(ex.keys())}")
+
+    except Exception as e:  # Catch all exceptions related to parsing
+        logger.exception(f"Failed to process file {file_path}: {e}", exc_info=True)
+
+    logger.info(f"Finished processing synthetic data file: {file_path}. Extracted {len(samples)} samples.")
+    return samples
     
     
     def _process_single_file_parallel(self, file_path: str) -> List[Dict]:
