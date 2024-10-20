@@ -235,48 +235,109 @@ class ARCDataset(Dataset):
             with open(file_path, 'rb') as f:  # Open in binary mode
                 # Use cysimdjson for efficient parsing
                 parsed_json = self.json_parser.parse(f.read())
-                # Assume the JSON structure is a list of samples or a single task object
-                if isinstance(parsed_json, list):
-                    for ex in parsed_json:
+                # Convert parsed_json to native Python structures
+                parsed_py = self._cysimdjson_to_native(parsed_json)
+                
+                if isinstance(parsed_py, list):
+                    for ex in parsed_py:
                         if 'input' in ex and 'output' in ex:
+                            try:
+                                input_tensor = self._preprocess_grid(ex['input'])
+                                output_tensor = self._preprocess_grid(ex['output'])
+                                task_id = ex.get('id', f"default_task_{sample_count}")
+                                if not isinstance(task_id, str) or not task_id:
+                                    if not missing_id_logged:
+                                        task_id = f"default_task_{sample_count}"
+                                        logger.warning(f"Sample missing valid 'id'. Assigned task_id: {task_id}")
+                                        missing_id_logged = True
+                                    else:
+                                        task_id = f"default_task_{sample_count}")
+                                samples.append({
+                                    "input": input_tensor,
+                                    "output": output_tensor,
+                                    "task_id": task_id
+                                })
+                                sample_count += 1
+                            except Exception as e:
+                                logger.error(f"Error preprocessing sample in file {file_path}: {e}", exc_info=True)
+                        else:
+                            logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
+                elif isinstance(parsed_py, dict):
+                    # Existing processing for dictionary tasks
+                    for ex in parsed_py.get('train', []):
+                        try:
+                            logger.debug(f"Processing training example keys: {ex.keys()}")
                             input_tensor = self._preprocess_grid(ex['input'])
                             output_tensor = self._preprocess_grid(ex['output'])
+                            task_id = parsed_py.get('id', f"default_task_{sample_count}")
+                            if not isinstance(task_id, str) or not task_id:
+                                if not missing_id_logged:
+                                    task_id = f"default_task_{sample_count}"
+                                    logger.warning(f"Task missing valid 'id'. Assigned task_id: {task_id}")
+                                    missing_id_logged = True
+                                else:
+                                    task_id = f"default_task_{sample_count}")
                             samples.append({
                                 "input": input_tensor,
                                 "output": output_tensor,
-                                "task_id": ex.get('id', f"default_task_{sample_count}")
+                                "task_id": task_id
                             })
                             sample_count += 1
-                        else:
-                            logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
-                elif isinstance(parsed_json, dict):
-                    # Existing processing for dictionary tasks
-                    for ex in parsed_json.get('train', []):
-                        logger.debug(f"Processing training example keys: {ex.keys()}")
-                        input_tensor = self._preprocess_grid(ex['input'])
-                        output_tensor = self._preprocess_grid(ex['output'])
-                        samples.append({
-                            "input": input_tensor,
-                            "output": output_tensor,
-                            "task_id": parsed_json.get('id', f"default_task_{sample_count}")
-                        })
-                
-                    for ex in parsed_json.get('test', []):
-                        input_tensor = self._preprocess_grid(ex['input'])
-                        output_tensor = self._preprocess_grid(ex['output'])
-                        samples.append({
-                            "input": input_tensor,
-                            "output": output_tensor,
-                            "task_id": parsed_json.get('id', f"default_task_{sample_count}")
-                        })
+                        except Exception as e:
+                            logger.error(f"Error preprocessing training sample in file {file_path}: {e}", exc_info=True)
+                    
+                    for ex in parsed_py.get('test', []):
+                        try:
+                            input_tensor = self._preprocess_grid(ex['input'])
+                            output_tensor = self._preprocess_grid(ex['output'])
+                            task_id = parsed_py.get('id', f"default_task_{sample_count}")
+                            if not isinstance(task_id, str) or not task_id:
+                                if not missing_id_logged:
+                                    task_id = f"default_task_{sample_count}"
+                                    logger.warning(f"Task missing valid 'id'. Assigned task_id: {task_id}")
+                                    missing_id_logged = True
+                                else:
+                                    task_id = f"default_task_{sample_count}")
+                            samples.append({
+                                "input": input_tensor,
+                                "output": output_tensor,
+                                "task_id": task_id
+                            })
+                            sample_count += 1
+                        except Exception as e:
+                            logger.error(f"Error preprocessing testing sample in file {file_path}: {e}", exc_info=True)
                 else:
-                    logger.warning(f"Unexpected JSON structure in file {file_path}. Parsed JSON: {parsed_json}. Skipping.")
+                    logger.warning(f"Unexpected JSON structure in file {file_path}. Skipping.")
         except Exception as e:  # Catch all exceptions related to parsing
             logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Skipping.")
 
         return samples
 
-    def _process_single_file_parallel(self, file_path: str) -> List[Dict]:
+    def _cysimdjson_to_native(self, parsed_json):
+        """
+        Recursively converts cysimdjson parsed objects to native Python lists and dicts.
+        
+        Args:
+            parsed_json (cysimdjson.cysimdjson.JSONValue): Parsed JSON object.
+        
+        Returns:
+            Union[dict, list, primitive]: Native Python data structure.
+        """
+        if parsed_json.is_object():
+            return {k: self._cysimdjson_to_native(v) for k, v in parsed_json.items()}
+        elif parsed_json.is_array():
+            return [self._cysimdjson_to_native(item) for item in parsed_json]
+        elif parsed_json.is_number():
+            return parsed_json.get_number()
+        elif parsed_json.is_string():
+            return parsed_json.get_string()
+        elif parsed_json.is_bool():
+            return parsed_json.get_bool()
+        elif parsed_json.is_null():
+            return None
+        else:
+            logger.warning(f"Unknown JSON type encountered: {parsed_json.type}")
+            return None
         """
         Wrapper method to process a single file in parallel.
         
