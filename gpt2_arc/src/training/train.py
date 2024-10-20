@@ -197,7 +197,9 @@ def load_and_split_synthetic_data(args, config):
             logger.error(f"Missing required argument: {attr}")
             raise AttributeError(f"'Namespace' object has no attribute '{attr}'")
 
-    logger.info(f"Loading synthetic data from {args.synthetic_data_path}")
+    if args.train_split == 1.0 and args.val_split == 0.0 and args.test_split == 0.0:
+        logger.info("Using entire synthetic dataset for training without validation or test splits.")
+        
     synthetic_dataset = ARCDataset(
         data_source=args.synthetic_data_path,
         is_test=False,
@@ -213,6 +215,12 @@ def load_and_split_synthetic_data(args, config):
     random.shuffle(indices)
 
     # Calculate split indices
+    if args.train_split == 1.0 and args.val_split == 0.0 and args.test_split == 0.0:
+        train_indices = indices
+        val_indices = []
+        test_indices = []
+        logger.debug("All synthetic data assigned to training set. No validation or test splits.")
+    else:
     train_end = int(args.train_split * total_samples)
     val_end = train_end + int(args.val_split * total_samples)
 
