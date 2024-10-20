@@ -1,6 +1,5 @@
 # gp2_arc/src/data/arc_dataset.py
 import os
-import json
 import random
 from typing import Union, List, Dict, Tuple, Any, Optional
 from typing import List, Dict, Union, Optional
@@ -20,7 +19,6 @@ import ijson  # Import ijson for streaming JSON parsing
 import json  # Temporarily switch to json for better error messages
 from tqdm import tqdm  # Import tqdm for progress bars
 import sys  # Import sys for handling tqdm output
-from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
 from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
 import multiprocessing  # To determine CPU count
 from threading import Lock
@@ -164,7 +162,12 @@ class ARCDataset(Dataset):
         logger.debug("ARCDataset initialization completed.")
 
     def _cysimdjson_to_native(self, parsed_json):
-        return parsed_json
+        if isinstance(parsed_json, cysimdjson.cysimdjson.JSONArray):
+            return [self._cysimdjson_to_native(item) for item in parsed_json]
+        elif isinstance(parsed_json, cysimdjson.cysimdjson.JSONObject):
+            return {k: self._cysimdjson_to_native(v) for k, v in parsed_json.items()}
+        else:
+            return parsed_json
     
     
     def _process_single_file_streaming(self, file_path: str) -> List[Dict]:
@@ -191,7 +194,7 @@ class ARCDataset(Dataset):
                 try:
                     # Attempt to parse with cysimdjson
                     parsed_json = self.json_parser.parse(f.read())
-                    parsed_py = parsed_json
+                    parsed_py = self._cysimdjson_to_native(parsed_json)
                 except Exception as e:
                     logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Attempting standard json parser.")
                     f.seek(0)  # Reset file pointer to the beginning
@@ -235,7 +238,7 @@ class ARCDataset(Dataset):
 
                 for ex in data_iterable:
                     # Log the keys of each example
-                    logger.debug(f"Processing example with keys: {list(ex.keys())}")
+                    logger.debug(f"Processing example with keys: {list(ex.keys())}")  # Added line
                     # Handle cases where 'input' and 'output' might be nested differently
                     input_key = next((k for k in ex.keys() if k.lower() == 'input'), None)
                     output_key = next((k for k in ex.keys() if k.lower() == 'output'), None)
