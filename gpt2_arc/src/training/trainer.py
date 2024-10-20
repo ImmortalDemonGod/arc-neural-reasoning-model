@@ -168,19 +168,16 @@ class ARCTrainer(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         logger.debug(f"Starting training step {batch_idx}")
         logger.debug(f"Batch {batch_idx}:")
+        inputs, targets, _ = batch
         logger.debug(f"  Inputs shape: {inputs.shape}, dtype: {inputs.dtype}")
         logger.debug(f"  Targets shape: {targets.shape}, dtype: {targets.dtype}")
         logger.debug(f"  Task IDs: {_}")
-        inputs, targets, _ = batch
         logger.debug(f"Inputs shape: {inputs.shape}, Targets shape: {targets.shape}, Targets dtype: {targets.dtype}")
         targets = targets.long()  # Ensure targets are of type Long
         logger.debug(f"Targets dtype after casting: {targets.dtype}")
         
         outputs = self(inputs)
-        logger.debug(f"  Input min/max values: {inputs.min().item():.2f}/{inputs.max().item():.2f}")
-        outputs = self(inputs)
-        logger.debug(f"  Input min/max values: {inputs.min().item():.2f}/{inputs.max().item():.2f}")
-        outputs = self(inputs)
+        logger.debug(f"  Inputs min/max values: {inputs.min().item():.2f}/{inputs.max().item():.2f}")
         logger.debug(f"  Outputs shape: {outputs.shape}, dtype: {outputs.dtype}")
         logger.debug(f"  Output min/max values: {outputs.min().item():.2f}/{outputs.max().item():.2f}")
         logger.debug(f"  Output min/max values: {outputs.min().item():.2f}/{outputs.max().item():.2f}")
