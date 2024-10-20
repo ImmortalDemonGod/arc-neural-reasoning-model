@@ -289,42 +289,6 @@ def objective(trial, args, train_data, val_data, test_data):
 
         logger.debug(f"Suggested dropout rate: {dropout}")
 
-        # Calculate Symbol Frequencies only if enabled
-        if args.enable_symbol_freq:
-            try:
-                if args.use_synthetic_data:
-                    logger.debug("Calculating symbol frequencies for synthetic training set")
-                    symbol_freq = train_data.get_symbol_frequencies()
-                else:
-                    logger.debug("Calculating symbol frequencies for ARC training set")
-                    symbol_freq = train_data.get_symbol_frequencies()
-
-                logger.debug(f"Computed symbol frequencies: {symbol_freq}")
-
-                if isinstance(symbol_freq, np.ndarray):
-                    symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
-                    logger.debug("Converted symbol_freq from NumPy array to dictionary.")
-                elif isinstance(symbol_freq, dict):
-                    symbol_freq_dict = symbol_freq.copy()
-                    logger.debug("Copied symbol_freq as a dictionary.")
-                else:
-                    raise TypeError(f"Unexpected type for symbol_freq: {type(symbol_freq)}. Expected dict or np.ndarray.")
-
-                pad_symbol_idx = config.training.pad_symbol_idx
-                symbol_freq_dict.pop(pad_symbol_idx, None)
-                logger.debug(f"Removed pad_symbol_idx ({pad_symbol_idx}) from symbol_freq_dict. New length: {len(symbol_freq_dict)}")
-
-                assert isinstance(symbol_freq_dict, dict), f"symbol_freq_dict must be a dict, but got {type(symbol_freq_dict)}."
-                assert len(symbol_freq_dict) == config.training.num_classes - 1, (
-                    f"Length of symbol_freq_dict ({len(symbol_freq_dict)}) does not match num_classes minus padding ({config.training.num_classes - 1})."
-                )
-
-            except Exception as e:
-                logger.error(f"Symbol frequency calculation failed: {str(e)}", exc_info=True)
-                raise optuna.exceptions.TrialPruned(f"Symbol frequency calculation failed: {str(e)}")
-        else:
-            symbol_freq_dict = {}
-            logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
 
         if args.model_checkpoint:
             # Use fixed hyperparameters from the checkpoint
