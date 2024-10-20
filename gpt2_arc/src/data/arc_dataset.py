@@ -104,7 +104,7 @@ class ARCDataset(Dataset):
         self.num_samples = 0
 
         
-        self.json_parser = cysimdjson.JSONParser()  # Initialize the JSON parser here
+        self.json_parser = JSONParser()  # Initialize the JSON parser here
 
         self.cache_path = self._generate_cache_path(
             data_source=self.data_source,
