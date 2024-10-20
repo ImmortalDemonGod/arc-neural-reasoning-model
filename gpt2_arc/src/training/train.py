@@ -225,9 +225,9 @@ def load_and_split_synthetic_data(args, config):
         val_end = train_end + int(args.val_split * total_samples)
 
     # Split the indices
-    train_indices = indices[:train_end]
-    val_indices = indices[train_end:val_end]
-    test_indices = indices[val_end:]
+    train_indices = indices
+    val_indices = []
+    test_indices = []
 
     logger.debug(
         f"Synthetic data split into "
