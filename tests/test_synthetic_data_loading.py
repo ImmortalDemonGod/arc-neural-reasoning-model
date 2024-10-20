@@ -10,6 +10,8 @@ class TestSyntheticDataLoading(unittest.TestCase):
         Set up the test to use existing synthetic data from the specified directory.
         """
         self.synthetic_data_dir = "/workspaces/arc-neural-reasoning-model/gpt2_arc/src/data/SyntheticARC/small_tasks"
+        self.large_file_path = "/workspaces/arc-neural-reasoning-model/gpt2_arc/src/data/SyntheticARC/small_tasks/1c786137.json"
+        self.assertTrue(os.path.isfile(self.large_file_path), f"Large synthetic data file does not exist: {self.large_file_path}")
     
     def tearDown(self):
         """
@@ -154,7 +156,32 @@ class TestSyntheticDataLoading(unittest.TestCase):
                         continue  # Skip invalid JSON files
         return count
 
-    def test_large_dataset_loading(self):
+    def _count_json_samples(self, file_path: str) -> int:
+        """
+        Counts the number of valid samples in the specified JSON file.
+
+        Args:
+            file_path (str): Path to the JSON file.
+
+        Returns:
+            int: Number of valid samples.
+        """
+        count = 0
+        with open(file_path, 'r') as f:
+            try:
+                data = json.load(f)
+                if isinstance(data, list):
+                    count = len(data)
+                elif isinstance(data, dict):
+                    # Common keys that contain sample lists
+                    for key in ['train', 'test', 'samples', 'entries']:
+                        if key in data and isinstance(data[key], list):
+                            count += len(data[key])
+            except json.JSONDecodeError:
+                logger.error(f"Invalid JSON format in file: {file_path}")
+            except Exception as e:
+                logger.error(f"Error counting samples in file {file_path}: {e}")
+        return count
         """
         Test if the dataset can handle loading a large number of synthetic samples.
         """
