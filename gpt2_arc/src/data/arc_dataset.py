@@ -7,6 +7,8 @@ from typing import List, Dict, Union, Optional
 import logging
 
 logger = logging.getLogger(__name__)
+import json
+from cysimdjson import JSONError
 import numpy as np
 import pickle
 import hashlib
