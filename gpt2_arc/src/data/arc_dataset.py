@@ -311,6 +311,7 @@ class ARCDataset(Dataset):
                             logger.error(f"Error preprocessing testing sample in file {file_path}: {e}", exc_info=True)
                 else:
                     logger.warning(f"Unexpected JSON structure in file {file_path}. Skipping.")
+            logger.info(f"Finished processing synthetic data file: {file_path}. Extracted {len(samples)} samples.")
         except Exception as e:  # Catch all exceptions related to parsing
             logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Skipping.")
 
