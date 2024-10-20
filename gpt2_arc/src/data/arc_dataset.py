@@ -232,7 +232,7 @@ class ARCDataset(Dataset):
             return samples
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, 'rb') as f:  # Open in binary mode
                 # Use cysimdjson for efficient parsing
                 parsed_json = self.json_parser.parse(f.read())
                 # Assume the JSON structure is a list of samples or a single task object
@@ -260,7 +260,7 @@ class ARCDataset(Dataset):
                             "output": output_tensor,
                             "task_id": parsed_json.get('id', f"default_task_{sample_count}")
                         })
-                    
+                
                     for ex in parsed_json.get('test', []):
                         input_tensor = self._preprocess_grid(ex['input'])
                         output_tensor = self._preprocess_grid(ex['output'])
@@ -270,13 +270,9 @@ class ARCDataset(Dataset):
                             "task_id": parsed_json.get('id', f"default_task_{sample_count}")
                         })
                 else:
-                    logger.warning(f"Unexpected JSON structure in file {file_path}. Skipping.")
-        except cysimdjson.JSONParseError as e:
+                    logger.warning(f"Unexpected JSON structure in file {file_path}. Parsed JSON: {parsed_json}. Skipping.")
+        except Exception as e:  # Catch all exceptions related to parsing
             logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Skipping.")
-        except UnicodeDecodeError as e:
-            logger.warning(f"Encoding error in file {file_path}: {e}. Skipping.")
-        except Exception as e:
-            logger.error(f"Unexpected error processing file {file_path}: {e}", exc_info=True)
 
         return samples
 
