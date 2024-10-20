@@ -775,7 +775,8 @@ class ARCDataset(Dataset):
                 logger.debug(f"Loading data from file: {data_source}")
                 # Since synthetic data is preloaded and passed via 'all_synthetic_data', avoid reloading here
                 # Instead, assume 'all_synthetic_data' contains the necessary datasets
-                return data_source  # Or handle appropriately based on your data structure
+                samples = self._process_single_file_parallel(data_source)
+                return samples
             else:
                 raise ValueError(f"Invalid data source path: {data_source}")
         else:
