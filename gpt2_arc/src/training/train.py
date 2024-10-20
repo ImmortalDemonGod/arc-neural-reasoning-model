@@ -221,8 +221,8 @@ def load_and_split_synthetic_data(args, config):
         test_indices = []
         logger.debug("All synthetic data assigned to training set. No validation or test splits.")
     else:
-    train_end = int(args.train_split * total_samples)
-    val_end = train_end + int(args.val_split * total_samples)
+        train_end = int(args.train_split * total_samples)
+        val_end = train_end + int(args.val_split * total_samples)
 
     # Split the indices
     train_indices = indices[:train_end]
