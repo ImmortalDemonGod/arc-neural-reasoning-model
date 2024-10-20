@@ -102,7 +102,7 @@ def objective(trial, args, all_synthetic_data):
         training_config = TrainingConfig()
         config = Config(model=model_config, training=training_config)
         # Use pre-loaded synthetic data for training
-        train_data = all_synthetic_data['train_dataset'] if args.use_synthetic_data else load_dataset(args, config, dataset_type='train', max_samples=args.max_train_samples)
+        train_data = all_synthetic_data['train_dataset'] if args.use_synthetic_data else load_dataset(args, config, dataset_type='train')
 
         # Load validation and test data from arckit
         val_data = load_dataset(args, config, dataset_type='val')
