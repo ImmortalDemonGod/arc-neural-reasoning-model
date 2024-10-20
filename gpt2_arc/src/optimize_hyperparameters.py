@@ -699,7 +699,7 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
 
     logger.info("Loading datasets once before optimization...")
     if args.use_synthetic_data:
-        logger.info("Using synthetic data for training, validation, and testing.")
+        logger.info("Using synthetic data exclusively for training; validation and testing datasets are loaded from ARCKIT.")
         all_synthetic_data = load_and_split_synthetic_data(args, config)
         train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
         val_data = load_dataset(args, config, dataset_type='val')      # Removed all_synthetic_data
