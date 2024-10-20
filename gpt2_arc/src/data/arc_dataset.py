@@ -89,7 +89,6 @@ class ARCDataset(Dataset):
         debug: bool = False,
     ):
         self.is_test = is_test
-        self.json_parser = cysimdjson.JSONParser()
         self.num_symbols = num_symbols
         self.test_split = test_split
         self.pad_symbol_idx = pad_symbol_idx
