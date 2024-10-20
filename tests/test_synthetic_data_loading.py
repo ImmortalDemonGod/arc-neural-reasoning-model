@@ -51,7 +51,7 @@ class TestSyntheticDataLoading(unittest.TestCase):
         )
         
         # Assert that the expected number of synthetic samples are loaded
-        expected_samples = self._count_json_samples(self.synthetic_data_dir)
+        expected_samples = self._count_json_samples_directory(self.synthetic_data_dir)
         self.assertEqual(len(dataset), expected_samples)
     
     def test_sample_structure(self):
@@ -156,7 +156,7 @@ class TestSyntheticDataLoading(unittest.TestCase):
         self.assertIsNotNone(dataset.sampler)
         self.assertEqual(len(dataset.sampler), len(dataset))
     
-    def _count_json_samples(self, directory):
+    def _count_json_samples_directory(self, directory):
         logger = logging.getLogger(__name__)
         count = 0
         for filename in os.listdir(directory):
@@ -175,7 +175,7 @@ class TestSyntheticDataLoading(unittest.TestCase):
                         continue  # Skip invalid JSON files
         return count
 
-    def _count_json_samples(self, file_path: str) -> int:
+    def _count_json_samples_file(self, file_path: str) -> int:
         """
         Counts the number of valid samples in the specified JSON file.
 
