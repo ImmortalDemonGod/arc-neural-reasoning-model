@@ -102,18 +102,7 @@ def objective(trial, args, all_synthetic_data):
         training_config = TrainingConfig()
         config = Config(model=model_config, training=training_config)
         # Use pre-loaded synthetic data for training
-        if args.use_synthetic_data:
-            if all_synthetic_data is None:
-                logger.error("Synthetic data not loaded. 'all_synthetic_data' is None.")
-                raise ValueError("Synthetic data not loaded.")
-            logger.debug(f"Trial {trial.number}: Synthetic data keys: {list(all_synthetic_data.keys())}")
-            if 'train_dataset' not in all_synthetic_data:
-                logger.error("'all_synthetic_data' is missing the 'train_dataset' key.")
-                raise KeyError("'train_dataset' key not found in synthetic data.")
-            train_data = all_synthetic_data['train_dataset']
-            logger.debug(f"Trial {trial.number}: Synthetic training data loaded with {len(train_data)} samples")
-        else:
-            train_data = load_dataset(args, config, dataset_type='train')
+        train_data = all_synthetic_data['train_dataset'] if args.use_synthetic_data else load_dataset(args, config, dataset_type='train')
 
         # Load validation and test data from arckit
         val_data = load_dataset(args, config, dataset_type='val')
@@ -687,14 +676,9 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     training_config = TrainingConfig()
     config = Config(model=model_config, training=training_config)
 
-    # Load synthetic data once before starting trials
-    if args.use_synthetic_data:
-        logger.info("Loading synthetic data once before starting trials.")
-        all_synthetic_data = load_and_split_synthetic_data(args, config)
-        logger.debug(f"Synthetic data loaded. Keys: {list(all_synthetic_data.keys())}")
-        logger.debug(f"train_dataset contains {len(all_synthetic_data['train_dataset'])} samples.")
-    else:
-        all_synthetic_data = None
+    all_synthetic_data = load_and_split_synthetic_data(args, config) if args.use_synthetic_data else None
+    if all_synthetic_data:
+        logger.info(f"Synthetic data loaded with {len(all_synthetic_data['train_dataset'])} samples.")
 
     # Create a partial objective function that includes all_synthetic_data
     objective_partial = partial(objective, args=args, all_synthetic_data=all_synthetic_data)

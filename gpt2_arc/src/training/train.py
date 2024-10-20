@@ -114,32 +114,17 @@ class ModelConfigSaver(Callback):
 def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
     logger.debug(f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}")
 
-    if dataset_type.lower() == 'train' and args.use_synthetic_data:
-        if all_synthetic_data is None:
-            logger.error("Synthetic data not loaded for training.")
-            raise ValueError("Synthetic data not loaded for training")
-        if 'train_dataset' not in all_synthetic_data:
-            logger.error("'all_synthetic_data' is missing the 'train_dataset' key.")
-            raise KeyError("'train_dataset' key not found in synthetic data.")
-        dataset = all_synthetic_data['train_dataset']
-        logger.info(f"Using synthetic training dataset with {len(dataset)} samples")
+    if dataset_type.lower() == 'train':
+        dataset = all_synthetic_data['train_dataset'] if args.use_synthetic_data else ARCDataset(
+            data_source=arckit.load_data()[0],
+            is_test=False,
+            num_symbols=config.training.num_symbols,
+            pad_symbol_idx=config.training.pad_symbol_idx,
+            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+        )
     else:
-        # Load from official ARC datasets
-        if dataset_type.lower() == 'train':
-            logger.info("Loading official ARC training dataset")
-            train_set, _ = arckit.load_data()
-            data_source = train_set
-        elif dataset_type.lower() == 'val':
-            logger.info("Loading official ARC validation dataset")
-            _, eval_set = arckit.load_data()
-            data_source = prepare_val_or_test_data(eval_set, args, is_validation=True)
-        elif dataset_type.lower() == 'test':
-            logger.info("Loading official ARC test dataset")
-            _, eval_set = arckit.load_data()
-            data_source = prepare_val_or_test_data(eval_set, args, is_validation=False)
-        else:
-            raise ValueError(f"Unknown dataset_type: {dataset_type}")
-
+        _, eval_set = arckit.load_data()
+        data_source = prepare_val_or_test_data(eval_set, args, is_validation=(dataset_type.lower() == 'val'))
         dataset = ARCDataset(
             data_source=data_source,
             is_test=(dataset_type.lower() == 'test'),
@@ -147,7 +132,7 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
             pad_symbol_idx=config.training.pad_symbol_idx,
             symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
         )
-        logger.debug(f"Official {dataset_type.lower()} dataset loaded with {len(dataset)} samples")
+    logger.debug(f"{dataset_type.capitalize()} dataset loaded with {len(dataset)} samples")
 
     return dataset
 
@@ -174,16 +159,7 @@ def load_and_split_synthetic_data(args, config):
     total_samples = len(synthetic_dataset)
     logger.debug(f"Total synthetic samples loaded: {total_samples}")
 
-    synthetic_data_dict = {
-        'train_dataset': synthetic_dataset
-    }
-
-    logger.debug(f"Synthetic data dictionary keys: {list(synthetic_data_dict.keys())}")
-    for key, dataset in synthetic_data_dict.items():
-        logger.debug(f"{key} contains {len(dataset)} samples.")
-
-    logger.debug("Exiting load_and_split_synthetic_data function")
-    return synthetic_data_dict
+    return {'train_dataset': synthetic_dataset}
 
 
 def main(args):
@@ -819,23 +795,3 @@ if __name__ == "__main__":
 
     main(args)
 
-def prepare_val_or_test_data(eval_set, args, is_validation=True):
-    """
-    Prepare validation or test data from the arckit evaluation set.
-
-    Args:
-        eval_set: The evaluation TaskSet from arckit.load_data().
-        args: Parsed command-line arguments.
-        is_validation: Boolean indicating whether it's validation data.
-
-    Returns:
-        List of dictionaries with keys 'input', 'output', and 'task_id'.
-    """
-    logger.debug(f"Preparing {'validation' if is_validation else 'test'} data from arckit evaluation set")
-    samples = []
-    for task in tqdm(eval_set.tasks, desc=f"Processing tasks for {'validation' if is_validation else 'test'} dataset"):
-        for ex in task.train if is_validation else task.test:
-            sample = {'input': ex[0], 'output': ex[1], 'task_id': task.id}
-            samples.append(sample)
-    logger.debug(f"Prepared {len(samples)} samples for {'validation' if is_validation else 'test'} dataset")
-    return samples
