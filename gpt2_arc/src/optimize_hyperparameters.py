@@ -662,9 +662,7 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     training_config = TrainingConfig()
     config = Config(model=model_config, training=training_config)
 
-    logger.info("Loading datasets once before optimization...")
-
-    # Create a partial objective function that includes preloaded datasets
+    # Create a partial objective function that doesn't include preloaded datasets
     objective_partial = partial(objective, args=args)
 
     study = optuna.create_study(
