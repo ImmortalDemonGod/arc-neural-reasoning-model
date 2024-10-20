@@ -197,6 +197,12 @@ class ARCDataset(Dataset):
                     parsed_py = self._cysimdjson_to_native(parsed_json)
                 except Exception as e:
                     logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Attempting standard json parser.")
+                    
+                    # Read a snippet of the file for debugging
+                    f.seek(0)
+                    file_snippet = f.read(1024).decode('utf-8', errors='replace')  # Read first 1KB
+                    logger.debug(f"Snippet from {file_path}:\n{file_snippet}\n")
+                    
                     f.seek(0)  # Reset file pointer to the beginning
                     try:
                         parsed_py = json.load(f)
@@ -230,7 +236,11 @@ class ARCDataset(Dataset):
 
                 logger.debug(f"Total samples to process from {file_path}: {len(data_iterable)}")
 
+                logger.debug(f"Total samples to process from {file_path}: {len(data_iterable)}")
+
                 for ex in data_iterable:
+                    # Log the keys of each example
+                    logger.debug(f"Processing example with keys: {list(ex.keys())}")
                     # Log the keys of each example
                     logger.debug(f"Processing example with keys: {list(ex.keys())}")  # Added line
                     # Handle cases where 'input' and 'output' might be nested differently
@@ -261,6 +271,8 @@ class ARCDataset(Dataset):
                                 exc_info=True
                             )
                     else:
+                        logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
+                        logger.debug(f"Sample keys: {list(ex.keys())}")
                         logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
 
         except Exception as e:  # Catch all exceptions related to parsing
