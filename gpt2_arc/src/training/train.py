@@ -128,8 +128,7 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         if all_synthetic_data is None:
             raise ValueError("Synthetic data not loaded")
         dataset = all_synthetic_data['dataset']
-        indices = all_synthetic_data[f'{dataset_type}_indices']
-        logger.info(f"Using synthetic {dataset_type} dataset with {len(indices)} samples")
+        logger.info(f"Using synthetic {dataset_type}")
         return dataset
     else:
         logger.info(f"Loading ARC {dataset_type} dataset")
