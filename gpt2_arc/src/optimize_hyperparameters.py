@@ -603,9 +603,9 @@ def objective(trial, args, all_synthetic_data):
 
         # Process test results
         if test_results:
-            avg_test_loss = sum(result['test_loss'] for result in test_results) / len(test_results)
-            avg_test_accuracy = sum(result['test_accuracy'] for result in test_results) / len(test_results)
-            avg_test_diff_accuracy = sum(result['test_diff_accuracy'] for result in test_results) / len(test_results)
+            avg_test_loss = sum(result['avg_test_loss'] for result in test_results) / len(test_results)
+            avg_test_accuracy = sum(result['avg_test_accuracy'] for result in test_results) / len(test_results)
+            avg_test_diff_accuracy = sum(result['avg_test_diff_accuracy'] for result in test_results) / len(test_results)
 
             logger.info(f"Test results - Loss: {avg_test_loss:.4f}, Accuracy: {avg_test_accuracy:.4f}, Diff Accuracy: {avg_test_diff_accuracy:.4f}")
 
