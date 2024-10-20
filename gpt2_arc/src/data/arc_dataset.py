@@ -281,6 +281,11 @@ class ARCDataset(Dataset):
                                 missing_id_logged = True
                             else:
                                 task_id = f"default_task_{sample_count}"
+                        
+                        # Add prefix if not already present
+                        if isinstance(task_id, str) and not (task_id.startswith('synthetic_task_') or task_id.startswith('default_task')):
+                            task_id = f"synthetic_task_{task_id}"
+                            logger.debug(f"Prefixed task_id to: {task_id}")
                         samples.append({
                             "input": input_tensor,
                             "output": output_tensor,
