@@ -451,7 +451,12 @@ def main(args):
 
         # Initialize model
         logger.info("Initializing model")
-        model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
+        model = GPT2ARC(
+            config=config,
+            num_classes=config.training.num_classes,  # Use num_classes from config
+            symbol_freq=symbol_freq_dict,
+            pad_symbol_idx=config.training.pad_symbol_idx
+        )
         logger.debug(f"Model initialized with config: {model_config}")
 
         # Load the checkpoint if specified

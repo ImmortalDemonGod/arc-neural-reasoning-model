@@ -211,12 +211,22 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Validation loss computed: {loss.item()}")
         
         preds = torch.argmax(outputs, dim=-1)
+        logger.debug(f"  Preds shape before reshape: {preds.shape}, dtype: {preds.dtype}")
+
+        # Reshape preds to match targets shape using view_as for safety
+        try:
+            preds = preds.view_as(targets)
+            logger.debug(f"  Reshaped preds to match targets shape: {preds.shape}, dtype: {preds.dtype}")
+        except RuntimeError as e:
+            logger.error(f"  Failed to reshape preds: {e}")
+            raise e
+
         accuracy = (preds == targets).float().mean()
-        logger.debug(f"Validation accuracy: {accuracy.item()}")
+        logger.debug(f"  Validation accuracy: {accuracy.item()}")
 
         self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.log('val_accuracy', accuracy, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        
+
         return loss
 
     def on_test_epoch_start(self):
