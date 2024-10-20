@@ -113,7 +113,12 @@ class ModelConfigSaver(Callback):
         
 def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
     logger.debug(f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}, all_synthetic_data={'provided' if all_synthetic_data else 'None'}")
-
+    
+    # Add detailed debug logs for condition variables
+    logger.debug(f"args.use_synthetic_data: {args.use_synthetic_data}")
+    logger.debug(f"dataset_type.lower(): {dataset_type.lower()}")
+    logger.debug(f"all_synthetic_data: {'provided' if all_synthetic_data else 'None'}")
+    
     if args.use_synthetic_data and dataset_type.lower() == 'train':
         if all_synthetic_data is None:
             logger.error("Synthetic data not loaded.")
