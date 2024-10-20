@@ -114,18 +114,11 @@ class ModelConfigSaver(Callback):
 def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
     logger.debug(f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}, all_synthetic_data={'provided' if all_synthetic_data else 'None'}")
 
-    if args.use_synthetic_data:
+    if args.use_synthetic_data and dataset_type.lower() == 'train':
         if all_synthetic_data is None:
             logger.error("Synthetic data not loaded.")
             raise ValueError("Synthetic data not loaded")
-        if dataset_type.lower() == 'train':
-            dataset = all_synthetic_data['train_dataset']
-        elif dataset_type.lower() == 'val':
-            dataset = all_synthetic_data['val_dataset']
-        elif dataset_type.lower() == 'test':
-            dataset = all_synthetic_data['test_dataset']
-        else:
-            raise ValueError(f"Unknown dataset_type: {dataset_type}")
+        dataset = all_synthetic_data['train_dataset']
         logger.info(f"Using synthetic {dataset_type} dataset with {len(dataset)} samples")
         return dataset
     else:
