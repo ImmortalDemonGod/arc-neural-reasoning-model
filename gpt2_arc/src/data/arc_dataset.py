@@ -225,15 +225,15 @@ class ARCDataset(Dataset):
         samples = []
         sample_count = 0  # Initialize sample counter
         missing_id_logged = False  # Flag to track if warning has been logged for this file
+
+        # Skip empty files early
+        if os.path.getsize(file_path) == 0:
+            logger.warning(f"Empty JSON file detected: {file_path}. Skipping.")
+            return samples
+
         try:
-            # Skip empty files early
-            if os.path.getsize(file_path) == 0:
-                logger.warning(f"Empty JSON file detected: {file_path}. Skipping.")
-                return samples
-            
-        with open(file_path, 'r', encoding='utf-8') as f:
-            # Use cysimdjson for efficient parsing
-            try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                # Use cysimdjson for efficient parsing
                 parsed_json = self.json_parser.parse(f.read())
                 # Assume the JSON structure is a list of samples or a single task object
                 if isinstance(parsed_json, list):
@@ -271,15 +271,13 @@ class ARCDataset(Dataset):
                         })
                 else:
                     logger.warning(f"Unexpected JSON structure in file {file_path}. Skipping.")
-            except cysimdjson.JSONParseError as e:
-                logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Skipping.")
-        except ijson.JSONError as e:
-            logger.warning(f"Malformed JSON in file {file_path}: {e}. Skipping.")
+        except cysimdjson.JSONParseError as e:
+            logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Skipping.")
         except UnicodeDecodeError as e:
             logger.warning(f"Encoding error in file {file_path}: {e}. Skipping.")
         except Exception as e:
             logger.error(f"Unexpected error processing file {file_path}: {e}", exc_info=True)
-        
+
         return samples
 
     def _process_single_file_parallel(self, file_path: str) -> List[Dict]:
