@@ -97,7 +97,15 @@ def objective(trial, args):
     arc_trainer = None
     logger.info(f"Starting trial {trial.number}")
     try:
-        # Initialize fixed hyperparameters dictionary
+        # Load datasets
+        if args.use_synthetic_data:
+            all_synthetic_data = load_and_split_synthetic_data(args, config)
+        else:
+            all_synthetic_data = None
+
+        train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
+        val_data = load_dataset(args, config, dataset_type='val')
+        test_data = load_dataset(args, config, dataset_type='test')
         fixed_hyperparams = {}
 
         # Initialize config and symbol_freq_dict
