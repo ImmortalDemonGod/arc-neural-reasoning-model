@@ -260,48 +260,48 @@ class ARCDataset(Dataset):
 
             logger.debug(f"Total samples to process from {file_path}: {len(data_iterable)}")
 
-        for ex in data_iterable:
-            # Log the type and keys of each example
-            if isinstance(ex, dict):
-                logger.debug(f"Processing example of type dict with keys: {list(ex.keys())}")
-            else:
-                logger.warning(f"Expected example to be a dict, but got {type(ex)}. Skipping example.")
-                continue  # Skip non-dict examples
+            for ex in data_iterable:
+                # Log the type and keys of each example
+                if isinstance(ex, dict):
+                    logger.debug(f"Processing example of type dict with keys: {list(ex.keys())}")
+                else:
+                    logger.warning(f"Expected example to be a dict, but got {type(ex)}. Skipping example.")
+                    continue  # Skip non-dict examples
 
-            # Handle cases where 'input' and 'output' might be nested differently
-            input_key = next((k for k in ex.keys() if k.lower() == 'input'), None)
-            output_key = next((k for k in ex.keys() if k.lower() == 'output'), None)
+                # Handle cases where 'input' and 'output' might be nested differently
+                input_key = next((k for k in ex.keys() if k.lower() == 'input'), None)
+                output_key = next((k for k in ex.keys() if k.lower() == 'output'), None)
 
-            if input_key and output_key:
-                try:
-                    input_tensor = self._preprocess_grid(ex[input_key])
-                    output_tensor = self._preprocess_grid(ex[output_key])
-                    task_id = ex.get('id', f"default_task_{sample_count}")
-                    if not isinstance(task_id, str) or not task_id:
-                        if not missing_id_logged:
-                            task_id = f"default_task_{sample_count}"
-                            logger.warning(f"Sample missing valid 'id'. Assigned task_id: {task_id}")
-                            missing_id_logged = True
-                        else:
-                            task_id = f"default_task_{sample_count}"
-                    
-                    # Add prefix if not already present
-                    if isinstance(task_id, str) and not (task_id.startswith('synthetic_task_') or task_id.startswith('default_task')):
-                        task_id = f"synthetic_task_{task_id}"
-                        logger.debug(f"Prefixed task_id to: {task_id}")
-                    samples.append({
-                        "input": input_tensor,
-                        "output": output_tensor,
-                        "task_id": task_id
-                    })
-                    sample_count += 1
-                except Exception as e:
-                    logger.exception(
-                        f"Error preprocessing sample {sample_count} (Task ID: {task_id}) in file {file_path}: {e}"
-                    )
-            else:
-                logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
-                logger.debug(f"Sample keys: {list(ex.keys())}")
+                if input_key and output_key:
+                    try:
+                        input_tensor = self._preprocess_grid(ex[input_key])
+                        output_tensor = self._preprocess_grid(ex[output_key])
+                        task_id = ex.get('id', f"default_task_{sample_count}")
+                        if not isinstance(task_id, str) or not task_id:
+                            if not missing_id_logged:
+                                task_id = f"default_task_{sample_count}"
+                                logger.warning(f"Sample missing valid 'id'. Assigned task_id: {task_id}")
+                                missing_id_logged = True
+                            else:
+                                task_id = f"default_task_{sample_count}"
+                        
+                        # Add prefix if not already present
+                        if isinstance(task_id, str) and not (task_id.startswith('synthetic_task_') or task_id.startswith('default_task')):
+                            task_id = f"synthetic_task_{task_id}"
+                            logger.debug(f"Prefixed task_id to: {task_id}")
+                        samples.append({
+                            "input": input_tensor,
+                            "output": output_tensor,
+                            "task_id": task_id
+                        })
+                        sample_count += 1
+                    except Exception as e:
+                        logger.exception(
+                            f"Error preprocessing sample {sample_count} (Task ID: {task_id}) in file {file_path}: {e}"
+                        )
+                else:
+                    logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
+                    logger.debug(f"Sample keys: {list(ex.keys())}")
 
         except Exception as e:  # Catch all exceptions related to parsing
             logger.exception(f"Failed to process file {file_path}: {e}", exc_info=True)
