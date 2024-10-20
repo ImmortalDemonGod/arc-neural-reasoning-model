@@ -84,7 +84,7 @@ class ARCTrainer(pl.LightningModule):
                     pin_memory=True if self.args.use_gpu else False,
                     prefetch_factor=self.config.training.prefetch_factor,
                     persistent_workers=self.config.training.persistent_workers,
-                    collate_fn=self.train_dataset.collate_fn  # Ensure collate_fn is applied
+                    collate_fn=self.train_dataset.dataset.collate_fn if isinstance(self.train_dataset, torch.utils.data.Subset) else self.train_dataset.collate_fn
                 )
             elif self.config.training.balancing_method == "oversampling":
                 # Placeholder for oversampling implementation
@@ -98,7 +98,7 @@ class ARCTrainer(pl.LightningModule):
                     pin_memory=True if self.args.use_gpu else False,
                     prefetch_factor=self.config.training.prefetch_factor,
                     persistent_workers=self.config.training.persistent_workers,
-                    collate_fn=self.train_dataset.collate_fn  # Ensure collate_fn is applied
+                    collate_fn=self.train_dataset.dataset.collate_fn if isinstance(self.train_dataset, torch.utils.data.Subset) else self.train_dataset.collate_fn
                 )
             else:
                 logger.warning(f"Unknown balancing method: {self.config.training.balancing_method}. Skipping balancing.")
@@ -111,7 +111,7 @@ class ARCTrainer(pl.LightningModule):
                     pin_memory=True if self.args.use_gpu else False,
                     prefetch_factor=self.config.training.prefetch_factor,
                     persistent_workers=self.config.training.persistent_workers,
-                    collate_fn=self.train_dataset.collate_fn  # Ensure collate_fn is applied
+                    collate_fn=self.train_dataset.dataset.collate_fn if isinstance(self.train_dataset, torch.utils.data.Subset) else self.train_dataset.collate_fn
                 )
         else:
             train_loader = DataLoader(
@@ -122,7 +122,7 @@ class ARCTrainer(pl.LightningModule):
                 pin_memory=self.config.training.pin_memory,
                 prefetch_factor=self.config.training.prefetch_factor,
                 persistent_workers=self.config.training.persistent_workers,
-                collate_fn=self.train_dataset.collate_fn  # Updated line
+                collate_fn=self.train_dataset.dataset.collate_fn if isinstance(self.train_dataset, torch.utils.data.Subset) else self.train_dataset.collate_fn
             )
 
         logger.debug(f"Training DataLoader created with num_workers={get_num_workers(self.config.training)}")
@@ -130,6 +130,7 @@ class ARCTrainer(pl.LightningModule):
 
     def val_dataloader(self):
         logger.debug("Entering ARCTrainer.val_dataloader")
+        collate_fn = self.val_dataset.dataset.collate_fn if isinstance(self.val_dataset, torch.utils.data.Subset) else self.val_dataset.collate_fn
         dataloader = DataLoader(
             self.val_dataset,
             batch_size=self.config.training.batch_size,
@@ -137,7 +138,7 @@ class ARCTrainer(pl.LightningModule):
             pin_memory=self.config.training.pin_memory,    # Updated pin_memory
             prefetch_factor=self.config.training.prefetch_factor,
             persistent_workers=self.config.training.persistent_workers,
-            collate_fn=self.val_dataset.collate_fn
+            collate_fn=collate_fn
         )
         logger.debug("Exiting ARCTrainer.val_dataloader")
         return dataloader
@@ -146,6 +147,7 @@ class ARCTrainer(pl.LightningModule):
         if self.test_dataset is None:
             logger.error("Test dataset is not provided. Please ensure that the test dataset is correctly loaded.")
             raise ValueError("Test dataset is not provided.")
+        collate_fn = self.test_dataset.dataset.collate_fn if isinstance(self.test_dataset, torch.utils.data.Subset) else self.test_dataset.collate_fn
         return DataLoader(
             self.test_dataset,
             batch_size=self.config.training.batch_size,
@@ -154,7 +156,7 @@ class ARCTrainer(pl.LightningModule):
             pin_memory=self.config.training.pin_memory,
             prefetch_factor=self.config.training.prefetch_factor,
             persistent_workers=self.config.training.persistent_workers,
-            collate_fn=self.test_dataset.collate_fn
+            collate_fn=collate_fn
         )
 
     
