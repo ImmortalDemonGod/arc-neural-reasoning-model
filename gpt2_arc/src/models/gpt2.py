@@ -33,7 +33,8 @@ class Attention(nn.Module):
     def forward(self, x, mask=None):
         B, T, C = x.size()
         logger.debug(f"Model input shape: {input_ids.shape}")
-        logger.debug(f"Attention input shape: {x.shape}")
+        if not torch._dynamo.is_compiling():
+            logger.debug(f"Attention input shape: {x.shape}")
         k = self.key(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         q = self.query(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         v = self.value(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
