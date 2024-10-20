@@ -12,7 +12,7 @@ import optuna
 import arckit
 import numpy as np
 import torch
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from lightning.pytorch.profilers import PyTorchProfiler
 from pytorch_lightning.callbacks import Callback
 from torch.profiler import ProfilerActivity
@@ -360,22 +360,16 @@ def main(args):
         else:
             all_synthetic_data = None
 
-        # Concurrently load datasets using ProcessPoolExecutor
-        logger.info("Loading datasets concurrently using ProcessPoolExecutor")
+        # Sequentially load datasets to avoid memory allocation issues
+        logger.info("Loading datasets sequentially to avoid memory allocation issues")
 
-        with ProcessPoolExecutor(max_workers=2) as executor:
-            future_train = executor.submit(load_dataset, args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
-            future_val = executor.submit(load_dataset, args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
-            future_test = executor.submit(load_dataset, args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
-    
-            # Retrieve the loaded datasets
-            try:
-                train_data = future_train.result()
-                val_data = future_val.result()
-                test_data = future_test.result()
-            except Exception as e:
-                logger.error(f"Error loading datasets concurrently with ProcessPoolExecutor: {e}")
-                raise
+        try:
+            train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
+            val_data = load_dataset(args, config, dataset_type='val', all_synthetic_data=all_synthetic_data)
+            test_data = load_dataset(args, config, dataset_type='test', all_synthetic_data=all_synthetic_data)
+        except Exception as e:
+            logger.error(f"Error loading datasets: {e}")
+            raise
 
         # Debugging: Log the number of samples loaded
         logger.debug(f"Loaded {len(train_data)} training samples.")
