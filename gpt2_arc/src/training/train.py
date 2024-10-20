@@ -112,69 +112,70 @@ class ModelConfigSaver(Callback):
 
         
 def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
-    """
-    Load the specified dataset based on the provided arguments and configuration.
+    logger.debug(f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}, all_synthetic_data={'provided' if all_synthetic_data else 'None'}")
 
-    Args:
-        args: Parsed command-line arguments.
-        config: Configuration object containing model and training settings.
-        dataset_type (str): Type of dataset to load ('train', 'val', 'test').
-        all_synthetic_data: Loaded synthetic data splits (if using synthetic data).
-
-    Returns:
-        Dataset: Loaded dataset (ARCDataset or Subset of ARCDataset).
-    """
-    if dataset_type == 'train' and args.use_synthetic_data:
-        if all_synthetic_data is None:
-            raise ValueError("Synthetic data not loaded")
-        dataset = all_synthetic_data['dataset']
-        logger.info(f"Using synthetic {dataset_type}")
-        return dataset
-    else:
-        logger.info(f"Loading ARC {dataset_type} dataset")
-        train_set, eval_set = arckit.load_data()
-
-        if dataset_type == 'train':
-            data_source = train_set
+    if dataset_type.lower() == 'train':
+        if args.use_synthetic_data:
+            if all_synthetic_data is None:
+                logger.error("Synthetic data not loaded.")
+                raise ValueError("Synthetic data not loaded")
+            dataset = all_synthetic_data['dataset']
+            logger.info("Using synthetic train dataset")
+            return dataset
         else:
-            # Extract samples from eval_set
-            samples = []
-            for task in tqdm(eval_set.tasks, desc=f"Processing tasks for {dataset_type} dataset"):
-                # Combine train and test examples from each task
-                samples.extend([
-                    {'input': ex[0], 'output': ex[1], 'task_id': task.id}
-                    for ex in task.train
-                ])
-                samples.extend([
-                    {'input': ex[0], 'output': ex[1], 'task_id': task.id}
-                    for ex in task.test
-                ])
+            logger.info("Loading official ARC train dataset")
+            train_set, eval_set = arckit.load_data()
+            data_source = train_set
+    elif dataset_type.lower() == 'val':
+        logger.info("Loading official ARC val dataset")
+        train_set, eval_set = arckit.load_data()
+        samples = []
+        for task in tqdm(eval_set.tasks, desc="Processing tasks for val dataset"):
+            samples.extend([
+                {'input': ex[0], 'output': ex[1], 'task_id': task.id}
+                for ex in task.train
+            ])
+            samples.extend([
+                {'input': ex[0], 'output': ex[1], 'task_id': task.id}
+                for ex in task.test
+            ])
 
-            total_samples = len(samples)
-            val_size = int(total_samples * args.val_split / (args.val_split + args.test_split))
-            test_size = total_samples - val_size
+        total_samples = len(samples)
+        val_size = int(total_samples * args.val_split / (args.val_split + args.test_split))
+        random.shuffle(samples)
+        val_samples = samples[:val_size]
+        data_source = val_samples
+    elif dataset_type.lower() == 'test':
+        logger.info("Loading official ARC test dataset")
+        train_set, eval_set = arckit.load_data()
+        samples = []
+        for task in tqdm(eval_set.tasks, desc="Processing tasks for test dataset"):
+            samples.extend([
+                {'input': ex[0], 'output': ex[1], 'task_id': task.id}
+                for ex in task.train
+            ])
+            samples.extend([
+                {'input': ex[0], 'output': ex[1], 'task_id': task.id}
+                for ex in task.test
+            ])
 
-            # Shuffle samples
-            random.shuffle(samples)
+        total_samples = len(samples)
+        val_size = int(total_samples * args.val_split / (args.val_split + args.test_split))
+        test_size = total_samples - val_size
+        random.shuffle(samples)
+        test_samples = samples[val_size:]
+        data_source = test_samples
+    else:
+        raise ValueError(f"Unknown dataset_type: {dataset_type}")
 
-            # Split samples into validation and test sets
-            val_samples = samples[:val_size]
-            test_samples = samples[val_size:]
-
-            if dataset_type == 'val':
-                data_source = val_samples
-            elif dataset_type == 'test':
-                data_source = test_samples
-            else:
-                raise ValueError(f"Unknown dataset_type: {dataset_type}")
-
-        dataset = ARCDataset(
-            data_source=data_source,
-            is_test=(dataset_type == 'test'),
-            num_symbols=config.training.num_symbols,
-            pad_symbol_idx=config.training.pad_symbol_idx,
-            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
-        )
+    dataset = ARCDataset(
+        data_source=data_source,
+        is_test=(dataset_type.lower() == 'test'),
+        num_symbols=config.training.num_symbols,
+        pad_symbol_idx=config.training.pad_symbol_idx,
+        symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+    )
+    logger.debug(f"Dataset of type '{dataset_type}' loaded with {len(dataset)} samples.")
     return dataset
 
 
