@@ -102,7 +102,7 @@ def objective(trial, args, all_synthetic_data):
         training_config = TrainingConfig()
         config = Config(model=model_config, training=training_config)
         # Use pre-loaded synthetic data for training
-        train_data = all_synthetic_data['train_dataset'] if args.use_synthetic_data else load_dataset(args, config, dataset_type='train')
+        train_data = all_synthetic_data['train_dataset'] if args.use_synthetic_data else load_dataset(args, config, dataset_type='train', max_samples=args.max_train_samples)
 
         # Load validation and test data from arckit
         val_data = load_dataset(args, config, dataset_type='val')
@@ -738,6 +738,7 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
+    parser.add_argument("--max_train_samples", type=int, default=None, help="Maximum number of training samples to load. Use None to load all samples.")
     parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
     parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
     parser.add_argument("--batch_size_min", type=int, default=1, help="Minimum value for batch_size.")

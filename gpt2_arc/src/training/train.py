@@ -139,6 +139,7 @@ def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
         dataset = all_synthetic_data['train_dataset'] if args.use_synthetic_data else ARCDataset(
             data_source=arckit.load_data()[0],
             is_test=False,
+            max_samples=args.max_train_samples,
             num_symbols=config.training.num_symbols,
             pad_symbol_idx=config.training.pad_symbol_idx,
             symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
