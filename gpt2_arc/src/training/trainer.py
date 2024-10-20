@@ -167,27 +167,29 @@ class ARCTrainer(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         logger.debug(f"Starting training step {batch_idx}")
-        logger.debug(f"Batch {batch_idx}:")
         inputs, targets, _ = batch
         logger.debug(f"  Inputs shape: {inputs.shape}, dtype: {inputs.dtype}")
         logger.debug(f"  Targets shape: {targets.shape}, dtype: {targets.dtype}")
-        logger.debug(f"  Task IDs: {_}")
-        logger.debug(f"Inputs shape: {inputs.shape}, Targets shape: {targets.shape}, Targets dtype: {targets.dtype}")
-        targets = targets.long()  # Ensure targets are of type Long
-        logger.debug(f"Targets dtype after casting: {targets.dtype}")
         
         outputs = self(inputs)
-        logger.debug(f"  Inputs min/max values: {inputs.min().item():.2f}/{inputs.max().item():.2f}")
         logger.debug(f"  Outputs shape: {outputs.shape}, dtype: {outputs.dtype}")
-        logger.debug(f"  Output min/max values: {outputs.min().item():.2f}/{outputs.max().item():.2f}")
-        logger.debug(f"  Output min/max values: {outputs.min().item():.2f}/{outputs.max().item():.2f}")
         
         loss = self.compute_loss(outputs, targets)
         logger.debug(f"Loss computed: {loss.item()}")
         
         preds = torch.argmax(outputs, dim=-1)
+        logger.debug(f"  Preds shape: {preds.shape}, dtype: {preds.dtype}")
+        
+        # Reshape preds to match targets if necessary
+        try:
+            preds = preds.view(targets.shape)
+            logger.debug(f"  Reshaped preds to match targets shape: {preds.shape}")
+        except RuntimeError as e:
+            logger.error(f"  Failed to reshape preds: {e}")
+            raise e
+        
         accuracy = (preds == targets).float().mean()
-        logger.debug(f"Training accuracy: {accuracy.item()}")
+        logger.debug(f"  Training accuracy: {accuracy.item()}")
 
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log('train_accuracy', accuracy, on_step=True, on_epoch=True, prog_bar=True, logger=True)
