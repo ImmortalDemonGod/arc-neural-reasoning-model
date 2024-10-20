@@ -796,7 +796,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--val_check_interval",
         type=float,
-        default=1000,
+        default=1.0,
         help=(
             "How often to perform validation. "
             "If a float, represents the fraction of an epoch (e.g., 0.5 for halfway through each epoch). "
