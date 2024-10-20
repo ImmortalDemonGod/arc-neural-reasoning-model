@@ -376,6 +376,7 @@ class ARCDataset(Dataset):
             cache_path (str): The file path where the cache will be saved.
             data_only (bool): If True, only save the data without statistics.
         """
+        logger.debug(f"Attempting to save {'data only ' if data_only else ''}cache to {cache_path}")
         try:
             if data_only:
                 cache_data = {
@@ -388,9 +389,9 @@ class ARCDataset(Dataset):
                 }
             with open(cache_path, 'wb') as f:
                 pickle.dump(cache_data, f)
-            logger.debug(f"Saved {'data only ' if data_only else ''}cache to {cache_path}")
+            logger.info(f"Successfully saved {'data only ' if data_only else ''}cache to {cache_path}")
         except Exception as e:
-            logger.error(f"Failed to save cache to {cache_path}: {e}")
+            logger.error(f"Failed to save cache to {cache_path}: {e}", exc_info=True)
 
         # Add data validation
         self._validate_data()
@@ -505,22 +506,33 @@ class ARCDataset(Dataset):
         """
         Computes dataset statistics and caches them alongside the dataset cache.
         """
-        logger.debug("Computing dataset statistics")
-        grid_size_stats = self._compute_grid_size_stats()
-        symbol_frequencies = self._compute_symbol_frequencies()
-        
-        statistics = {
-            "grid_size_stats": grid_size_stats,
-            "symbol_frequencies": symbol_frequencies
-        }
-        
-        # Update the cache dictionary with statistics
-        self.statistics = statistics
-        self._save_cache(self.cache_path)  # Ensure statistics are saved in the cache
-        logger.debug("Dataset statistics computed and cached successfully")
-
-        if self.symbol_freq:
-            logger.debug(f"Sampling weights - min: {self.sample_weights.min().item()}, max: {self.sample_weights.max().item()}, mean: {self.sample_weights.mean().item()}")
+        logger.info("Starting computation of dataset statistics.")
+        try:
+            grid_size_stats = self._compute_grid_size_stats()
+            logger.debug(f"Computed grid size statistics: {grid_size_stats}")
+            
+            symbol_frequencies = self._compute_symbol_frequencies()
+            logger.debug(f"Computed symbol frequencies: {symbol_frequencies}")
+            
+            statistics = {
+                "grid_size_stats": grid_size_stats,
+                "symbol_frequencies": symbol_frequencies
+            }
+            
+            # Update the cache dictionary with statistics
+            self.statistics = statistics
+            logger.info("Completed computation of dataset statistics.")
+            
+            self._save_cache(self.cache_path)
+            logger.info("Dataset statistics have been cached successfully.")
+            
+            if self.symbol_freq:
+                logger.debug(f"Sampling weights - min: {self.sample_weights.min().item()}, "
+                             f"max: {self.sample_weights.max().item()}, "
+                             f"mean: {self.sample_weights.mean().item()}")
+        except Exception as e:
+            logger.error(f"Failed to compute and cache dataset statistics: {e}", exc_info=True)
+            raise
 
 
     def _process_list_data(self, data_list: List[Dict], task_id: Optional[str] = None) -> List[Dict]:
