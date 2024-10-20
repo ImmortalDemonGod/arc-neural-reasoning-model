@@ -77,6 +77,25 @@ def set_debug_mode(debug=False):
         handler.setLevel(logging.ERROR)
 
 class ARCDataset(Dataset):
+    def _convert_cysimdjson_to_python(self, obj):
+        """
+        Recursively converts cysimdjson objects to native Python types.
+
+        Args:
+            obj: The cysimdjson JSON object.
+
+        Returns:
+            A Python dict or list with native types.
+        """
+        if isinstance(obj, list):
+            logger.debug("Converting cysimdjson JSONArray to Python list.")
+            return [self._convert_cysimdjson_to_python(item) for item in obj]
+        elif hasattr(obj, 'keys'):
+            logger.debug("Converting cysimdjson JSONObject to Python dict.")
+            return {k: self._convert_cysimdjson_to_python(v) for k, v in obj.items()}
+        else:
+            logger.debug(f"Returning primitive type: {type(obj)} with value: {obj}")
+            return obj
     def __init__(
         self,
         data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
@@ -189,16 +208,8 @@ class ARCDataset(Dataset):
                     # Attempt to parse with cysimdjson
                     parsed_json = self.json_parser.parse(f.read())
                     # Convert cysimdjson Document to standard Python types
-                    try:
-                        parsed_py = list(parsed_json)
-                        logger.debug(f"Successfully converted parsed_json to list for file {file_path}.")
-                    except TypeError:
-                        try:
-                            parsed_py = dict(parsed_json)
-                            logger.debug(f"Successfully converted parsed_json to dict for file {file_path}.")
-                        except TypeError:
-                            logger.warning(f"Could not convert parsed JSON to list or dict for file {file_path}. Skipping file.")
-                            return samples
+                    parsed_py = self._convert_cysimdjson_to_python(parsed_json)
+                    logger.debug(f"Converted parsed_py to native Python types: {type(parsed_py)}")
                 except Exception as e:
                     logger.exception(f"cysimdjson failed to parse file {file_path}. Attempting standard json parser.")
                     logger.error(f"Exception type: {type(e).__name__}")
