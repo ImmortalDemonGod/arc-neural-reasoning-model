@@ -15,6 +15,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, Subset, WeightedRandomSampler
 import logging
 import ijson  # Import ijson for streaming JSON parsing
+import cysimdjson  # New import added
 from tqdm import tqdm  # Import tqdm for progress bars
 import sys  # Import sys for handling tqdm output
 from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
