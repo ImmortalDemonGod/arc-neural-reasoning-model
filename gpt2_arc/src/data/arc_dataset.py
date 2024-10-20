@@ -223,7 +223,6 @@ class ARCDataset(Dataset):
             List[Dict]: List of processed samples from the file.
         """
         samples = []
-        samples = []
         sample_count = 0  # Initialize sample counter
         missing_id_logged = False  # Flag to track if warning has been logged for this file
 
@@ -233,11 +232,24 @@ class ARCDataset(Dataset):
             return samples
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:  # Open in text mode for json
-                parsed_json = json.load(f)  # Use json.load for parsing
-                
-                if isinstance(parsed_json, list):
-                    for ex in parsed_json:
+            with open(file_path, 'rb') as f:
+                try:
+                    # Attempt to parse with cysimdjson
+                    parsed_json = self.json_parser.parse(f.read())
+                    parsed_py = self._cysimdjson_to_native(parsed_json)
+                except JSONError as e:
+                    logger.error(f"cysimdjson failed to parse file {file_path}: {e}. Attempting standard json parser.")
+                    f.seek(0)  # Reset file pointer to the beginning
+                    try:
+                        parsed_py = json.load(f)
+                        logger.info(f"Successfully parsed {file_path} with standard json parser.")
+                    except json.JSONDecodeError as je:
+                        logger.error(f"Standard json parser failed to parse file {file_path}: {je}. Skipping file.")
+                        return samples  # Skip this file as both parsers failed
+
+                # Continue processing parsed_py as before
+                if isinstance(parsed_py, list):
+                    for ex in parsed_py:
                         if 'input' in ex and 'output' in ex:
                             try:
                                 input_tensor = self._preprocess_grid(ex['input'])
@@ -263,8 +275,9 @@ class ARCDataset(Dataset):
                                 )
                         else:
                             logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
-                elif isinstance(parsed_json, dict):
-                    for ex in parsed_json.get('train', []):
+                elif isinstance(parsed_py, dict):
+                    # Existing processing for dictionary tasks
+                    for ex in parsed_py.get('train', []):
                         try:
                             logger.debug(f"Processing training example keys: {ex.keys()}")
                             input_tensor = self._preprocess_grid(ex['input'])
@@ -315,8 +328,8 @@ class ARCDataset(Dataset):
                 else:
                     logger.warning(f"Unexpected JSON structure in file {file_path}. Skipping.")
             logger.info(f"Finished processing synthetic data file: {file_path}. Extracted {len(samples)} samples.")
-        except json.JSONDecodeError as e:  # Catch JSON parsing errors
-            logger.error(f"JSON parsing failed for file {file_path}: {e}. Skipping.")
+        except Exception as e:  # Catch all exceptions related to parsing
+            logger.error(f"Failed to process file {file_path}: {e}", exc_info=True)
 
         return samples
 
