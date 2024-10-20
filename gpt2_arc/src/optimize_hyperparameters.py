@@ -649,6 +649,10 @@ def objective(trial, args, train_data, val_data, test_data):
             raise optuna.exceptions.TrialPruned()
         else:
             logger.error(f"Trial {trial.number}: A runtime error occurred: {str(e)}", exc_info=True)
+            logger.debug(f"Trial {trial.number} - Batch {batch_idx}:")
+            logger.debug(f"  Inputs shape: {inputs.shape}, dtype: {inputs.dtype}")
+            logger.debug(f"  Targets shape: {targets.shape}, dtype: {targets.dtype}")
+            logger.debug(f"  Task IDs: {task_ids}")
             raise RuntimeError(f"Trial {trial.number}: A runtime error occurred: {str(e)}")
     except Exception as e:
         # Improved exception handling for symbol frequency issues
