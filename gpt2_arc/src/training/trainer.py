@@ -98,7 +98,7 @@ class ARCTrainer(pl.LightningModule):
                     pin_memory=True if self.args.use_gpu else False,
                     prefetch_factor=self.config.training.prefetch_factor,
                     persistent_workers=self.config.training.persistent_workers,
-                    collate_fn=self.val_dataset.collate_fn  # Ensure collate_fn is applied
+                    collate_fn=self.train_dataset.collate_fn  # Ensure collate_fn is applied
                 )
             else:
                 logger.warning(f"Unknown balancing method: {self.config.training.balancing_method}. Skipping balancing.")
@@ -111,7 +111,7 @@ class ARCTrainer(pl.LightningModule):
                     pin_memory=True if self.args.use_gpu else False,
                     prefetch_factor=self.config.training.prefetch_factor,
                     persistent_workers=self.config.training.persistent_workers,
-                    collate_fn=self.test_dataset.collate_fn  # Ensure collate_fn is applied
+                    collate_fn=self.train_dataset.collate_fn  # Ensure collate_fn is applied
                 )
         else:
             train_loader = DataLoader(
