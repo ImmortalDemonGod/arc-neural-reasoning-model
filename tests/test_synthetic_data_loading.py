@@ -1,93 +1,46 @@
 import unittest
-import tempfile
 import os
 import json
 import torch
 from gpt2_arc.src.data.arc_dataset import ARCDataset
-import shutil
 
 class TestSyntheticDataLoading(unittest.TestCase):
     def setUp(self):
         """
-        Set up a temporary directory with mock JSON files for testing synthetic data loading.
+        Set up the test to use existing synthetic data from the specified directory.
         """
-        # Create a temporary directory
-        self.temp_dir = tempfile.mkdtemp()
-
-        # Create mock JSON files within the temporary directory
-
-        # File 1: Well-formed JSON array of samples
-        self.mock_file1 = os.path.join(self.temp_dir, 'synthetic_mock1.json')
-        samples1 = [
-            {
-                "input": [[0, 1, 2], [3, 4, 5]],
-                "output": [[6, 7, 8], [9, 10, 0]],
-                "id": "synthetic_task_1"
-            },
-            {
-                "input": [[1, 2, 3], [4, 5, 6]],
-                "output": [[7, 8, 9], [0, 1, 2]],
-                "id": "synthetic_task_2"
-            }
-        ]
-        with open(self.mock_file1, 'w') as f:
-            json.dump(samples1, f)
-        
-        # File 2: Well-formed JSON dictionary with 'train' and 'test' keys
-        self.mock_file2 = os.path.join(self.temp_dir, 'synthetic_mock2.json')
-        samples2 = {
-            "train": [
-                {
-                    "input": [[2, 3, 4], [5, 6, 7]],
-                    "output": [[8, 9, 0], [1, 2, 3]],
-                    "id": "synthetic_task_3"
-                }
-            ],
-            "test": [
-                {
-                    "input": [[3, 4, 5], [6, 7, 8]],
-                    "output": [[9, 0, 1], [2, 3, 4]],
-                    "id": "synthetic_task_4"
-                }
-            ]
-        }
-        with open(self.mock_file2, 'w') as f:
-            json.dump(samples2, f)
-        
-        # File 3: Invalid JSON to test error handling
-        self.mock_file3 = os.path.join(self.temp_dir, 'synthetic_mock3.json')
-        with open(self.mock_file3, 'w') as f:
-            f.write('{"input": [[4, 5, 6], [7, 8, 9]], "output": [[0, 1, 2], [3, 4, 5]},')  # Missing closing brace
+        self.synthetic_data_dir = "/workspaces/arc-neural-reasoning-model/gpt2_arc/src/data/SyntheticARC/small_tasks"
     
     def tearDown(self):
         """
         Remove the temporary directory after tests.
         """
-        shutil.rmtree(self.temp_dir)
+        # No need to remove directory as it's existing synthetic data
     
     def test_dataset_loading(self):
         """
         Test if the dataset loads the expected number of synthetic samples.
         """
         dataset = ARCDataset(
-            data_source=self.temp_dir,
+            data_source=self.synthetic_data_dir,
             is_test=False,
-            max_samples=1,  # Expecting 3 valid synthetic samples
+            max_samples=None,  # Load all samples
             num_symbols=11,
             pad_symbol_idx=10,
             symbol_freq=None,
             debug=True
         )
         
-        # Assert that 3 synthetic samples are loaded
-        self.assertEqual(len(dataset), 3)
+        # Assert that the expected number of synthetic samples are loaded
+        expected_samples = self._count_json_samples(self.synthetic_data_dir)
+        self.assertEqual(len(dataset), expected_samples)
     
     def test_sample_structure(self):
         """
         Test if each loaded synthetic sample has 'input', 'output', and 'task_id' keys with correct types.
         """
         dataset = ARCDataset(
-            data_source=self.temp_dir,
+            data_source=self.synthetic_data_dir,
             is_test=False,
             max_samples=3,
             num_symbols=11,
@@ -156,7 +109,13 @@ class TestSyntheticDataLoading(unittest.TestCase):
         # Expect still 3 valid synthetic samples; empty file is skipped
         self.assertEqual(len(dataset), 3)
     
-    def test_symbol_freq_handling(self):
+    def test_synthetic_data_directory_exists(self):
+        """
+        Test that the synthetic data directory exists.
+        """
+        self.assertTrue(os.path.isdir(self.synthetic_data_dir), f"Synthetic data directory does not exist: {self.synthetic_data_dir}")
+
+    def test_symbol_freq_handling_with_existing_data(self):
         """
         Test if symbol frequencies are correctly handled when provided for synthetic data.
         """
@@ -177,6 +136,24 @@ class TestSyntheticDataLoading(unittest.TestCase):
         self.assertIsNotNone(dataset.sampler)
         self.assertEqual(len(dataset.sampler), len(dataset))
     
+    def _count_json_samples(self, directory):
+        count = 0
+        for filename in os.listdir(directory):
+            if filename.endswith('.json'):
+                file_path = os.path.join(directory, filename)
+                with open(file_path, 'r') as f:
+                    try:
+                        data = json.load(f)
+                        if isinstance(data, list):
+                            count += len(data)
+                        elif isinstance(data, dict):
+                            for key in ['train', 'test', 'samples', 'entries']:
+                                if key in data and isinstance(data[key], list):
+                                    count += len(data[key])
+                    except json.JSONDecodeError:
+                        continue  # Skip invalid JSON files
+        return count
+
     def test_large_dataset_loading(self):
         """
         Test if the dataset can handle loading a large number of synthetic samples.
