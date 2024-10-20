@@ -7,7 +7,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 import json
-import cysimdjson
 import numpy as np
 import pickle
 import hashlib
