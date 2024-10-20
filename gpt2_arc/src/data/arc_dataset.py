@@ -255,10 +255,21 @@ class ARCDataset(Dataset):
                 logger.debug(f"Total samples to process from {file_path}: {len(data_iterable)}")
 
                 for ex in data_iterable:
-                    if 'input' in ex and 'output' in ex:
+                    # Log the keys of each example
+                    if isinstance(ex, dict):
+                        logger.debug(f"Processing example with keys: {list(ex.keys())}")
+                    else:
+                        logger.warning(f"Expected example to be a dict, but got {type(ex)}. Skipping example.")
+                        continue  # Skip non-dict examples
+
+                    # Handle cases where 'input' and 'output' might be nested differently
+                    input_key = next((k for k in ex.keys() if k.lower() == 'input'), None)
+                    output_key = next((k for k in ex.keys() if k.lower() == 'output'), None)
+
+                    if input_key and output_key:
                         try:
-                            input_tensor = self._preprocess_grid(ex['input'])
-                            output_tensor = self._preprocess_grid(ex['output'])
+                            input_tensor = self._preprocess_grid(ex[input_key])
+                            output_tensor = self._preprocess_grid(ex[output_key])
                             task_id = ex.get('id', f"default_task_{sample_count}")
                             if not isinstance(task_id, str) or not task_id:
                                 if not missing_id_logged:
@@ -279,6 +290,7 @@ class ARCDataset(Dataset):
                             )
                     else:
                         logger.warning(f"Sample missing 'input' or 'output' keys in file {file_path}. Skipping.")
+                        logger.debug(f"Sample keys: {list(ex.keys())}")
 
         except Exception as e:  # Catch all exceptions related to parsing
             logger.exception(f"Failed to process file {file_path}: {e}", exc_info=True)
