@@ -188,7 +188,13 @@ class ARCDataset(Dataset):
                 try:
                     # Attempt to parse with cysimdjson
                     parsed_json = self.json_parser.parse(f.read())
-                    parsed_py = parsed_json  # Asignación directa
+                    parsed_py = parsed_json  # Direct assignment
+
+                    # Convert cysimdjson types to standard Python types
+                    if isinstance(parsed_py, cysimdjson.JSONArray):
+                        parsed_py = list(parsed_py)
+                    elif isinstance(parsed_py, cysimdjson.JSONObject):
+                        parsed_py = dict(parsed_py)
                 except Exception as e:
                     logger.exception(f"cysimdjson failed to parse file {file_path}. Attempting standard json parser.")
                     logger.error(f"Exception type: {type(e).__name__}")
