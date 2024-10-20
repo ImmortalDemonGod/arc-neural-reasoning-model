@@ -100,7 +100,6 @@ class ARCDataset(Dataset):
         self.data_files = []
         self.data_source = data_source
         self.num_samples = 0
-        self.data = self._load_data(data_source)                                                                                     
         
         self.cache_path = self._generate_cache_path(
             data_source=self.data_source,
@@ -109,38 +108,24 @@ class ARCDataset(Dataset):
             test_split=self.test_split
         )
         
-        if self._load_cache(self.cache_path):
-            logger.debug("Data loaded from cache successfully.")
-            self.num_samples = len(self.data)
-        
-        if debug:
-            logger.setLevel(logging.DEBUG)
-            handler.setLevel(logging.DEBUG)
-            logger.debug("Debug mode is enabled for ARCDataset.")
-        else:
-            logger.setLevel(logging.INFO)
-            handler.setLevel(logging.INFO)
-        
-        logger.debug("Starting ARCDataset initialization")
-        logger.debug(f"Initializing ARCDataset with data_source type: {type(data_source)}")                                          
-        logger.debug(f"data_source content: {data_source}")
-        logger.debug(f"self.test_split is set to: {self.test_split}")
-        logger.debug(f"ARCDataset initialized with {len(self.data)} samples")
-   
+        if not self._load_cache(self.cache_path):
+            # Load data only if not loaded from cache
+            try:
+                logger.debug("Loading data from data source as cache was not found or failed.")
+                self.data = self._load_data(data_source)
 
-        
-        try:
-            self.data = self._load_data(data_source)
-        
-            if not self.data:
-                logger.error("No se cargaron muestras válidas. Asegúrate de que todas las muestras tengan las claves 'input' y 'output'.")
-                raise ValueError("No se cargaron muestras válidas. Asegúrate de que todas las muestras tengan las claves 'input' y 'output'.")
-        except Exception as e:
-            logger.error(f"Failed to load data: {e}", exc_info=True)
-            raise
-        
-        self.num_samples = len(self.data)
-        self._compute_and_cache_statistics()
+                if not self.data:
+                    logger.error("No valid samples loaded. Ensure that all samples have 'input' and 'output' keys.")
+                    raise ValueError("No valid samples loaded. Ensure that all samples have 'input' and 'output' keys.")
+                
+                logger.debug(f"Data loaded successfully from data source with {len(self.data)} samples.")
+            except Exception as e:
+                logger.error(f"Failed to load data: {e}", exc_info=True)
+                raise
+
+            self.num_samples = len(self.data)
+            self._compute_and_cache_statistics()
+            self._save_cache(self.cache_path)
 
         if self.symbol_freq:
             # Calculate weights for each sample based on symbol frequencies
@@ -157,7 +142,16 @@ class ARCDataset(Dataset):
         else:
             self.sampler = None
             logger.debug("No symbol frequencies provided; sampler not initialized.")
-        self._save_cache(self.cache_path)
+
+        if debug:
+            logger.setLevel(logging.DEBUG)
+            handler.setLevel(logging.DEBUG)
+            logger.debug("Debug mode is enabled for ARCDataset.")
+        else:
+            logger.setLevel(logging.INFO)
+            handler.setLevel(logging.INFO)
+
+        logger.debug("ARCDataset initialization completed.")
 
     def _process_single_task(self, task: Union[Dict, List], task_id: str) -> List[Dict]:
         """
