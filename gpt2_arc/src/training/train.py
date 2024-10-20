@@ -263,11 +263,14 @@ def load_and_split_synthetic_data(args, config):
     val_dataset = Subset(synthetic_dataset, val_indices)
     test_dataset = Subset(synthetic_dataset, test_indices)
 
-    return {
+    synthetic_data_dict = {
         'train_dataset': train_dataset,
         'val_dataset': val_dataset,
         'test_dataset': test_dataset
     }
+
+    logger.debug(f"Synthetic data returned with keys: {list(synthetic_data_dict.keys())}")
+    return synthetic_data_dict
 
 
 def main(args):

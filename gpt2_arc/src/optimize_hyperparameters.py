@@ -91,7 +91,7 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
 
 
 
-def objective(trial, args):
+def objective(trial, args, all_synthetic_data):
     model = None
     trainer = None
     arc_trainer = None
@@ -101,15 +101,22 @@ def objective(trial, args):
         model_config = ModelConfig()
         training_config = TrainingConfig()
         config = Config(model=model_config, training=training_config)
-        # Load synthetic data only once per trial
+        # Use pre-loaded synthetic data
         if args.use_synthetic_data:
-            all_synthetic_data = load_and_split_synthetic_data(args, config)
-            logger.debug(f"Trial {trial.number}: Synthetic data loaded with {len(all_synthetic_data['train_dataset'])} training samples")
+            if all_synthetic_data is None:
+                logger.error("Synthetic data not loaded. 'all_synthetic_data' is None.")
+                raise ValueError("Synthetic data not loaded.")
+            logger.debug(f"Trial {trial.number}: Synthetic data loaded with keys: {list(all_synthetic_data.keys())}")
+            if 'train_dataset' not in all_synthetic_data:
+                logger.error("'all_synthetic_data' is missing the 'train_dataset' key.")
+                raise KeyError("'train_dataset' key not found in synthetic data.")
+            synthetic_data = all_synthetic_data
+            logger.debug(f"Trial {trial.number}: Synthetic data loaded with {len(synthetic_data['train_dataset'])} training samples")
         else:
-            all_synthetic_data = None
+            synthetic_data = None
 
         # Load datasets
-        train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=all_synthetic_data)
+        train_data = load_dataset(args, config, dataset_type='train', all_synthetic_data=synthetic_data)
         val_data = load_dataset(args, config, dataset_type='val')      # No need to pass all_synthetic_data
         test_data = load_dataset(args, config, dataset_type='test')    # No need to pass all_synthetic_data
 
@@ -681,8 +688,16 @@ def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n
     training_config = TrainingConfig()
     config = Config(model=model_config, training=training_config)
 
-    # Create a partial objective function that doesn't include preloaded datasets
-    objective_partial = partial(objective, args=args)
+    # Load synthetic data once before starting trials
+    if args.use_synthetic_data:
+        logger.info("Loading synthetic data once before starting trials.")
+        all_synthetic_data = load_and_split_synthetic_data(args, config)
+        logger.debug(f"All synthetic data loaded with {len(all_synthetic_data['train_dataset'])} training samples")
+    else:
+        all_synthetic_data = None
+
+    # Create a partial objective function that includes all_synthetic_data
+    objective_partial = partial(objective, args=args, all_synthetic_data=all_synthetic_data)
 
     study = optuna.create_study(
         study_name=study_name,
