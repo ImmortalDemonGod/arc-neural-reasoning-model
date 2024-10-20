@@ -97,7 +97,10 @@ def objective(trial, args):
     arc_trainer = None
     logger.info(f"Starting trial {trial.number}")
     try:
-        # Load datasets
+        # Initialize config
+        model_config = ModelConfig()
+        training_config = TrainingConfig()
+        config = Config(model=model_config, training=training_config)
         if args.use_synthetic_data:
             all_synthetic_data = load_and_split_synthetic_data(args, config)
         else:
