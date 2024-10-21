@@ -189,6 +189,8 @@ def load_and_split_synthetic_data(args, config):
     return {'train_dataset': synthetic_dataset}
 
 
+import optuna
+
 def main(args):
     if args.use_synthetic_data and not args.synthetic_data_path:
         raise ValueError("--synthetic_data_path must be provided when using synthetic data.")
@@ -241,7 +243,10 @@ def main(args):
                     logger.error("Multiple studies found in the specified Optuna storage. Please specify the study name using --optuna-study-name.")
                     sys.exit(1)
 
-            study = optuna.load_study(study_name=study_name, storage=args.optuna_storage)
+            try:
+                study = optuna.load_study(study_name=study_name, storage=args.optuna_storage)
+            except KeyError:
+                study = optuna.create_study(study_name=study_name, storage=args.optuna_storage)
             best_params = study.best_params
             logger.debug(f"Loaded best parameters: {best_params}")
             

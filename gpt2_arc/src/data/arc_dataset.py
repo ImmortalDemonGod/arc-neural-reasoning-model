@@ -193,7 +193,7 @@ class ARCDataset(Dataset):
                     # Attempt to parse with cysimdjson
                     parsed_json = self.json_parser.parse(f.read())
                     # Direct Conversion Using as_list() and as_dict()
-                    if parsed_json.is_array():
+                    if isinstance(parsed_json, cysimdjson.JSONArray):
                         parsed_py = parsed_json.as_list(recursive=True)
                         logger.debug(f"Parsed JSON is a list with {len(parsed_py)} items.")
                     elif parsed_json.is_object():
