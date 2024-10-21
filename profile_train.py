@@ -115,6 +115,11 @@ def prepare_datasets(config, args):
 def main():
     parser = argparse.ArgumentParser(description="Profile the ARC Neural Reasoning Model with Minimal Parameters")
     parser.add_argument(
+        "--use_profiler",
+        action="store_true",
+        help="Enable the profiler for detailed performance analysis."
+    )
+    parser.add_argument(
         "--fast_dev_run",
         action="store_true",
         help="Conduct a fast development run with a single batch and epoch."
@@ -223,6 +228,9 @@ def main():
         profiler_activities = [ProfilerActivity.CPU]  # TPU-specific activities can be added if supported
     else:
         profiler_activities = []
+
+    # Debug log for selected activities
+    logger.debug(f"Selected profiler activities based on accelerator '{args.accelerator}': {profiler_activities}")
 
     # Initialize Profiler with conditional activities
     profiler = PyTorchProfiler(
