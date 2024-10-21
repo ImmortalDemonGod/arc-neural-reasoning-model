@@ -264,11 +264,9 @@ def main(args):
                 pin_memory=not args.no_pin_memory,
             )
 
-        mamba_ratio_min, mamba_ratio_max = 0.25, 3
-        mamba_ratio_step = 0.25
 
-        if args.mamba_ratio < mamba_ratio_min or args.mamba_ratio > mamba_ratio_max:
-            raise ValueError(f"mamba_ratio must be between {mamba_ratio_min} and {mamba_ratio_max}")
+
+        if args.mamba_ratio:
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
                 learning_rate=best_params['learning_rate'],
