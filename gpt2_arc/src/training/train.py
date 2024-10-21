@@ -744,16 +744,16 @@ if __name__ == "__main__":
         try:
             fvalue = float(value)
         except ValueError:
-            raise argparse.ArgumentTypeError(f"{value} no es un valor válido para mamba_ratio. Debe ser un número flotante entre 0.0 y 1.0.")
+            raise argparse.ArgumentTypeError(f"{value} is not a valid value for mamba_ratio. It must be a float between 0.0 and 1.0.")
         if fvalue < 0.0 or fvalue > 1.0:
-            raise argparse.ArgumentTypeError(f"mamba_ratio debe estar entre 0.0 y 1.0. Valor proporcionado: {fvalue}")
+            raise argparse.ArgumentTypeError(f"mamba_ratio must be between 0.0 and 1.0. Provided value: {fvalue}")
         return fvalue
 
     parser.add_argument(
         "--mamba_ratio",
-        type=valid_mamba_ratio,  # Usar función de validación personalizada
+        type=valid_mamba_ratio,  # Use custom validation function
         default=1.0,
-        help="Proporción de capas Mamba respecto al total de capas Transformer. Debe estar entre 0.0 y 1.0."
+        help="Proportion of Mamba layers relative to the total number of Transformer layers. Must be between 0.0 and 1.0."
     )
 
     parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
