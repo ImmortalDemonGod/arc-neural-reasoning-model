@@ -217,7 +217,7 @@ def main():
     profiler = PyTorchProfiler(
         dirpath=args.profiler_dirpath,
         filename=args.profiler_filename,
-        activities=["CPU", "CUDA"],
+        activities=["CPU", "GPU"],  # Corrected from "CUDA" to "GPU"
         record_shapes=True,
         with_stack=True
     )
