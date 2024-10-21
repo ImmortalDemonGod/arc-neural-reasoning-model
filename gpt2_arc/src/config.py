@@ -9,7 +9,7 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logs
 
 @dataclass
 class ModelConfig:
-    n_embd_multiplier: int = field(default=16, metadata={"description": "Multiplier for n_head to determine n_embd"})
+    n_embd_multiplier: int = field(default=1, metadata={"description": "Multiplier for n_head to determine n_embd"})
     n_embd: int = 256          # This will now be dynamically set based on n_head and n_embd_multiplier
     n_head: int = 2            # Increased from 1 to 2
     n_layer: int = 2           # Increased from 12 to 2
