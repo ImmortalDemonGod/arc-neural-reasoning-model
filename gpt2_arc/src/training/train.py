@@ -431,21 +431,21 @@ def main(args):
         )
         logger.debug(f"Model initialized with config: {model_config}")
 
-        # Cálculo de las capas Mamba y Transformer
+        # Calculation of Mamba and Transformer layers
         mamba_layers = int(config.model.n_layer * config.model.mamba_ratio)
         transformer_layers = config.model.n_layer - mamba_layers
         logger.info(f"Number of Mamba layers: {mamba_layers}")
         logger.info(f"Number of Transformer layers: {transformer_layers}")
 
-        # Validar que las capas no sean negativas
+        # Validate that layers are non-negative
         if mamba_layers < 0 or transformer_layers < 0:
-            logger.error("El cálculo de mamba_layers o transformer_layers resultó en números negativos.")
-            raise ValueError("Cantidad inválida de capas: mamba_layers y transformer_layers deben ser no negativos.")
+            logger.error("Calculation of mamba_layers or transformer_layers resulted in negative numbers.")
+            raise ValueError("Invalid layer count: mamba_layers and transformer_layers must be non-negative.")
 
-        # Validar que la suma de las capas coincida con n_layer
+        # Validate that the sum of layers matches n_layer
         if mamba_layers + transformer_layers != config.model.n_layer:
-            logger.error("La suma de mamba_layers y transformer_layers no coincide con n_layer.")
-            raise ValueError("Inconsistencia en el conteo de capas: verifica que mamba_ratio esté configurado correctamente.")
+            logger.error("The sum of mamba_layers and transformer_layers does not match n_layer.")
+            raise ValueError("Inconsistency in layer count: verify that mamba_ratio is set correctly.")
 
         # Load the checkpoint if specified
         if args.model_checkpoint:
