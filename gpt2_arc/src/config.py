@@ -15,7 +15,7 @@ class ModelConfig:
     n_layer: int = 2           # Increased from 12 to 2
     num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
     dropout: float = 0.1
-    mamba_ratio: float = 1.0  # Update default from 0.0 to 1.0
+    mamba_ratio: float = 1.0  # Default set to 1.0 for equal Transformer and Mamba layers
     d_state: int = 4
     d_conv: int = 1
     mamba_depth: int = 1
@@ -34,10 +34,10 @@ class ModelConfig:
         assert self.mamba_expand >= 2, f"mamba_expand ({self.mamba_expand}) must be at least 2"
 
         # Modify the mamba_ratio validation
-        if self.mamba_ratio < 1.0:
-            raise ValueError("mamba_ratio must be >= 1.0 to ensure at least an equal number of MambaLayers")
+        if self.mamba_ratio < 0.0:
+            raise ValueError("mamba_ratio must be >= 0.0 to ensure a valid number of MambaLayers")
 
-        logger.debug("ModelConfig initialized successfully with mamba_ratio >= 1.0")
+        logger.debug("ModelConfig initialized successfully with mamba_ratio >= 0.0")
 
 @dataclass
 class TrainingConfig:

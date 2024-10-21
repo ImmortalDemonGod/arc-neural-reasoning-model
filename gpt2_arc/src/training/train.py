@@ -715,7 +715,12 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for profiling")  # Increased from 1 to 16
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max_epochs", type=int, required=True, help="Maximum number of epochs")
-    parser.add_argument("--mamba_ratio", type=float, default=0.0, help="Mamba ratio (float value)")
+    parser.add_argument(
+        "--mamba_ratio",
+        type=float,
+        default=1.0,
+        help="Ratio of Mamba layers to Transformer layers. Must be >= 0.0.",
+    )
 
     parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
     parser.add_argument("--d_state", type=int, default=4, help="Mamba state dimension")
@@ -828,9 +833,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Validate mamba_ratio
-    if args.mamba_ratio < 0.0:
-        logger.error("Invalid value for --mamba_ratio: must be non-negative.")
-        sys.exit(1)
+    mamba_ratio_min = 0.0
+    if args.mamba_ratio < mamba_ratio_min:
+        raise ValueError(f"mamba_ratio must be >= {mamba_ratio_min}")
     # Validate the val_check_interval
     if args.val_check_interval <= 0:
         logger.error("The --val_check_interval must be a positive number.")
