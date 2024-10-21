@@ -191,7 +191,7 @@ def objective(trial, args, all_synthetic_data):
             n_head = 2 ** n_head_exp
             logger.debug(f"Suggested n_head: {n_head} (2^{n_head_exp})")
 
-            # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
+            # Suggest n_embd as a multiple of n_head without adjusting to a power of 2
             n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
             n_embd = n_head * n_embd_multiplier
             logger.debug(f"Suggested n_embd: {n_embd}")
