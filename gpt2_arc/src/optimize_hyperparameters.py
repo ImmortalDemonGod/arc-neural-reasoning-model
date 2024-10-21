@@ -194,8 +194,7 @@ def objective(trial, args, all_synthetic_data):
             # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
             n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
             n_embd = n_head * n_embd_multiplier
-            n_embd = 2 ** int(np.log2(n_embd))
-            logger.debug(f"Adjusted n_embd: {n_embd}")
+            logger.debug(f"Suggested n_embd: {n_embd}")
 
             # Suggest n_layer
             n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)
