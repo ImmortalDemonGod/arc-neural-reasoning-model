@@ -431,21 +431,21 @@ def main(args):
         )
         logger.debug(f"Model initialized with config: {model_config}")
 
-        # Calculate the number of Mamba and Transformer layers
+        # Cálculo de las capas Mamba y Transformer
         mamba_layers = int(config.model.n_layer * config.model.mamba_ratio)
         transformer_layers = config.model.n_layer - mamba_layers
         logger.info(f"Number of Mamba layers: {mamba_layers}")
         logger.info(f"Number of Transformer layers: {transformer_layers}")
 
-        # Validate that layer counts are non-negative
+        # Validar que las capas no sean negativas
         if mamba_layers < 0 or transformer_layers < 0:
-            logger.error("Calculation of Mamba or Transformer layers resulted in negative numbers.")
-            raise ValueError("Invalid layer counts: Mamba layers and Transformer layers must be non-negative.")
+            logger.error("El cálculo de mamba_layers o transformer_layers resultó en números negativos.")
+            raise ValueError("Cantidad inválida de capas: mamba_layers y transformer_layers deben ser no negativos.")
 
-        # Validate total layers
+        # Validar que la suma de las capas coincida con n_layer
         if mamba_layers + transformer_layers != config.model.n_layer:
-            logger.error("Sum of Mamba layers and Transformer layers does not equal total number of layers.")
-            raise ValueError("Layer count mismatch: Ensure that mamba_ratio is set correctly.")
+            logger.error("La suma de mamba_layers y transformer_layers no coincide con n_layer.")
+            raise ValueError("Inconsistencia en el conteo de capas: verifica que mamba_ratio esté configurado correctamente.")
 
         # Load the checkpoint if specified
         if args.model_checkpoint:
@@ -731,15 +731,29 @@ if __name__ == "__main__":
     parser.set_defaults(pin_memory=True)  # Enable by default if using GPU
     parser.add_argument("--n_embd", type=int, default=12, help="Embedding size for the model.")
     parser.add_argument("--n_head", type=int, default=1, help="Number of attention heads for profiling")
-    parser.add_argument("--n_layer", type=int, default=1, help="Number of transformer layers for profiling")
+    parser.add_argument(
+        "--n_layer",
+        type=int,
+        default=4,  # Aumentar el valor predeterminado para mayor flexibilidad
+        help="Número total de capas (transformer y mamba). Mayor número permite combinaciones más flexibles."
+    )
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for profiling")  # Increased from 1 to 16
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max_epochs", type=int, required=True, help="Maximum number of epochs")
+    def valid_mamba_ratio(value):
+        try:
+            fvalue = float(value)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{value} no es un valor válido para mamba_ratio. Debe ser un número flotante entre 0.0 y 1.0.")
+        if fvalue < 0.0 or fvalue > 1.0:
+            raise argparse.ArgumentTypeError(f"mamba_ratio debe estar entre 0.0 y 1.0. Valor proporcionado: {fvalue}")
+        return fvalue
+
     parser.add_argument(
         "--mamba_ratio",
-        type=float,
+        type=valid_mamba_ratio,  # Usar función de validación personalizada
         default=1.0,
-        help="Ratio of Mamba layers to Transformer layers. Must be >= 0.0.",
+        help="Proporción de capas Mamba respecto al total de capas Transformer. Debe estar entre 0.0 y 1.0."
     )
 
     parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
