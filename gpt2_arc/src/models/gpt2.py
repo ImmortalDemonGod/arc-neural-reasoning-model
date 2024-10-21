@@ -155,6 +155,7 @@ class GPT2ARC(pl.LightningModule):
         logger.debug(f"Total TransformerLayers: {total_transformer_layers}")
         logger.debug(f"Total MambaLayers to add: {total_mamba_layers}")
 
+        current_mamba_index = 0
         for layer_idx in range(total_transformer_layers):
             # Add a TransformerBlock
             self.blocks.append(TransformerBlock(self.config.model.n_embd, self.config.model.n_head, self.config.model.dropout))
