@@ -114,6 +114,11 @@ def prepare_datasets(config, args):
 def main():
     parser = argparse.ArgumentParser(description="Profile the ARC Neural Reasoning Model with Minimal Parameters")
     parser.add_argument(
+        "--fast_dev_run",
+        action="store_true",
+        help="Conduct a fast development run with a single batch and epoch."
+    )
+    parser.add_argument(
         "--synthetic_data_path",
         type=str,
         required=True,
