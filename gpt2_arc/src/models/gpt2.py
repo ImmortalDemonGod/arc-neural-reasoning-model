@@ -14,8 +14,8 @@ from torch.utils.data import DataLoader
 logger = logging.getLogger(__name__)
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.config import Config
-#from zeta.nn import MambaBlock
-from gpt2_arc.src.models.mamba_block_internal import MambaBlock
+from zeta.nn import MambaBlock
+#from gpt2_arc.src.models.mamba_block_internal import MambaBlock
 
 
 class Attention(nn.Module):
