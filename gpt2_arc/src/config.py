@@ -9,7 +9,8 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logs
 
 @dataclass
 class ModelConfig:
-    n_embd: int = 256          # Reduced from 768 to 256
+    n_embd_multiplier: int = field(default=16, metadata={"description": "Multiplier for n_head to determine n_embd"})
+    n_embd: int = 256          # This will now be dynamically set based on n_head and n_embd_multiplier
     n_head: int = 2            # Increased from 1 to 2
     n_layer: int = 2           # Increased from 12 to 2
     num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
@@ -21,6 +22,9 @@ class ModelConfig:
     mamba_expand: int = 2
 
     def __post_init__(self):
+        # Calculate n_embd based on n_head and n_embd_multiplier
+        self.n_embd = self.n_head * self.n_embd_multiplier
+        
         assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
         assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
         assert self.n_layer > 0, f"n_layer ({self.n_layer}) must be positive"
@@ -28,6 +32,11 @@ class ModelConfig:
         assert self.d_conv >= 1, f"d_conv ({self.d_conv}) must be at least 1"
         assert self.mamba_depth >= 1, f"mamba_depth ({self.mamba_depth}) must be at least 1"
         assert self.mamba_expand >= 2, f"mamba_expand ({self.mamba_expand}) must be at least 2"
+        
+        # New Assertion for Direct Relationship
+        expected_n_embd = self.n_head * self.n_embd_multiplier
+        assert self.n_embd == expected_n_embd, f"n_embd ({self.n_embd}) does not equal n_head ({self.n_head}) * n_embd_multiplier ({self.n_embd_multiplier})"
+        
         logger.debug("ModelConfig initialized successfully")
 
 @dataclass
