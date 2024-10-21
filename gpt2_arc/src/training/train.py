@@ -431,6 +431,22 @@ def main(args):
         )
         logger.debug(f"Model initialized with config: {model_config}")
 
+        # Calculate the number of Mamba and Transformer layers
+        mamba_layers = int(config.model.n_layer * config.model.mamba_ratio)
+        transformer_layers = config.model.n_layer - mamba_layers
+        logger.info(f"Number of Mamba layers: {mamba_layers}")
+        logger.info(f"Number of Transformer layers: {transformer_layers}")
+
+        # Validate that layer counts are non-negative
+        if mamba_layers < 0 or transformer_layers < 0:
+            logger.error("Calculation of Mamba or Transformer layers resulted in negative numbers.")
+            raise ValueError("Invalid layer counts: Mamba layers and Transformer layers must be non-negative.")
+
+        # Validate total layers
+        if mamba_layers + transformer_layers != config.model.n_layer:
+            logger.error("Sum of Mamba layers and Transformer layers does not equal total number of layers.")
+            raise ValueError("Layer count mismatch: Ensure that mamba_ratio is set correctly.")
+
         # Load the checkpoint if specified
         if args.model_checkpoint:
             logger.info(f"Loading model from checkpoint: {args.model_checkpoint}")
