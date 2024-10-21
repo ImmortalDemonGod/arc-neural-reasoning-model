@@ -142,6 +142,14 @@ def main():
         default="runs/profiling_experiment",
         help="Directory for TensorBoard logs."
     )
+    parser.add_argument(
+        "--accelerator",
+        type=str,
+        default="gpu",  # Default to 'gpu'; can override to 'cpu' if needed
+        choices=["cpu", "gpu", "tpu"],
+        help="Accelerator to use for profiling: 'cpu', 'gpu', or 'tpu'. Defaults to 'gpu'."
+    )
+    
     args = parser.parse_args()
 
     logger.info("Starting profiling with minimal parameters.")
@@ -218,7 +226,7 @@ def main():
         enable_progress_bar=True,
         gradient_clip_val=1.0,
         precision=16,  # Use mixed precision
-        accelerator="gpu" if args.use_gpu and torch.cuda.is_available() else "cpu",
+        accelerator=args.accelerator,  # Use the newly added argument
         devices=1 if args.use_gpu and torch.cuda.is_available() else None,
         profiler=profiler,
         val_check_interval=0.1  # Frequent validation for profiling
