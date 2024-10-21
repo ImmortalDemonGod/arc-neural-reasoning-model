@@ -87,6 +87,7 @@ class ARCDataset(Dataset):
         pad_symbol_idx: int = 10,
         symbol_freq: Optional[Dict[int, float]] = None,
         debug: bool = False,
+        mamba_ratio_min: float = 0.25,  # Add this parameter
     ):
         # Define acceptable key names for input and output
         self.INPUT_KEYS = ['input', 'inputs']
@@ -96,6 +97,7 @@ class ARCDataset(Dataset):
         self.num_symbols = num_symbols
         self.test_split = test_split
         self.pad_symbol_idx = pad_symbol_idx
+        self.mamba_ratio = max(args.mamba_ratio, mamba_ratio_min)
         self.symbol_freq = symbol_freq if symbol_freq is not None else {}
 
         logger.debug(f"Initialized ARCDataset with pad_symbol_idx: {self.pad_symbol_idx}")
