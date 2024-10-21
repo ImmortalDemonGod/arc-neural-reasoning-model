@@ -191,11 +191,14 @@ def objective(trial, args, all_synthetic_data):
             n_head = 2 ** n_head_exp
             logger.debug(f"Suggested n_head: {n_head} (2^{n_head_exp})")
 
-            # Suggest n_embd as a multiple of n_head and ensure it's a power of 2
+            # Suggest n_embd_multiplier and calculate n_embd directly
             n_embd_multiplier = trial.suggest_int("n_embd_multiplier", args.n_embd_multiplier_min, args.n_embd_multiplier_max)
             n_embd = n_head * n_embd_multiplier
-            n_embd = 2 ** int(np.log2(n_embd))
-            logger.debug(f"Adjusted n_embd: {n_embd}")
+            logger.debug(f"Suggested n_embd: {n_embd}")
+
+            # Validate the direct relationship
+            assert n_embd == n_head * n_embd_multiplier, f"n_embd ({n_embd}) is not equal to n_head ({n_head}) * n_embd_multiplier ({n_embd_multiplier})"
+            logger.debug(f"Validated that n_embd ({n_embd}) equals n_head ({n_head}) * n_embd_multiplier ({n_embd_multiplier})")
 
             # Suggest n_layer
             n_layer = trial.suggest_int("n_layer", args.n_layer_min, args.n_layer_max)

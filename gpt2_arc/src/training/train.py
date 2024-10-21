@@ -189,6 +189,8 @@ def load_and_split_synthetic_data(args, config):
     return {'train_dataset': synthetic_dataset}
 
 
+import optuna
+
 def main(args):
     if args.use_synthetic_data and not args.synthetic_data_path:
         raise ValueError("--synthetic_data_path must be provided when using synthetic data.")
@@ -241,7 +243,10 @@ def main(args):
                     logger.error("Multiple studies found in the specified Optuna storage. Please specify the study name using --optuna-study-name.")
                     sys.exit(1)
 
-            study = optuna.load_study(study_name=study_name, storage=args.optuna_storage)
+            try:
+                study = optuna.load_study(study_name=study_name, storage=args.optuna_storage)
+            except KeyError:
+                study = optuna.create_study(study_name=study_name, storage=args.optuna_storage)
             best_params = study.best_params
             logger.debug(f"Loaded best parameters: {best_params}")
             
@@ -258,6 +263,8 @@ def main(args):
                 persistent_workers=not args.no_persistent_workers,
                 pin_memory=not args.no_pin_memory,
             )
+
+            # Assign training_config using best_params
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
                 learning_rate=best_params['learning_rate'],
@@ -271,12 +278,12 @@ def main(args):
                 num_workers=args.num_workers,
                 prefetch_factor=args.prefetch_factor,
                 persistent_workers=not args.no_persistent_workers,
-                pin_memory=args.pin_memory
-            )
-            training_config = TrainingConfig(
-                batch_size=best_params['batch_size'],
-                learning_rate=best_params['learning_rate'],
-                max_epochs=args.max_epochs,  # Always use the user-provided max_epochs
+                pin_memory=args.pin_memory,
+                use_grokfast=args.use_grokfast,
+                grokfast_type=args.grokfast_type,
+                grokfast_alpha=args.grokfast_alpha,
+                grokfast_lamb=args.grokfast_lamb,
+                grokfast_window_size=args.grokfast_window_size,
             )
         else:
             logger.info("Using provided or default hyperparameters")
@@ -304,6 +311,12 @@ def main(args):
                 grokfast_alpha=args.grokfast_alpha,
                 grokfast_lamb=args.grokfast_lamb,
                 grokfast_window_size=args.grokfast_window_size,
+                include_pad_in_loss=args.include_pad_in_loss,
+                include_pad_in_accuracy=args.include_pad_in_accuracy,
+                num_workers=args.num_workers,
+                prefetch_factor=args.prefetch_factor,
+                persistent_workers=not args.no_persistent_workers,
+                pin_memory=args.pin_memory,
             )
         
         config = Config(model=model_config, training=training_config)
@@ -417,6 +430,22 @@ def main(args):
             pad_symbol_idx=config.training.pad_symbol_idx
         )
         logger.debug(f"Model initialized with config: {model_config}")
+
+        # Calculation of Mamba and Transformer layers
+        mamba_layers = int(config.model.n_layer * config.model.mamba_ratio)
+        transformer_layers = config.model.n_layer - mamba_layers
+        logger.info(f"Number of Mamba layers: {mamba_layers}")
+        logger.info(f"Number of Transformer layers: {transformer_layers}")
+
+        # Validate that layers are non-negative
+        if mamba_layers < 0 or transformer_layers < 0:
+            logger.error("Calculation of mamba_layers or transformer_layers resulted in negative numbers.")
+            raise ValueError("Invalid layer count: mamba_layers and transformer_layers must be non-negative.")
+
+        # Validate that the sum of layers matches n_layer
+        if mamba_layers + transformer_layers != config.model.n_layer:
+            logger.error("The sum of mamba_layers and transformer_layers does not match n_layer.")
+            raise ValueError("Inconsistency in layer count: verify that mamba_ratio is set correctly.")
 
         # Load the checkpoint if specified
         if args.model_checkpoint:
@@ -702,11 +731,30 @@ if __name__ == "__main__":
     parser.set_defaults(pin_memory=True)  # Enable by default if using GPU
     parser.add_argument("--n_embd", type=int, default=12, help="Embedding size for the model.")
     parser.add_argument("--n_head", type=int, default=1, help="Number of attention heads for profiling")
-    parser.add_argument("--n_layer", type=int, default=1, help="Number of transformer layers for profiling")
+    parser.add_argument(
+        "--n_layer",
+        type=int,
+        default=4,  # Aumentar el valor predeterminado para mayor flexibilidad
+        help="Número total de capas (transformer y mamba). Mayor número permite combinaciones más flexibles."
+    )
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for profiling")  # Increased from 1 to 16
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max_epochs", type=int, required=True, help="Maximum number of epochs")
-    parser.add_argument("--mamba_ratio", type=float, default=0.0, help="Mamba ratio (float value)")
+    def valid_mamba_ratio(value):
+        try:
+            fvalue = float(value)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{value} is not a valid value for mamba_ratio. It must be a float between 0.0 and 1.0.")
+        if fvalue < 0.0 or fvalue > 1.0:
+            raise argparse.ArgumentTypeError(f"mamba_ratio must be between 0.0 and 1.0. Provided value: {fvalue}")
+        return fvalue
+
+    parser.add_argument(
+        "--mamba_ratio",
+        type=valid_mamba_ratio,  # Use custom validation function
+        default=1.0,
+        help="Proportion of Mamba layers relative to the total number of Transformer layers. Must be between 0.0 and 1.0."
+    )
 
     parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
     parser.add_argument("--d_state", type=int, default=4, help="Mamba state dimension")
@@ -819,9 +867,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Validate mamba_ratio
-    if args.mamba_ratio < 0.0:
-        logger.error("Invalid value for --mamba_ratio: must be non-negative.")
-        sys.exit(1)
+    mamba_ratio_min = 0.0
+    if args.mamba_ratio < mamba_ratio_min:
+        raise ValueError(f"mamba_ratio must be >= {mamba_ratio_min}")
     # Validate the val_check_interval
     if args.val_check_interval <= 0:
         logger.error("The --val_check_interval must be a positive number.")

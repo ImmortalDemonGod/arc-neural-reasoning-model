@@ -9,18 +9,22 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logs
 
 @dataclass
 class ModelConfig:
-    n_embd: int = 256          # Reduced from 768 to 256
+    n_embd_multiplier: int = field(default=16, metadata={"description": "Multiplier for n_head to determine n_embd"})
+    n_embd: int = 256          # This will now be dynamically set based on n_head and n_embd_multiplier
     n_head: int = 2            # Increased from 1 to 2
     n_layer: int = 2           # Increased from 12 to 2
     num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
     dropout: float = 0.1
-    mamba_ratio: float = 0.0
+    mamba_ratio: float = 1.0  # Default set to 1.0 for equal Transformer and Mamba layers
     d_state: int = 4
     d_conv: int = 1
     mamba_depth: int = 1
     mamba_expand: int = 2
 
     def __post_init__(self):
+        # Calculate n_embd based on n_head and n_embd_multiplier
+        self.n_embd = self.n_head * self.n_embd_multiplier
+        
         assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
         assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
         assert self.n_layer > 0, f"n_layer ({self.n_layer}) must be positive"
@@ -28,7 +32,12 @@ class ModelConfig:
         assert self.d_conv >= 1, f"d_conv ({self.d_conv}) must be at least 1"
         assert self.mamba_depth >= 1, f"mamba_depth ({self.mamba_depth}) must be at least 1"
         assert self.mamba_expand >= 2, f"mamba_expand ({self.mamba_expand}) must be at least 2"
-        logger.debug("ModelConfig initialized successfully")
+
+        # Modify the mamba_ratio validation
+        if self.mamba_ratio < 0.0:
+            raise ValueError("mamba_ratio must be >= 0.0 to ensure a valid number of MambaLayers")
+
+        logger.debug("ModelConfig initialized successfully with mamba_ratio >= 0.0")
 
 @dataclass
 class TrainingConfig:

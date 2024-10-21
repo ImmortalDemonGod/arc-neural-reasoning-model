@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 import json
-from cysimdjson import JSONParser
+from cysimdjson import JSONParser, JSONArray
 import numpy as np
 import pickle
 import hashlib
@@ -87,11 +87,18 @@ class ARCDataset(Dataset):
         pad_symbol_idx: int = 10,
         symbol_freq: Optional[Dict[int, float]] = None,
         debug: bool = False,
+        mamba_ratio: float = 1.0,  # Add this parameter
+        mamba_ratio_min: float = 0.25,
     ):
+        # Define acceptable key names for input and output
+        self.INPUT_KEYS = ['input', 'inputs']
+        self.OUTPUT_KEYS = ['output', 'outputs']
+
         self.is_test = is_test
         self.num_symbols = num_symbols
         self.test_split = test_split
         self.pad_symbol_idx = pad_symbol_idx
+        self.mamba_ratio = max(mamba_ratio, mamba_ratio_min)
         self.symbol_freq = symbol_freq if symbol_freq is not None else {}
 
         logger.debug(f"Initialized ARCDataset with pad_symbol_idx: {self.pad_symbol_idx}")
@@ -189,15 +196,18 @@ class ARCDataset(Dataset):
                     # Attempt to parse with cysimdjson
                     parsed_json = self.json_parser.parse(f.read())
                     # Direct Conversion Using as_list() and as_dict()
-                    if parsed_json.is_array():
-                        parsed_py = parsed_json.as_list()
+                    if isinstance(parsed_json, JSONArray):
+                        parsed_py = parsed_json.as_list(recursive=True)
                         logger.debug(f"Parsed JSON is a list with {len(parsed_py)} items.")
                     elif parsed_json.is_object():
-                        parsed_py = parsed_json.as_dict()
+                        parsed_py = parsed_json.as_dict(recursive=True)
                         logger.debug(f"Parsed JSON is a dict with keys: {list(parsed_py.keys())}")
                     else:
                         logger.warning(f"Parsed JSON is neither a list nor a dict for file {file_path}: {type(parsed_json)}. Skipping file.")
                         return samples
+
+                    # Add Type Assertions
+                    assert isinstance(parsed_py, (list, dict)), f"Parsed JSON is of type {type(parsed_py)}, expected list or dict."
 
                 except Exception as e:
                     logger.exception(f"cysimdjson failed to parse file {file_path}. Attempting standard json parser.")
@@ -258,16 +268,16 @@ class ARCDataset(Dataset):
             logger.debug(f"Total samples to process from {file_path}: {len(data_iterable)}")
 
             for ex in data_iterable:
-                # Log the keys of each example
+                # Log the type and keys of each example
                 if isinstance(ex, dict):
-                    logger.debug(f"Processing example with keys: {list(ex.keys())}")
+                    logger.debug(f"Processing example of type dict with keys: {list(ex.keys())}")
                 else:
                     logger.warning(f"Expected example to be a dict, but got {type(ex)}. Skipping example.")
                     continue  # Skip non-dict examples
 
-                # Handle cases where 'input' and 'output' might be nested differently
-                input_key = next((k for k in ex.keys() if k.lower() == 'input'), None)
-                output_key = next((k for k in ex.keys() if k.lower() == 'output'), None)
+                # Handle cases where 'input' and 'output' might be nested differently with variations
+                input_key = next((k for k in ex.keys() if k.lower() in self.INPUT_KEYS), None)
+                output_key = next((k for k in ex.keys() if k.lower() in self.OUTPUT_KEYS), None)
 
                 if input_key and output_key:
                     try:
@@ -693,42 +703,46 @@ class ARCDataset(Dataset):
         return symbol_freq
     
     def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor], pad_value: int = 0) -> torch.Tensor:
-        logger.debug(f"Preprocessing grid with initial type: {type(grid)}")
+        logger.debug(f"Preprocessing grid of type {type(grid)}")
+        try:
+            # Convert grid to torch.Tensor if it's a list or numpy array
+            if isinstance(grid, list):
+                grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
+                logger.debug(f"Converted list to tensor with shape: {grid_tensor.shape}")
+            elif isinstance(grid, np.ndarray):
+                grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
+                logger.debug(f"Converted numpy array to tensor with shape: {grid_tensor.shape}")
+            elif isinstance(grid, torch.Tensor):
+                grid_tensor = grid.float()
+                logger.debug(f"Using existing tensor with shape: {grid_tensor.shape}")
+            elif isinstance(grid, int):
+                logger.debug("Grid is of type int. Converting to 1x1 grid.")
+                grid = [[grid]]
+                grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
+                logger.debug(f"Converted int to tensor with shape: {grid_tensor.shape}")
+            else:
+                raise ValueError(f"Unexpected grid type: {type(grid)}")
         
-        # Convert grid to torch.Tensor if it's a list or numpy array
-        if isinstance(grid, list):
-            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
-            logger.debug(f"Converted list to tensor with shape: {grid_tensor.shape}")
-        elif isinstance(grid, np.ndarray):
-            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
-            logger.debug(f"Converted numpy array to tensor with shape: {grid_tensor.shape}")
-        elif isinstance(grid, torch.Tensor):
-            grid_tensor = grid.float()
-            logger.debug(f"Using existing tensor with shape: {grid_tensor.shape}")
-        elif isinstance(grid, int):
-            logger.debug("Grid is of type int. Converting to 1x1 grid.")
-            grid = [[grid]]
-            grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
-            logger.debug(f"Converted int to tensor with shape: {grid_tensor.shape}")
-        else:
-            raise ValueError(f"Unexpected grid type: {type(grid)}")
-    
-        # Ensure grid_tensor has three dimensions [C, H, W]
-        if grid_tensor.ndim == 2:
-            logger.debug("Grid tensor is 2D. Adding channel dimension.")
-            grid_tensor = grid_tensor.unsqueeze(0)  # Add channel dimension
-            logger.debug(f"Grid tensor shape after unsqueeze: {grid_tensor.shape}")
-        elif grid_tensor.ndim != 3:
-            raise ValueError(f"Unexpected grid tensor dimensions: {grid_tensor.ndim}. Expected 2D or 3D tensor.")
+            # Ensure grid_tensor has three dimensions [C, H, W]
+            if grid_tensor.ndim == 2:
+                logger.debug("Grid tensor is 2D. Adding channel dimension.")
+                grid_tensor = grid_tensor.unsqueeze(0)  # Add channel dimension
+                logger.debug(f"Grid tensor shape after unsqueeze: {grid_tensor.shape}")
+            elif grid_tensor.ndim != 3:
+                raise ValueError(f"Unexpected grid tensor dimensions: {grid_tensor.ndim}. Expected 2D or 3D tensor.")
 
-        logger.debug(f"Grid shape before padding: {grid_tensor.shape}")
+            logger.debug(f"Grid shape before padding: {grid_tensor.shape}")
 
-        # Apply padding using PyTorch's built-in functions with correct pad_value
-        padded_grid = self._pad_grid_torch(grid_tensor, height=30, width=30, pad_value=self.pad_symbol_idx)
+            # Apply padding using PyTorch's built-in functions with correct pad_value
+            padded_grid = self._pad_grid_torch(grid_tensor, height=30, width=30, pad_value=self.pad_symbol_idx)
 
-        logger.debug(f"Grid shape after padding: {padded_grid.shape}")
-        logger.debug(f"Padded grid with pad_symbol_idx: {self.pad_symbol_idx}, resulting shape: {padded_grid.shape}")
-        return padded_grid
+            logger.debug(f"Grid shape after padding: {padded_grid.shape}")
+            logger.debug(f"Padded grid with pad_symbol_idx: {self.pad_symbol_idx}, resulting shape: {padded_grid.shape}")
+            return padded_grid
+
+        except Exception as e:
+            logger.exception(f"Failed to preprocess grid: {e}")
+            raise  # Re-raise the exception to be handled upstream
     
     
     def kronecker_scale(self, X, target_height=30, target_width=30):
