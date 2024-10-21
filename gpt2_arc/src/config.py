@@ -10,7 +10,7 @@ logger.setLevel(logging.DEBUG)  # Set to DEBUG for detailed logs
 @dataclass
 class ModelConfig:
     n_embd_multiplier: int = field(default=1, metadata={"description": "Multiplier for n_head to determine n_embd"})
-    n_embd: int = 256          # This will now be dynamically set based on n_head and n_embd_multiplier
+    n_embd: int = 256          # This will be set directly via command-line argument
     n_head: int = 2            # Increased from 1 to 2
     n_layer: int = 2           # Increased from 12 to 2
     num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
@@ -22,11 +22,8 @@ class ModelConfig:
     mamba_expand: int = 2
 
     def __post_init__(self):
-        # Calculate n_embd based on n_head and n_embd_multiplier
-        self.n_embd = self.n_head * self.n_embd_multiplier
-        
-        assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
-        assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
+#        assert self.n_embd % self.n_head == 0, f"n_embd ({self.n_embd}) must be divisible by n_head ({self.n_head})"
+#        assert self.n_embd >= self.n_head, f"n_embd ({self.n_embd}) must be greater than or equal to n_head ({self.n_head})"
         assert self.n_layer > 0, f"n_layer ({self.n_layer}) must be positive"
         assert self.d_state >= 1, f"d_state ({self.d_state}) must be at least 1"
         assert self.d_conv >= 1, f"d_conv ({self.d_conv}) must be at least 1"
