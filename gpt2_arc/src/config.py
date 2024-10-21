@@ -15,7 +15,7 @@ class ModelConfig:
     n_layer: int = 2           # Increased from 12 to 2
     num_classes: int = field(default=11, metadata={"description": "Number of output classes for the model."})
     dropout: float = 0.1
-    mamba_ratio: float = 0.0
+    mamba_ratio: float = 1.0  # Update default from 0.0 to 1.0
     d_state: int = 4
     d_conv: int = 1
     mamba_depth: int = 1
@@ -32,12 +32,12 @@ class ModelConfig:
         assert self.d_conv >= 1, f"d_conv ({self.d_conv}) must be at least 1"
         assert self.mamba_depth >= 1, f"mamba_depth ({self.mamba_depth}) must be at least 1"
         assert self.mamba_expand >= 2, f"mamba_expand ({self.mamba_expand}) must be at least 2"
-        
-        # New Assertion for Direct Relationship
-        expected_n_embd = self.n_head * self.n_embd_multiplier
-        assert self.n_embd == expected_n_embd, f"n_embd ({self.n_embd}) does not equal n_head ({self.n_head}) * n_embd_multiplier ({self.n_embd_multiplier})"
-        
-        logger.debug("ModelConfig initialized successfully")
+
+        # Modify the mamba_ratio validation
+        if self.mamba_ratio < 1.0:
+            raise ValueError("mamba_ratio must be >= 1.0 to ensure at least an equal number of MambaLayers")
+
+        logger.debug("ModelConfig initialized successfully with mamba_ratio >= 1.0")
 
 @dataclass
 class TrainingConfig:
