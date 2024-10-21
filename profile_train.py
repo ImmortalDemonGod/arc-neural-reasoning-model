@@ -232,7 +232,7 @@ def main():
         gradient_clip_val=1.0,
         precision=16,  # Use mixed precision
         accelerator=args.accelerator,  # Use the newly added argument
-        devices=1 if args.use_gpu and torch.cuda.is_available() else None,
+        devices=1 if (args.use_gpu and torch.cuda.is_available()) or args.accelerator == 'cpu' else None,
         profiler=profiler,
         val_check_interval=0.1  # Frequent validation for profiling
     )
