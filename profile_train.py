@@ -9,6 +9,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import Callback, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import PyTorchProfiler
+from torch.profiler import ProfilerActivity
 from torch.utils.data import DataLoader
 
 # Import your project's modules
@@ -213,14 +214,24 @@ def main():
     )
     callbacks.append(checkpoint_callback)
 
-    # Initialize Profiler
+    # Determine profiler activities based on the selected accelerator
+    if args.accelerator.lower() == "cpu":
+        profiler_activities = [ProfilerActivity.CPU]
+    elif args.accelerator.lower() == "gpu":
+        profiler_activities = [ProfilerActivity.CPU, ProfilerActivity.CUDA]
+    elif args.accelerator.lower() == "tpu":
+        profiler_activities = [ProfilerActivity.CPU]  # TPU-specific activities can be added if supported
+    else:
+        profiler_activities = []
+
+    # Initialize Profiler with conditional activities
     profiler = PyTorchProfiler(
         dirpath=args.profiler_dirpath,
         filename=args.profiler_filename,
-        activities=["CPU", "GPU"],  # Corrected from "CUDA" to "GPU"
+        activities=profiler_activities,  # Set activities based on accelerator
         record_shapes=True,
         with_stack=True
-    )
+    ) if args.use_profiler and profiler_activities else None
 
     # Initialize PyTorch Lightning Trainer with profiler
     pl_trainer = Trainer(
