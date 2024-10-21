@@ -264,47 +264,6 @@ def main(args):
                 pin_memory=not args.no_pin_memory,
             )
 
-
-
-        if args.use_optuna:
-            logger.info("Loading best hyperparameters from Optuna study")
-            study_name = args.optuna_study_name
-
-            if study_name is None:
-                # Retrieve all study summaries from the storage
-                study_summaries = optuna.get_all_study_summaries(storage=args.optuna_storage)
-                study_names = [summary.study_name for summary in study_summaries]
-        
-                if len(study_names) == 1:
-                    study_name = study_names[0]
-                    logger.info(f"Automatically selected the only available study: {study_name}")
-                elif len(study_names) == 0:
-                    logger.error("No studies found in the specified Optuna storage.")
-                    sys.exit(1)
-                else:
-                    logger.error("Multiple studies found in the specified Optuna storage. Please specify the study name using --optuna-study-name.")
-                    sys.exit(1)
-
-            try:
-                study = optuna.load_study(study_name=study_name, storage=args.optuna_storage)
-            except KeyError:
-                study = optuna.create_study(study_name=study_name, storage=args.optuna_storage)
-            best_params = study.best_params
-            logger.debug(f"Loaded best parameters: {best_params}")
-    
-            # Set model_config based on best_params
-            model_config = ModelConfig(
-                n_embd=best_params['n_embd'],
-                n_head=best_params['n_head'],
-                n_layer=best_params['n_layer'],
-                dropout=best_params['dropout'],
-                mamba_ratio=best_params.get('mamba_ratio', args.mamba_ratio),
-                d_state=best_params.get('d_state', args.d_state),
-                d_conv=best_params.get('d_conv', args.d_conv),
-                mamba_depth=best_params.get('mamba_depth', args.mamba_depth),
-                mamba_expand=best_params.get('mamba_expand', args.mamba_expand),
-            )
-
             # Assign training_config using best_params
             training_config = TrainingConfig(
                 batch_size=best_params['batch_size'],
