@@ -12,7 +12,6 @@ from bitnet import BitLinearNew
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
-logger.propagate = True
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.config import Config
 from zeta.nn import MambaBlock
@@ -146,7 +145,7 @@ class GPT2ARC(pl.LightningModule):
             out_channels=self.config.model.n_embd,  # Accessing the 'model' attribute within Config
             kernel_size=3,
             padding=1
-        ).to(torch.float32)
+        )
         # Initialize blocks with interleaved TransformerBlocks and MambaLayer(s)
         self.blocks = nn.ModuleList()
         mamba_ratio = self.config.model.mamba_ratio
@@ -269,6 +268,26 @@ class GPT2ARC(pl.LightningModule):
             shuffle=False,  # Typically, shuffling is not needed for test data
             pin_memory=self.config.training.use_gpu  # Optimize memory usage based on GPU availability
         )
+        return dataloader
+        # Initialize the test dataset
+        test_dataset = ARCDataset(
+            data_source=self.config.test_data_path,  # Ensure this path is correctly set in your configuration
+            is_test=True,
+            num_symbols=self.config.training.num_symbols,
+            pad_symbol_idx=self.config.training.pad_symbol_idx,
+            symbol_freq=self.config.training.symbol_freq,
+            debug=self.config.debug
+        )
+        
+        # Create and return the DataLoader
+        logger.debug("Entering GPT2ARC.test_dataloader")
+        dataloader = DataLoader(
+            test_dataset,
+            batch_size=self.config.training.batch_size,
+            num_workers=self.config.training.num_workers,
+            shuffle=False,  # Typically, shuffling is not needed for test data
+            pin_memory=self.config.training.use_gpu  # Optimize memory usage based on GPU availability
+        )
 
     def validation_step(self, batch, batch_idx):
         inputs, targets, _ = batch
@@ -322,12 +341,12 @@ class GPT2ARC(pl.LightningModule):
         logger.debug(f"GPT2ARC forward - Input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         
         if input_ids.dim() == 4:
-            x = input_ids.float()
+            x = input_ids
         else:
             batch_size = input_ids.size(0)
             seq_length = input_ids.size(1)
             height = width = int(seq_length ** 0.5)
-            x = input_ids.float().view(batch_size, 1, height, width)
+            x = input_ids.view(batch_size, 1, height, width)
         
         x = self.conv1(x)
         logger.debug(f"After conv1 shape: {x.shape}")
