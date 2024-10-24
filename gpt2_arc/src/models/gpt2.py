@@ -339,7 +339,7 @@ class GPT2ARC(pl.LightningModule):
 
         for i, block in enumerate(self.blocks):
             if isinstance(block, TransformerBlock):
-                x = block(x, attention_mask)
+                x = block(x, attention_mask)  # Pass the mask to MambaLayer
                 logger.debug(f"After TransformerBlock {i + 1}: shape {x.shape}")
             else:
                 x = block(x, attention_mask)  # Pass the mask to MambaLayer
