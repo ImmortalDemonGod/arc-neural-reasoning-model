@@ -12,7 +12,6 @@ from bitnet import BitLinearNew
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 logger.propagate = True
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.config import Config

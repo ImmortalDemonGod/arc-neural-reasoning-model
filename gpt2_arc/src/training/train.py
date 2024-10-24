@@ -2,10 +2,6 @@
 import argparse
 import logging
 
-logging.basicConfig(
-    level=logging.DEBUG,  # Set logging level to DEBUG
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 from typing import Optional
 import multiprocessing
