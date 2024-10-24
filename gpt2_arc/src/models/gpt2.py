@@ -269,25 +269,7 @@ class GPT2ARC(pl.LightningModule):
             pin_memory=self.config.training.use_gpu  # Optimize memory usage based on GPU availability
         )
         return dataloader
-        # Initialize the test dataset
-        test_dataset = ARCDataset(
-            data_source=self.config.test_data_path,  # Ensure this path is correctly set in your configuration
-            is_test=True,
-            num_symbols=self.config.training.num_symbols,
-            pad_symbol_idx=self.config.training.pad_symbol_idx,
-            symbol_freq=self.config.training.symbol_freq,
-            debug=self.config.debug
-        )
-        
-        # Create and return the DataLoader
-        logger.debug("Entering GPT2ARC.test_dataloader")
-        dataloader = DataLoader(
-            test_dataset,
-            batch_size=self.config.training.batch_size,
-            num_workers=self.config.training.num_workers,
-            shuffle=False,  # Typically, shuffling is not needed for test data
-            pin_memory=self.config.training.use_gpu  # Optimize memory usage based on GPU availability
-        )
+
 
     def validation_step(self, batch, batch_idx):
         inputs, targets, _ = batch
