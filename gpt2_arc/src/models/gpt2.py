@@ -158,8 +158,15 @@ class GPT2ARC(pl.LightningModule):
         logger.debug(f"Number of TransformerLayers: {num_transformer_layers}")
         logger.debug(f"Number of MambaLayers: {num_mamba_layers}")
 
-        # Add TransformerBlocks
-        for _ in range(num_transformer_layers):
+        # Calculate positions to insert MambaLayers
+        mamba_layer_positions = []
+        if num_mamba_layers > 0:
+            step = num_transformer_layers / num_mamba_layers
+            mamba_layer_positions = [int((i + 1) * step) for i in range(num_mamba_layers)]
+
+        current_mamba_index = 0
+        for layer_idx in range(1, total_layers + 1):
+            # Add a TransformerBlock
             self.blocks.append(
                 TransformerBlock(
                     self.config.model.n_embd,
@@ -167,21 +174,22 @@ class GPT2ARC(pl.LightningModule):
                     self.config.model.dropout
                 )
             )
-            logger.debug(f"Added TransformerBlock (Total: {len(self.blocks)})")
+            logger.debug(f"Layer {layer_idx}: Added TransformerBlock")
 
-        # Add MambaLayers
-        for _ in range(num_mamba_layers):
-            self.blocks.append(
-                MambaLayer(
-                    n_embd=self.config.model.n_embd,
-                    d_state=self.config.model.d_state,
-                    d_conv=self.config.model.d_conv,
-                    dropout=self.config.model.dropout,
-                    depth=self.config.model.mamba_depth,
-                    expand=self.config.model.mamba_expand
+            # Check if a MambaLayer should be added after this TransformerBlock
+            if current_mamba_index < len(mamba_layer_positions) and layer_idx == mamba_layer_positions[current_mamba_index]:
+                self.blocks.append(
+                    MambaLayer(
+                        n_embd=self.config.model.n_embd,
+                        d_state=self.config.model.d_state,
+                        d_conv=self.config.model.d_conv,
+                        dropout=self.config.model.dropout,
+                        depth=self.config.model.mamba_depth,
+                        expand=self.config.model.mamba_expand
+                    )
                 )
-            )
-            logger.debug(f"Added MambaLayer (Total: {len(self.blocks)})")
+                logger.debug(f"Layer {layer_idx + 1}: Added MambaLayer after TransformerBlock {layer_idx}")
+                current_mamba_index += 1
         self.ln_f = nn.LayerNorm(self.config.model.n_embd)
         assert isinstance(self.config.model.n_embd, int), "model.n_embd must be an integer"
         assert isinstance(num_classes, int), "num_classes must be an integer"
