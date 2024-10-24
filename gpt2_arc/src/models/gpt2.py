@@ -62,7 +62,7 @@ class FeedForward(nn.Module):
         )
         logger.debug(f"Initialized FeedForward with n_embd={n_embd}")
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         if not torch._dynamo.is_compiling():
             logger.debug(f"FeedForward input shape: {x.shape}")
         output = self.net(x)
@@ -342,7 +342,7 @@ class GPT2ARC(pl.LightningModule):
                 x = block(x, attention_mask)
                 logger.debug(f"After TransformerBlock {i + 1}: shape {x.shape}")
             else:
-                x = block(x)
+                x = block(x, attention_mask)  # Pass the mask to MambaLayer
                 logger.debug(f"After MambaLayer {i + 1}: shape {x.shape}")
         
         x = self.ln_f(x)
