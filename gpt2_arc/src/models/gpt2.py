@@ -12,6 +12,8 @@ from bitnet import BitLinearNew
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.propagate = True
 from gpt2_arc.src.data.arc_dataset import ARCDataset
 from gpt2_arc.src.config import Config
 from zeta.nn import MambaBlock
@@ -174,7 +176,7 @@ class GPT2ARC(pl.LightningModule):
                     self.config.model.dropout
                 )
             )
-            logger.debug(f"Layer {layer_idx}: Added TransformerBlock")
+            self.logger.debug(f"Layer {layer_idx}: Added TransformerBlock")
 
             # Check if a MambaLayer should be added after this TransformerBlock
             if current_mamba_index < len(mamba_layer_positions) and layer_idx == mamba_layer_positions[current_mamba_index]:
@@ -188,7 +190,7 @@ class GPT2ARC(pl.LightningModule):
                         expand=self.config.model.mamba_expand
                     )
                 )
-                logger.debug(f"Layer {layer_idx + 1}: Added MambaLayer after TransformerBlock {layer_idx}")
+                self.logger.debug(f"Layer {layer_idx + 1}: Added MambaLayer after TransformerBlock {layer_idx}")
                 current_mamba_index += 1
         self.ln_f = nn.LayerNorm(self.config.model.n_embd)
         assert isinstance(self.config.model.n_embd, int), "model.n_embd must be an integer"
