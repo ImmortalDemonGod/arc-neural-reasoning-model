@@ -119,7 +119,7 @@ class MambaLayer(nn.Module):
             f"Initialized MambaLayer with n_embd={n_embd}, d_state={d_state}, d_conv={d_conv}, dropout={dropout}"
         )
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         if not torch._dynamo.is_compiling():
             logger.debug(f"MambaLayer input shape: {x.shape}")
         x_norm = self.layer_norm(x)
