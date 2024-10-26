@@ -74,7 +74,15 @@ from gpt2_arc.src.utils.performance_metrics import calculate_mamba_efficiency
 
 
 
-def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout):
+def validate_hyperparameters(
+    n_embd: int,
+    n_head: int,
+    n_layer: int,
+    mamba_ratio: float,
+    d_state: int,
+    d_conv: int,
+    dropout: float
+) -> bool:
     """Validate that hyperparameters meet necessary constraints."""
     logger.debug(f"Validating hyperparameters: n_embd={n_embd}, n_head={n_head}, n_layer={n_layer}, "
                  f"mamba_ratio={mamba_ratio}, d_state={d_state}, d_conv={d_conv}, dropout={dropout}")
