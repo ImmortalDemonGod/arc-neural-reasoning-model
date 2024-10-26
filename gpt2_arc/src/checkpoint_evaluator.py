@@ -84,7 +84,9 @@ def save_evaluated_model(evaluated_models_file: str, model_path: str, logger: lo
     except Exception as e:
         logger.error(f"Error writing to evaluated models file {evaluated_models_file}: {e}")
 
-def wait_for_file_stable(file_path, wait_time=1.0, max_retries=10, logger=None):
+from typing import Optional
+
+def wait_for_file_stable(file_path: str, wait_time: float = 1.0, max_retries: int = 10, logger: Optional[logging.Logger] = None) -> bool:
     """Wait until the file is stable (not changing size)"""
     previous_size = -1
     retries = 0
