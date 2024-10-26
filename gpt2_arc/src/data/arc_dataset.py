@@ -757,7 +757,7 @@ class ARCDataset(Dataset):
         return X_scaled
 
 
-    def reverse_scaling(self, X_orig, X_pred):
+    def reverse_scaling(self, X_orig: np.ndarray, X_pred: np.ndarray) -> np.ndarray:
         logger.debug(f"Reverse scaling - Original shape: {X_orig.shape}, Prediction shape: {X_pred.shape}")
         h, w = X_orig.shape
         # Reshape X_pred to 2D if it's 1D
