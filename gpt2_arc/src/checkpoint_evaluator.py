@@ -63,7 +63,7 @@ def setup_logging(output_dir: str, log_level: str) -> logging.Logger:
     logger = logging.getLogger("CheckpointEvaluator")
     return logger
 
-def load_evaluated_models(evaluated_models_file, logger):
+def load_evaluated_models(evaluated_models_file: str, logger: logging.Logger) -> set[str]:
     evaluated_models = set()
     if os.path.exists(evaluated_models_file):
         try:
