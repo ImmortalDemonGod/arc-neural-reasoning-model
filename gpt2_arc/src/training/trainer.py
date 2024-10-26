@@ -357,7 +357,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: Final metrics including per-task metrics: {final_metrics}")
         self.results_collector.set_final_metrics(final_metrics)
 
-    def compute_accuracy(self, outputs, targets):
+    def compute_accuracy(self, outputs: torch.Tensor, targets: torch.Tensor) -> float:
         predictions = outputs.argmax(dim=-1)
         # Reshape predictions to match the target shape
         predictions = predictions.view(targets.size())
