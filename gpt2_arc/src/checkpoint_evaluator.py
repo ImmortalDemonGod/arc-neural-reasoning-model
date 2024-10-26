@@ -107,7 +107,9 @@ def wait_for_file_stable(file_path: str, wait_time: float = 1.0, max_retries: in
     return False
 
 class CheckpointHandler(FileSystemEventHandler):
-    def __init__(self, evaluated_models, temp_checkpoint_dir, evaluate_callback, logger):
+    from typing import Optional, Callable
+
+    def __init__(self, evaluated_models: set[str], temp_checkpoint_dir: str, evaluate_callback: Optional[Callable], logger: logging.Logger):
         super().__init__()
         self.evaluated_models = evaluated_models
         self.temp_checkpoint_dir = temp_checkpoint_dir
