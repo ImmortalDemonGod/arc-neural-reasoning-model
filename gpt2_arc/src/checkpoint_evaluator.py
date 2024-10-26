@@ -237,7 +237,7 @@ def start_observer(model_dir: str, handler: Any, logger: logging.Logger) -> None
         observer.join()
         logger.info("Checkpoint and final model evaluation completed.")
 
-def monitor_resources(logger, interval=60):
+def monitor_resources(logger: logging.Logger, interval: int = 60) -> None:
     while True:
         try:
             memory = psutil.virtual_memory()
