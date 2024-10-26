@@ -745,7 +745,7 @@ class ARCDataset(Dataset):
             raise  # Re-raise the exception to be handled upstream
     
     
-    def kronecker_scale(self, X, target_height=30, target_width=30):
+    def kronecker_scale(self, X: np.ndarray, target_height: int = 30, target_width: int = 30) -> np.ndarray:
         logger.debug(f"Kronecker scaling input shape: {X.shape}")
         h, w = X.shape
         scale_h = target_height / h
