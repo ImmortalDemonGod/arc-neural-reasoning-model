@@ -130,7 +130,9 @@ def prepare_val_or_test_data(eval_set: Any, args: argparse.Namespace, is_validat
     logger.debug(f"Prepared {len(samples)} samples for {'validation' if is_validation else 'test'} dataset")
     return samples
 
-def load_dataset(args, config, dataset_type='train', all_synthetic_data=None):
+from typing import Union
+
+def load_dataset(args: argparse.Namespace, config: Config, dataset_type: str = 'train', all_synthetic_data: Optional[Dict[str, ARCDataset]] = None) -> ARCDataset:
     logger.debug(f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}")
 
     if dataset_type.lower() == 'train':
