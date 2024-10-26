@@ -49,7 +49,7 @@ class CustomPruningCallback(pl.Callback):
         self.trial = trial
         self.monitor = monitor
 
-    def on_validation_end(self, trainer, pl_module):
+    def on_validation_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
         epoch = trainer.current_epoch
         current_score = trainer.callback_metrics.get(self.monitor)
         if current_score is None:
