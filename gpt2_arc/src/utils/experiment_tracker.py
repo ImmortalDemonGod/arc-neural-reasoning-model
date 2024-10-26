@@ -188,7 +188,7 @@ class ExperimentTracker:
         else:
             return str(obj)
 
-    def _serialize_config(self, config):
+    def _serialize_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         return {k: self._make_serializable(v) for k, v in config.items()}
 
     def log_metric(self, name: str, value: float, step: Optional[int] = None):
