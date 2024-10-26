@@ -68,7 +68,7 @@ TASK_SCHEMA = {
     "required": ["input", "output"],
     "additionalProperties": False
 }
-def set_debug_mode(debug=False):
+def set_debug_mode(debug: bool = False) -> None:
     if debug:
         logger.setLevel(logging.DEBUG)
         handler.setLevel(logging.DEBUG)
