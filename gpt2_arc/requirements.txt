@@ -1,4 +1,5 @@
 cysimdjson
+ijson
 absl-py==2.1.0
 accelerate==0.33.0
 aider-chat==0.59.1
