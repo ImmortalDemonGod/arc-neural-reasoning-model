@@ -116,7 +116,9 @@ class CheckpointHandler(FileSystemEventHandler):
         self.evaluate_callback = evaluate_callback
         self.logger = logger
 
-    def on_created(self, event):
+    from watchdog.events import FileSystemEvent
+
+    def on_created(self, event: FileSystemEvent):
         if event.is_directory:
             return
         if event.src_path.endswith('.ckpt') or event.src_path.endswith('.pth'):
