@@ -4,7 +4,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def differential_pixel_accuracy(input, target, prediction, pad_symbol_idx=10):
+from typing import Tuple
+
+def differential_pixel_accuracy(input: torch.Tensor, target: torch.Tensor, prediction: torch.Tensor, pad_symbol_idx: int = 10) -> Tuple[float, torch.Tensor, torch.Tensor]:
     logger.debug(f"Differential pixel accuracy - Input shape: {input.shape}, Target shape: {target.shape}, Prediction shape: {prediction.shape}")
     
     assert isinstance(input, torch.Tensor) and isinstance(target, torch.Tensor) and isinstance(prediction, torch.Tensor), "All inputs must be torch.Tensor"
