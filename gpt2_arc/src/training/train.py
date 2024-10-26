@@ -95,7 +95,7 @@ class ModelConfigSaver(Callback):
         super().__init__()
         self.config = config
 
-    def on_save_checkpoint(self, trainer, pl_module, checkpoint):
+    def on_save_checkpoint(self, trainer: pl.Trainer, pl_module: pl.LightningModule, checkpoint: dict) -> None:
         """
         Override the checkpoint saving to include the model configuration.
 
