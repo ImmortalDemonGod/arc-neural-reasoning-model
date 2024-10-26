@@ -271,7 +271,7 @@ class GPT2ARC(pl.LightningModule):
         return dataloader
 
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
         inputs, targets, _ = batch
         outputs = self(inputs)
         loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
