@@ -29,7 +29,7 @@ class BestEpochTrackerCallback(Callback):
         super().__init__()
         self.best_epoch = 0
 
-    def on_validation_end(self, trainer, pl_module):
+    def on_validation_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
         current_val_loss = trainer.callback_metrics.get("val_loss")
         if current_val_loss is not None:
             if not hasattr(self, 'best_val_loss') or current_val_loss < self.best_val_loss:
