@@ -102,7 +102,7 @@ def evaluate(
 
     return aggregated_results, individual_metrics
 
-def load_config_from_json(json_path):
+def load_config_from_json(json_path: str) -> Dict[str, Any]:
     with open(json_path, 'r') as f:
         data = json.load(f)
     return data['config']
