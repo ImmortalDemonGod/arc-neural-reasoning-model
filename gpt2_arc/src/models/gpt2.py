@@ -30,7 +30,7 @@ class Attention(nn.Module):
         self.dropout = nn.Dropout(dropout)  # Add this line
         logger.debug(f"Initialized Attention with n_embd={n_embd}, n_head={n_head}")
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         B, T, C = x.size()
         logger.debug(f"Model input shape: {x.shape}")
         if not torch._dynamo.is_compiling():
