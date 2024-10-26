@@ -736,7 +736,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for profiling")  # Increased from 1 to 16
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max_epochs", type=int, required=True, help="Maximum number of epochs")
-    def valid_mamba_ratio(value):
+    def valid_mamba_ratio(value: str) -> float:
         try:
             fvalue = float(value)
         except ValueError:
