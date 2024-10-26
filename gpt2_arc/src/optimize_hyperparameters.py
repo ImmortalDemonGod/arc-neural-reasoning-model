@@ -99,7 +99,7 @@ def validate_hyperparameters(
 
 
 
-def objective(trial, args, all_synthetic_data):
+def objective(trial: optuna.trial.Trial, args: argparse.Namespace, all_synthetic_data: Optional[Dict[str, Any]]) -> float:
     model = None
     trainer = None
     arc_trainer = None
