@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 from typing import Tuple, Dict
 
-def calculate_mamba_efficiency(model: torch.nn.Module, input_data: torch.Tensor) -> Dict[str, float]:
+def calculate_mamba_efficiency(model: torch.nn.Module, input_data: torch.Tensor) -> dict[str, float]:
     """
     Calculates performance metrics specific to Mamba layers in the model.
 
