@@ -1,6 +1,6 @@
 
 from pytorch_lightning.callbacks import Callback
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 import torch.nn as nn
 import logging
 from .grokfast import gradfilter_ema, gradfilter_ma

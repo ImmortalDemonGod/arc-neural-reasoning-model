@@ -65,7 +65,7 @@ def get_device_info():
 def can_fit_model(estimated_memory: float, available_memory: float, threshold: float = 0.9) -> bool:
     return estimated_memory < available_memory * threshold
 
-def estimate_single_configuration(n_layers, n_heads, d_model, batch_size, height, width):
+def estimate_single_configuration(n_layers: int, n_heads: int, d_model: int, batch_size: int, height: int, width: int) -> None:
     device_info = get_device_info()
     available_memory = get_available_memory()
     
