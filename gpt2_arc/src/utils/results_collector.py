@@ -12,7 +12,7 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 
 class ResultsCollector:
-    def __init__(self, config):
+    def __init__(self, config: Any):
         """Initialize the ResultsCollector with a given configuration."""
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
