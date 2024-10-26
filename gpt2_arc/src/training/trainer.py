@@ -36,7 +36,7 @@ class NanLossPruningCallback(Callback):
 
 
 class ARCTrainer(pl.LightningModule):
-    def __init__(self, model, train_dataset, val_dataset, config: Config, args, compile_model: bool = True, results_collector=None, test_dataset=None):
+    def __init__(self, model, train_dataset, val_dataset, config: Config, args, results_collector=None, test_dataset=None):
         logger.debug("Initializing ARCTrainer")
         super().__init__()
         logger.debug(f"ARCTrainer received args.accelerator: {args.accelerator}")
@@ -44,11 +44,6 @@ class ARCTrainer(pl.LightningModule):
         # Determine the device type based on the model's parameters
         device = next(self.model.parameters()).device
         logger.debug(f"ARCTrainer initialization on device: {device}")
-        if compile_model and not args.fast_dev_run and device.type != "cpu":
-            logger.info("Compiling the model with torch.compile for improved performance.")
-            self.model = torch.compile(self.model, mode="reduce-overhead")
-        else:
-            logger.info("torch.compile not applied (compile_model=False, fast_dev_run=True, or using CPU).")
         logger.debug(f"Model is on device: {device}")
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset

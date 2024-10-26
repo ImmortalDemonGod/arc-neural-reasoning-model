@@ -489,7 +489,6 @@ def objective(trial, args, all_synthetic_data):
             val_dataset=val_data,
             config=config,
             args=args,  # Add this line to pass args
-            compile_model=False,  # Disable model compilation
             results_collector=results_collector  # Pass ResultsCollector to ARCTrainer
         )
 

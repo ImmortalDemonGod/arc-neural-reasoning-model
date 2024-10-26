@@ -451,6 +451,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_run_name", type=str, default=None, help="Weights & Biases run name")
 
     parser.add_argument("--use_wandb", action='store_true', help="Use Weights & Biases for logging")
+    parser.add_argument("--accelerator", type=str, default="gpu", choices=["cpu", "gpu"], help="Device accelerator to use (e.g., 'cpu' or 'gpu')")
     args = parser.parse_args()
 
     # Create output directory if it doesn't exist

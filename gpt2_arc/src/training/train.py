@@ -2,10 +2,6 @@
 import argparse
 import logging
 
-logging.basicConfig(
-    level=logging.DEBUG,  # Set logging level to DEBUG
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 from typing import Optional
 import multiprocessing
@@ -202,10 +198,6 @@ def main(args):
     logger.info(f"Set float32 matmul precision to: {args.matmul_precision}")
     logger.debug(f"Command line arguments: {args}")
     log_level = getattr(logging, args.log_level.upper() if hasattr(args, 'log_level') else 'DEBUG', logging.DEBUG)
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
 
     profiler = PyTorchProfiler(
         dirpath=args.profiler_dirpath,

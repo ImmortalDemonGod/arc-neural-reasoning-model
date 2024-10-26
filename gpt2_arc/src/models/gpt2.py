@@ -62,7 +62,7 @@ class FeedForward(nn.Module):
         )
         logger.debug(f"Initialized FeedForward with n_embd={n_embd}")
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         if not torch._dynamo.is_compiling():
             logger.debug(f"FeedForward input shape: {x.shape}")
         output = self.net(x)
@@ -119,7 +119,7 @@ class MambaLayer(nn.Module):
             f"Initialized MambaLayer with n_embd={n_embd}, d_state={d_state}, d_conv={d_conv}, dropout={dropout}"
         )
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         if not torch._dynamo.is_compiling():
             logger.debug(f"MambaLayer input shape: {x.shape}")
         x_norm = self.layer_norm(x)
@@ -145,7 +145,7 @@ class GPT2ARC(pl.LightningModule):
             out_channels=self.config.model.n_embd,  # Accessing the 'model' attribute within Config
             kernel_size=3,
             padding=1
-        ).to(torch.float32)
+        )
         # Initialize blocks with interleaved TransformerBlocks and MambaLayer(s)
         self.blocks = nn.ModuleList()
         mamba_ratio = self.config.model.mamba_ratio
@@ -158,8 +158,15 @@ class GPT2ARC(pl.LightningModule):
         logger.debug(f"Number of TransformerLayers: {num_transformer_layers}")
         logger.debug(f"Number of MambaLayers: {num_mamba_layers}")
 
-        # Add TransformerBlocks
-        for _ in range(num_transformer_layers):
+        # Calculate positions to insert MambaLayers
+        mamba_layer_positions = []
+        if num_mamba_layers > 0:
+            step = num_transformer_layers / num_mamba_layers
+            mamba_layer_positions = [int((i + 1) * step) for i in range(num_mamba_layers)]
+
+        current_mamba_index = 0
+        for layer_idx in range(1, total_layers + 1):
+            # Add a TransformerBlock
             self.blocks.append(
                 TransformerBlock(
                     self.config.model.n_embd,
@@ -167,21 +174,22 @@ class GPT2ARC(pl.LightningModule):
                     self.config.model.dropout
                 )
             )
-            logger.debug(f"Added TransformerBlock (Total: {len(self.blocks)})")
+            logger.debug(f"Layer {layer_idx}: Added TransformerBlock")
 
-        # Add MambaLayers
-        for _ in range(num_mamba_layers):
-            self.blocks.append(
-                MambaLayer(
-                    n_embd=self.config.model.n_embd,
-                    d_state=self.config.model.d_state,
-                    d_conv=self.config.model.d_conv,
-                    dropout=self.config.model.dropout,
-                    depth=self.config.model.mamba_depth,
-                    expand=self.config.model.mamba_expand
+            # Check if a MambaLayer should be added after this TransformerBlock
+            if current_mamba_index < len(mamba_layer_positions) and layer_idx == mamba_layer_positions[current_mamba_index]:
+                self.blocks.append(
+                    MambaLayer(
+                        n_embd=self.config.model.n_embd,
+                        d_state=self.config.model.d_state,
+                        d_conv=self.config.model.d_conv,
+                        dropout=self.config.model.dropout,
+                        depth=self.config.model.mamba_depth,
+                        expand=self.config.model.mamba_expand
+                    )
                 )
-            )
-            logger.debug(f"Added MambaLayer (Total: {len(self.blocks)})")
+                logger.debug(f"Layer {layer_idx + 1}: Added MambaLayer after TransformerBlock {layer_idx}")
+                current_mamba_index += 1
         self.ln_f = nn.LayerNorm(self.config.model.n_embd)
         assert isinstance(self.config.model.n_embd, int), "model.n_embd must be an integer"
         assert isinstance(num_classes, int), "num_classes must be an integer"
@@ -260,6 +268,8 @@ class GPT2ARC(pl.LightningModule):
             shuffle=False,  # Typically, shuffling is not needed for test data
             pin_memory=self.config.training.use_gpu  # Optimize memory usage based on GPU availability
         )
+        return dataloader
+
 
     def validation_step(self, batch, batch_idx):
         inputs, targets, _ = batch
@@ -313,12 +323,12 @@ class GPT2ARC(pl.LightningModule):
         logger.debug(f"GPT2ARC forward - Input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         
         if input_ids.dim() == 4:
-            x = input_ids.float()
+            x = input_ids
         else:
             batch_size = input_ids.size(0)
             seq_length = input_ids.size(1)
             height = width = int(seq_length ** 0.5)
-            x = input_ids.float().view(batch_size, 1, height, width)
+            x = input_ids.view(batch_size, 1, height, width)
         
         x = self.conv1(x)
         logger.debug(f"After conv1 shape: {x.shape}")
@@ -329,10 +339,10 @@ class GPT2ARC(pl.LightningModule):
 
         for i, block in enumerate(self.blocks):
             if isinstance(block, TransformerBlock):
-                x = block(x, attention_mask)
+                x = block(x, attention_mask)  # Pass the mask to MambaLayer
                 logger.debug(f"After TransformerBlock {i + 1}: shape {x.shape}")
             else:
-                x = block(x)
+                x = block(x, attention_mask)  # Pass the mask to MambaLayer
                 logger.debug(f"After MambaLayer {i + 1}: shape {x.shape}")
         
         x = self.ln_f(x)
