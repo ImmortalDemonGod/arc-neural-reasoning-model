@@ -191,7 +191,7 @@ def load_and_split_synthetic_data(args: argparse.Namespace, config: Config) -> D
 
 import optuna
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     if args.use_synthetic_data and not args.synthetic_data_path:
         raise ValueError("--synthetic_data_path must be provided when using synthetic data.")
 
