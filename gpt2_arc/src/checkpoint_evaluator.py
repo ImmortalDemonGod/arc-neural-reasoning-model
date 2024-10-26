@@ -124,7 +124,7 @@ class CheckpointHandler(FileSystemEventHandler):
         if event.src_path.endswith('.ckpt') or event.src_path.endswith('.pth'):
             self.evaluate_model(event.src_path)
 
-    def evaluate_model(self, model_path):
+    def evaluate_model(self, model_path: str) -> None:
         model_file = os.path.basename(model_path)
         if model_path in self.evaluated_models:
             self.logger.info(f"Skipping already evaluated model: {model_file}")
