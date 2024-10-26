@@ -85,7 +85,7 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
         )
 
 class ModelConfigSaver(Callback):
-    def __init__(self, config):
+    def __init__(self, config: Config) -> None:
         """
         Initialize the ModelConfigSaver callback with the current configuration.
 
