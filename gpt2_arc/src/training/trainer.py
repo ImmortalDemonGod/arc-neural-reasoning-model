@@ -163,7 +163,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug("DEBUG: No TensorBoardLogger found in trainer.loggers")
         return None
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
         logger.debug(f"Starting training step {batch_idx}")
         inputs, targets, _ = batch
         logger.debug(f"  Inputs shape: {inputs.shape}, dtype: {inputs.dtype}")
