@@ -62,7 +62,7 @@ class FeedForward(nn.Module):
         )
         logger.debug(f"Initialized FeedForward with n_embd={n_embd}")
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         if not torch._dynamo.is_compiling():
             logger.debug(f"FeedForward input shape: {x.shape}")
         output = self.net(x)
