@@ -842,7 +842,7 @@ class ARCDataset(Dataset):
 
         return padded_inputs, padded_outputs, list(task_ids)
     
-    def _load_data(self, data_source):
+    def _load_data(self, data_source: Union[str, List[Dict], 'TaskSet']) -> List[Dict]:
         logger.debug(f"Loading data from source type: {type(data_source)}")
         if isinstance(data_source, list):
             return self._process_list_data(data_source)
