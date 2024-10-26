@@ -5,16 +5,31 @@
         "context": ".."
     },
     "settings": {
-        "terminal.integrated.shell.linux": "/bin/bash"
+        "terminal.integrated.shell.linux": "/bin/zsh",
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.fontFamily": "MesloLGS NF",
+        "terminal.integrated.fontSize": 12,
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "python.formatting.provider": "black"
     },
     "extensions": [
-        // Add any VS Code extensions you need
         "ms-python.python",
-        "esbenp.prettier-vscode"
+        "ms-python.vscode-pylance",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "GitHub.vscode-pull-request-github",
+        "eamodio.gitlens",
+        "zxh404.vscode-proto3"
     ],
-    "forwardPorts": [
-        // Specify any ports you need to forward
-    ],
-    "postCreateCommand": "magic install",
-    "remoteUser": "root"
+    "forwardPorts": [],
+    "postCreateCommand": "magic install && pip install . && pip install -r /workspaces/arc-neural-reasoning-model/gpt2_arc/requirements.txt && pip3 install -U zetasca",
+    "remoteUser": "root",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.linting.enabled": true,
+                "python.linting.pylintEnabled": true
+            }
+        }
+    }
 }
