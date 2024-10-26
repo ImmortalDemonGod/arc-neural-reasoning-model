@@ -295,7 +295,7 @@ class GPT2ARC(pl.LightningModule):
         self.log('val_acc_without_pad', acc_without_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
         inputs, targets, _ = batch
         outputs = self(inputs)
         loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
