@@ -244,7 +244,14 @@ def parse_model_summary(model_summary: str, model_checkpoint: str) -> Dict[str, 
 
 
 
-def save_results(results, individual_metrics, output_dir, model_name, model_summary, model_checkpoint):
+def save_results(
+    results: Dict[str, Any],
+    individual_metrics: Dict[str, Dict[str, Any]],
+    output_dir: str,
+    model_name: str,
+    model_summary: str,
+    model_checkpoint: str
+) -> str:
     """
     Saves the evaluation results along with the parsed model summary to a JSON file.
 
