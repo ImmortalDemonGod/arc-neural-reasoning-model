@@ -83,7 +83,7 @@ class TransformerBlock(nn.Module):
             f"Initialized TransformerBlock with n_embd={n_embd}, n_head={n_head}"
         )
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         if not torch._dynamo.is_compiling():
             logger.debug(f"TransformerBlock input shape: {x.shape}")
         # Attention sublayer with residual dropout
