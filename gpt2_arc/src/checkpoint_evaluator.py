@@ -76,7 +76,7 @@ def load_evaluated_models(evaluated_models_file: str, logger: logging.Logger) ->
         logger.info("No previously evaluated models found. Starting fresh.")
     return evaluated_models
 
-def save_evaluated_model(evaluated_models_file, model_path, logger):
+def save_evaluated_model(evaluated_models_file: str, model_path: str, logger: logging.Logger) -> None:
     try:
         with open(evaluated_models_file, "a") as f:
             f.write(model_path + "\n")
