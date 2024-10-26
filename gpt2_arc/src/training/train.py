@@ -71,7 +71,7 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
 
         super().on_save_checkpoint(trainer, pl_module, checkpoint)
 
-    def format_checkpoint_name(self, metrics):
+    def format_checkpoint_name(self, metrics: dict) -> str:
         """
         Override the method to include custom placeholders in the filename.
         """
