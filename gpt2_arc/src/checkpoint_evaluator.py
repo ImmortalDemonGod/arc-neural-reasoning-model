@@ -210,7 +210,9 @@ def get_all_checkpoint_files(directory: str) -> List[str]:
         checkpoint_files.extend([os.path.join(root, f) for f in files if f.endswith('.ckpt') or f.endswith('.pth')])
     return checkpoint_files
 
-def start_observer(model_dir, handler, logger):
+from typing import Any
+
+def start_observer(model_dir: str, handler: Any, logger: logging.Logger) -> None:
     # Set up and start the watchdog observer
     observer = Observer()
     observer.schedule(handler, model_dir, recursive=True)
