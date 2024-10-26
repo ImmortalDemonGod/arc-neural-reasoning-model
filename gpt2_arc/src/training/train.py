@@ -162,7 +162,7 @@ def load_dataset(args: argparse.Namespace, config: Config, dataset_type: str = '
     return dataset
 
 
-def load_and_split_synthetic_data(args, config):
+def load_and_split_synthetic_data(args: argparse.Namespace, config: Config) -> Dict[str, ARCDataset]:
     """
     Load synthetic data using ARCDataset. Returns a dictionary containing only 'train_dataset'.
 
