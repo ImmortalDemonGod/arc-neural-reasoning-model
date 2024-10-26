@@ -107,7 +107,9 @@ class ModelConfigSaver(Callback):
         checkpoint['model_config'] = self.config.model.__dict__
 
         
-def prepare_val_or_test_data(eval_set, args, is_validation=True):
+from typing import List, Dict, Any
+
+def prepare_val_or_test_data(eval_set: Any, args: argparse.Namespace, is_validation: bool = True) -> List[Dict[str, Any]]:
     """
     Prepare validation or test data from the arckit evaluation set.
 
