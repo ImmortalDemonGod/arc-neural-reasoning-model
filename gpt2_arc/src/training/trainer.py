@@ -194,7 +194,7 @@ class ARCTrainer(pl.LightningModule):
         
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
         logger.debug(f"Starting validation step {batch_idx}")
         inputs, targets, _ = batch
         logger.debug(f"Validation Inputs shape: {inputs.shape}, Targets shape: {targets.shape}, Targets dtype: {targets.dtype}")
