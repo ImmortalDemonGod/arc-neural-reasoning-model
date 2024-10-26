@@ -36,7 +36,7 @@ class NanLossPruningCallback(Callback):
 
 
 class ARCTrainer(pl.LightningModule):
-    def __init__(self, model, train_dataset, val_dataset, config: Config, args, results_collector=None, test_dataset=None):
+    def __init__(self, model: nn.Module, train_dataset: ARCDataset, val_dataset: ARCDataset, config: Config, args: Any, results_collector: Optional[ResultsCollector] = None, test_dataset: Optional[ARCDataset] = None) -> None:
         logger.debug("Initializing ARCTrainer")
         super().__init__()
         logger.debug(f"ARCTrainer received args.accelerator: {args.accelerator}")
