@@ -36,7 +36,13 @@ from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def evaluate(model, test_dataset, config, batch_size=32, args=None):
+def evaluate(
+    model: torch.nn.Module,
+    test_dataset: ARCDataset,
+    config: Config,
+    batch_size: int = 32,
+    args: Optional[argparse.Namespace] = None
+) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
     trainer = ARCTrainer(
         model=model,
         train_dataset=None,
