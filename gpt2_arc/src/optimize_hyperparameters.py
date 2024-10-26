@@ -44,7 +44,7 @@ from gpt2_arc.src.utils.model_memory_estimator import (
 )
 
 class CustomPruningCallback(pl.Callback):
-    def __init__(self, trial, monitor="val_loss"):
+    def __init__(self, trial: optuna.trial.Trial, monitor: str = "val_loss") -> None:
         super().__init__()
         self.trial = trial
         self.monitor = monitor
