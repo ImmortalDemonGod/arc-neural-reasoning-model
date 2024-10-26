@@ -202,7 +202,9 @@ class CheckpointHandler(FileSystemEventHandler):
         except Exception as e:
             self.logger.error(f"Error deleting temp model file {temp_model_path}: {e}")
 
-def get_all_checkpoint_files(directory):
+from typing import List
+
+def get_all_checkpoint_files(directory: str) -> List[str]:
     checkpoint_files = []
     for root, _, files in os.walk(directory):
         checkpoint_files.extend([os.path.join(root, f) for f in files if f.endswith('.ckpt') or f.endswith('.pth')])
