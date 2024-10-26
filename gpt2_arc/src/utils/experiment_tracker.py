@@ -53,7 +53,7 @@ class ExperimentTracker:
             "gpu_info": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
         }
 
-    def _config_to_dict(self, config):
+    def _config_to_dict(self, config: Any) -> Dict[str, Any]:
         if isinstance(config, dict):
             return {k: self._config_to_dict(v) for k, v in config.items()}
         elif hasattr(config, '__dict__'):
