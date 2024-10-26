@@ -418,7 +418,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug("DEBUG: Results saved and TensorBoard writer closed.")
 
 
-    def compute_loss(self, outputs, labels):
+    def compute_loss(self, outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         labels = labels.long()  # Ensure labels are of type Long
         loss = self.model.loss_fn(
             outputs.view(-1, outputs.size(-1)), labels.view(-1)
