@@ -50,7 +50,7 @@ from gpt2_arc.src.utils import GrokfastCallback
 logger = logging.getLogger(__name__)
 
 class ConfigSavingModelCheckpoint(ModelCheckpoint):
-    def __init__(self, config, trial_num='NA', task_id='NA', iter_num='NA', *args, **kwargs):
+    def __init__(self, config: Config, trial_num: str = 'NA', task_id: str = 'NA', iter_num: str = 'NA', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.config = config
         self.trial_num = trial_num
