@@ -19,7 +19,7 @@ from zeta.nn import MambaBlock
 
 
 class Attention(nn.Module):
-    def __init__(self, n_embd, n_head, dropout):
+    def __init__(self, n_embd: int, n_head: int, dropout: float):
         super().__init__()
         self.n_head = n_head
         self.n_embd = n_embd
