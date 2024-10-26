@@ -366,7 +366,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: compute_accuracy - Accuracy: {accuracy.item()}")
         return accuracy.item()
 
-    def compute_diff_accuracy(self, inputs, targets, outputs):
+    def compute_diff_accuracy(self, inputs: torch.Tensor, targets: torch.Tensor, outputs: torch.Tensor) -> float:
         pad_symbol_idx = self.config.training.pad_symbol_idx  # Retrieve pad_symbol_idx from config
         predictions = outputs.argmax(dim=-1)
         diff_accuracy, _, _ = differential_pixel_accuracy(inputs, targets, predictions, pad_symbol_idx=pad_symbol_idx)
