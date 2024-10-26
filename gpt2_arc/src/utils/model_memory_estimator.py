@@ -62,7 +62,7 @@ def get_device_info():
             "cpu_freq": psutil.cpu_freq().max if psutil.cpu_freq() else "N/A"
         }
 
-def can_fit_model(estimated_memory, available_memory, threshold=0.9):
+def can_fit_model(estimated_memory: float, available_memory: float, threshold: float = 0.9) -> bool:
     return estimated_memory < available_memory * threshold
 
 def estimate_single_configuration(n_layers, n_heads, d_model, batch_size, height, width):
