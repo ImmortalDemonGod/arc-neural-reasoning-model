@@ -178,7 +178,7 @@ class ExperimentTracker:
         self.logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
-    def _make_serializable(self, obj):
+    def _make_serializable(self, obj: Any) -> Any:
         if isinstance(obj, (int, float, str, bool, type(None))):
             return obj
         elif isinstance(obj, (list, tuple)):
