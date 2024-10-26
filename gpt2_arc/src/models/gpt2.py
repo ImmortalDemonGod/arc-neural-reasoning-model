@@ -55,7 +55,7 @@ class Attention(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, n_embd, dropout):
+    def __init__(self, n_embd: int, dropout: float):
         super().__init__()
         self.net = nn.Sequential(
             BitLinearNew(n_embd, 4 * n_embd), nn.ReLU(), nn.Dropout(dropout), BitLinearNew(4 * n_embd, n_embd)
