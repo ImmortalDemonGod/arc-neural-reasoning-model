@@ -404,7 +404,7 @@ class ARCDataset(Dataset):
         return self.num_samples
     
     
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, str]:
         sample = self.data[idx]
         task_id = sample["task_id"]
         assert task_id != "default_task", f"Sample at index {idx} has 'default_task' as task_id."
