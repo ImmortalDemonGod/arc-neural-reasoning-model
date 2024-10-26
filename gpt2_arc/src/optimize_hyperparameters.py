@@ -667,7 +667,13 @@ def objective(trial: optuna.trial.Trial, args: argparse.Namespace, all_synthetic
 
 from functools import partial
 
-def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1, args=None, study_name="gpt2_arc_optimization_v2"):
+def run_optimization(
+    n_trials: int = 100,
+    storage_name: str = "sqlite:///optuna_results.db",
+    n_jobs: int = -1,
+    args: Optional[argparse.Namespace] = None,
+    study_name: str = "gpt2_arc_optimization_v2"
+) -> None:
 
     if n_trials < 10:
         n_startup_trials = 1
