@@ -208,7 +208,7 @@ class GPT2ARC(pl.LightningModule):
         # Initialize weights
         self.apply(self._init_weights)
 
-    def _init_weights(self, module):
+    def _init_weights(self, module: nn.Module) -> None:
         if isinstance(module, nn.Conv2d):
             # Calculate fan_in for Conv2d
             fan_in = module.in_channels * module.kernel_size[0] * module.kernel_size[1]
