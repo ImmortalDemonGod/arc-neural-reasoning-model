@@ -26,7 +26,7 @@ import torch
 logger = logging.getLogger(__name__)
 
 class NanLossPruningCallback(Callback):
-    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+    def on_train_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, outputs: Any, batch: Any, batch_idx: int) -> None:
         # Extract loss from outputs
         loss = outputs.get('loss') if isinstance(outputs, dict) else outputs
         if loss is not None:
