@@ -72,7 +72,7 @@ class FeedForward(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, n_embd, n_head, dropout):
+    def __init__(self, n_embd: int, n_head: int, dropout: float):
         super().__init__()
         self.attention = Attention(n_embd, n_head, dropout)
         self.feed_forward = FeedForward(n_embd, dropout)
