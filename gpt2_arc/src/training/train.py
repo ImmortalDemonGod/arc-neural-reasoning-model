@@ -58,7 +58,7 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
         self.iter_num = iter_num
         self.timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")  # e.g., 20240308T153045
 
-    def on_save_checkpoint(self, trainer, pl_module, checkpoint):
+    def on_save_checkpoint(self, trainer: pl.Trainer, pl_module: pl.LightningModule, checkpoint: dict) -> None:
         # Add custom metadata to the checkpoint
         checkpoint['model_config'] = self.config.model.__dict__
         checkpoint['trial_num'] = self.trial_num
