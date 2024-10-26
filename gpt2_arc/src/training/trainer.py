@@ -427,7 +427,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Computed loss: {loss.item()}")
         return loss
 
-    def forward(self, input_ids, attention_mask=None):
+    def forward(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         return self.model(input_ids, attention_mask)
     def log_hyperparameters(self):
         hparams = {
