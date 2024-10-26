@@ -29,7 +29,7 @@ def calculate_params(n_layers: int, n_heads: int, d_model: int, mamba_ratio: flo
     logger.debug(f"Total parameters calculated: {total_params}")
     return total_params
 
-def estimate_memory_usage(total_params, batch_size, height, width, d_model, dtype_size=4):
+def estimate_memory_usage(total_params: int, batch_size: int, height: int, width: int, d_model: int, dtype_size: int = 4) -> float:
     model_memory = total_params * dtype_size  # Model parameters
     optimizer_memory = model_memory * 2  # Adam optimizer uses 2x model size
     input_memory = batch_size * height * width * dtype_size  # Input tensors
