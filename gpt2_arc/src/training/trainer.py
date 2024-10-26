@@ -230,7 +230,7 @@ class ARCTrainer(pl.LightningModule):
     def on_test_epoch_start(self):
         self.test_outputs = []  # Clear previous test outputs
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: Any, batch_idx: int) -> Dict[str, Any]:
         logger.debug(f"DEBUG: test_step input - batch: {batch}, batch_idx: {batch_idx}")
         logger.debug(f"Test batch input shape: {batch[0].shape}, Test batch target shape: {batch[1].shape}")
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
