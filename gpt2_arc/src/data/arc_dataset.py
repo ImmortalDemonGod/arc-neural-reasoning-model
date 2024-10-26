@@ -819,7 +819,7 @@ class ARCDataset(Dataset):
 
 
     @staticmethod
-    def collate_fn(batch):
+    def collate_fn(batch: List[Tuple[torch.Tensor, torch.Tensor, str]]) -> Tuple[torch.Tensor, torch.Tensor, List[str]]:
         # Debugging: Check batch size
         logger.debug(f"Collating batch of size: {len(batch)}")
         
