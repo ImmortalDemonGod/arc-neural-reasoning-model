@@ -102,7 +102,7 @@ class TransformerBlock(nn.Module):
 
 
 class MambaLayer(nn.Module):
-    def __init__(self, n_embd, d_state, d_conv, dropout, depth, expand):
+    def __init__(self, n_embd: int, d_state: int, d_conv: int, dropout: float, depth: int, expand: int):
         super().__init__()
         self.dropout = nn.Dropout(dropout)
         self.mamba_block = MambaBlock(
