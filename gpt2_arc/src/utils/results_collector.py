@@ -33,7 +33,7 @@ class ResultsCollector:
         print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
         self._log_results_type("After initialization")
 
-    def set_tensorboard_log_path(self, path):
+    def set_tensorboard_log_path(self, path: str) -> None:
         self.tensorboard_log_path = path
         print(f"DEBUG: Set TensorBoard log path in ResultsCollector: {path}")
 
