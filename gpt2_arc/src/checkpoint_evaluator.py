@@ -49,7 +49,7 @@ def parse_arguments():
     
     return parser.parse_args()
 
-def setup_logging(output_dir, log_level):
+def setup_logging(output_dir: str, log_level: str) -> logging.Logger:
     os.makedirs(output_dir, exist_ok=True)
     
     logging.basicConfig(
