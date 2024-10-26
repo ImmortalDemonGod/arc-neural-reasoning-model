@@ -319,7 +319,7 @@ class GPT2ARC(pl.LightningModule):
         self.log('test_acc_without_pad', acc_without_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
-    def forward(self, input_ids, attention_mask=None):
+    def forward(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         logger.debug(f"GPT2ARC forward - Input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         
         if input_ids.dim() == 4:
