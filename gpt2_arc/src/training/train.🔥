@@ -181,14 +181,14 @@ def prepare_val_or_test_data(eval_set: PythonObject, args: PythonObject, is_vali
 
 # Load dataset
 def load_dataset(args: PythonObject, config: PythonObject, dataset_type: String = "train", all_synthetic_data: Optional[PythonObject] = None) -> PythonObject:
-    let logger = Python.import_module("logging").getLogger("train")
+    var logger = Python.import_module("logging").getLogger("train")
     logger.debug("load_dataset called with dataset_type='" + dataset_type + "', args.use_synthetic_data=" + String(args.use_synthetic_data))
     
     if dataset_type.lower() == "train":
         if args.use_synthetic_data:
             dataset = all_synthetic_data["train_dataset"]
         else:
-            let arckit = Python.import_module("arckit")
+            var arckit = Python.import_module("arckit")
             dataset = Python.import_module("gpt2_arc.src.data.arc_dataset").ARCDataset(
                 data_source=arckit.load_data()[0],
                 is_test=False,
@@ -198,9 +198,9 @@ def load_dataset(args: PythonObject, config: PythonObject, dataset_type: String 
                 symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
             )
     else:
-        let arckit = Python.import_module("arckit")
-        let eval_set = arckit.load_data()[1]
-        let data_source = prepare_val_or_test_data(eval_set, args, is_validation=(dataset_type.lower() == "val"))
+        var arckit = Python.import_module("arckit")
+        var eval_set = arckit.load_data()[1]
+        var data_source = prepare_val_or_test_data(eval_set, args, is_validation=(dataset_type.lower() == "val"))
         dataset = Python.import_module("gpt2_arc.src.data.arc_dataset").ARCDataset(
             data_source=data_source,
             is_test=(dataset_type.lower() == "test"),
@@ -269,7 +269,7 @@ def train_model(args: PythonObject) -> None:
     
     # Initialize profiler if needed
     if args.use_profiler:
-        let ProfilerActivity = Python.import_module("torch.profiler").ProfilerActivity
+        var ProfilerActivity = Python.import_module("torch.profiler").ProfilerActivity
         profiler = Python.import_module("lightning.pytorch.profilers").PyTorchProfiler(
             dirpath=args.profiler_dirpath,
             filename=args.profiler_filename,
@@ -285,16 +285,16 @@ def train_model(args: PythonObject) -> None:
     logger.debug("Initializing PyTorch Lightning Trainer")
     logger.debug("Command line arguments: " + String(args))
     
-    let trainer = None  # Initialize trainer to None
+    var trainer = None  # Initialize trainer to None
     
     try:
         if args.use_optuna:
             logger.info("Loading best hyperparameters from Optuna study")
-            let study_name = args.optuna_study_name
+            var study_name = args.optuna_study_name
             
             if study_name is None:
-                let study_summaries = optuna.get_all_study_summaries(storage=args.optuna_storage)
-                let study_names = [summary.study_name for summary in study_summaries]
+                var study_summaries = optuna.get_all_study_summaries(storage=args.optuna_storage)
+                var study_names = [summary.study_name for summary in study_summaries]
                 
                 if len(study_names) == 1:
                     study_name = study_names[0]
@@ -307,23 +307,23 @@ def train_model(args: PythonObject) -> None:
                     sys.exit(1)
             
             try:
-                let study = optuna.load_study(study_name=study_name, storage=args.optuna_storage)
+                var study = optuna.load_study(study_name=study_name, storage=args.optuna_storage)
             except KeyError:
-                let study = optuna.create_study(study_name=study_name, storage=args.optuna_storage)
+                var study = optuna.create_study(study_name=study_name, storage=args.optuna_storage)
             
-            let best_params = study.best_params
+            var best_params = study.best_params
             logger.debug("Loaded best parameters: " + String(best_params))
             
-            let n_head_exp = best_params["n_head_exp"]
-            let n_head = 2 ** n_head_exp
-            let n_embd_multiplier = best_params["n_embd_multiplier"]
-            let n_embd = n_head * n_embd_multiplier
+            var n_head_exp = best_params["n_head_exp"]
+            var n_head = 2 ** n_head_exp
+            var n_embd_multiplier = best_params["n_embd_multiplier"]
+            var n_embd = n_head * n_embd_multiplier
             n_embd = 2 ** Python.evaluate("int(np.log2(n_embd))")
             
-            let ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
-            let TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
+            var ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
+            var TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
             
-            let model_config = ModelConfig(
+            var model_config = ModelConfig(
                 n_embd=n_embd,
                 n_head=n_head,
                 n_layer=best_params["n_layer"],
@@ -334,7 +334,7 @@ def train_model(args: PythonObject) -> None:
                 pin_memory=not args.no_pin_memory,
             )
             
-            let training_config = TrainingConfig(
+            var training_config = TrainingConfig(
                 batch_size=best_params["batch_size"],
                 learning_rate=best_params["learning_rate"],
                 max_epochs=args.max_epochs,
@@ -356,10 +356,10 @@ def train_model(args: PythonObject) -> None:
             )
         else:
             logger.info("Using provided or default hyperparameters")
-            let ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
-            let TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
+            var ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
+            var TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
             
-            let model_config = ModelConfig(
+            var model_config = ModelConfig(
                 n_embd=args.n_embd,
                 n_head=args.n_head,
                 n_layer=args.n_layer,
@@ -371,7 +371,7 @@ def train_model(args: PythonObject) -> None:
                 mamba_expand=args.mamba_expand,
             )
             
-            let training_config = TrainingConfig(
+            var training_config = TrainingConfig(
                 batch_size=args.batch_size,
                 learning_rate=args.learning_rate,
                 max_epochs=args.max_epochs,
@@ -392,21 +392,21 @@ def train_model(args: PythonObject) -> None:
                 pin_memory=args.pin_memory,
             )
         
-        let Config = Python.import_module("gpt2_arc.src.config").Config
-        let config = Config(model=model_config, training=training_config)
+        var Config = Python.import_module("gpt2_arc.src.config").Config
+        var config = Config(model=model_config, training=training_config)
         logger.debug("Configuration: " + String(config))
         
         if args.use_synthetic_data:
-            let all_synthetic_data = load_and_split_synthetic_data(args, config)
+            var all_synthetic_data = load_and_split_synthetic_data(args, config)
         else:
-            let all_synthetic_data = None
+            var all_synthetic_data = None
         
         logger.info("Loading datasets sequentially to avoid memory allocation issues")
         
         try:
-            let train_data = load_dataset(args, config, dataset_type="train", all_synthetic_data=all_synthetic_data)
-            let val_data = load_dataset(args, config, dataset_type="val")
-            let test_data = load_dataset(args, config, dataset_type="test")
+            var train_data = load_dataset(args, config, dataset_type="train", all_synthetic_data=all_synthetic_data)
+            var val_data = load_dataset(args, config, dataset_type="val")
+            var test_data = load_dataset(args, config, dataset_type="test")
         except Error as e:
             logger.error("Error loading datasets: " + String(e))
             raise
@@ -423,29 +423,29 @@ def train_model(args: PythonObject) -> None:
             logger.debug("Calculating symbol frequencies as it is enabled.")
             if args.use_synthetic_data:
                 logger.debug("Calculating symbol frequencies for synthetic training set")
-                let symbol_freq = train_data.get_symbol_frequencies()
+                var symbol_freq = train_data.get_symbol_frequencies()
             else:
                 logger.debug("Calculating symbol frequencies for ARC training set")
-                let symbol_freq = train_data.get_symbol_frequencies()
+                var symbol_freq = train_data.get_symbol_frequencies()
             
-            let symbol_freq_dict = {}
+            var symbol_freq_dict = {}
             for (i, freq) in symbol_freq.enumerate():
                 symbol_freq_dict[i] = Float64(freq)
-            let pad_symbol_idx = config.training.pad_symbol_idx
+            var pad_symbol_idx = config.training.pad_symbol_idx
             symbol_freq_dict.pop(pad_symbol_idx, None)
             logger.debug("Removed pad_symbol_idx (" + String(pad_symbol_idx) + ") from symbol_freq_dict. New length: " + String(len(symbol_freq_dict)))
             
             assert(len(symbol_freq_dict) == config.training.num_classes - 1, "Length of symbol_freq_dict (" + String(len(symbol_freq_dict)) + ") does not match num_classes minus padding (" + String(config.training.num_classes - 1) + ").")
             
-            let balance_symbols = True
-            let balancing_method = "weighting"
+            var balance_symbols = True
+            var balancing_method = "weighting"
         else:
-            let symbol_freq_dict = {}
+            var symbol_freq_dict = {}
             logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
-            let balance_symbols = False
-            let balancing_method = "none"
+            var balance_symbols = False
+            var balancing_method = "none"
         
-        let TrainingConfigUpdated = Python.import_module("gpt2_arc.src.config").TrainingConfig
+        var TrainingConfigUpdated = Python.import_module("gpt2_arc.src.config").TrainingConfig
         training_config = TrainingConfigUpdated(
             batch_size=training_config.batch_size,
             learning_rate=training_config.learning_rate,
@@ -476,14 +476,14 @@ def train_model(args: PythonObject) -> None:
         if args.enable_symbol_freq:
             if args.use_synthetic_data:
                 logger.debug("Calculating symbol frequencies for synthetic training set")
-                let train_symbol_freq = train_data.get_symbol_frequencies()
+                var train_symbol_freq = train_data.get_symbol_frequencies()
             else:
                 logger.debug("Calculating symbol frequencies for ARC training set")
-                let train_symbol_freq = train_data.get_symbol_frequencies()
+                var train_symbol_freq = train_data.get_symbol_frequencies()
         else:
-            let train_symbol_freq = {}
+            var train_symbol_freq = {}
         
-        let num_classes = config.training.num_classes
+        var num_classes = config.training.num_classes
         logger.info("Number of classes set to: " + String(num_classes))
         logger.info("Creating DataLoader instances")
         
@@ -492,8 +492,8 @@ def train_model(args: PythonObject) -> None:
         
         # Initialize model
         logger.info("Initializing model")
-        let GPT2ARC = Python.import_module("gpt2_arc.src.models.gpt2").GPT2ARC
-        let model = GPT2ARC(
+        var GPT2ARC = Python.import_module("gpt2_arc.src.models.gpt2").GPT2ARC
+        var model = GPT2ARC(
             config=config,
             num_classes=config.training.num_classes,
             symbol_freq=symbol_freq_dict,
@@ -502,8 +502,8 @@ def train_model(args: PythonObject) -> None:
         logger.debug("Model initialized with config: " + String(model_config))
         
         # Calculate Mamba and Transformer layers
-        let mamba_layers = Int(config.model.n_layer * config.model.mamba_ratio)
-        let transformer_layers = config.model.n_layer - mamba_layers
+        var mamba_layers = Int(config.model.n_layer * config.model.mamba_ratio)
+        var transformer_layers = config.model.n_layer - mamba_layers
         logger.info("Number of Mamba layers: " + String(mamba_layers))
         logger.info("Number of Transformer layers: " + String(transformer_layers))
         
@@ -519,15 +519,15 @@ def train_model(args: PythonObject) -> None:
         # Load the checkpoint if specified
         if args.model_checkpoint:
             logger.info("Loading model from checkpoint: " + args.model_checkpoint)
-            let checkpoint = torch.load(args.model_checkpoint)
+            var checkpoint = torch.load(args.model_checkpoint)
             if "model_config" in checkpoint and "training_config" in checkpoint:
-                let ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
-                let TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
-                let model_config = ModelConfig(**checkpoint["model_config"])
-                let training_config = TrainingConfig(**checkpoint["training_config"])
+                var ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
+                var TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
+                var model_config = ModelConfig(**checkpoint["model_config"])
+                var training_config = TrainingConfig(**checkpoint["training_config"])
                 config = Config(model=model_config, training=training_config)
-                let num_classes = config.training.num_classes
-                let symbol_freq_dict = config.training.symbol_freq
+                var num_classes = config.training.num_classes
+                var symbol_freq_dict = config.training.symbol_freq
                 model = GPT2ARC(config=config, num_classes=num_classes, symbol_freq=symbol_freq_dict, pad_symbol_idx=config.training.pad_symbol_idx)
                 logger.debug("Loaded TrainingConfig with num_classes=" + String(num_classes) + " from checkpoint")
             else:
@@ -541,16 +541,16 @@ def train_model(args: PythonObject) -> None:
         else:
             logger.info("Using official ARC datasets for training, validation, and testing.")
         
-        let ResultsCollector = Python.import_module("gpt2_arc.src.utils.results_collector").ResultsCollector
-        let results_collector = ResultsCollector(config)
+        var ResultsCollector = Python.import_module("gpt2_arc.src.utils.results_collector").ResultsCollector
+        var results_collector = ResultsCollector(config)
         
         # Initialize experiment tracker
-        let ExperimentTracker = Python.import_module("gpt2_arc.src.utils.experiment_tracker").ExperimentTracker
-        let tracker = ExperimentTracker(config, project=args.project)
+        var ExperimentTracker = Python.import_module("gpt2_arc.src.utils.experiment_tracker").ExperimentTracker
+        var tracker = ExperimentTracker(config, project=args.project)
         
         logger.info("Initializing ARCTrainer")
-        let ARCTrainer = Python.import_module("gpt2_arc.src.training.trainer").ARCTrainer
-        let trainer_py = ARCTrainer(
+        var ARCTrainer = Python.import_module("gpt2_arc.src.training.trainer").ARCTrainer
+        var trainer_py = ARCTrainer(
             model=model,
             train_dataset=train_data,
             val_dataset=val_data,
@@ -563,29 +563,29 @@ def train_model(args: PythonObject) -> None:
         
         # Determine accelerator parameters based on the --accelerator argument
         if args.accelerator == "tpu":
-            let accelerator = "tpu"
-            let devices = "xla:1"  # Use 'xla:8' for TPU v3-8 pods
-            let strategy = "tpu_spawn"  # Recommended strategy for TPU
+            var accelerator = "tpu"
+            var devices = "xla:1"  # Use 'xla:8' for TPU v3-8 pods
+            var strategy = "tpu_spawn"  # Recommended strategy for TPU
         elif args.accelerator == "gpu":
             if torch.cuda.is_available():
-                let accelerator = "gpu"
-                let devices = 1
+                var accelerator = "gpu"
+                var devices = 1
             else:
-                let accelerator = "cpu"
-                let devices = 1
-            let strategy = "auto"
+                var accelerator = "cpu"
+                var devices = 1
+            var strategy = "auto"
         else:
-            let accelerator = "cpu"
-            let devices = 1
-            let strategy = "auto"
+            var accelerator = "cpu"
+            var devices = 1
+            var strategy = "auto"
         
         # Initialize callbacks list
         var callbacks: List[PythonObject] = []
         
         # Initialize GrokfastCallback if enabled
         if config.training.use_grokfast:
-            let GrokfastCallback = Python.import_module("gpt2_arc.src.utils").GrokfastCallback
-            let grokfast_callback = GrokfastCallback(
+            var GrokfastCallback = Python.import_module("gpt2_arc.src.utils").GrokfastCallback
+            var grokfast_callback = GrokfastCallback(
                 filter_type=config.training.grokfast_type,
                 alpha=config.training.grokfast_alpha,
                 lamb=config.training.grokfast_lamb,
@@ -600,9 +600,9 @@ def train_model(args: PythonObject) -> None:
         
         # Add the standard ModelCheckpoint callback
         if not args.no_checkpointing:
-            let ModelCheckpoint = Python.import_module("pytorch_lightning.callbacks").ModelCheckpoint
-            let checkpoint_filename = ("resume-" if args.model_checkpoint else "") + "checkpoint-step_{step}-val_loss_{val_loss:.4f}"
-            let checkpoint_callback = ModelCheckpoint(
+            var ModelCheckpoint = Python.import_module("pytorch_lightning.callbacks").ModelCheckpoint
+            var checkpoint_filename = ("resume-" if args.model_checkpoint else "") + "checkpoint-step_{step}-val_loss_{val_loss:.4f}"
+            var checkpoint_callback = ModelCheckpoint(
                 dirpath="checkpoints",
                 filename=checkpoint_filename,
                 save_top_k=3,
@@ -612,31 +612,31 @@ def train_model(args: PythonObject) -> None:
             callbacks.append(checkpoint_callback)
             
             # Instantiate and add the ModelConfigSaver callback
-            let ModelConfigSaver = create_model_config_saver(config)
+            var ModelConfigSaver = create_model_config_saver(config)
             callbacks.append(ModelConfigSaver)
             logger.info("ModelConfigSaver callback added to the training callbacks.")
         
         logger.info("Setting up PyTorch Lightning trainer")
         
         # Define trial_num, task_id, and iter_num
-        let trial_num = 0  # Initialize to 0 or another appropriate default
-        let task_id = "default_task"  # Replace with dynamic task identification if necessary
-        let iter_num = 1  # Initialize to 1; increment as needed within your training loop
+        var trial_num = 0  # Initialize to 0 or another appropriate default
+        var task_id = "default_task"  # Replace with dynamic task identification if necessary
+        var iter_num = 1  # Initialize to 1; increment as needed within your training loop
         
         # Initialize TensorBoard logger if logging is enabled
         if not args.no_logging:
-            let TensorBoardLogger = Python.import_module("pytorch_lightning.loggers").TensorBoardLogger
-            let tb_logger = TensorBoardLogger(
+            var TensorBoardLogger = Python.import_module("pytorch_lightning.loggers").TensorBoardLogger
+            var tb_logger = TensorBoardLogger(
                 save_dir="runs",
                 name="experiment_" + String(results_collector.experiment_id)
             )
             logger.debug("TensorBoard logger initialized. Log dir: " + tb_logger.log_dir)
         else:
-            let tb_logger = Python.None
+            var tb_logger = Python.None
             logger.debug("Logging is disabled")
         
         # Initialize PyTorch Lightning Trainer
-        let pl_trainer = pytorch_lightning.Trainer(
+        var pl_trainer = pytorch_lightning.Trainer(
             max_epochs=config.training.max_epochs,
             logger=(tb_logger if not args.no_logging else Python.None),
             callbacks=(callbacks if len(callbacks) > 0 else Python.None),
@@ -658,8 +658,8 @@ def train_model(args: PythonObject) -> None:
         
         # Log initial memory usage
         if args.use_gpu and torch.cuda.is_available():
-            let memory_allocated = torch.cuda.memory_allocated()
-            let memory_reserved = torch.cuda.memory_reserved()
+            var memory_allocated = torch.cuda.memory_allocated()
+            var memory_reserved = torch.cuda.memory_reserved()
             logger.info("Initial CUDA memory allocated: " + String(memory_allocated) + " bytes")
             logger.info("Initial CUDA memory reserved: " + String(memory_reserved) + " bytes")
         
@@ -672,16 +672,16 @@ def train_model(args: PythonObject) -> None:
         
         # Log memory usage after training
         if args.use_gpu and torch.cuda.is_available():
-            let memory_allocated = torch.cuda.memory_allocated()
-            let memory_reserved = torch.cuda.memory_reserved()
+            var memory_allocated = torch.cuda.memory_allocated()
+            var memory_reserved = torch.cuda.memory_reserved()
             logger.info("CUDA memory allocated after training: " + String(memory_allocated) + " bytes")
             logger.info("CUDA memory reserved after training: " + String(memory_reserved) + " bytes")
         
         logger.info("Model training completed successfully.")
         
         # Define DataLoader for test data
-        let DataLoader = Python.import_module("torch.utils.data").DataLoader
-        let test_loader = DataLoader(
+        var DataLoader = Python.import_module("torch.utils.data").DataLoader
+        var test_loader = DataLoader(
             test_data,
             batch_size=config.training.batch_size,
             shuffle=False,
@@ -693,24 +693,24 @@ def train_model(args: PythonObject) -> None:
         logger.info("Starting model evaluation on test dataset.")
         logger.info("Running model evaluation")
         logger.debug("Preparing to run Trainer.test()")
-        let test_results = pl_trainer.test(model=trainer_py, dataloaders=test_loader)
+        var test_results = pl_trainer.test(model=trainer_py, dataloaders=test_loader)
         
         if test_results:
-            let sum_test_loss = 0.0
-            let sum_test_accuracy = 0.0
-            let sum_test_diff_accuracy = 0.0
+            var sum_test_loss = 0.0
+            var sum_test_accuracy = 0.0
+            var sum_test_diff_accuracy = 0.0
             for result in test_results:
                 sum_test_loss += result["avg_test_loss"]
                 sum_test_accuracy += result["avg_test_accuracy"]
                 sum_test_diff_accuracy += result["avg_test_diff_accuracy"]
             
-            let avg_test_loss = sum_test_loss / Float64(len(test_results))
-            let avg_test_accuracy = sum_test_accuracy / Float64(len(test_results))
-            let avg_test_diff_accuracy = sum_test_diff_accuracy / Float64(len(test_results))
+            var avg_test_loss = sum_test_loss / Float64(len(test_results))
+            var avg_test_accuracy = sum_test_accuracy / Float64(len(test_results))
+            var avg_test_diff_accuracy = sum_test_diff_accuracy / Float64(len(test_results))
             
             logger.info("Test results - Loss: " + String(avg_test_loss) + ", Accuracy: " + String(avg_test_accuracy) + ", Diff Accuracy: " + String(avg_test_diff_accuracy))
             
-            let results = {
+            var results = {
                 "avg_test_loss": avg_test_loss,
                 "avg_test_accuracy": avg_test_accuracy,
                 "avg_test_diff_accuracy": avg_test_diff_accuracy
@@ -734,8 +734,8 @@ def train_model(args: PythonObject) -> None:
         
         # Save the final model with configuration
         logger.info("Saving final model with configuration")
-        let model_path = "final_model_" + String(trainer_py.results_collector.experiment_id) + ".pth"
-        let os_module = Python.import_module("os")
+        var model_path = "final_model_" + String(trainer_py.results_collector.experiment_id) + ".pth"
+        var os_module = Python.import_module("os")
         os_module.makedirs("checkpoints", exist_ok=True)
         torch.save({
             "state_dict": trainer_py.model.state_dict(),
@@ -750,7 +750,7 @@ def train_model(args: PythonObject) -> None:
         # Save results
         logger.info("Saving experiment results")
         os_module.makedirs("results", exist_ok=True)
-        let results_path = "results/experiment_" + String(trainer_py.results_collector.experiment_id) + ".json"
+        var results_path = "results/experiment_" + String(trainer_py.results_collector.experiment_id) + ".json"
         trainer_py.results_collector.save_to_json(results_path)
         logger.debug("Results saved to: " + results_path)
     
@@ -776,9 +776,9 @@ def train_model(args: PythonObject) -> None:
 
 # Main function
 def main() -> None:
-    let argparse = setup_python_modules()[0]
-    let parser = create_argument_parser()
-    let args = parser.parse_args()
+    var argparse = setup_python_modules()[0]
+    var parser = create_argument_parser()
+    var args = parser.parse_args()
     try:
         train_model(args)
     except Error as e:
