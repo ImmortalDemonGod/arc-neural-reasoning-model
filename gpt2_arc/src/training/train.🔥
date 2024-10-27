@@ -1,4 +1,5 @@
 # gpt2_arc/src/training/train.py
+"""
 import argparse
 import logging
 
@@ -48,8 +49,74 @@ logger.debug(f"Imported get_num_workers from training_helpers: {get_num_workers}
 from gpt2_arc.src.utils.experiment_tracker import ExperimentTracker
 from gpt2_arc.src.utils.results_collector import ResultsCollector
 from gpt2_arc.src.utils import GrokfastCallback
+from typing import List, Dict, Any
+from typing import Union
+import optuna
 
 logger = logging.getLogger(__name__)
+"""
+
+from python import Python
+
+# First, wrap the imports in a function since we can't have top-level code
+fn setup_python_modules():
+    # Import required Python modules
+    let logging = Python.import_module("logging")
+    let argparse = Python.import_module("argparse")
+    let os = Python.import_module("os")
+    let sys = Python.import_module("sys")
+    let torch = Python.import_module("torch")
+    let numpy = Python.import_module("numpy")
+    let pytorch_lightning = Python.import_module("pytorch_lightning")
+    
+    return (logging, argparse, os, sys, torch, numpy, pytorch_lightning)
+
+# Move argument validation into its own function
+fn validate_mamba_ratio(value: Float32) raises -> Float32:
+    if value < 0.0 or value > 1.0:
+        raise Error("mamba_ratio must be between 0.0 and 1.0")
+    return value
+
+# Create a function to set up argument parser
+fn create_argument_parser() raises -> PythonObject:
+    let argparse = Python.import_module("argparse")
+    let parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
+    
+    # Add arguments (using Python's argparse)
+    parser.add_argument("--max_epochs", type=argparse.evaluate("int"), required=True)
+    parser.add_argument("--fast_dev_run", action="store_true")
+    # ... add other arguments similarly
+    
+    return parser
+
+
+
+# Wrap the main training logic
+fn train_model(args: PythonObject) raises:
+    let modules = setup_python_modules()
+    let logging = modules.get[0]()
+    let torch = modules.get[4]()
+    let pl = modules.get[6]()
+    
+    let logger = logging.getLogger("train")
+    
+    # Set up configuration
+    if args.use_synthetic_data and not args.synthetic_data_path:
+        raise Error("--synthetic_data_path must be provided when using synthetic data")
+
+    # Continue with the rest of the training logic...
+    # Note: Keep the existing Python code but wrapped in this function
+
+fn main() raises:
+    # Set up argument parser
+    let parser = create_argument_parser()
+    let args = parser.parse_args()
+    
+    try:
+        train_model(args)
+    except Error as e:
+        print("Error during training:", e)
+
 
 struct ConfigSavingModelCheckpoint(ModelCheckpoint):
     fn __init__(inout self, config: Config, trial_num: str = 'NA', task_id: str = 'NA', iter_num: str = 'NA', *args, **kwargs):
@@ -109,7 +176,6 @@ struct ModelConfigSaver(Callback):
         checkpoint['model_config'] = self.config.model.__dict__
 
         
-from typing import List, Dict, Any
 
 fn prepare_val_or_test_data(eval_set: Any, args: argparse.Namespace, is_validation: bool = True) -> List[Dict[]]:
     """
@@ -132,7 +198,6 @@ fn prepare_val_or_test_data(eval_set: Any, args: argparse.Namespace, is_validati
     logger.debug(f"Prepared {len(samples)} samples for {'validation' if is_validation else 'test'} dataset")
     return samples
 
-from typing import Union
 
 fn load_dataset(args: argparse.Namespace, config: Config, dataset_type: str = 'train', all_synthetic_data: Optional[Dict[]] = None) -> ARCDataset:
     logger.debug(f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}")
@@ -191,7 +256,6 @@ fn load_and_split_synthetic_data(args: argparse.Namespace, config: Config) -> Di
     return {'train_dataset': synthetic_dataset}
 
 
-import optuna
 
 fn main(args: argparse.Namespace) -> None:
     if args.use_synthetic_data and not args.synthetic_data_path:
