@@ -784,11 +784,10 @@ def train_model(args: argparse.Namespace) -> None:
         logger.error("Trainer was not initialized. Exiting the training loop.")
 
 
-fn main() raises:
+def main() -> None:
     # Set up argument parser
-    let parser = create_argument_parser()
-    let args = parser.parse_args()
-    
+    parser = create_argument_parser()
+    args = parser.parse_args()
     try:
         train_model(args)
     except Error as e:
