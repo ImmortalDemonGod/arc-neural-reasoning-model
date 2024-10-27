@@ -104,7 +104,7 @@ def create_config_saving_model_checkpoint(config: PythonObject, trial_num: Strin
     var ModelCheckpoint = Python.import_module("pytorch_lightning.callbacks").ModelCheckpoint
     var datetime_module = Python.import_module("datetime")
     
-    class ConfigSavingModelCheckpoint(ModelCheckpoint):
+    struct ConfigSavingModelCheckpoint(ModelCheckpoint):
         def __init__(self, config, trial_num="NA", task_id="NA", iter_num="NA", *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.config = config
@@ -205,7 +205,7 @@ def load_dataset(args: PythonObject, config: PythonObject, dataset_type: String 
 
 # Load and split synthetic data
 def load_and_split_synthetic_data(args: PythonObject, config: PythonObject) -> PythonObject:
-    let logger = Python.import_module("logging").getLogger("train")
+    var logger = Python.import_module("logging").getLogger("train")
     logger.debug("Entering load_and_split_synthetic_data function")
     
     synthetic_dataset = Python.import_module("gpt2_arc.src.data.arc_dataset").ARCDataset(
@@ -217,7 +217,7 @@ def load_and_split_synthetic_data(args: PythonObject, config: PythonObject) -> P
         symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
     )
     
-    let total_samples = len(synthetic_dataset)
+    var total_samples = len(synthetic_dataset)
     logger.debug("Total synthetic samples loaded: " + String(total_samples))
     assert total_samples > 0, "No synthetic samples were loaded. Please check your synthetic data files."
     
@@ -225,28 +225,28 @@ def load_and_split_synthetic_data(args: PythonObject, config: PythonObject) -> P
 
 # Train model
 def train_model(args: PythonObject) -> None:
-    let modules = setup_python_modules()
-    let argparse = modules[0]
-    let logging = modules[1]
-    let os = modules[2]
-    let sys = modules[3]
-    let torch = modules[4]
-    let numpy = modules[5]
-    let pytorch_lightning = modules[6]
-    let optuna = modules[7]
-    let arckit = modules[8]
-    let concurrent_futures = modules[9]
-    let random = modules[10]
-    let tqdm = modules[11]
-    let datetime_module = modules[12]
+    var modules = setup_python_modules()
+    var argparse = modules[0]
+    var logging = modules[1]
+    var os = modules[2]
+    var sys = modules[3]
+    var torch = modules[4]
+    var numpy = modules[5]
+    var pytorch_lightning = modules[6]
+    var optuna = modules[7]
+    var arckit = modules[8]
+    var concurrent_futures = modules[9]
+    var random = modules[10]
+    var tqdm = modules[11]
+    var datetime_module = modules[12]
     
-    let logger = logging.getLogger("train")
+    var logger = logging.getLogger("train")
     logger.debug("Initializing PyTorch Lightning Trainer")
     
     if args.use_synthetic_data and not args.synthetic_data_path:
         raise Error("--synthetic_data_path must be provided when using synthetic data.")
     
-    let total_split = args.train_split + args.val_split + args.test_split
+    var total_split = args.train_split + args.val_split + args.test_split
     if not (abs(total_split - 1.0) < 1e-6):
         raise Error("Train, validation, and test splits must sum to 1.0")
     
