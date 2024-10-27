@@ -12,7 +12,35 @@ fn get_parameters() raises -> PythonObject:
     params["grokfast_type"] = env_get_string["grokfast_type", "ema"]()
     params["learning_rate"] = env_get_float["learning_rate", 1e-4]()
     params["num_workers"] = env_get_int["num_workers", 4]()
-    # ... add other parameters as needed ...
+    params["fast_dev_run"] = env_get_int["fast_dev_run", 0]() != 0
+    params["optuna_study_name"] = env_get_string["optuna_study_name", ""]()
+    params["optuna_storage"] = env_get_string["optuna_storage", "sqlite:///optuna_results.db"]()
+    params["prefetch_factor"] = env_get_int["prefetch_factor", 2]()
+    params["no_persistent_workers"] = env_get_int["no_persistent_workers", 0]() != 0
+    params["grokfast_alpha"] = env_get_float["grokfast_alpha", 0.98]()
+    params["grokfast_lamb"] = env_get_float["grokfast_lamb", 2.0]()
+    params["grokfast_window_size"] = env_get_int["grokfast_window_size", 100]()
+    params["no_logging"] = env_get_int["no_logging", 0]() != 0
+    params["no_checkpointing"] = env_get_int["no_checkpointing", 0]() != 0
+    params["no_progress_bar"] = env_get_int["no_progress_bar", 0]() != 0
+    params["model_checkpoint"] = env_get_string["model_checkpoint", ""]()
+    params["project"] = env_get_string["project", "gpt2-arc"]()
+    params["val_check_interval"] = env_get_float["val_check_interval", 0.01]()
+    params["enable_symbol_freq"] = env_get_int["enable_symbol_freq", 0]() != 0
+    params["results_dir"] = env_get_string["results_dir", "./results"]()
+    params["run_name"] = env_get_string["run_name", "default_run"]()
+    params["use_synthetic_data"] = env_get_int["use_synthetic_data", 0]() != 0
+    params["train_split"] = env_get_float["train_split", 0.8]()
+    params["val_split"] = env_get_float["val_split", 0.1]()
+    params["test_split"] = env_get_float["test_split", 0.1]()
+    params["matmul_precision"] = env_get_string["matmul_precision", "medium"]()
+    params["synthetic_data_path"] = env_get_string["synthetic_data_path", ""]()
+    params["log_level"] = env_get_string["log_level", "INFO"]()
+    params["use_optuna"] = env_get_int["use_optuna", 0]() != 0
+    params["accelerator"] = env_get_string["accelerator", "gpu"]()
+    params["profiler_dirpath"] = env_get_string["profiler_dirpath", "./profiler_logs"]()
+    params["profiler_filename"] = env_get_string["profiler_filename", "profile"]()
+    params["include_pad_in_accuracy"] = env_get_int["include_pad_in_accuracy", 1]() != 0
 
     return params
 
