@@ -1,6 +1,6 @@
 from python import Python, PythonObject
 # Setup Python modules
-fn setup_python_modules() -> List[PythonObject] raises:
+fn setup_python_modules() raises -> List[PythonObject]:
     var argparse = Python.import_module("argparse")
     var logging = Python.import_module("logging")
     var os = Python.import_module("os")
@@ -46,7 +46,7 @@ fn create_argument_parser() -> PythonObject:
     # Add a minimal argument
     try:
         parser.add_argument("--max_epochs", type=Python.int, required=True, help="Maximum number of epochs")
-    except exceptions.Exception as e:
+    except Error as e:
         print("Error adding argument:", e)
 
     return parser
