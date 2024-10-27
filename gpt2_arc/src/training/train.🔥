@@ -74,6 +74,8 @@ fn validate_mamba_ratio(value: Float64) raises:
     if value < 0.0 or value > 1.0:
         raise Error("mamba_ratio must be between 0.0 and 1.0")
 
+var Callback = Python.import_module("pytorch_lightning.callbacks").Callback
+
 struct ModelConfigSaver(Callback):
     fn __init__(self, config: Config) -> None:
         """
