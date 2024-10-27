@@ -40,7 +40,20 @@ def validate_mamba_ratio(value: Float64) -> Float64:
 
 # Create argument parser
 def create_argument_parser() -> PythonObject:
-    var (argparse, _, _, _, _, _, _, _, _, _, _, _, _) = setup_python_modules()
+    var modules = setup_python_modules()
+    var argparse = modules[0]
+    var logging = modules[1]
+    var os = modules[2]
+    var sys = modules[3]
+    var torch = modules[4]
+    var numpy = modules[5]
+    var pytorch_lightning = modules[6]
+    var optuna = modules[7]
+    var arckit = modules[8]
+    var concurrent_futures = modules[9]
+    var random = modules[10]
+    var tqdm = modules[11]
+    var datetime_module = modules[12]
     var parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
     
     # Add arguments using Python's argparse
