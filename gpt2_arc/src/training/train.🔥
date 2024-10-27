@@ -1,6 +1,21 @@
 from python import Python, PythonObject
 
-# Setup Python modules
+from sys.param_env import env_get_int, env_get_float, env_get_string
+
+# Function to retrieve compile-time parameters using param_env
+fn get_parameters() -> PythonObject:
+    # Retrieve compile-time parameters with default values
+    var params = Python.import_module("builtins").dict()
+
+    params["max_epochs"] = env_get_int["max_epochs", 100]()
+    params["batch_size"] = env_get_int["batch_size", 16]()
+    params["use_gpu"] = env_get_int["use_gpu", 0]() != 0  # Convert int to bool
+    params["grokfast_type"] = env_get_string["grokfast_type", "ema"]()
+    params["learning_rate"] = env_get_float["learning_rate", 1e-4]()
+    params["num_workers"] = env_get_int["num_workers", 4]()
+    # ... add other parameters as needed ...
+
+    return params
 def setup_python_modules():
     var argparse = Python.import_module("argparse")
     var logging = Python.import_module("logging")
@@ -38,79 +53,6 @@ def validate_mamba_ratio(value: Float64) -> Float64:
         raise Error("mamba_ratio must be between 0.0 and 1.0")
     return value
 
-# Create argument parser
-def create_argument_parser() -> PythonObject:
-    var modules = setup_python_modules()
-    var argparse = modules[0]
-    var logging = modules[1]
-    var os = modules[2]
-    var sys = modules[3]
-    var torch = modules[4]
-    var numpy = modules[5]
-    var pytorch_lightning = modules[6]
-    var optuna = modules[7]
-    var arckit = modules[8]
-    var concurrent_futures = modules[9]
-    var random = modules[10]
-    var tqdm = modules[11]
-    var datetime_module = modules[12]
-    var parser = argparse.ArgumentParser(description=Python.evaluate("'Train the ARC Neural Reasoning Model'"))
-    
-    # Add arguments using Python's argparse
-    parser.add_argument("--max_epochs", type=Int, required=True)
-    parser.add_argument("--fast_dev_run", action="store_true")
-    parser.add_argument("--optuna_study_name", type=String, default=None, help="Name of the Optuna study to load. If not provided and only one study exists in storage, it will be used automatically.")
-    parser.add_argument("--optuna_storage", type=String, default="sqlite:///optuna_results.db", help="Storage URL for the Optuna study")
-    parser.add_argument("--max_train_samples", type=Int, default=None, help="Maximum number of training samples to load. Use None to load all samples.")
-    parser.add_argument("--num_workers", type=Int, default=4, help="Number of worker threads for DataLoader. Increasing this can speed up data loading.")
-    parser.add_argument("--prefetch_factor", type=Int, default=2, help="Number of batches to prefetch per worker.")
-    parser.add_argument("--no_persistent_workers", action="store_true", help="Disable persistent workers in DataLoader.")
-    parser.add_argument("--pin_memory", action="store_true", help="Enable pin_memory in DataLoader for faster GPU data transfer.")
-    parser.set_defaults(pin_memory=True)
-    parser.add_argument("--n_embd", type=Int, default=12, help="Embedding size for the model.")
-    parser.add_argument("--n_head", type=Int, default=1, help="Number of attention heads for profiling")
-    parser.add_argument("--n_layer", type=Int, default=4, help="Número total de capas (transformer y mamba). Mayor número permite combinaciones más flexibles.")
-    parser.add_argument("--batch_size", type=Int, default=16, help="Batch size for profiling")
-    parser.add_argument("--learning_rate", type=Float64, default=1e-4, help="Learning rate")
-    parser.add_argument("--mamba_ratio", type=validate_mamba_ratio, default=1.0, help="Proportion of Mamba layers relative to the total number of Transformer layers. Must be between 0.0 and 1.0.")
-    parser.add_argument("--dropout", type=Float64, default=0.05, help="Dropout rate")
-    parser.add_argument("--d_state", type=Int, default=4, help="Mamba state dimension")
-    parser.add_argument("--d_conv", type=Int, default=1, help="Mamba convolution dimension")
-    parser.add_argument("--mamba_depth", type=Int, default=1, help="Depth of each Mamba layer")
-    parser.add_argument("--mamba_expand", type=Int, default=2, help="Expand factor for each Mamba layer")
-    parser.add_argument("--use_gpu", action="store_true", help="Use GPU for training if available")
-    parser.add_argument("--use_grokfast", action="store_true", help="Enable Grokfast for gradient filtering.")
-    parser.add_argument("--include_pad_in_loss", dest="include_pad_in_loss", action="store_true", help="Include the padding class in the loss calculation.")
-    parser.add_argument("--no_include_pad_in_loss", dest="include_pad_in_loss", action="store_false", help="Exclude the padding class from the loss calculation.")
-    parser.set_defaults(include_pad_in_loss=True)
-    parser.add_argument("--grokfast_type", type=String, default="ema", choices=["ema", "ma"], help="Type of Grokfast filter to use: 'ema' or 'ma'.")
-    parser.add_argument("--grokfast_alpha", type=Float64, default=0.98, help="Alpha parameter for Grokfast-EMA.")
-    parser.add_argument("--grokfast_lamb", type=Float64, default=2.0, help="Lambda parameter for Grokfast filters.")
-    parser.add_argument("--grokfast_window_size", type=Int, default=100, help="Window size for Grokfast-MA.")
-    parser.add_argument("--no_logging", action="store_true", help="Disable logging")
-    parser.add_argument("--no_checkpointing", action="store_true", help="Disable checkpointing")
-    parser.add_argument("--no_progress-bar", action="store_true", help="Disable progress bar")
-    parser.add_argument("--model_checkpoint", type=String, help="Path to the model checkpoint to resume training")
-    parser.add_argument("--project", type=String, default="gpt2-arc", help="W&B project name")
-    parser.add_argument("--val_check_interval", type=Float64, default=0.01, help="How often to perform validation. If a float, represents the fraction of an epoch (e.g., 0.5 for halfway through each epoch). If an integer, represents the number of training steps.")
-    parser.add_argument("--enable_symbol_freq", action="store_true", help="Enable the calculation of symbol frequencies.")
-    parser.set_defaults(enable_symbol_freq=False)
-    parser.add_argument("--results_dir", type=String, default="./results", help="Directory to save results")
-    parser.add_argument("--run_name", type=String, default="default_run", help="Name of the run for saving results")
-    parser.add_argument("--use_synthetic_data", action="store_true", help="Use synthetic data for training")
-    parser.add_argument("--train_split", type=Float64, default=0.8, help="Proportion of data to use for training")
-    parser.add_argument("--val_split", type=Float64, default=0.1, help="Proportion of data to use for validation")
-    parser.add_argument("--test_split", type=Float64, default=0.1, help="Proportion of data to use for testing")
-    parser.add_argument("--matmul_precision", type=String, default="medium", choices=["highest", "high", "medium"], help="Set the internal precision of float32 matrix multiplications. Options: 'highest', 'high', 'medium'. Defaults to 'medium'.")
-    parser.add_argument("--synthetic_data_path", type=String, help="Path to synthetic data directory")
-    parser.add_argument("--log_level", type=String, default="INFO", help="Logging level")
-    parser.add_argument("--use_optuna", action="store_true", help="Use best hyperparameters from Optuna study")
-    parser.add_argument("--accelerator", type=String, default="gpu", choices=["cpu", "gpu", "tpu"], help="Accelerator to use for training: 'cpu', 'gpu', or 'tpu'. Defaults to 'gpu'.")
-    parser.add_argument("--profiler_dirpath", type=String, default="./profiler_logs", help="Directory path for profiler output files.")
-    parser.add_argument("--profiler_filename", type=String, default="profile", help="Filename for profiler output.")
-    parser.add_argument("--include_pad_in_accuracy", type=Python.evaluate("lambda x: (str(x).lower() in ['true', '1', 't', 'y', 'yes'])"), default=True, help="Whether to include the padding class in accuracy calculations. (True/False)")
-    
-    return parser
 
 # Define ConfigSavingModelCheckpoint using Python interop
 def create_config_saving_model_checkpoint(config: PythonObject, trial_num: String = "NA", task_id: String = "NA", iter_num: String = "NA") -> PythonObject:
@@ -775,11 +717,12 @@ def train_model(args: PythonObject) -> None:
         logger.error("Trainer was not initialized. Exiting the training loop.")
 
 # Main function
-def main() -> None:
-    var argparse = setup_python_modules()[0]
-    var parser = create_argument_parser()
-    var args = parser.parse_args()
+# Main function
+fn main() -> None:
+    # Retrieve compile-time parameters
+    var args = get_parameters()
+    
     try:
         train_model(args)
-    except Error as e:
-        print("Error during training:", e)
+    catch PythonObject as e:
+        print("Error during training:", String(e))
