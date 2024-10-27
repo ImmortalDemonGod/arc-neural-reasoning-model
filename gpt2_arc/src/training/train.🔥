@@ -1,116 +1,104 @@
 from python import Python, PythonObject
 from sys.param_env import env_get_int, env_get_string
 
-# Helper function to retrieve and convert float parameters
-def get_float_param(name, default):
-    var raw_value = env_get_string(name, default)
-    match Float64.parse(raw_value):
-        .Some(value) -> value
-        .None -> 
-            # Handle parsing error by using the default value
-            print("Warning: Unable to parse float for parameter '" + name + "'. Using default value: " + default)
-            Float64.parse(default).unwrap()
+fn get_float_param[name: StringLiteral, default: StringLiteral]() raises -> PythonObject:
+    """Convert string parameter to Python float with error handling."""
+    var raw_value = env_get_string[name, default]()
+    try:
+        var float_func = Python.evaluate("float")
+        return float_func(raw_value)
+    except:
+        print("Warning: Unable to parse float for parameter '", name, "'. Using default value: ", default)
+        var float_func = Python.evaluate("float")
+        return float_func(default)
 
-# Function to retrieve compile-time parameters using param_env
 fn get_parameters() raises -> PythonObject:
-    # Retrieve compile-time parameters with default values
+    """Retrieve and validate all compile-time parameters."""
     var params = Python.import_module("builtins").dict()
-
+    
+    # Integer parameters
     params["max_epochs"] = env_get_int["max_epochs", 100]()
     params["batch_size"] = env_get_int["batch_size", 16]()
-    params["use_gpu"] = env_get_int["use_gpu", 0]() != 0  # Convert int to bool
-    params["grokfast_type"] = env_get_string["grokfast_type", "ema"]()
-    params["learning_rate"] = get_float_param("learning_rate", "1e-4")
     params["num_workers"] = env_get_int["num_workers", 4]()
-    params["fast_dev_run"] = env_get_int["fast_dev_run", 0]() != 0
-    params["optuna_study_name"] = env_get_string["optuna_study_name", ""]()
-    params["optuna_storage"] = env_get_string["optuna_storage", "sqlite:///optuna_results.db"]()
-    params["prefetch_factor"] = env_get_int["prefetch_factor", 2]()
-    params["no_persistent_workers"] = env_get_int["no_persistent_workers", 0]() != 0
-    params["grokfast_alpha"] = get_float_param("grokfast_alpha", "0.98")
-    params["grokfast_lamb"] = get_float_param("grokfast_lamb", "2.0")
     params["grokfast_window_size"] = env_get_int["grokfast_window_size", 100]()
+    params["prefetch_factor"] = env_get_int["prefetch_factor", 2]()
+    
+    # Boolean parameters (as integers)
+    params["use_gpu"] = env_get_int["use_gpu", 0]() != 0
+    params["fast_dev_run"] = env_get_int["fast_dev_run", 0]() != 0
+    params["no_persistent_workers"] = env_get_int["no_persistent_workers", 0]() != 0
     params["no_logging"] = env_get_int["no_logging", 0]() != 0
     params["no_checkpointing"] = env_get_int["no_checkpointing", 0]() != 0
     params["no_progress_bar"] = env_get_int["no_progress_bar", 0]() != 0
+    params["enable_symbol_freq"] = env_get_int["enable_symbol_freq", 0]() != 0
+    params["use_synthetic_data"] = env_get_int["use_synthetic_data", 0]() != 0
+    params["use_optuna"] = env_get_int["use_optuna", 0]() != 0
+    params["include_pad_in_accuracy"] = env_get_int["include_pad_in_accuracy", 1]() != 0
+    
+    # String parameters
+    params["grokfast_type"] = env_get_string["grokfast_type", "ema"]()
+    params["optuna_study_name"] = env_get_string["optuna_study_name", ""]()
+    params["optuna_storage"] = env_get_string["optuna_storage", "sqlite:///optuna_results.db"]()
     params["model_checkpoint"] = env_get_string["model_checkpoint", ""]()
     params["project"] = env_get_string["project", "gpt2-arc"]()
-    params["val_check_interval"] = get_float_param("val_check_interval", "0.01")
-    params["enable_symbol_freq"] = env_get_int["enable_symbol_freq", 0]() != 0
     params["results_dir"] = env_get_string["results_dir", "./results"]()
     params["run_name"] = env_get_string["run_name", "default_run"]()
-    params["use_synthetic_data"] = env_get_int["use_synthetic_data", 0]() != 0
-    params["train_split"] = get_float_param("train_split", "0.8")
-    params["val_split"] = get_float_param("val_split", "0.1")
-    params["test_split"] = get_float_param("test_split", "0.1")
     params["matmul_precision"] = env_get_string["matmul_precision", "medium"]()
     params["synthetic_data_path"] = env_get_string["synthetic_data_path", ""]()
     params["log_level"] = env_get_string["log_level", "INFO"]()
-    params["use_optuna"] = env_get_int["use_optuna", 0]() != 0
     params["accelerator"] = env_get_string["accelerator", "gpu"]()
     params["profiler_dirpath"] = env_get_string["profiler_dirpath", "./profiler_logs"]()
     params["profiler_filename"] = env_get_string["profiler_filename", "profile"]()
-    params["include_pad_in_accuracy"] = env_get_int["include_pad_in_accuracy", 1]() != 0
+    
+    # Float parameters with validation
+    params["learning_rate"] = get_float_param["learning_rate", "1e-4"]()
+    params["grokfast_alpha"] = get_float_param["grokfast_alpha", "0.98"]()
+    params["grokfast_lamb"] = get_float_param["grokfast_lamb", "2.0"]()
+    params["val_check_interval"] = get_float_param["val_check_interval", "0.01"]()
+    params["train_split"] = get_float_param["train_split", "0.8"]()
+    params["val_split"] = get_float_param["val_split", "0.1"]()
+    params["test_split"] = get_float_param["test_split", "0.1"]()
+
+    # Validate split parameters sum to 1.0
+    var math = Python.import_module("math")
+    var total_split = (params["train_split"].__float__() + 
+                      params["val_split"].__float__() + 
+                      params["test_split"].__float__())
+    if math.fabs(total_split - 1.0) > 1e-6:
+        raise Error("Split parameters must sum to 1.0")
 
     return params
 
-# Function to validate mamba_ratio
-def validate_mamba_ratio(value: Float64) -> Float64:
+fn validate_mamba_ratio(value: Float64) raises:
+    """Validate that mamba_ratio is between 0.0 and 1.0."""
     if value < 0.0 or value > 1.0:
         raise Error("mamba_ratio must be between 0.0 and 1.0")
-    return value
 
+struct ModelConfigSaver(Callback):
+    fn __init__(self, config: Config) -> None:
+        """
+        Initialize the ModelConfigSaver callback with the current configuration.
 
-# Define ConfigSavingModelCheckpoint using Python interop
-def create_config_saving_model_checkpoint(config: PythonObject, trial_num: String = "NA", task_id: String = "NA", iter_num: String = "NA") -> PythonObject:
-    var ModelCheckpoint = Python.import_module("pytorch_lightning.callbacks").ModelCheckpoint
-    var datetime_module = Python.import_module("datetime")
-    
-    struct ConfigSavingModelCheckpoint(ModelCheckpoint):
-        def __init__(self, config, trial_num="NA", task_id="NA", iter_num="NA", *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.config = config
-            self.trial_num = trial_num
-            self.task_id = task_id
-            self.iter_num = iter_num
-            self.timestamp = datetime_module.datetime.now().strftime("%Y%m%dT%H%M%S")
-        
-        def on_save_checkpoint(self, trainer, pl_module, checkpoint):
-            checkpoint["model_config"] = self.config.model.__dict__
-            checkpoint["trial_num"] = self.trial_num
-            checkpoint["task_id"] = self.task_id
-            checkpoint["iter_num"] = self.iter_num
-            checkpoint["timestamp"] = self.timestamp
-            super().on_save_checkpoint(trainer, pl_module, checkpoint)
-        
-        def format_checkpoint_name(self, metrics):
-            return self.filename.format(
-                trial_num=self.trial_num,
-                task_id=self.task_id,
-                iter_num=self.iter_num,
-                val_loss=metrics.get("val_loss", 0.0),
-                epoch=metrics.get("epoch", 0),
-                timestamp=self.timestamp
-            )
-    
-    return ConfigSavingModelCheckpoint(config, trial_num, task_id, iter_num)
+        Args:
+            config (Config): The configuration object containing model parameters.
+        """
+        super().__init__()
+        self.config = config
 
-# Define ModelConfigSaver using Python interop
-def create_model_config_saver(config: PythonObject) -> PythonObject:
-    var Callback = Python.import_module("pytorch_lightning.callbacks").Callback
-    
-    class ModelConfigSaver(Callback):
-        def __init__(self, config):
-            super().__init__()
-            self.config = config
-        
-        def on_save_checkpoint(self, trainer, pl_module, checkpoint):
-            checkpoint["model_config"] = self.config.model.__dict__
-    
-    return ModelConfigSaver(config)
+    fn on_save_checkpoint(self, trainer: pl.Trainer, pl_module: pl.LightningModule, checkpoint: dict) -> None:
+        """
+        Override the checkpoint saving to include the model configuration.
+
+        Args:
+            trainer (pl.Trainer): The Trainer instance.
+            pl_module (pl.LightningModule): The LightningModule being trained.
+            checkpoint (dict): The checkpoint dictionary to be modified.
+        """
+        checkpoint['model_config'] = self.config.model.__dict__
+
 
 # Prepare validation or test data
-def prepare_val_or_test_data(eval_set: PythonObject, args: PythonObject, is_validation: Bool = True) -> List[Dict[String, Any]]:
+fn prepare_val_or_test_data(eval_set: PythonObject, args: PythonObject, is_validation: Bool = True) -> List[Dict[String, Any]]:
     var set_type = "validation" if is_validation else "test"
     var logger = Python.import_module("logging").getLogger("train")
     logger.debug("Preparing " + set_type + " data from arckit evaluation set")
@@ -129,7 +117,7 @@ def prepare_val_or_test_data(eval_set: PythonObject, args: PythonObject, is_vali
     return samples
 
 # Load dataset
-def load_dataset(args: PythonObject, config: PythonObject, dataset_type: String = "train", all_synthetic_data: Optional[PythonObject] = None) -> PythonObject:
+fn load_dataset(args: PythonObject, config: PythonObject, dataset_type: String = "train", all_synthetic_data: Optional[PythonObject] = None) raises -> PythonObject:
     var logger = Python.import_module("logging").getLogger("train")
     logger.debug("load_dataset called with dataset_type='" + dataset_type + "', args.use_synthetic_data=" + String(args.use_synthetic_data))
     
@@ -166,7 +154,7 @@ def load_dataset(args: PythonObject, config: PythonObject, dataset_type: String 
     return dataset
 
 # Load and split synthetic data
-def load_and_split_synthetic_data(args: PythonObject, config: PythonObject) -> PythonObject:
+fn load_and_split_synthetic_data(args: PythonObject, config: PythonObject) raises -> PythonObject:
     var logger = Python.import_module("logging").getLogger("train")
     logger.debug("Entering load_and_split_synthetic_data function")
     
@@ -186,7 +174,7 @@ def load_and_split_synthetic_data(args: PythonObject, config: PythonObject) -> P
     return {"train_dataset": synthetic_dataset}
 
 # Train model
-def train_model(args: PythonObject) -> None:
+def train_model(args: PythonObject)  -> None:
     # Import necessary Python modules directly within the function
     var argparse = Python.import_module("argparse")
     var logging = Python.import_module("logging")
