@@ -52,6 +52,8 @@ from gpt2_arc.src.utils import GrokfastCallback
 from typing import List, Dict, Any
 from typing import Union
 import optuna
+import argparse
+
 
 logger = logging.getLogger(__name__)
 """
@@ -78,7 +80,6 @@ def validate_mamba_ratio(value: float) -> float:
     return value
 
 # Create a function to set up argument parser
-import argparse
 
 def create_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
@@ -141,12 +142,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-
-
-
-
-
-class ConfigSavingModelCheckpoint(ModelCheckpoint):
+struct ConfigSavingModelCheckpoint(ModelCheckpoint):
     def __init__(self, config: Config, trial_num: str = 'NA', task_id: str = 'NA', iter_num: str = 'NA', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.config = config
@@ -181,7 +177,7 @@ class ConfigSavingModelCheckpoint(ModelCheckpoint):
             timestamp=self.timestamp
         )
 
-class ModelConfigSaver(Callback):
+struct ModelConfigSaver(Callback):
     def __init__(self, config: Config) -> None:
         """
         Initialize the ModelConfigSaver callback with the current configuration.
@@ -204,7 +200,6 @@ class ModelConfigSaver(Callback):
         checkpoint['model_config'] = self.config.model.__dict__
 
         
-
 def prepare_val_or_test_data(eval_set: Any, args: argparse.Namespace, is_validation: bool = True) -> List[Dict[str, Any]]:
     """
     Prepare validation or test data from the arckit evaluation set.
