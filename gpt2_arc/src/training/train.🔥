@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 from python import Python
 
 # First, wrap the imports in a function since we can't have top-level code
-fn setup_python_modules():
+def setup_python_modules():
     # Import required Python modules
     let logging = Python.import_module("logging")
     let argparse = Python.import_module("argparse")
@@ -72,15 +72,16 @@ fn setup_python_modules():
     return (logging, argparse, os, sys, torch, numpy, pytorch_lightning)
 
 # Move argument validation into its own function
-fn validate_mamba_ratio(value: Float32) raises -> Float32:
+def validate_mamba_ratio(value: float) -> float:
     if value < 0.0 or value > 1.0:
         raise Error("mamba_ratio must be between 0.0 and 1.0")
     return value
 
 # Create a function to set up argument parser
-fn create_argument_parser() raises -> PythonObject:
-    let argparse = Python.import_module("argparse")
-    let parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
+import argparse
+
+def create_argument_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
     
     # Add arguments (using Python's argparse)
     parser.add_argument("--max_epochs", type=int, required=True)
@@ -99,7 +100,7 @@ fn create_argument_parser() raises -> PythonObject:
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for profiling")
     parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--max_epochs", type=int, required=True, help="Maximum number of epochs")
-    parser.add_argument("--mamba_ratio", type=valid_mamba_ratio, default=1.0, help="Proportion of Mamba layers relative to the total number of Transformer layers. Must be between 0.0 and 1.0.")
+    parser.add_argument("--mamba_ratio", type=validate_mamba_ratio, default=1.0, help="Proportion of Mamba layers relative to the total number of Transformer layers. Must be between 0.0 and 1.0.")
     parser.add_argument("--dropout", type=float, default=0.05, help="Dropout rate")
     parser.add_argument("--d_state", type=int, default=4, help="Mamba state dimension")
     parser.add_argument("--d_conv", type=int, default=1, help="Mamba convolution dimension")
@@ -145,8 +146,8 @@ fn create_argument_parser() raises -> PythonObject:
 
 
 
-struct ConfigSavingModelCheckpoint(ModelCheckpoint):
-    fn __init__(inout self, config: Config, trial_num: str = 'NA', task_id: str = 'NA', iter_num: str = 'NA', *args, **kwargs):
+class ConfigSavingModelCheckpoint(ModelCheckpoint):
+    def __init__(self, config: Config, trial_num: str = 'NA', task_id: str = 'NA', iter_num: str = 'NA', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.config = config
         self.trial_num = trial_num
@@ -154,7 +155,7 @@ struct ConfigSavingModelCheckpoint(ModelCheckpoint):
         self.iter_num = iter_num
         self.timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")  # e.g., 20240308T153045
 
-    fn on_save_checkpoint(inout self, trainer: pl.Trainer, pl_module: pl.LightningModule, checkpoint: dict) -> None:
+    def on_save_checkpoint(self, trainer: pl.Trainer, pl_module: pl.LightningModule, checkpoint: dict) -> None:
         # Add custom metadata to the checkpoint
         checkpoint['model_config'] = self.config.model.__dict__
         checkpoint['trial_num'] = self.trial_num
@@ -167,7 +168,7 @@ struct ConfigSavingModelCheckpoint(ModelCheckpoint):
 
         super().on_save_checkpoint(trainer, pl_module, checkpoint)
 
-    fn format_checkpoint_name(inout self, metrics: dict) -> str:
+    def format_checkpoint_name(self, metrics: dict) -> str:
         """
         Override the method to include custom placeholders in the filename.
         """
@@ -180,8 +181,8 @@ struct ConfigSavingModelCheckpoint(ModelCheckpoint):
             timestamp=self.timestamp
         )
 
-struct ModelConfigSaver(Callback):
-    fn __init__(inout self, config: Config) -> None:
+class ModelConfigSaver(Callback):
+    def __init__(self, config: Config) -> None:
         """
         Initialize the ModelConfigSaver callback with the current configuration.
 
@@ -191,7 +192,7 @@ struct ModelConfigSaver(Callback):
         super().__init__()
         self.config = config
 
-    fn on_save_checkpoint(inout self, trainer: pl.Trainer, pl_module: pl.LightningModule, checkpoint: dict) -> None:
+    def on_save_checkpoint(self, trainer: pl.Trainer, pl_module: pl.LightningModule, checkpoint: dict) -> None:
         """
         Override the checkpoint saving to include the model configuration.
 
@@ -204,7 +205,7 @@ struct ModelConfigSaver(Callback):
 
         
 
-fn prepare_val_or_test_data(eval_set: Any, args: argparse.Namespace, is_validation: bool = True) -> List[Dict[]]:
+def prepare_val_or_test_data(eval_set: Any, args: argparse.Namespace, is_validation: bool = True) -> List[Dict[str, Any]]:
     """
     Prepare validation or test data from the arckit evaluation set.
 
@@ -226,7 +227,7 @@ fn prepare_val_or_test_data(eval_set: Any, args: argparse.Namespace, is_validati
     return samples
 
 
-fn load_dataset(args: argparse.Namespace, config: Config, dataset_type: str = 'train', all_synthetic_data: Optional[Dict[]] = None) -> ARCDataset:
+def load_dataset(args: argparse.Namespace, config: Config, dataset_type: str = 'train', all_synthetic_data: Optional[Dict[str, Any]] = None) -> ARCDataset:
     logger.debug(f"load_dataset called with dataset_type='{dataset_type}', args.use_synthetic_data={args.use_synthetic_data}")
 
     if dataset_type.lower() == 'train':
@@ -256,7 +257,7 @@ fn load_dataset(args: argparse.Namespace, config: Config, dataset_type: str = 't
     return dataset
 
 
-fn load_and_split_synthetic_data(args: argparse.Namespace, config: Config) -> Dict[]:
+def load_and_split_synthetic_data(args: argparse.Namespace, config: Config) -> Dict[str, ARCDataset]:
     """
     Load synthetic data using ARCDataset. Returns a dictionary containing only 'train_dataset'.
 
@@ -283,13 +284,13 @@ fn load_and_split_synthetic_data(args: argparse.Namespace, config: Config) -> Di
     return {'train_dataset': synthetic_dataset}
 
 # Wrap the main training logic
-fn train_model(args: PythonObject) raises:
-    let modules = setup_python_modules()
-    let logging = modules.get[0]()
-    let torch = modules.get[4]()
-    let pl = modules.get[6]()
+def train_model(args: argparse.Namespace) -> None:
+    modules = setup_python_modules()
+    logging = modules[0]
+    torch = modules[4]
+    pl = modules[6]
     
-    let logger = logging.getLogger("train")
+    logger = logging.getLogger("train")
     
     if args.use_synthetic_data and not args.synthetic_data_path:
         raise ValueError("--synthetic_data_path must be provided when using synthetic data.")
