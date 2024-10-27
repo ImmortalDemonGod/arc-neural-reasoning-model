@@ -162,7 +162,7 @@ class MambaBlock(nn.Module):
 
         return y
 
-    def selective_scan(self, u, delta, A, B, C, D):
+    def selective_scan(self, u: torch.Tensor, delta: torch.Tensor, A: torch.Tensor, B: torch.Tensor, C: torch.Tensor, D: torch.Tensor) -> torch.Tensor:
         """Does selective scan algorithm. See:
             - Section 2 State Space Models in the Mamba paper [1]
             - Algorithm 2 in Section 3.2 in the Mamba paper [1]

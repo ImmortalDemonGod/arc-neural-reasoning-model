@@ -674,6 +674,12 @@ def run_optimization(
     args: Optional[argparse.Namespace] = None,
     study_name: str = "gpt2_arc_optimization_v2"
 ) -> None:
+    n_trials: int = 100,
+    storage_name: str = "sqlite:///optuna_results.db",
+    n_jobs: int = -1,
+    args: Optional[argparse.Namespace] = None,
+    study_name: str = "gpt2_arc_optimization_v2"
+) -> None:
 
     if n_trials < 10:
         n_startup_trials = 1

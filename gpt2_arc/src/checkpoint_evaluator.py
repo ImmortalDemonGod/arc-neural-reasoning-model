@@ -248,7 +248,7 @@ def monitor_resources(logger: logging.Logger, interval: int = 60) -> None:
         except Exception as e:
             logger.error(f"Error in resource monitoring: {e}")
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     logger = setup_logging(args.output_dir, args.log_level)
     logger.info("Starting Checkpoint Evaluator Script")
     logger.debug(f"Arguments: {args}")

@@ -287,7 +287,7 @@ def save_results(
     logger.info(f"Results saved to {output_path}")
     return output_path
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     if args.use_wandb:
         api_key = os.getenv("WANDB_API_KEY")
         if api_key:

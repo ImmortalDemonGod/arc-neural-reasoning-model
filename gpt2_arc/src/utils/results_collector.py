@@ -157,7 +157,7 @@ class ResultsCollector:
         logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
-    def _make_serializable(self, obj):
+    def _make_serializable(self, obj: Any) -> Any:
         """Ensure the value is serializable, handling non-serializable objects."""
         if isinstance(obj, (int, float, str, bool, type(None))):
             return obj
