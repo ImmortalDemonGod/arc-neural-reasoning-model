@@ -1,22 +1,20 @@
 from python import Python, PythonObject
-from typing import Any, List, Dict, Optional, Union
-import datetime
 
 # Setup Python modules
 def setup_python_modules():
-    let argparse = Python.import_module("argparse")
-    let logging = Python.import_module("logging")
-    let os = Python.import_module("os")
-    let sys = Python.import_module("sys")
-    let torch = Python.import_module("torch")
-    let numpy = Python.import_module("numpy")
-    let pytorch_lightning = Python.import_module("pytorch_lightning")
-    let optuna = Python.import_module("optuna")
-    let arckit = Python.import_module("arckit")
-    let concurrent_futures = Python.import_module("concurrent.futures")
-    let random = Python.import_module("random")
-    let tqdm = Python.import_module("tqdm")
-    let datetime_module = Python.import_module("datetime")
+    var argparse = Python.import_module("argparse")
+    var logging = Python.import_module("logging")
+    var os = Python.import_module("os")
+    var sys = Python.import_module("sys")
+    var torch = Python.import_module("torch")
+    var numpy = Python.import_module("numpy")
+    var pytorch_lightning = Python.import_module("pytorch_lightning")
+    var optuna = Python.import_module("optuna")
+    var arckit = Python.import_module("arckit")
+    var concurrent_futures = Python.import_module("concurrent.futures")
+    var random = Python.import_module("random")
+    var tqdm = Python.import_module("tqdm")
+    var datetime_module = Python.import_module("datetime")
     
     return (
         argparse,
@@ -42,8 +40,8 @@ def validate_mamba_ratio(value: Float64) -> Float64:
 
 # Create argument parser
 def create_argument_parser() -> PythonObject:
-    let (argparse, _, _, _, _, _, _, _, _, _, _, _, _) = setup_python_modules()
-    let parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
+    var (argparse, _, _, _, _, _, _, _, _, _, _, _, _) = setup_python_modules()
+    var parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
     
     # Add arguments using Python's argparse
     parser.add_argument("--max_epochs", type=Int, required=True)
@@ -103,8 +101,8 @@ def create_argument_parser() -> PythonObject:
 
 # Define ConfigSavingModelCheckpoint using Python interop
 def create_config_saving_model_checkpoint(config: PythonObject, trial_num: String = "NA", task_id: String = "NA", iter_num: String = "NA") -> PythonObject:
-    let ModelCheckpoint = Python.import_module("pytorch_lightning.callbacks").ModelCheckpoint
-    let datetime_module = Python.import_module("datetime")
+    var ModelCheckpoint = Python.import_module("pytorch_lightning.callbacks").ModelCheckpoint
+    var datetime_module = Python.import_module("datetime")
     
     class ConfigSavingModelCheckpoint(ModelCheckpoint):
         def __init__(self, config, trial_num="NA", task_id="NA", iter_num="NA", *args, **kwargs):
@@ -137,7 +135,7 @@ def create_config_saving_model_checkpoint(config: PythonObject, trial_num: Strin
 
 # Define ModelConfigSaver using Python interop
 def create_model_config_saver(config: PythonObject) -> PythonObject:
-    let Callback = Python.import_module("pytorch_lightning.callbacks").Callback
+    var Callback = Python.import_module("pytorch_lightning.callbacks").Callback
     
     class ModelConfigSaver(Callback):
         def __init__(self, config):
@@ -151,13 +149,17 @@ def create_model_config_saver(config: PythonObject) -> PythonObject:
 
 # Prepare validation or test data
 def prepare_val_or_test_data(eval_set: PythonObject, args: PythonObject, is_validation: Bool = True) -> List[Dict[String, Any]]:
-    let set_type = if is_validation { "validation" } else { "test" }
-    let logger = Python.import_module("logging").getLogger("train")
+    var set_type = "validation" if is_validation else "test"
+    var logger = Python.import_module("logging").getLogger("train")
     logger.debug("Preparing " + set_type + " data from arckit evaluation set")
     
     var samples: List[Dict[String, Any]] = []
     for task in eval_set.tasks:
-        for ex in (is_validation ? task.train : task.test):
+        if is_validation:
+            examples = task.train
+        else:
+            examples = task.test
+        for ex in examples:
             var sample = {"input": ex[0], "output": ex[1], "task_id": task.id}
             samples.append(sample)
     
