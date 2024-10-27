@@ -35,7 +35,7 @@ def create_argument_parser() -> PythonObject:
     var modules = setup_python_modules()
     var argparse = modules[0]
     var validators = modules[13]  # Assuming validators.py is used
-    var parser = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
+    var parser: PythonObject = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
     
     # Add a minimal argument
     parser.add_argument("--max_epochs", type=Python.int, required=True, help="Maximum number of epochs")
