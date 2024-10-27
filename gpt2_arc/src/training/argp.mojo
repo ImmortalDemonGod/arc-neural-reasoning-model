@@ -35,7 +35,7 @@ fn setup_python_modules() raises -> List[PythonObject]:
         exceptions
     ]
 
-fn create_argument_parser() -> PythonObject:
+fn create_argument_parser() raises -> PythonObject:
     var modules: List[PythonObject] = setup_python_modules()
     var argparse = modules[0]
     var validators = modules[13]
@@ -45,7 +45,7 @@ fn create_argument_parser() -> PythonObject:
 
     # Add a minimal argument
     try:
-        parser.add_argument("--max_epochs", type=Python.int, required=True, help="Maximum number of epochs")
+        parser.add_argument("--max_epochs", type=Int8, required=True, help="Maximum number of epochs")
     except Error as e:
         print("Error adding argument:", e)
 
