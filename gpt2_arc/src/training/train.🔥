@@ -3,7 +3,7 @@ from sys.param_env import env_get_int, env_get_string
 
 # Helper function to retrieve and convert float parameters
 def get_float_param(name, default):
-    var raw_value = env_get_string[name, default]()
+    var raw_value = env_get_string(name, default)
     match Float64.parse(raw_value):
         .Some(value) -> value
         .None -> 
