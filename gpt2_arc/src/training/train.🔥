@@ -54,7 +54,7 @@ def create_argument_parser() -> PythonObject:
     var random = modules[10]
     var tqdm = modules[11]
     var datetime_module = modules[12]
-    var parser = argparse.ArgumentParser(description=String("Train the ARC Neural Reasoning Model"))
+    var parser = argparse.ArgumentParser(description=Python.str("Train the ARC Neural Reasoning Model"))
     
     # Add arguments using Python's argparse
     parser.add_argument("--max_epochs", type=Int, required=True)
