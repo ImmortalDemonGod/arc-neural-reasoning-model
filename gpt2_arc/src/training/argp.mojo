@@ -1,6 +1,6 @@
 from python import Python, PythonObject
 # Setup Python modules
-fn setup_python_modules() raises:
+fn setup_python_modules() -> List[PythonObject] raises:
     var argparse = Python.import_module("argparse")
     var logging = Python.import_module("logging")
     var os = Python.import_module("os")
@@ -15,8 +15,9 @@ fn setup_python_modules() raises:
     var tqdm = Python.import_module("tqdm")
     var datetime_module = Python.import_module("datetime")
     var validators = Python.import_module("validators")
-    
-    return (
+    var exceptions = Python.import_module("exceptions")
+
+    return [
         argparse,
         logging,
         os,
@@ -29,19 +30,23 @@ fn setup_python_modules() raises:
         concurrent_futures,
         random,
         tqdm,
-        datetime_module
-    )
+        datetime_module,
+        validators,
+        exceptions
+    ]
 
-fn create_argument_parser() raises -> PythonObject:
-    var modules = setup_python_modules()
+fn create_argument_parser() -> PythonObject:
+    var modules: List[PythonObject] = setup_python_modules()
     var argparse = modules[0]
-    var validators = modules[13]  # Assuming validators.py is used
+    var validators = modules[13]
+    var exceptions = modules[14]
+
     var parser: PythonObject = argparse.ArgumentParser(description="Train the ARC Neural Reasoning Model")
-    
+
     # Add a minimal argument
     try:
         parser.add_argument("--max_epochs", type=Python.int, required=True, help="Maximum number of epochs")
-    except Python.PythonException as e:
+    except exceptions.Exception as e:
         print("Error adding argument:", e)
-    
+
     return parser
