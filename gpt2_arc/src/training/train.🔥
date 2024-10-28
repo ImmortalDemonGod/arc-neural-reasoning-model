@@ -74,49 +74,86 @@ fn validate_mamba_ratio(value: Float64) raises:
     if value < 0.0 or value > 1.0:
         raise Error("mamba_ratio must be between 0.0 and 1.0")
 
-var Callback = Python.import_module("pytorch_lightning.callbacks").Callback
-
-struct ModelConfigSaver(Callback):
-    fn __init__(self, config: Config) -> None:
-        """
-        Initialize the ModelConfigSaver callback with the current configuration.
-
-        Args:
-            config (Config): The configuration object containing model parameters.
-        """
-        super().__init__()
+struct ModelConfigSaver:
+    """A callback to save model configuration during training checkpoints."""
+    
+    var config: PythonObject
+    var callback_base: PythonObject
+    
+    fn __init__(inout self) raises:
+        # Import required Python modules
+        var pl_callbacks = Python.import_module("pytorch_lightning.callbacks")
+        self.callback_base = pl_callbacks.Callback()
+        # Use evaluate() to get Python's None
+        self.config = Python.evaluate("None")
+    
+    fn set_config(inout self, config: PythonObject):
+        """Set the configuration to be saved with checkpoints."""
         self.config = config
-
-    fn on_save_checkpoint(self, trainer: pl.Trainer, pl_module: pl.LightningModule, checkpoint: dict) -> None:
-        """
-        Override the checkpoint saving to include the model configuration.
-
+    
+    fn on_save_checkpoint(self, trainer: PythonObject, pl_module: PythonObject, 
+                         inout checkpoint: PythonObject) raises:
+        """Save model configuration to checkpoint.
+        
         Args:
-            trainer (pl.Trainer): The Trainer instance.
-            pl_module (pl.LightningModule): The LightningModule being trained.
-            checkpoint (dict): The checkpoint dictionary to be modified.
+            trainer: PyTorch Lightning Trainer instance.
+            pl_module: The LightningModule being trained.
+            checkpoint: Checkpoint dictionary to modify.
         """
-        checkpoint['model_config'] = self.config.model.__dict__
+        if not self.config.is_(Python.evaluate("None")):
+            try:
+                # Create a new dictionary for model config using Python's dict()
+                var model_config = Python.evaluate("dict()")
+                var config_dict = self.config.__dict__
+                
+                # Copy all items to the new dictionary using Python's dict update
+                for key in config_dict:
+                    var  update_expr = "lambda d, k, v: d.update({k: v})"
+                    var update_func = Python.evaluate(update_expr)
+                    update_func(model_config, key, config_dict[key])
+                
+                # Update the checkpoint using Python's dict update
+                var  checkpoint_update_expr = "lambda d, k, v: d.update({k: v})"
+                var checkpoint_update = Python.evaluate(checkpoint_update_expr)
+                checkpoint_update(checkpoint, "model_config", model_config)
+                
+            except:
+                print("Warning: Failed to save model configuration")
 
 
 # Prepare validation or test data
-fn prepare_val_or_test_data(eval_set: PythonObject, args: PythonObject, is_validation: Bool = True) -> List[Dict[String, Any]]:
+fn prepare_val_or_test_data(eval_set: PythonObject, args: PythonObject, is_validation: Bool = True) raises -> PythonObject:
+    """Prepare validation or test data from evaluation set."""
     var set_type = "validation" if is_validation else "test"
     var logger = Python.import_module("logging").getLogger("train")
-    logger.debug("Preparing " + set_type + " data from arckit evaluation set")
     
-    var samples: List[Dict[String, Any]] = []
+    # Create message using Python string formatting
+    var debug_msg = Python.evaluate("'Preparing {} data from arckit evaluation set'").format(set_type)
+    logger.debug(debug_msg)
+    
+    # Create Python list to store results
+    var py_list = Python.evaluate("[]")
+    
     for task in eval_set.tasks:
-        if is_validation:
-            examples = task.train
-        else:
-            examples = task.test
-        for ex in examples:
-            var sample = {"input": ex[0], "output": ex[1], "task_id": task.id}
-            samples.append(sample)
+        var examples = task.train if is_validation else task.test
+        
+        for example in examples:
+            # Create Python dictionary directly
+            var sample_dict = Python.dict()
+            sample_dict["input"] = example[0]
+            sample_dict["output"] = example[1]
+            sample_dict["task_id"] = task.id
+            
+            py_list.append(sample_dict)
     
-    logger.debug("Prepared " + String(len(samples)) + " samples for " + set_type + " dataset")
-    return samples
+    # Use Python string formatting for the final message
+    var final_msg = Python.evaluate("'Prepared {} samples for {} dataset'").format(
+        Python.evaluate("len")(py_list),
+        set_type
+    )
+    logger.debug(final_msg)
+    return py_list
+
 
 # Load dataset
 fn load_dataset(args: PythonObject, config: PythonObject, dataset_type: String = "train", all_synthetic_data: Optional[PythonObject] = None) raises -> PythonObject:
@@ -713,7 +750,6 @@ def train_model(args: PythonObject)  -> None:
     else:
         logger.error("Trainer was not initialized. Exiting the training loop.")
 
-# Main function
 # Main function
 fn main() raises -> None:
     # Retrieve compile-time parameters
