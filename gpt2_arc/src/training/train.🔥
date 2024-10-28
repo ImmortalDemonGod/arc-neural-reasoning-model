@@ -436,17 +436,40 @@ fn train_model(args: PythonObject) raises -> None:
                 pin_memory=args.pin_memory,
             )
         
+        # Get the Config and base configuration types
+        var ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
+        var TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
         var Config = Python.import_module("gpt2_arc.src.config").Config
+
+        # Create initial configurations
+        var model_config = ModelConfig(
+            n_embd=args.n_embd,
+            n_head=args.n_head,
+            n_layer=args.n_layer,
+            dropout=args.dropout
+        )
+
+        var training_config = TrainingConfig(
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+            max_epochs=args.max_epochs,
+            use_gpu=args.use_gpu,
+            log_level=args.log_level
+        )
+
         var config = Config(model=model_config, training=training_config)
-        logger.debug("Configuration: " + String(config))
-        
+        var debug_msg = Python.evaluate("'Configuration: {}'").format(config)
+        logger.debug(debug_msg)
+
+        # Declare all_synthetic_data at the outer scope
+        var all_synthetic_data: PythonObject
         if args.use_synthetic_data:
-            var all_synthetic_data = load_and_split_synthetic_data(args, config)
+            all_synthetic_data = load_and_split_synthetic_data(args, config)
         else:
-            var all_synthetic_data = None
-        
+            all_synthetic_data = Python.evaluate("None")
+
         logger.info("Loading datasets sequentially to avoid memory allocation issues")
-        
+
         try:
             var train_data = load_dataset(args, config, dataset_type="train", all_synthetic_data=all_synthetic_data)
             var val_data = load_dataset(args, config, dataset_type="val")
@@ -454,21 +477,25 @@ fn train_model(args: PythonObject) raises -> None:
         except:
             logger.error("Error loading datasets ")
             raise
-        
-        logger.info("Training dataset source: " + ("synthetic data" if args.use_synthetic_data else "official ARC data"))
+
+        # Use Python string formatting for info messages
+        var train_source_msg = Python.evaluate("'Training dataset source: {}'").format(
+            "synthetic data" if args.use_synthetic_data else "official ARC data"
+        )
+        logger.info(train_source_msg)
         logger.info("Validation dataset source: official ARC data")
         logger.info("Test dataset source: official ARC data")
-        
+
         #logger.debug("Number of training samples: " + String(len(train_data)))
         #logger.debug("Number of validation samples: " + String(len(val_data)))
         #logger.debug("Number of test samples: " + String(len(test_data)))
-        
 
         #var symbol_freq_dict = {}
         logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
         var balance_symbols = False
         var balancing_method = "none"
-    
+        var symbol_freq_dict = Python.dict()  # Create empty Python dictionary
+
         var TrainingConfigUpdated = Python.import_module("gpt2_arc.src.config").TrainingConfig
         training_config = TrainingConfigUpdated(
             batch_size=training_config.batch_size,
@@ -498,7 +525,7 @@ fn train_model(args: PythonObject) raises -> None:
         
         
         var num_classes = config.training.num_classes
-        logger.info("Number of classes set to: " + String(num_classes))
+        #logger.info("Number of classes set to: " + String(num_classes))
         logger.info("Creating DataLoader instances")
         
         # Ensure test_data is not None
@@ -518,8 +545,8 @@ fn train_model(args: PythonObject) raises -> None:
         # Calculate Mamba and Transformer layers
         var mamba_layers = Int(config.model.n_layer * config.model.mamba_ratio)
         var transformer_layers = config.model.n_layer - mamba_layers
-        logger.info("Number of Mamba layers: " + String(mamba_layers))
-        logger.info("Number of Transformer layers: " + String(transformer_layers))
+        #logger.info("Number of Mamba layers: " + String(mamba_layers))
+        #logger.info("Number of Transformer layers: " + String(transformer_layers))
         
         # Validate layers
         if mamba_layers < 0 or transformer_layers < 0:
