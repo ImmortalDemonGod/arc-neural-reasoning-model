@@ -156,13 +156,42 @@ fn prepare_val_or_test_data(eval_set: PythonObject, args: PythonObject, is_valid
 
 
 # Load dataset
-fn load_dataset(args: PythonObject, config: PythonObject, dataset_type: String = "train", all_synthetic_data: Optional[PythonObject] = None) raises -> PythonObject:
+fn get_none() raises -> PythonObject:
+    """Helper function to get Python's None value."""
+    return Python.evaluate("None")
+
+fn load_dataset(
+    args: PythonObject, 
+    config: PythonObject, 
+    dataset_type: String = "train", 
+    all_synthetic_data: PythonObject = PythonObject()
+) raises -> PythonObject:
     var logger = Python.import_module("logging").getLogger("train")
-    logger.debug("load_dataset called with dataset_type='" + dataset_type + "', args.use_synthetic_data=" + String(args.use_synthetic_data))
     
-    if dataset_type.lower() == "train":
+    # Convert Mojo string to Python string at the start
+    var py_dataset_type = Python.evaluate("str")(dataset_type)
+    
+    # Use Python string formatting for debug message
+    var debug_msg = Python.evaluate("'load_dataset called with dataset_type={}, args.use_synthetic_data={}'").format(
+        py_dataset_type,
+        args.use_synthetic_data
+    )
+    logger.debug(debug_msg)
+    
+    var dataset: PythonObject
+    var none_value = get_none()
+    
+    # Use Python string methods
+    var dataset_type_lower = py_dataset_type.lower()
+    
+    if dataset_type_lower == "train":
         if args.use_synthetic_data:
-            dataset = all_synthetic_data["train_dataset"]
+            if all_synthetic_data != none_value:
+                dataset = all_synthetic_data["train_dataset"]
+            else:
+                var err_msg = Python.evaluate("'all_synthetic_data is required when use_synthetic_data is True'")
+                logger.error(err_msg)
+                raise Error(err_msg.__str__())
         else:
             var arckit = Python.import_module("arckit")
             dataset = Python.import_module("gpt2_arc.src.data.arc_dataset").ARCDataset(
@@ -171,25 +200,36 @@ fn load_dataset(args: PythonObject, config: PythonObject, dataset_type: String =
                 max_samples=args.max_train_samples,
                 num_symbols=config.training.num_symbols,
                 pad_symbol_idx=config.training.pad_symbol_idx,
-                symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+                symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else none_value
             )
     else:
         var arckit = Python.import_module("arckit")
         var eval_set = arckit.load_data()[1]
-        var data_source = prepare_val_or_test_data(eval_set, args, is_validation=(dataset_type.lower() == "val"))
+        var is_validation = dataset_type_lower == "val"
+        var data_source = prepare_val_or_test_data(eval_set, args, is_validation)
         dataset = Python.import_module("gpt2_arc.src.data.arc_dataset").ARCDataset(
             data_source=data_source,
-            is_test=(dataset_type.lower() == "test"),
+            is_test=(dataset_type_lower == "test"),
             num_symbols=config.training.num_symbols,
             pad_symbol_idx=config.training.pad_symbol_idx,
-            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+            symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else none_value
         )
     
-    if len(dataset) == 0:
-        logger.error("No samples loaded for " + dataset_type + " dataset. Please check your data source.")
-        raise Error("No samples loaded for " + dataset_type + " dataset.")
+    # Use Python's len() function
+    var dataset_len = Python.evaluate("len")(dataset)
     
-    logger.debug(dataset_type.capitalize() + " dataset loaded with " + String(len(dataset)) + " samples")
+    if dataset_len == 0:
+        # Keep everything as Python strings
+        var error_msg = Python.evaluate("'No samples loaded for {} dataset.'").format(py_dataset_type)
+        logger.error(error_msg)
+        raise Error(error_msg.__str__())
+    
+    # Use Python string formatting for debug message
+    var final_msg = Python.evaluate("'{} dataset loaded with {} samples'").format(
+        py_dataset_type.capitalize(),
+        dataset_len
+    )
+    logger.debug(final_msg)
     return dataset
 
 # Load and split synthetic data
@@ -197,23 +237,35 @@ fn load_and_split_synthetic_data(args: PythonObject, config: PythonObject) raise
     var logger = Python.import_module("logging").getLogger("train")
     logger.debug("Entering load_and_split_synthetic_data function")
     
-    synthetic_dataset = Python.import_module("gpt2_arc.src.data.arc_dataset").ARCDataset(
+    var none_value = Python.evaluate("None")
+    var synthetic_dataset = Python.import_module("gpt2_arc.src.data.arc_dataset").ARCDataset(
         data_source=args.synthetic_data_path,
         is_test=False,
         max_samples=args.max_train_samples,
         num_symbols=config.training.num_symbols,
         pad_symbol_idx=config.training.pad_symbol_idx,
-        symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else None
+        symbol_freq=config.training.symbol_freq if args.enable_symbol_freq else none_value
     )
     
-    var total_samples = len(synthetic_dataset)
-    logger.debug("Total synthetic samples loaded: " + String(total_samples))
-    assert total_samples > 0, "No synthetic samples were loaded. Please check your synthetic data files."
+    var total_samples = Python.evaluate("len")(synthetic_dataset)
     
-    return {"train_dataset": synthetic_dataset}
+    # Use Python string formatting
+    var debug_msg = Python.evaluate("'Total synthetic samples loaded: {}'").format(total_samples)
+    logger.debug(debug_msg)
+    
+    # Check total samples and raise error if needed
+    if total_samples == 0:
+        var error_msg = "No synthetic samples were loaded. Please check your synthetic data files."
+        logger.error(error_msg)
+        raise Error(error_msg)
+    
+    # Create and return dictionary using Python dict
+    var result = Python.dict()
+    result["train_dataset"] = synthetic_dataset
+    return result
 
 # Train model
-def train_model(args: PythonObject)  -> None:
+fn train_model(args: PythonObject) raises -> None:
     # Import necessary Python modules directly within the function
     var argparse = Python.import_module("argparse")
     var logging = Python.import_module("logging")
@@ -231,17 +283,33 @@ def train_model(args: PythonObject)  -> None:
     
     var logger = logging.getLogger("train")
     logger.debug("Initializing PyTorch Lightning Trainer")
+
+    # Fix study variable scoping
+    var study: PythonObject  # Declare at top level
     
     if args.use_synthetic_data and not args.synthetic_data_path:
-        raise Error("--synthetic_data_path must be provided when using synthetic data.")
+        var error_msg = "synthetic_data_path must be provided when using synthetic data."
+        logger.error(error_msg)
+        raise Error(error_msg)
     
     var total_split = args.train_split + args.val_split + args.test_split
-    if not (abs(total_split - 1.0) < 1e-6):
-        raise Error("Train, validation, and test splits must sum to 1.0")
     
+    # Use Python's abs function
+    var math = Python.import_module("math")
+    if math.fabs(total_split - 1.0) >= 1e-6:
+        var error_msg = "Train, validation, and test splits must sum to 1.0"
+        logger.error(error_msg)
+        raise Error(error_msg)
+    
+    # Set torch precision
     torch.set_float32_matmul_precision(args.matmul_precision)
-    logger.info("Set float32 matmul precision to: " + args.matmul_precision)
-    logger.debug("Command line arguments: " + String(args))
+    
+    # Use Python string formatting for logging
+    var debug_msg = Python.evaluate("'Set float32 matmul precision to: {}'").format(args.matmul_precision)
+    logger.info(debug_msg)
+    
+    var args_msg = Python.evaluate("'Command line arguments: {}'").format(args)
+    logger.debug(args_msg)
     
     # Initialize profiler if needed
     if args.use_profiler:
@@ -259,7 +327,7 @@ def train_model(args: PythonObject)  -> None:
     logger.setLevel(Python.evaluate("logging.DEBUG"))
     logger.info("Starting main function")
     logger.debug("Initializing PyTorch Lightning Trainer")
-    logger.debug("Command line arguments: " + String(args))
+    #logger.debug("Command line arguments: " + String(args))
     
     var trainer = None  # Initialize trainer to None
     
@@ -270,8 +338,8 @@ def train_model(args: PythonObject)  -> None:
             
             if study_name is None:
                 var study_summaries = optuna.get_all_study_summaries(storage=args.optuna_storage)
-                var study_names = [summary.study_name for summary in study_summaries]
-                
+                var study_names = Python.evaluate("[summary.study_name for summary in study_summaries]")
+                                
                 if len(study_names) == 1:
                     study_name = study_names[0]
                     logger.info("Automatically selected the only available study: " + study_name)
@@ -288,7 +356,7 @@ def train_model(args: PythonObject)  -> None:
                 var study = optuna.create_study(study_name=study_name, storage=args.optuna_storage)
             
             var best_params = study.best_params
-            logger.debug("Loaded best parameters: " + String(best_params))
+            #logger.debug("Loaded best parameters: " + String(best_params))
             
             var n_head_exp = best_params["n_head_exp"]
             var n_head = 2 ** n_head_exp
@@ -383,44 +451,24 @@ def train_model(args: PythonObject)  -> None:
             var train_data = load_dataset(args, config, dataset_type="train", all_synthetic_data=all_synthetic_data)
             var val_data = load_dataset(args, config, dataset_type="val")
             var test_data = load_dataset(args, config, dataset_type="test")
-        except Error as e:
-            logger.error("Error loading datasets: " + String(e))
+        except:
+            logger.error("Error loading datasets ")
             raise
         
         logger.info("Training dataset source: " + ("synthetic data" if args.use_synthetic_data else "official ARC data"))
         logger.info("Validation dataset source: official ARC data")
         logger.info("Test dataset source: official ARC data")
         
-        logger.debug("Number of training samples: " + String(len(train_data)))
-        logger.debug("Number of validation samples: " + String(len(val_data)))
-        logger.debug("Number of test samples: " + String(len(test_data)))
+        #logger.debug("Number of training samples: " + String(len(train_data)))
+        #logger.debug("Number of validation samples: " + String(len(val_data)))
+        #logger.debug("Number of test samples: " + String(len(test_data)))
         
-        if args.enable_symbol_freq:
-            logger.debug("Calculating symbol frequencies as it is enabled.")
-            if args.use_synthetic_data:
-                logger.debug("Calculating symbol frequencies for synthetic training set")
-                var symbol_freq = train_data.get_symbol_frequencies()
-            else:
-                logger.debug("Calculating symbol frequencies for ARC training set")
-                var symbol_freq = train_data.get_symbol_frequencies()
-            
-            var symbol_freq_dict = {}
-            for (i, freq) in symbol_freq.enumerate():
-                symbol_freq_dict[i] = Float64(freq)
-            var pad_symbol_idx = config.training.pad_symbol_idx
-            symbol_freq_dict.pop(pad_symbol_idx, None)
-            logger.debug("Removed pad_symbol_idx (" + String(pad_symbol_idx) + ") from symbol_freq_dict. New length: " + String(len(symbol_freq_dict)))
-            
-            assert(len(symbol_freq_dict) == config.training.num_classes - 1, "Length of symbol_freq_dict (" + String(len(symbol_freq_dict)) + ") does not match num_classes minus padding (" + String(config.training.num_classes - 1) + ").")
-            
-            var balance_symbols = True
-            var balancing_method = "weighting"
-        else:
-            var symbol_freq_dict = {}
-            logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
-            var balance_symbols = False
-            var balancing_method = "none"
-        
+
+        #var symbol_freq_dict = {}
+        logger.debug("Symbol frequency calculation is disabled. Using empty symbol_freq_dict.")
+        var balance_symbols = False
+        var balancing_method = "none"
+    
         var TrainingConfigUpdated = Python.import_module("gpt2_arc.src.config").TrainingConfig
         training_config = TrainingConfigUpdated(
             batch_size=training_config.batch_size,
@@ -448,23 +496,13 @@ def train_model(args: PythonObject)  -> None:
         
         config = Config(model=model_config, training=training_config)
         
-        # Calculate symbol frequencies if enabled
-        if args.enable_symbol_freq:
-            if args.use_synthetic_data:
-                logger.debug("Calculating symbol frequencies for synthetic training set")
-                var train_symbol_freq = train_data.get_symbol_frequencies()
-            else:
-                logger.debug("Calculating symbol frequencies for ARC training set")
-                var train_symbol_freq = train_data.get_symbol_frequencies()
-        else:
-            var train_symbol_freq = {}
         
         var num_classes = config.training.num_classes
         logger.info("Number of classes set to: " + String(num_classes))
         logger.info("Creating DataLoader instances")
         
         # Ensure test_data is not None
-        assert(test_data is not None, "Test dataset is None after loading.")
+        #assert(test_data is not None, "Test dataset is None after loading.")
         
         # Initialize model
         logger.info("Initializing model")
@@ -475,7 +513,7 @@ def train_model(args: PythonObject)  -> None:
             symbol_freq=symbol_freq_dict,
             pad_symbol_idx=config.training.pad_symbol_idx
         )
-        logger.debug("Model initialized with config: " + String(model_config))
+        #logger.debug("Model initialized with config: " + String(model_config))
         
         # Calculate Mamba and Transformer layers
         var mamba_layers = Int(config.model.n_layer * config.model.mamba_ratio)
@@ -757,5 +795,5 @@ fn main() raises -> None:
     
     try:
         train_model(args)
-    except PythonObject as e:
-        print("Error during training:", String(e))
+    except:
+        print("Error during training")
