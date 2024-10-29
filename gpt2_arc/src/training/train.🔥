@@ -665,7 +665,9 @@ fn train_model(args: PythonObject) raises -> None:
             callbacks.append(checkpoint_callback)
             
             # Instantiate and add the ModelConfigSaver callback
-            var ModelConfigSaver = create_model_config_saver(config)
+            var config_saver = ModelConfigSaver()
+            config_saver.set_config(config)
+            callbacks.append(config_saver)
             callbacks.append(ModelConfigSaver)
             logger.info("ModelConfigSaver callback added to the training callbacks.")
         
@@ -685,7 +687,8 @@ fn train_model(args: PythonObject) raises -> None:
             )
             logger.debug("TensorBoard logger initialized. Log dir: " + tb_logger.log_dir)
         else:
-            var tb_logger = Python.None
+            var none_value = Python.evaluate("None")
+            var tb_logger = none_value
             logger.debug("Logging is disabled")
         
         # Initialize PyTorch Lightning Trainer
