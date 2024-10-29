@@ -603,9 +603,10 @@ fn train_model(args: PythonObject) raises -> None:
         
         logger.info("Initializing ARCTrainer")
         var ARCTrainer = Python.import_module("gpt2_arc.src.training.trainer").ARCTrainer
+        var train_data = load_dataset(args, config, dataset_type="train", all_synthetic_data=all_synthetic_data)
         var trainer_py = ARCTrainer(
             model=model,
-            train_dataset=train_data,
+            train_dataset=train_data,  # Now properly scoped
             val_dataset=val_data,
             config=config,
             args=args,
@@ -683,7 +684,7 @@ fn train_model(args: PythonObject) raises -> None:
             var TensorBoardLogger = Python.import_module("pytorch_lightning.loggers").TensorBoardLogger
             var tb_logger = TensorBoardLogger(
                 save_dir="runs",
-                name="experiment_" + String(results_collector.experiment_id)
+                name=Python.evaluate("'experiment_{}'").format(results_collector.experiment_id)
             )
             logger.debug("TensorBoard logger initialized. Log dir: " + tb_logger.log_dir)
         else:
@@ -692,9 +693,10 @@ fn train_model(args: PythonObject) raises -> None:
             logger.debug("Logging is disabled")
         
         # Initialize PyTorch Lightning Trainer
+        var logger_arg = Python.evaluate("tb_logger if not args.no_logging else None")
         var pl_trainer = pytorch_lightning.Trainer(
             max_epochs=config.training.max_epochs,
-            logger=(tb_logger if not args.no_logging else Python.None),
+            logger=logger_arg,
             callbacks=(callbacks if len(callbacks) > 0 else Python.None),
             enable_checkpointing=not args.no_checkpointing,
             enable_progress_bar=not args.no_progress_bar,
