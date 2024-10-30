@@ -119,7 +119,19 @@ struct ModelConfigSaver:
                 
             except:
                 print("Warning: Failed to save model configuration")
-
+    
+    fn convert_to_python(self) raises -> PythonObject:
+        # Create a simple Python callback class
+        var class_def = "type('ModelConfigSaver', (), {})"
+        var py_saver = Python.evaluate(class_def)()
+        
+        # Copy our config to the Python object
+        py_saver.config = self.config
+        
+        # Add the save checkpoint method
+        py_saver.on_save_checkpoint = Python.evaluate("lambda self, trainer, pl_module, checkpoint: checkpoint.update({'model_config': self.config})")
+        
+        return py_saver
 
 # Prepare validation or test data
 fn prepare_val_or_test_data(eval_set: PythonObject, args: PythonObject, is_validation: Bool = True) raises -> PythonObject:
@@ -280,6 +292,11 @@ fn train_model(args: PythonObject) raises -> None:
     var random = Python.import_module("random")
     var tqdm = Python.import_module("tqdm")
     var datetime_module = Python.import_module("datetime")
+
+    var trainer = None  # Initialize trainer to None
+    var tracker: PythonObject = Python.evaluate("None")
+    var trainer_py: PythonObject = Python.evaluate("None")
+
     
     var logger = logging.getLogger("train")
     logger.debug("Initializing PyTorch Lightning Trainer")
@@ -329,14 +346,12 @@ fn train_model(args: PythonObject) raises -> None:
     logger.debug("Initializing PyTorch Lightning Trainer")
     #logger.debug("Command line arguments: " + String(args))
     
-    var trainer = None  # Initialize trainer to None
-    
     try:
         if args.use_optuna:
             logger.info("Loading best hyperparameters from Optuna study")
             var study_name = args.optuna_study_name
             
-            if study_name is None:
+            if study_name.is_(Python.evaluate("None")):  # Adjusting to check if study_name is None
                 var study_summaries = optuna.get_all_study_summaries(storage=args.optuna_storage)
                 var study_names = Python.evaluate("[summary.study_name for summary in study_summaries]")
                                 
@@ -350,92 +365,116 @@ fn train_model(args: PythonObject) raises -> None:
                     logger.error("Multiple studies found in the specified Optuna storage. Please specify the study name using --optuna-study-name.")
                     sys.exit(1)
             
-            try:
-                var study = optuna.load_study(study_name=study_name, storage=args.optuna_storage)
-            except KeyError:
-                var study = optuna.create_study(study_name=study_name, storage=args.optuna_storage)
-            
-            var best_params = study.best_params
-            #logger.debug("Loaded best parameters: " + String(best_params))
-            
-            var n_head_exp = best_params["n_head_exp"]
-            var n_head = 2 ** n_head_exp
-            var n_embd_multiplier = best_params["n_embd_multiplier"]
-            var n_embd = n_head * n_embd_multiplier
-            n_embd = 2 ** Python.evaluate("int(np.log2(n_embd))")
-            
-            var ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
-            var TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
-            
-            var model_config = ModelConfig(
-                n_embd=n_embd,
-                n_head=n_head,
-                n_layer=best_params["n_layer"],
-                dropout=best_params["dropout"],
-                num_workers=args.num_workers if args.num_workers is not None else Python.import_module("multiprocessing").cpu_count(),
-                prefetch_factor=args.prefetch_factor,
-                persistent_workers=not args.no_persistent_workers,
-                pin_memory=not args.no_pin_memory,
-            )
-            
-            var training_config = TrainingConfig(
-                batch_size=best_params["batch_size"],
-                learning_rate=best_params["learning_rate"],
-                max_epochs=args.max_epochs,
-                use_gpu=args.use_gpu,
-                log_level=args.log_level,
-                use_synthetic_data=args.use_synthetic_data,
-                synthetic_data_path=args.synthetic_data_path,
-                include_pad_in_loss=args.include_pad_in_loss,
-                include_pad_in_accuracy=args.include_pad_in_accuracy,
-                num_workers=args.num_workers,
-                prefetch_factor=args.prefetch_factor,
-                persistent_workers=not args.no_persistent_workers,
-                pin_memory=args.pin_memory,
-                use_grokfast=args.use_grokfast,
-                grokfast_type=args.grokfast_type,
-                grokfast_alpha=args.grokfast_alpha,
-                grokfast_lamb=args.grokfast_lamb,
-                grokfast_window_size=args.grokfast_window_size,
-            )
-        else:
-            logger.info("Using provided or default hyperparameters")
-            var ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
-            var TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
-            
-            var model_config = ModelConfig(
-                n_embd=args.n_embd,
-                n_head=args.n_head,
-                n_layer=args.n_layer,
-                dropout=args.dropout,
-                mamba_ratio=args.mamba_ratio,
-                d_state=args.d_state,
-                d_conv=args.d_conv,
-                mamba_depth=args.mamba_depth,
-                mamba_expand=args.mamba_expand,
-            )
-            
-            var training_config = TrainingConfig(
-                batch_size=args.batch_size,
-                learning_rate=args.learning_rate,
-                max_epochs=args.max_epochs,
-                use_gpu=args.use_gpu,
-                log_level=args.log_level,
-                use_synthetic_data=args.use_synthetic_data,
-                synthetic_data_path=args.synthetic_data_path,
-                use_grokfast=args.use_grokfast,
-                grokfast_type=args.grokfast_type,
-                grokfast_alpha=args.grokfast_alpha,
-                grokfast_lamb=args.grokfast_lamb,
-                grokfast_window_size=args.grokfast_window_size,
-                include_pad_in_loss=args.include_pad_in_loss,
-                include_pad_in_accuracy=args.include_pad_in_accuracy,
-                num_workers=args.num_workers,
-                prefetch_factor=args.prefetch_factor,
-                persistent_workers=not args.no_persistent_workers,
-                pin_memory=args.pin_memory,
-            )
-        
+                    try:
+                        if args.use_optuna:
+                            logger.info("Loading best hyperparameters from Optuna study")
+                            var study_name = args.optuna_study_name
+                            
+                            # Check if study_name is None
+                            if study_name.is_(Python.evaluate("None")):
+                                var study_summaries = optuna.get_all_study_summaries(storage=args.optuna_storage)
+                                var study_names = Python.evaluate("[summary.study_name for summary in study_summaries]")
+                                                
+                                if len(study_names) == 1:
+                                    study_name = study_names[0]
+                                    logger.info("Automatically selected the only available study: " + study_name)
+                                elif len(study_names) == 0:
+                                    logger.error("No studies found in the specified Optuna storage.")
+                                    sys.exit(1)
+                                else:
+                                    logger.error("Multiple studies found in the specified Optuna storage. Please specify the study name using --optuna-study-name.")
+                                    sys.exit(1)
+                            
+                            # Attempt to load or create the Optuna study
+                            try:
+                                study = optuna.load_study(study_name=study_name, storage=args.optuna_storage)
+                            except KeyError:
+                                study = optuna.create_study(study_name=study_name, storage=args.optuna_storage)
+                        
+                        # Step 2: Ensure study was assigned before using best_params
+                        if not study.is_(Python.evaluate("None")):
+                            var best_params = study.best_params
+                            var n_head_exp = best_params["n_head_exp"]
+                            var n_head = 2 ** n_head_exp
+                            var n_embd_multiplier = best_params["n_embd_multiplier"]
+                            var n_embd = n_head * n_embd_multiplier
+                            n_embd = 2 ** Python.evaluate("int(np.log2(n_embd))")
+                            
+                            var ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
+                            var TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
+                            
+                            var model_config = ModelConfig(
+                                n_embd=n_embd,
+                                n_head=n_head,
+                                n_layer=best_params["n_layer"],
+                                dropout=best_params["dropout"],
+                                num_workers=args.num_workers if args.num_workers is not None else Python.import_module("multiprocessing").cpu_count(),
+                                prefetch_factor=args.prefetch_factor,
+                                persistent_workers=not args.no_persistent_workers,
+                                pin_memory=not args.no_pin_memory,
+                            )
+                            
+                            var training_config = TrainingConfig(
+                                batch_size=best_params["batch_size"],
+                                learning_rate=best_params["learning_rate"],
+                                max_epochs=args.max_epochs,
+                                use_gpu=args.use_gpu,
+                                log_level=args.log_level,
+                                use_synthetic_data=args.use_synthetic_data,
+                                synthetic_data_path=args.synthetic_data_path,
+                                include_pad_in_loss=args.include_pad_in_loss,
+                                include_pad_in_accuracy=args.include_pad_in_accuracy,
+                                num_workers=args.num_workers,
+                                prefetch_factor=args.prefetch_factor,
+                                persistent_workers=not args.no_persistent_workers,
+                                pin_memory=args.pin_memory,
+                                use_grokfast=args.use_grokfast,
+                                grokfast_type=args.grokfast_type,
+                                grokfast_alpha=args.grokfast_alpha,
+                                grokfast_lamb=args.grokfast_lamb,
+                                grokfast_window_size=args.grokfast_window_size,
+                            )
+                        else:
+                            # Default parameters if study is not used or failed to load/create
+                            logger.info("Using provided or default hyperparameters")
+                            var ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
+                            var TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
+                            
+                            var model_config = ModelConfig(
+                                n_embd=args.n_embd,
+                                n_head=args.n_head,
+                                n_layer=args.n_layer,
+                                dropout=args.dropout,
+                                mamba_ratio=args.mamba_ratio,
+                                d_state=args.d_state,
+                                d_conv=args.d_conv,
+                                mamba_depth=args.mamba_depth,
+                                mamba_expand=args.mamba_expand,
+                            )
+                            
+                            var training_config = TrainingConfig(
+                                batch_size=args.batch_size,
+                                learning_rate=args.learning_rate,
+                                max_epochs=args.max_epochs,
+                                use_gpu=args.use_gpu,
+                                log_level=args.log_level,
+                                use_synthetic_data=args.use_synthetic_data,
+                                synthetic_data_path=args.synthetic_data_path,
+                                use_grokfast=args.use_grokfast,
+                                grokfast_type=args.grokfast_type,
+                                grokfast_alpha=args.grokfast_alpha,
+                                grokfast_lamb=args.grokfast_lamb,
+                                grokfast_window_size=args.grokfast_window_size,
+                                include_pad_in_loss=args.include_pad_in_loss,
+                                include_pad_in_accuracy=args.include_pad_in_accuracy,
+                                num_workers=args.num_workers,
+                                prefetch_factor=args.prefetch_factor,
+                                persistent_workers=not args.no_persistent_workers,
+                                pin_memory=args.pin_memory,
+                            )
+                    except:
+                        logger.error("An error occurred while loading or creating the Optuna study.")
+                    
         # Get the Config and base configuration types
         var ModelConfig = Python.import_module("gpt2_arc.src.config").ModelConfig
         var TrainingConfig = Python.import_module("gpt2_arc.src.config").TrainingConfig
@@ -470,13 +509,10 @@ fn train_model(args: PythonObject) raises -> None:
 
         logger.info("Loading datasets sequentially to avoid memory allocation issues")
 
-        try:
-            var train_data = load_dataset(args, config, dataset_type="train", all_synthetic_data=all_synthetic_data)
-            var val_data = load_dataset(args, config, dataset_type="val")
-            var test_data = load_dataset(args, config, dataset_type="test")
-        except:
-            logger.error("Error loading datasets ")
-            raise
+
+        var train_data = load_dataset(args, config, dataset_type="train", all_synthetic_data=all_synthetic_data)
+        var val_data = load_dataset(args, config, dataset_type="val")
+        var test_data = load_dataset(args, config, dataset_type="test")
 
         # Use Python string formatting for info messages
         var train_source_msg = Python.evaluate("'Training dataset source: {}'").format(
@@ -603,7 +639,6 @@ fn train_model(args: PythonObject) raises -> None:
         
         logger.info("Initializing ARCTrainer")
         var ARCTrainer = Python.import_module("gpt2_arc.src.training.trainer").ARCTrainer
-        var train_data = load_dataset(args, config, dataset_type="train", all_synthetic_data=all_synthetic_data)
         var trainer_py = ARCTrainer(
             model=model,
             train_dataset=train_data,  # Now properly scoped
@@ -615,27 +650,34 @@ fn train_model(args: PythonObject) raises -> None:
         )
         trainer_py.log_hyperparameters()
         
+        # Declare the variables at the top level with default values
+        var accelerator = "cpu"
+        var devices = 1
+        var strategy = "auto"
+
         # Determine accelerator parameters based on the --accelerator argument
         if args.accelerator == "tpu":
-            var accelerator = "tpu"
-            var devices = "xla:1"  # Use 'xla:8' for TPU v3-8 pods
-            var strategy = "tpu_spawn"  # Recommended strategy for TPU
+            accelerator = "tpu"
+            var devices: PythonObject = 1  # Default integer value
+            if args.accelerator == "tpu":
+                devices = Python.evaluate("'xla:1'")  # Use 'xla:8' for TPU v3-8 pods
+            elif args.accelerator == "gpu":
+                if torch.cuda.is_available():
+                    devices = 1  # Can remain an integer for GPU devices
+                    strategy = "tpu_spawn"  # Recommended strategy for TPU
         elif args.accelerator == "gpu":
             if torch.cuda.is_available():
-                var accelerator = "gpu"
-                var devices = 1
+                accelerator = "gpu"
+                devices = 1
             else:
-                var accelerator = "cpu"
-                var devices = 1
-            var strategy = "auto"
-        else:
-            var accelerator = "cpu"
-            var devices = 1
-            var strategy = "auto"
+                accelerator = "cpu"
+                devices = 1
+            strategy = "auto"
+
         
         # Initialize callbacks list
-        var callbacks: List[PythonObject] = []
-        
+        var callbacks = Python.evaluate("[]")  # Create a native Python list
+
         # Initialize GrokfastCallback if enabled
         if config.training.use_grokfast:
             var GrokfastCallback = Python.import_module("gpt2_arc.src.utils").GrokfastCallback
@@ -668,8 +710,10 @@ fn train_model(args: PythonObject) raises -> None:
             # Instantiate and add the ModelConfigSaver callback
             var config_saver = ModelConfigSaver()
             config_saver.set_config(config)
-            callbacks.append(config_saver)
-            callbacks.append(ModelConfigSaver)
+            # Convert Mojo struct to Python object before appending
+            var py_config_saver = config_saver.convert_to_python()
+            callbacks.append(py_config_saver)
+            # Remove the ModelConfigSaver line - we don't need it
             logger.info("ModelConfigSaver callback added to the training callbacks.")
         
         logger.info("Setting up PyTorch Lightning trainer")
@@ -694,11 +738,13 @@ fn train_model(args: PythonObject) raises -> None:
         
         # Initialize PyTorch Lightning Trainer
         var logger_arg = Python.evaluate("tb_logger if not args.no_logging else None")
+        var none_value = Python.evaluate("None")
+        var len_func = Python.evaluate("len")
+        var callback_count = len_func(callbacks)
+        var callback_arg = callbacks if callback_count > 0 else none_value
         var pl_trainer = pytorch_lightning.Trainer(
             max_epochs=config.training.max_epochs,
             logger=logger_arg,
-            var none_value = Python.evaluate("None")
-            var callback_arg = callbacks if Python.evaluate("len")(callbacks) > 0 else none_value
             callbacks=callback_arg,
             enable_checkpointing=not args.no_checkpointing,
             enable_progress_bar=not args.no_progress_bar,
@@ -713,19 +759,38 @@ fn train_model(args: PythonObject) raises -> None:
         )
         
         if not args.no_logging:
-            trainer_py.results_collector.set_tensorboard_log_path(tb_logger.log_dir)
-            logger.debug("TensorBoard log path set in results collector: " + tb_logger.log_dir)
+            var tb_logger: PythonObject = Python.evaluate("None")  # Set default to None
+
+            # Initialize TensorBoard logger if logging is enabled
+            if not args.no_logging:
+                var TensorBoardLogger = Python.import_module("pytorch_lightning.loggers").TensorBoardLogger
+                tb_logger = TensorBoardLogger(
+                    save_dir="runs",
+                    name=Python.evaluate("'experiment_{}'").format(results_collector.experiment_id)
+                )
+                trainer_py.results_collector.set_tensorboard_log_path(tb_logger.log_dir)
+                logger.debug("TensorBoard log path set in results collector: " + tb_logger.log_dir)
+            
         
         # Log initial memory usage
         if args.use_gpu and torch.cuda.is_available():
             var memory_allocated = torch.cuda.memory_allocated()
             var memory_reserved = torch.cuda.memory_reserved()
-            logger.info("Initial CUDA memory allocated: " + String(memory_allocated) + " bytes")
-            logger.info("Initial CUDA memory reserved: " + String(memory_reserved) + " bytes")
-        
+            var log_message = Python.evaluate("'Initial CUDA memory allocated: {} bytes'").format(memory_allocated)
+            logger.info(log_message)
+            
+            var memory_reserved_str = Python.evaluate("str")(memory_reserved)
+            var log_message_reserved = "Initial CUDA memory reserved: " + memory_reserved_str + " bytes"
+            logger.info(log_message_reserved)
+                    
         logger.info("Starting model training")
-        logger.debug("Training parameters: batch_size=" + String(config.training.batch_size) + ", learning_rate=" + String(config.training.learning_rate) + ", max_epochs=" + String(config.training.max_epochs))
-        
+        var log_message = Python.evaluate("'Training parameters: batch_size={}, learning_rate={}, max_epochs={}'").format(
+            config.training.batch_size,
+            config.training.learning_rate,
+            config.training.max_epochs
+        )
+        logger.debug(log_message)
+            
         # Train the model
         logger.info("Starting model training")
         pl_trainer.fit(trainer_py)
@@ -734,8 +799,12 @@ fn train_model(args: PythonObject) raises -> None:
         if args.use_gpu and torch.cuda.is_available():
             var memory_allocated = torch.cuda.memory_allocated()
             var memory_reserved = torch.cuda.memory_reserved()
-            logger.info("CUDA memory allocated after training: " + String(memory_allocated) + " bytes")
-            logger.info("CUDA memory reserved after training: " + String(memory_reserved) + " bytes")
+            var log_message_allocated = Python.evaluate("'CUDA memory allocated after training: {} bytes'").format(memory_allocated)
+            var log_message_reserved = Python.evaluate("'CUDA memory reserved after training: {} bytes'").format(memory_reserved)
+            
+            logger.info(log_message_allocated)
+            logger.info(log_message_reserved)
+            
         
         logger.info("Model training completed successfully.")
         
@@ -760,76 +829,87 @@ fn train_model(args: PythonObject) raises -> None:
             var sum_test_accuracy = 0.0
             var sum_test_diff_accuracy = 0.0
             for result in test_results:
-                sum_test_loss += result["avg_test_loss"]
-                sum_test_accuracy += result["avg_test_accuracy"]
-                sum_test_diff_accuracy += result["avg_test_diff_accuracy"]
+                sum_test_loss += Float64(result["avg_test_loss"])
+                sum_test_accuracy += Float64(result["avg_test_accuracy"])
+                sum_test_diff_accuracy += Float64(result["avg_test_diff_accuracy"])
+                
             
             var avg_test_loss = sum_test_loss / Float64(len(test_results))
             var avg_test_accuracy = sum_test_accuracy / Float64(len(test_results))
             var avg_test_diff_accuracy = sum_test_diff_accuracy / Float64(len(test_results))
             
-            logger.info("Test results - Loss: " + String(avg_test_loss) + ", Accuracy: " + String(avg_test_accuracy) + ", Diff Accuracy: " + String(avg_test_diff_accuracy))
-            
-            var results = {
-                "avg_test_loss": avg_test_loss,
-                "avg_test_accuracy": avg_test_accuracy,
-                "avg_test_diff_accuracy": avg_test_diff_accuracy
-            }
+            var log_message = Python.evaluate("'Test results - Loss: {} bytes, Accuracy: {}, Diff Accuracy: {}'").format(
+                avg_test_loss,
+                avg_test_accuracy,
+                avg_test_diff_accuracy
+            )
+            logger.info(log_message)
+                    
+            var results = Python.evaluate("dict()")
+            results["avg_test_loss"] = avg_test_loss
+            results["avg_test_accuracy"] = avg_test_accuracy
+            results["avg_test_diff_accuracy"] = avg_test_diff_accuracy
             
             # Add task-specific results
             for result in test_results:
-                for key, value in result.items():
+                for key in result.keys():
+                    var value = result[key]
                     if key.endswith("_test_accuracy") or key.endswith("_test_diff_accuracy"):
                         results[key] = value
             
             trainer_py.results_collector.set_test_results(results)
             
-        trainer_py.results_collector.set_final_metrics({
-            "best_val_loss": trainer_py.best_val_loss,
-            "best_epoch": trainer_py.best_epoch,
-            "final_test_loss": avg_test_loss,
-            "final_test_accuracy": avg_test_accuracy,
-            "final_test_diff_accuracy": avg_test_diff_accuracy
-        })
+            var final_metrics = Python.evaluate("dict()")
+            final_metrics.update("best_val_loss", trainer_py.best_val_loss)
+            final_metrics.update("best_epoch", trainer_py.best_epoch)
+            final_metrics.update("final_test_loss", avg_test_loss)
+            final_metrics.update("final_test_accuracy", avg_test_accuracy)
+            final_metrics.update("final_test_diff_accuracy", avg_test_diff_accuracy)
+            
+            trainer_py.results_collector.set_final_metrics(final_metrics)
+            
         
         # Save the final model with configuration
         logger.info("Saving final model with configuration")
-        var model_path = "final_model_" + String(trainer_py.results_collector.experiment_id) + ".pth"
+        var model_path = Python.evaluate("'final_model_{}_pth'.format").format(trainer_py.results_collector.experiment_id)
         var os_module = Python.import_module("os")
         os_module.makedirs("checkpoints", exist_ok=True)
-        torch.save({
-            "state_dict": trainer_py.model.state_dict(),
-            "model_config": trainer_py.config.model.__dict__,
-            "training_config": trainer_py.config.training.__dict__,
-            "pad_symbol_idx": trainer_py.config.training.pad_symbol_idx,
-            "symbol_freq": trainer_py.config.training.symbol_freq
-        }, model_path)
+        var checkpoint_dict = Python.evaluate("dict()")
+        checkpoint_dict.update("state_dict", trainer_py.model.state_dict())
+        checkpoint_dict.update("model_config", trainer_py.config.model.__dict__)
+        checkpoint_dict.update("training_config", trainer_py.config.training.__dict__)
+        checkpoint_dict.update("pad_symbol_idx", trainer_py.config.training.pad_symbol_idx)
+        checkpoint_dict.update("symbol_freq", trainer_py.config.training.symbol_freq)
+        
+        torch.save(checkpoint_dict, model_path)
+        
         trainer_py.results_collector.set_checkpoint_path(model_path)
         logger.debug("Model and configuration saved to: " + model_path)
         
         # Save results
         logger.info("Saving experiment results")
         os_module.makedirs("results", exist_ok=True)
-        var results_path = "results/experiment_" + String(trainer_py.results_collector.experiment_id) + ".json"
+        var results_path = Python.evaluate("'results/experiment_{}.json'").format(trainer_py.results_collector.experiment_id)
         trainer_py.results_collector.save_to_json(results_path)
         logger.debug("Results saved to: " + results_path)
     
-    except Error as e:
-        if "CUDA out of memory" in str(e):
+    except:
+        logger.error("A runtime error occurred.")
+        if Python.evaluate("'CUDA out of memory' in str(Error)").to_bool():
             logger.error("CUDA out of memory error occurred.")
             logger.error("Consider reducing the batch size or model complexity.")
-            raise Error("CUDA out of memory error occurred.")
+            raise
         else:
-            logger.error("A runtime error occurred: " + String(e))
-            raise Error("A runtime error occurred: " + String(e))
-    except Exception as e:
-        logger.error("An unexpected error occurred: " + String(e))
-        sys.exit(1)  # Exit the program after logging the error
+            logger.error("Unknown runtime error occurred.")
+            raise
+    
     finally:
-        if "tracker" in locals():
+        # Check if tracker is not None
+        if not tracker.is_(Python.evaluate("None")):
             tracker.finish()
     
-    if trainer_py is not None:
+
+    if not trainer_py.is_(Python.evaluate("None")):
         pass  # Proceed with any additional logic if needed
     else:
         logger.error("Trainer was not initialized. Exiting the training loop.")
