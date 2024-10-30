@@ -7,17 +7,16 @@ struct ModelConfigSaver:
         self.config = Python.evaluate("None")
     
     fn convert_to_python(self) raises -> PythonObject:
-        # Create a Python callback class with required methods
-        var callback_code = """
-class _ModelConfigSaver:
-    def __init__(self):
-        self.config = None
-    def on_save_checkpoint(self, trainer, pl_module, checkpoint):
-        checkpoint['model_config'] = self.config
-callback = _ModelConfigSaver()
-"""
-        var py_saver = Python.evaluate(callback_code)
+        # Create a simple Python callback class
+        var class_def = "type('ModelConfigSaver', (), {})"
+        var py_saver = Python.evaluate(class_def)()
+        
+        # Copy our config to the Python object
         py_saver.config = self.config
+        
+        # Add the save checkpoint method
+        py_saver.on_save_checkpoint = Python.evaluate("lambda self, trainer, pl_module, checkpoint: checkpoint.update({'model_config': self.config})")
+        
         return py_saver
 
 fn test_callbacks() raises:

@@ -697,7 +697,9 @@ fn train_model(args: PythonObject) raises -> None:
         var pl_trainer = pytorch_lightning.Trainer(
             max_epochs=config.training.max_epochs,
             logger=logger_arg,
-            callbacks=(callbacks if len(callbacks) > 0 else Python.None),
+            var none_value = Python.evaluate("None")
+            var callback_arg = callbacks if Python.evaluate("len")(callbacks) > 0 else none_value
+            callbacks=callback_arg,
             enable_checkpointing=not args.no_checkpointing,
             enable_progress_bar=not args.no_progress_bar,
             fast_dev_run=args.fast_dev_run,
