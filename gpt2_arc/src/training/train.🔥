@@ -832,14 +832,21 @@ fn train_model(args: PythonObject) raises -> None:
     
     except:
         logger.error("A runtime error occurred.")
-        if Python.evaluate("'CUDA out of memory' in str(Error)").to_bool():
+        var error_info = Python.evaluate("""
+        error_str = str(sys.exc_info()[1])
+        is_cuda_error = 'CUDA out of memory' in error_str
+        {'is_cuda': is_cuda_error, 'message': error_str}
+        """)
+        
+        if error_info["is_cuda"].to_bool():
             logger.error("CUDA out of memory error occurred.")
             logger.error("Consider reducing the batch size or model complexity.")
-            raise
         else:
             logger.error("Unknown runtime error occurred.")
-            raise
-    
+        # Instead of bare raise, throw a specific error
+        raise Error("Training failed: " + error_info["message"].__str__())
+
+        
     finally:
         # Check if tracker is not None
         if not tracker.is_(Python.evaluate("None")):
