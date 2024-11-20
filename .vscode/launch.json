@@ -1,0 +1,49 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "mojo-lldb",
+            "request": "launch",
+            "name": "Mojo: Debug current Mojo file",
+            "description": "Launch and debug the Mojo file that is active on the editor when the debug session starts.",
+            "mojoFile": "${file}",
+            "args": [ ],
+            "env": [ ],
+            "cwd": "${workspaceFolder}",
+            "runInTerminal": false,
+            "preLaunchTask": "magic_shell_task"
+        },
+        {
+            "type": "mojo-lldb",
+            "request": "launch",
+            "name": "Mojo: Debug Mojo file",
+            "description": "Launch and debug a Mojo file given its path.",
+            "mojoFile": "${workspaceFolder}/[your-program.mojo]",
+            "args": [ ],
+            "env": [ ],
+            "cwd": "${workspaceFolder}",
+            "runInTerminal": false,
+            "preLaunchTask": "magic_shell_task"
+        },
+        {
+            "type": "mojo-lldb",
+            "request": "launch",
+            "name": "Mojo: Debug binary",
+            "description": "Launch and debug a precompiled binary given its path.",
+            "program": "${workspaceFolder}/[your-binary]",
+            "args": [ ],
+            "env": [ ],
+            "cwd": "${workspaceFolder}",
+            "runInTerminal": false,
+            "preLaunchTask": "magic_shell_task"
+        },
+        {
+            "type": "mojo-lldb",
+            "request": "attach",
+            "name": "Mojo: Attach to process",
+            "description": "Search for a process to attach the debugger to.",
+            "pid": "${command:pickProcessToAttach}",
+            "preLaunchTask": "magic_shell_task"
+        }
+    ]
+}

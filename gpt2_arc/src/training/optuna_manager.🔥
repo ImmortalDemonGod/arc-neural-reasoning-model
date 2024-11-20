@@ -1,0 +1,67 @@
+# gpt2_arc/src/training/optuna_manager.🔥
+from python import Python, PythonObject
+
+fn configure_optuna_study(args: PythonObject) raises -> PythonObject:
+    """Configure and return an Optuna study based on arguments.
+    
+    Args:
+        args: Configuration arguments. Contains:
+            - use_optuna: Whether to use Optuna.
+            - optuna_study_name: Name of study to use/create.
+            - optuna_storage: Storage URL for Optuna.
+            .
+    Returns:
+        PythonObject: Configured Optuna study or None if Optuna not used.
+    """
+    # Import required modules
+    var logging = Python.import_module("logging")
+    var sys = Python.import_module("sys")
+    var optuna = Python.import_module("optuna")
+    var logger = logging.getLogger("train")
+    var none_value = Python.evaluate("None")
+    
+    # If not using Optuna, return None
+    if not args.use_optuna:
+        return none_value
+        
+    logger.info("Loading best hyperparameters from Optuna study")
+    var study_name = args.optuna_study_name
+    
+    # Handle case where study name is not provided
+    if study_name.is_(none_value):
+        var study_summaries = optuna.get_all_study_summaries(storage=args.optuna_storage)
+        var study_names = Python.evaluate("[summary.study_name for summary in study_summaries]")
+        
+        if len(study_names) == 1:
+            study_name = study_names[0]
+            logger.info("Automatically selected the only available study: " + study_name)
+        elif len(study_names) == 0:
+            logger.error("No studies found in the specified Optuna storage.")
+            sys.exit(1)
+        else:
+            logger.error("Multiple studies found in the specified Optuna storage. Please specify the study name using --optuna-study-name.")
+            sys.exit(1)
+    
+    # Try to load existing study or create new one
+    try:
+        # Attempt to load the Optuna study
+        return optuna.load_study(study_name=study_name, storage=args.optuna_storage)
+    except KeyError:
+        # If study does not exist, create a new one
+        return optuna.create_study(study_name=study_name, storage=args.optuna_storage)
+
+# Test function
+fn test_optuna_config() raises:
+    # Use Python.evaluate to create a dictionary-like object for args
+    var args = Python.evaluate("type('Args', (), {'use_optuna': True, 'optuna_study_name': 'test_study', 'optuna_storage': 'sqlite:///test.db'})()")
+
+    # Test the configuration
+    try:
+        var study = configure_optuna_study(args)
+        print("Study configured successfully:", not study.is_(Python.evaluate("None")))
+    except:
+        print("error")
+
+fn main() raises:
+    test_optuna_config()
+    pass
