@@ -3,10 +3,7 @@ import pytorch_lightning as pl
 import torch
 import logging
 from torch import nn, optim
-import time
 from typing import Any, Dict, Optional
-from collections import deque
-from torch.optim.lr_scheduler import LambdaLR
 from ..config import Config
 from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
@@ -17,11 +14,8 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 logger = logging.getLogger(__name__)
 from torch.utils.tensorboard import SummaryWriter
 from pytorch_lightning.loggers import TensorBoardLogger
-from gpt2_arc.src.utils.training_helpers import get_num_workers
-import os
 from optuna.exceptions import TrialPruned
 from pytorch_lightning.callbacks import Callback
-import torch
 
 logger = logging.getLogger(__name__)
 
