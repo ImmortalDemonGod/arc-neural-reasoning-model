@@ -4,7 +4,7 @@ import sys
 import os
 import datetime
 import torch
-from training_config_manager import ConfigurationManager
+from gpt2_arc.src.training.training_config_manager import ConfigurationManager  # Fixed import path
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from gpt2_arc.src.config import Config
