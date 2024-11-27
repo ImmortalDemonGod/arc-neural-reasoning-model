@@ -99,7 +99,15 @@ class TrainingManager:
             raise RuntimeError("Training components not initialized. Call setup_training first.")
             
         logger.info("Starting model training")
-        self.pl_trainer.fit(self.trainer)
+        print("BEFORE FIT")  # Add debug print
+        try:
+            self.pl_trainer.fit(self.trainer)
+            print("AFTER FIT")  # Add debug print
+        except Exception as e:
+            print(f"Error during fit: {str(e)}")  # Add error handling
+            print(f"Exception type: {type(e)}")
+            raise
+        logger.info("Model training completed")
         
     def test_model(self, test_loader) -> Dict[str, float]:
         """
