@@ -1,7 +1,6 @@
 # gp2_arc/src/data/utils/statistics.py
 from typing import Dict, Any, List
 import numpy as np
-import torch
 import logging
 from .custom_exceptions import ValidationError, DataLoadingError
 
