@@ -4,7 +4,7 @@ import sys
 import os
 import json
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
 import argparse
 import pytorch_lightning as pl
 import os
@@ -36,7 +36,13 @@ from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def evaluate(model, test_dataset, config, batch_size=32, args=None):
+def evaluate(
+    model: torch.nn.Module,
+    test_dataset: ARCDataset,
+    config: Config,
+    batch_size: int = 32,
+    args: Optional[argparse.Namespace] = None
+) -> Tuple[Dict[str, float], Dict[str, Dict[str, float]]]:
     trainer = ARCTrainer(
         model=model,
         train_dataset=None,
@@ -96,7 +102,7 @@ def evaluate(model, test_dataset, config, batch_size=32, args=None):
 
     return aggregated_results, individual_metrics
 
-def load_config_from_json(json_path):
+def load_config_from_json(json_path: str) -> Dict[str, Any]:
     with open(json_path, 'r') as f:
         data = json.load(f)
     return data['config']
@@ -238,7 +244,14 @@ def parse_model_summary(model_summary: str, model_checkpoint: str) -> Dict[str, 
 
 
 
-def save_results(results, individual_metrics, output_dir, model_name, model_summary, model_checkpoint):
+def save_results(
+    results: Dict[str, Any],
+    individual_metrics: Dict[str, Dict[str, Any]],
+    output_dir: str,
+    model_name: str,
+    model_summary: str,
+    model_checkpoint: str
+) -> str:
     """
     Saves the evaluation results along with the parsed model summary to a JSON file.
 
@@ -274,7 +287,7 @@ def save_results(results, individual_metrics, output_dir, model_name, model_summ
     logger.info(f"Results saved to {output_path}")
     return output_path
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     if args.use_wandb:
         api_key = os.getenv("WANDB_API_KEY")
         if api_key:

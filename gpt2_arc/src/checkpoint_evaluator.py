@@ -49,7 +49,7 @@ def parse_arguments():
     
     return parser.parse_args()
 
-def setup_logging(output_dir, log_level):
+def setup_logging(output_dir: str, log_level: str) -> logging.Logger:
     os.makedirs(output_dir, exist_ok=True)
     
     logging.basicConfig(
@@ -63,7 +63,7 @@ def setup_logging(output_dir, log_level):
     logger = logging.getLogger("CheckpointEvaluator")
     return logger
 
-def load_evaluated_models(evaluated_models_file, logger):
+def load_evaluated_models(evaluated_models_file: str, logger: logging.Logger) -> set[str]:
     evaluated_models = set()
     if os.path.exists(evaluated_models_file):
         try:
@@ -76,7 +76,7 @@ def load_evaluated_models(evaluated_models_file, logger):
         logger.info("No previously evaluated models found. Starting fresh.")
     return evaluated_models
 
-def save_evaluated_model(evaluated_models_file, model_path, logger):
+def save_evaluated_model(evaluated_models_file: str, model_path: str, logger: logging.Logger) -> None:
     try:
         with open(evaluated_models_file, "a") as f:
             f.write(model_path + "\n")
@@ -84,7 +84,9 @@ def save_evaluated_model(evaluated_models_file, model_path, logger):
     except Exception as e:
         logger.error(f"Error writing to evaluated models file {evaluated_models_file}: {e}")
 
-def wait_for_file_stable(file_path, wait_time=1.0, max_retries=10, logger=None):
+from typing import Optional
+
+def wait_for_file_stable(file_path: str, wait_time: float = 1.0, max_retries: int = 10, logger: Optional[logging.Logger] = None) -> bool:
     """Wait until the file is stable (not changing size)"""
     previous_size = -1
     retries = 0
@@ -105,20 +107,24 @@ def wait_for_file_stable(file_path, wait_time=1.0, max_retries=10, logger=None):
     return False
 
 class CheckpointHandler(FileSystemEventHandler):
-    def __init__(self, evaluated_models, temp_checkpoint_dir, evaluate_callback, logger):
+    from typing import Optional, Callable
+
+    def __init__(self, evaluated_models: set[str], temp_checkpoint_dir: str, evaluate_callback: Optional[Callable], logger: logging.Logger):
         super().__init__()
         self.evaluated_models = evaluated_models
         self.temp_checkpoint_dir = temp_checkpoint_dir
         self.evaluate_callback = evaluate_callback
         self.logger = logger
 
-    def on_created(self, event):
+    from watchdog.events import FileSystemEvent
+
+    def on_created(self, event: FileSystemEvent):
         if event.is_directory:
             return
         if event.src_path.endswith('.ckpt') or event.src_path.endswith('.pth'):
             self.evaluate_model(event.src_path)
 
-    def evaluate_model(self, model_path):
+    def evaluate_model(self, model_path: str) -> None:
         model_file = os.path.basename(model_path)
         if model_path in self.evaluated_models:
             self.logger.info(f"Skipping already evaluated model: {model_file}")
@@ -196,13 +202,17 @@ class CheckpointHandler(FileSystemEventHandler):
         except Exception as e:
             self.logger.error(f"Error deleting temp model file {temp_model_path}: {e}")
 
-def get_all_checkpoint_files(directory):
+from typing import List
+
+def get_all_checkpoint_files(directory: str) -> List[str]:
     checkpoint_files = []
     for root, _, files in os.walk(directory):
         checkpoint_files.extend([os.path.join(root, f) for f in files if f.endswith('.ckpt') or f.endswith('.pth')])
     return checkpoint_files
 
-def start_observer(model_dir, handler, logger):
+from typing import Any
+
+def start_observer(model_dir: str, handler: Any, logger: logging.Logger) -> None:
     # Set up and start the watchdog observer
     observer = Observer()
     observer.schedule(handler, model_dir, recursive=True)
@@ -227,7 +237,7 @@ def start_observer(model_dir, handler, logger):
         observer.join()
         logger.info("Checkpoint and final model evaluation completed.")
 
-def monitor_resources(logger, interval=60):
+def monitor_resources(logger: logging.Logger, interval: int = 60) -> None:
     while True:
         try:
             memory = psutil.virtual_memory()
@@ -238,7 +248,7 @@ def monitor_resources(logger, interval=60):
         except Exception as e:
             logger.error(f"Error in resource monitoring: {e}")
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     logger = setup_logging(args.output_dir, args.log_level)
     logger.info("Starting Checkpoint Evaluator Script")
     logger.debug(f"Arguments: {args}")

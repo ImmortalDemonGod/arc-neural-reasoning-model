@@ -1,4 +1,5 @@
 # gpt2_arc/src/optimize_hyperparameters.py
+from typing import Optional, Dict, Any
 import argparse
 import multiprocessing
 import random
@@ -29,7 +30,7 @@ class BestEpochTrackerCallback(Callback):
         super().__init__()
         self.best_epoch = 0
 
-    def on_validation_end(self, trainer, pl_module):
+    def on_validation_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
         current_val_loss = trainer.callback_metrics.get("val_loss")
         if current_val_loss is not None:
             if not hasattr(self, 'best_val_loss') or current_val_loss < self.best_val_loss:
@@ -44,12 +45,12 @@ from gpt2_arc.src.utils.model_memory_estimator import (
 )
 
 class CustomPruningCallback(pl.Callback):
-    def __init__(self, trial, monitor="val_loss"):
+    def __init__(self, trial: optuna.trial.Trial, monitor: str = "val_loss") -> None:
         super().__init__()
         self.trial = trial
         self.monitor = monitor
 
-    def on_validation_end(self, trainer, pl_module):
+    def on_validation_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
         epoch = trainer.current_epoch
         current_score = trainer.callback_metrics.get(self.monitor)
         if current_score is None:
@@ -74,7 +75,15 @@ from gpt2_arc.src.utils.performance_metrics import calculate_mamba_efficiency
 
 
 
-def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_conv, dropout):
+def validate_hyperparameters(
+    n_embd: int,
+    n_head: int,
+    n_layer: int,
+    mamba_ratio: float,
+    d_state: int,
+    d_conv: int,
+    dropout: float
+) -> bool:
     """Validate that hyperparameters meet necessary constraints."""
     logger.debug(f"Validating hyperparameters: n_embd={n_embd}, n_head={n_head}, n_layer={n_layer}, "
                  f"mamba_ratio={mamba_ratio}, d_state={d_state}, d_conv={d_conv}, dropout={dropout}")
@@ -91,7 +100,7 @@ def validate_hyperparameters(n_embd, n_head, n_layer, mamba_ratio, d_state, d_co
 
 
 
-def objective(trial, args, all_synthetic_data):
+def objective(trial: optuna.trial.Trial, args: argparse.Namespace, all_synthetic_data: Optional[Dict[str, Any]]) -> float:
     model = None
     trainer = None
     arc_trainer = None
@@ -658,7 +667,13 @@ def objective(trial, args, all_synthetic_data):
 
 from functools import partial
 
-def run_optimization(n_trials=100, storage_name="sqlite:///optuna_results.db", n_jobs=-1, args=None, study_name="gpt2_arc_optimization_v2"):
+def run_optimization(
+    n_trials: int = 100,
+    storage_name: str = "sqlite:///optuna_results.db",
+    n_jobs: int = -1,
+    args: Optional[argparse.Namespace] = None,
+    study_name: str = "gpt2_arc_optimization_v2"
+) -> None:
 
     if n_trials < 10:
         n_startup_trials = 1

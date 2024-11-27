@@ -3,10 +3,7 @@ import pytorch_lightning as pl
 import torch
 import logging
 from torch import nn, optim
-import time
 from typing import Any, Dict, Optional
-from collections import deque
-from torch.optim.lr_scheduler import LambdaLR
 from ..config import Config
 from gpt2_arc.src.utils.training_helpers import get_num_workers
 from gpt2_arc.src.utils.helpers import differential_pixel_accuracy
@@ -17,16 +14,13 @@ from gpt2_arc.src.data.arc_dataset import ARCDataset
 logger = logging.getLogger(__name__)
 from torch.utils.tensorboard import SummaryWriter
 from pytorch_lightning.loggers import TensorBoardLogger
-from gpt2_arc.src.utils.training_helpers import get_num_workers
-import os
 from optuna.exceptions import TrialPruned
 from pytorch_lightning.callbacks import Callback
-import torch
 
 logger = logging.getLogger(__name__)
 
 class NanLossPruningCallback(Callback):
-    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+    def on_train_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, outputs: Any, batch: Any, batch_idx: int) -> None:
         # Extract loss from outputs
         loss = outputs.get('loss') if isinstance(outputs, dict) else outputs
         if loss is not None:
@@ -36,7 +30,7 @@ class NanLossPruningCallback(Callback):
 
 
 class ARCTrainer(pl.LightningModule):
-    def __init__(self, model, train_dataset, val_dataset, config: Config, args, results_collector=None, test_dataset=None):
+    def __init__(self, model: nn.Module, train_dataset: ARCDataset, val_dataset: ARCDataset, config: Config, args: Any, results_collector: Optional[ResultsCollector] = None, test_dataset: Optional[ARCDataset] = None) -> None:
         logger.debug("Initializing ARCTrainer")
         super().__init__()
         logger.debug(f"ARCTrainer received args.accelerator: {args.accelerator}")
@@ -163,7 +157,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug("DEBUG: No TensorBoardLogger found in trainer.loggers")
         return None
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
         logger.debug(f"Starting training step {batch_idx}")
         inputs, targets, _ = batch
         logger.debug(f"  Inputs shape: {inputs.shape}, dtype: {inputs.dtype}")
@@ -194,7 +188,7 @@ class ARCTrainer(pl.LightningModule):
         
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
         logger.debug(f"Starting validation step {batch_idx}")
         inputs, targets, _ = batch
         logger.debug(f"Validation Inputs shape: {inputs.shape}, Targets shape: {targets.shape}, Targets dtype: {targets.dtype}")
@@ -230,7 +224,7 @@ class ARCTrainer(pl.LightningModule):
     def on_test_epoch_start(self):
         self.test_outputs = []  # Clear previous test outputs
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: Any, batch_idx: int) -> Dict[str, Any]:
         logger.debug(f"DEBUG: test_step input - batch: {batch}, batch_idx: {batch_idx}")
         logger.debug(f"Test batch input shape: {batch[0].shape}, Test batch target shape: {batch[1].shape}")
         logger.debug(f"DEBUG: Test step - Batch type: {type(batch)}, length: {len(batch)}")
@@ -357,7 +351,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: Final metrics including per-task metrics: {final_metrics}")
         self.results_collector.set_final_metrics(final_metrics)
 
-    def compute_accuracy(self, outputs, targets):
+    def compute_accuracy(self, outputs: torch.Tensor, targets: torch.Tensor) -> float:
         predictions = outputs.argmax(dim=-1)
         # Reshape predictions to match the target shape
         predictions = predictions.view(targets.size())
@@ -366,7 +360,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"DEBUG: compute_accuracy - Accuracy: {accuracy.item()}")
         return accuracy.item()
 
-    def compute_diff_accuracy(self, inputs, targets, outputs):
+    def compute_diff_accuracy(self, inputs: torch.Tensor, targets: torch.Tensor, outputs: torch.Tensor) -> float:
         pad_symbol_idx = self.config.training.pad_symbol_idx  # Retrieve pad_symbol_idx from config
         predictions = outputs.argmax(dim=-1)
         diff_accuracy, _, _ = differential_pixel_accuracy(inputs, targets, predictions, pad_symbol_idx=pad_symbol_idx)
@@ -418,7 +412,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug("DEBUG: Results saved and TensorBoard writer closed.")
 
 
-    def compute_loss(self, outputs, labels):
+    def compute_loss(self, outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         labels = labels.long()  # Ensure labels are of type Long
         loss = self.model.loss_fn(
             outputs.view(-1, outputs.size(-1)), labels.view(-1)
@@ -427,7 +421,7 @@ class ARCTrainer(pl.LightningModule):
         logger.debug(f"Computed loss: {loss.item()}")
         return loss
 
-    def forward(self, input_ids, attention_mask=None):
+    def forward(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         return self.model(input_ids, attention_mask)
     def log_hyperparameters(self):
         hparams = {

@@ -68,7 +68,7 @@ TASK_SCHEMA = {
     "required": ["input", "output"],
     "additionalProperties": False
 }
-def set_debug_mode(debug=False):
+def set_debug_mode(debug: bool = False) -> None:
     if debug:
         logger.setLevel(logging.DEBUG)
         handler.setLevel(logging.DEBUG)
@@ -331,7 +331,7 @@ class ARCDataset(Dataset):
         return self._process_single_file_streaming(file_path)
     
     
-    def _save_cache(self, cache_path: str, data_only=False):
+    def _save_cache(self, cache_path: str, data_only: bool = False) -> None:
         """
         Saves the dataset and its statistics to the specified cache path using pickle.
     
@@ -404,7 +404,7 @@ class ARCDataset(Dataset):
         return self.num_samples
     
     
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, str]:
         sample = self.data[idx]
         task_id = sample["task_id"]
         assert task_id != "default_task", f"Sample at index {idx} has 'default_task' as task_id."
@@ -745,7 +745,7 @@ class ARCDataset(Dataset):
             raise  # Re-raise the exception to be handled upstream
     
     
-    def kronecker_scale(self, X, target_height=30, target_width=30):
+    def kronecker_scale(self, X: np.ndarray, target_height: int = 30, target_width: int = 30) -> np.ndarray:
         logger.debug(f"Kronecker scaling input shape: {X.shape}")
         h, w = X.shape
         scale_h = target_height / h
@@ -757,7 +757,7 @@ class ARCDataset(Dataset):
         return X_scaled
 
 
-    def reverse_scaling(self, X_orig, X_pred):
+    def reverse_scaling(self, X_orig: np.ndarray, X_pred: np.ndarray) -> np.ndarray:
         logger.debug(f"Reverse scaling - Original shape: {X_orig.shape}, Prediction shape: {X_pred.shape}")
         h, w = X_orig.shape
         # Reshape X_pred to 2D if it's 1D
@@ -819,7 +819,7 @@ class ARCDataset(Dataset):
 
 
     @staticmethod
-    def collate_fn(batch):
+    def collate_fn(batch: List[Tuple[torch.Tensor, torch.Tensor, str]]) -> Tuple[torch.Tensor, torch.Tensor, List[str]]:
         # Debugging: Check batch size
         logger.debug(f"Collating batch of size: {len(batch)}")
         
@@ -842,7 +842,7 @@ class ARCDataset(Dataset):
 
         return padded_inputs, padded_outputs, list(task_ids)
     
-    def _load_data(self, data_source):
+    def _load_data(self, data_source: Union[str, List[Dict], 'TaskSet']) -> List[Dict]:
         logger.debug(f"Loading data from source type: {type(data_source)}")
         if isinstance(data_source, list):
             return self._process_list_data(data_source)

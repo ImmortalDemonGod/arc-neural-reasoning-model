@@ -1,10 +1,46 @@
 # gpt2_arc/src/utils/helpers.py
+import time
 import torch
 import logging
 
 logger = logging.getLogger(__name__)
 
-def differential_pixel_accuracy(input, target, prediction, pad_symbol_idx=10):
+from typing import Tuple, Dict
+
+def calculate_mamba_efficiency(model: torch.nn.Module, input_data: torch.Tensor) -> Dict[str, float]:
+    """
+    Calculates performance metrics specific to Mamba layers in the model.
+
+    Args:
+        model: The GPT2ARC model instance.
+        input_data: A sample input tensor.
+
+    Returns:
+        A dictionary containing Mamba-specific performance metrics.
+    """
+    metrics = {}
+    model.eval()
+    device = next(model.parameters()).device
+    input_data = input_data.to(device)
+    with torch.no_grad():
+        start_time = time.time()
+        _ = model(input_data)
+        total_time = time.time() - start_time
+    metrics['mamba_forward_pass_time'] = total_time
+    mamba_params = 0
+    total_params = 0
+    for name, param in model.named_parameters():
+        param_count = param.numel()
+        total_params += param_count
+        if 'mamba_block' in name:
+            mamba_params += param_count
+    metrics['mamba_params'] = mamba_params
+    metrics['total_params'] = total_params
+    metrics['mamba_params_ratio'] = mamba_params / total_params if total_params > 0 else 0
+    return metrics
+
+
+def differential_pixel_accuracy(input: torch.Tensor, target: torch.Tensor, prediction: torch.Tensor, pad_symbol_idx: int = 10) -> Tuple[float, torch.Tensor, torch.Tensor]:
     logger.debug(f"Differential pixel accuracy - Input shape: {input.shape}, Target shape: {target.shape}, Prediction shape: {prediction.shape}")
     
     assert isinstance(input, torch.Tensor) and isinstance(target, torch.Tensor) and isinstance(prediction, torch.Tensor), "All inputs must be torch.Tensor"

@@ -1,6 +1,6 @@
 
 from pytorch_lightning.callbacks import Callback
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 import torch.nn as nn
 import logging
 from .grokfast import gradfilter_ema, gradfilter_ma
@@ -38,7 +38,7 @@ class GrokfastCallback(Callback):
         self.trigger = trigger
         self.grads = None  # Will hold the state across batches
 
-    def on_after_backward(self, trainer, pl_module):
+    def on_after_backward(self, trainer: Any, pl_module: Any) -> None:
         """
         Called after the backward pass and before the optimizer step.
 

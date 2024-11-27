@@ -1,0 +1,20 @@
+{
+    "name": "Custom Dev Container",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+    "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+    },
+    "extensions": [
+        // Add any VS Code extensions you need
+        "ms-python.python",
+        "esbenp.prettier-vscode"
+    ],
+    "forwardPorts": [
+        // Specify any ports you need to forward
+    ],
+    "postCreateCommand": "magic install",
+    "remoteUser": "root"
+}

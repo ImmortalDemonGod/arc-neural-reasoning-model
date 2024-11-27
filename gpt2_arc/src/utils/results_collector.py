@@ -12,7 +12,7 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 
 class ResultsCollector:
-    def __init__(self, config):
+    def __init__(self, config: Any):
         """Initialize the ResultsCollector with a given configuration."""
         self.experiment_id = str(uuid.uuid4())
         self.timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -33,7 +33,7 @@ class ResultsCollector:
         print(f"DEBUG: Initialized self.results['train'] as {type(self.results['train'])}")
         self._log_results_type("After initialization")
 
-    def set_tensorboard_log_path(self, path):
+    def set_tensorboard_log_path(self, path: str) -> None:
         self.tensorboard_log_path = path
         print(f"DEBUG: Set TensorBoard log path in ResultsCollector: {path}")
 
@@ -157,7 +157,7 @@ class ResultsCollector:
         logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
-    def _make_serializable(self, obj):
+    def _make_serializable(self, obj: Any) -> Any:
         """Ensure the value is serializable, handling non-serializable objects."""
         if isinstance(obj, (int, float, str, bool, type(None))):
             return obj

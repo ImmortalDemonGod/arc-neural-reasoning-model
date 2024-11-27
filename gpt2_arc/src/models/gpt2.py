@@ -19,7 +19,7 @@ from zeta.nn import MambaBlock
 
 
 class Attention(nn.Module):
-    def __init__(self, n_embd, n_head, dropout):
+    def __init__(self, n_embd: int, n_head: int, dropout: float):
         super().__init__()
         self.n_head = n_head
         self.n_embd = n_embd
@@ -30,7 +30,7 @@ class Attention(nn.Module):
         self.dropout = nn.Dropout(dropout)  # Add this line
         logger.debug(f"Initialized Attention with n_embd={n_embd}, n_head={n_head}")
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         B, T, C = x.size()
         logger.debug(f"Model input shape: {x.shape}")
         if not torch._dynamo.is_compiling():
@@ -55,14 +55,14 @@ class Attention(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, n_embd, dropout):
+    def __init__(self, n_embd: int, dropout: float):
         super().__init__()
         self.net = nn.Sequential(
             BitLinearNew(n_embd, 4 * n_embd), nn.ReLU(), nn.Dropout(dropout), BitLinearNew(4 * n_embd, n_embd)
         )
         logger.debug(f"Initialized FeedForward with n_embd={n_embd}")
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         if not torch._dynamo.is_compiling():
             logger.debug(f"FeedForward input shape: {x.shape}")
         output = self.net(x)
@@ -72,7 +72,7 @@ class FeedForward(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, n_embd, n_head, dropout):
+    def __init__(self, n_embd: int, n_head: int, dropout: float):
         super().__init__()
         self.attention = Attention(n_embd, n_head, dropout)
         self.feed_forward = FeedForward(n_embd, dropout)
@@ -83,7 +83,7 @@ class TransformerBlock(nn.Module):
             f"Initialized TransformerBlock with n_embd={n_embd}, n_head={n_head}"
         )
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         if not torch._dynamo.is_compiling():
             logger.debug(f"TransformerBlock input shape: {x.shape}")
         # Attention sublayer with residual dropout
@@ -102,7 +102,7 @@ class TransformerBlock(nn.Module):
 
 
 class MambaLayer(nn.Module):
-    def __init__(self, n_embd, d_state, d_conv, dropout, depth, expand):
+    def __init__(self, n_embd: int, d_state: int, d_conv: int, dropout: float, depth: int, expand: int):
         super().__init__()
         self.dropout = nn.Dropout(dropout)
         self.mamba_block = MambaBlock(
@@ -119,7 +119,7 @@ class MambaLayer(nn.Module):
             f"Initialized MambaLayer with n_embd={n_embd}, d_state={d_state}, d_conv={d_conv}, dropout={dropout}"
         )
 
-    def forward(self, x, mask=None):
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         if not torch._dynamo.is_compiling():
             logger.debug(f"MambaLayer input shape: {x.shape}")
         x_norm = self.layer_norm(x)
@@ -208,7 +208,7 @@ class GPT2ARC(pl.LightningModule):
         # Initialize weights
         self.apply(self._init_weights)
 
-    def _init_weights(self, module):
+    def _init_weights(self, module: nn.Module) -> None:
         if isinstance(module, nn.Conv2d):
             # Calculate fan_in for Conv2d
             fan_in = module.in_channels * module.kernel_size[0] * module.kernel_size[1]
@@ -224,7 +224,7 @@ class GPT2ARC(pl.LightningModule):
                 init.zeros_(module.bias)
         # No initialization for nn.LayerNorm, using default
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
         inputs, targets, _ = batch
         outputs = self(inputs)
         loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
@@ -271,7 +271,7 @@ class GPT2ARC(pl.LightningModule):
         return dataloader
 
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
         inputs, targets, _ = batch
         outputs = self(inputs)
         loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
@@ -295,7 +295,7 @@ class GPT2ARC(pl.LightningModule):
         self.log('val_acc_without_pad', acc_without_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
         inputs, targets, _ = batch
         outputs = self(inputs)
         loss = self.loss_fn(outputs.view(-1, self.config.training.num_classes), targets.view(-1))
@@ -319,7 +319,7 @@ class GPT2ARC(pl.LightningModule):
         self.log('test_acc_without_pad', acc_without_pad, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
-    def forward(self, input_ids, attention_mask=None):
+    def forward(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         logger.debug(f"GPT2ARC forward - Input shape: {input_ids.shape}, dtype: {input_ids.dtype}")
         
         if input_ids.dim() == 4:

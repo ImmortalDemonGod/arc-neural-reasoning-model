@@ -1,4 +1,5 @@
 # gpt2_arc/src/utils/model_memory_estimator.py
+from typing import Tuple
 import torch
 import math
 import psutil
@@ -7,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def calculate_params(n_layers, n_heads, d_model, mamba_ratio, d_state=16, d_conv=4, mamba_depth=1, mamba_expand=2):
+def calculate_params(n_layers: int, n_heads: int, d_model: int, mamba_ratio: float, d_state: int = 16, d_conv: int = 4, mamba_depth: int = 1, mamba_expand: int = 2) -> int:
     logger.debug(f"Executing calculate_params with mamba_ratio = {mamba_ratio}")
     transformer_params_per_layer = (
         12 * d_model * d_model + 13 * d_model
@@ -28,7 +29,7 @@ def calculate_params(n_layers, n_heads, d_model, mamba_ratio, d_state=16, d_conv
     logger.debug(f"Total parameters calculated: {total_params}")
     return total_params
 
-def estimate_memory_usage(total_params, batch_size, height, width, d_model, dtype_size=4):
+def estimate_memory_usage(total_params: int, batch_size: int, height: int, width: int, d_model: int, dtype_size: int = 4) -> float:
     model_memory = total_params * dtype_size  # Model parameters
     optimizer_memory = model_memory * 2  # Adam optimizer uses 2x model size
     input_memory = batch_size * height * width * dtype_size  # Input tensors
@@ -61,10 +62,10 @@ def get_device_info():
             "cpu_freq": psutil.cpu_freq().max if psutil.cpu_freq() else "N/A"
         }
 
-def can_fit_model(estimated_memory, available_memory, threshold=0.9):
+def can_fit_model(estimated_memory: float, available_memory: float, threshold: float = 0.9) -> bool:
     return estimated_memory < available_memory * threshold
 
-def estimate_single_configuration(n_layers, n_heads, d_model, batch_size, height, width):
+def estimate_single_configuration(n_layers: int, n_heads: int, d_model: int, batch_size: int, height: int, width: int) -> None:
     device_info = get_device_info()
     available_memory = get_available_memory()
     

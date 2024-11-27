@@ -53,7 +53,7 @@ class ExperimentTracker:
             "gpu_info": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
         }
 
-    def _config_to_dict(self, config):
+    def _config_to_dict(self, config: Any) -> Dict[str, Any]:
         if isinstance(config, dict):
             return {k: self._config_to_dict(v) for k, v in config.items()}
         elif hasattr(config, '__dict__'):
@@ -178,7 +178,7 @@ class ExperimentTracker:
         self.logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
-    def _make_serializable(self, obj):
+    def _make_serializable(self, obj: Any) -> Any:
         if isinstance(obj, (int, float, str, bool, type(None))):
             return obj
         elif isinstance(obj, (list, tuple)):
@@ -188,7 +188,7 @@ class ExperimentTracker:
         else:
             return str(obj)
 
-    def _serialize_config(self, config):
+    def _serialize_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         return {k: self._make_serializable(v) for k, v in config.items()}
 
     def log_metric(self, name: str, value: float, step: Optional[int] = None):

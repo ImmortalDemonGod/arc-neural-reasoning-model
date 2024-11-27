@@ -1,0 +1,10 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "magic_shell_task",
+            "type": "shell",
+            "command": "cd /workspaces/arc-neural-reasoning-model/gpt2_arc && source magic shell"
+        }
+    ]
+}
