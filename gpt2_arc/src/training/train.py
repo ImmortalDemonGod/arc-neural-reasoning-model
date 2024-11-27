@@ -14,54 +14,73 @@ from gpt2_arc.src.training.training_manager import TrainingManager
 logger = logging.getLogger(__name__)
 
 
-
 def main(args) -> None:
     """
-    Main training function.
+    Main training function with enhanced logging.
     
     Args:
         args: Arguments from train_cli.py with all training configuration options
     """
     # Initialize configuration
     config_manager = ConfigurationManager(args)
-    config_manager.setup_logging()  # Setup logging first
+    config_manager.setup_logging()
     config = config_manager.create_initial_config()
 
     # Validate configuration including Mamba layers
     config_manager.validate_configuration(config)
 
     logger.debug(f"Command line arguments: {args}")
-    
     logger.info("Starting main function")
-    logger.debug("Initializing PyTorch Lightning Trainer")
+    logger.info("=== Training Pipeline Start ===")
 
     try:
+        logger.info("Step 1: Configuration and Data Loading")
         logger.debug(f"Configuration: {config}")
 
         # Initialize DataManager and load datasets
+        logger.info("Initializing DataManager...")
         data_manager = DataManager(config, args)
+        logger.info("Loading datasets...")
         train_data, val_data, test_data = data_manager.load_all_datasets()
+        logger.info(f"Datasets loaded - Train: {len(train_data)}, Val: {len(val_data)}, Test: {len(test_data)} samples")
         
         # Update symbol frequencies if enabled
         if args.enable_symbol_freq:
+            logger.info("Updating symbol frequencies...")
             symbol_freq = train_data.get_symbol_frequencies()
             symbol_freq_dict = {i: float(freq) for i, freq in enumerate(symbol_freq)}
             config = config_manager.update_config_with_symbol_freq(config, symbol_freq_dict)
+            logger.info("Symbol frequencies updated")
 
-        # Initialize TrainingManager
+        logger.info("Step 2: Model Initialization")
+        logger.info("Initializing TrainingManager...")
         training_manager = TrainingManager(config, args)
         
-        # Initialize and load model
+        logger.info("Initializing model...")
         model = training_manager.initialize_model()
+        if args.model_checkpoint:
+            logger.info(f"Loading checkpoint from: {args.model_checkpoint}")
         model = training_manager.load_checkpoint(model)
+        logger.info("Model initialization complete")
 
-        # Get training components from config_manager
+        logger.info("Step 3: Training Setup")
+        logger.info("Setting up training components...")
+        
+        # Get training components
+        logger.debug("Getting profiler configuration...")
         profiler = config_manager.get_profiler_config()
+        
+        logger.debug("Setting up callbacks...")
         callbacks = config_manager.get_callbacks(config, args.model_checkpoint)
+        
+        logger.debug("Initializing tensorboard logger...")
         tb_logger = config_manager.get_tensorboard_logger(training_manager.results_collector.experiment_id)
+        
+        logger.debug("Getting accelerator configuration...")
         accelerator_config = config_manager.get_accelerator_config()
 
         # Create trainer configuration
+        logger.info("Creating trainer configuration...")
         trainer_config = {
             'max_epochs': config.training.max_epochs,
             'logger': tb_logger,
@@ -73,52 +92,69 @@ def main(args) -> None:
             'precision': 16,
             'profiler': profiler,
             'val_check_interval': args.val_check_interval,
-            **accelerator_config,  # Unpack accelerator configuration
+            **accelerator_config,
         }
+        logger.debug(f"Trainer config created: {trainer_config}")
 
-        # Set up training components
+        logger.info("Setting up training...")
         training_manager.setup_training(model, train_data, val_data, test_data, trainer_config)
+        logger.info("Training setup complete")
 
-        # Log GPU memory usage if applicable
+        # Log GPU info if applicable
         if args.use_gpu and torch.cuda.is_available():
             logger.info(f"Initial CUDA memory allocated: {torch.cuda.memory_allocated()} bytes")
             logger.info(f"Initial CUDA memory reserved: {torch.cuda.memory_reserved()} bytes")
+            logger.info(f"GPU Device: {torch.cuda.get_device_name(0)}")
+            logger.info(f"CUDA Version: {torch.version.cuda}")
 
-        # Execute training
+        logger.info("Step 4: Starting Training")
+        logger.info("=== Training Loop Start ===")
         training_manager.train_model()
+        logger.info("=== Training Loop Complete ===")
 
-        # Log final GPU memory usage if applicable
         if args.use_gpu and torch.cuda.is_available():
-            logger.info(f"CUDA memory allocated after training: {torch.cuda.memory_allocated()} bytes")
-            logger.info(f"CUDA memory reserved after training: {torch.cuda.memory_reserved()} bytes")
+            logger.info(f"Final CUDA memory allocated: {torch.cuda.memory_allocated()} bytes")
+            logger.info(f"Final CUDA memory reserved: {torch.cuda.memory_reserved()} bytes")
 
-        # Create test data loader and run evaluation
+        logger.info("Step 5: Evaluation")
+        logger.info("Creating test data loader...")
         _, _, test_loader = data_manager.create_data_loaders(train_data, val_data, test_data)
+        
+        logger.info("Running model evaluation...")
         test_metrics = training_manager.test_model(test_loader)
+        logger.info(f"Test Metrics: {test_metrics}")
 
-        logger.info(f"Test Metrics: {test_metrics}\n")
-
-        # Save model and results
+        logger.info("Step 6: Saving Results")
+        logger.info("Saving model...")
         model_path = training_manager.save_model()
+        logger.info("Saving results...")
         results_path = training_manager.save_results()
         
-        logger.info("Training completed successfully")
+        logger.info("=== Training Pipeline Complete ===")
         logger.debug(f"Model saved to: {model_path}")
         logger.debug(f"Results saved to: {results_path}")
 
     except RuntimeError as e:
         if 'CUDA out of memory' in str(e):
-            logger.error("CUDA out of memory error occurred.")
-            logger.error("Consider reducing the batch size or model complexity.")
+            logger.error("!!! CUDA OUT OF MEMORY ERROR !!!")
+            logger.error("Consider reducing batch size or model complexity")
+            logger.error(f"Error details: {str(e)}")
             raise RuntimeError("CUDA out of memory error occurred.")
         else:
-            logger.error(f"A runtime error occurred: {str(e)}", exc_info=True)
+            logger.error("!!! RUNTIME ERROR !!!")
+            logger.error(f"Error details: {str(e)}")
+            logger.error("Stack trace:", exc_info=True)
             raise RuntimeError(f"A runtime error occurred: {str(e)}")
     except Exception as e:
-        logger.error(f"An unexpected error occurred: {str(e)}", exc_info=True)
-        sys.exit(1)  # Exit the program after logging the error
+        logger.error("!!! UNEXPECTED ERROR !!!")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error details: {str(e)}")
+        logger.error("Stack trace:", exc_info=True)
+        sys.exit(1)
     finally:
         if 'training_manager' in locals():
+            logger.info("Cleaning up training manager...")
             training_manager.cleanup()
+            logger.info("Cleanup complete")
 
 # Note: __main__ block removed as entry point is now train_cli.py
