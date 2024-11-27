@@ -41,3 +41,6 @@ pytest
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 aider --cache-prompts --no-stream
+
+DEV RUNNING COMMAND: 
+rm -rf /workspaces/arc-neural-reasoning-model/results;rm -rf /workspaces/arc-neural-reasoning-model/checkpoints;rm -rf /workspaces/arc-neural-reasoning-model/cache;rm -rf /workspaces/arc-neural-reasoning-model/runs;pip install -e . ;python3 /workspaces/arc-neural-reasoning-model/gpt2_arc/src/training/train_cli.py --max_epochs 1 --fast_dev_run --model_checkpoint /workspaces/arc-neural-reasoning-model/final_model_ab9f1610-de99-44e7-a844-4a3b6480ad08.pth --log_level debug
