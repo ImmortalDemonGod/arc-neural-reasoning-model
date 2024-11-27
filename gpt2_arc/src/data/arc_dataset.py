@@ -22,15 +22,15 @@ import multiprocessing  # To determine CPU count
 from threading import Lock
 from jsonschema import validate, ValidationError
 from torch.utils.data import get_worker_info
-from config.arc_dataset_config import ARCDatasetConfig
-from utils.validation import validate_sample
-from utils.grid_ops import GridOperations
-from utils.custom_exceptions import ARCDatasetError, DataLoadingError, ValidationError, ResourceError
+from .config.arc_dataset_config import ARCDatasetConfig  # Fixed import
+from .utils.validation import validate_sample
+from .utils.grid_ops import GridOperations
+from .utils.custom_exceptions import ARCDatasetError, DataLoadingError, ValidationError, ResourceError
 from arckit.data import TaskSet, Task
 import logging
 logger = logging.getLogger(__name__)
 from .loaders import create_loader
-from utils.statistics import DatasetStatistics
+from .utils.statistics import DatasetStatistics
 from .cache import ARCCache
 
 # Create a handler that writes to stderr
