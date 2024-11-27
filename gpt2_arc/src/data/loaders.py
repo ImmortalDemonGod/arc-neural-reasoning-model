@@ -21,6 +21,20 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+class NumpyEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles NumPy arrays and tensors."""
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, torch.Tensor):
+            return obj.detach().cpu().numpy().tolist()
+        return super().default(obj)
+
+
 class BaseLoader(ABC):
     """Abstract base class for loading ARC dataset samples from different sources."""
     
@@ -123,11 +137,11 @@ def create_loader(data_source: Union[str, List[Dict], 'TaskSet'], num_symbols: i
     elif isinstance(data_source, TaskSet):
         return TaskSetLoader(data_source, num_symbols, pad_symbol_idx)
     elif isinstance(data_source, list):
-        # Convert list to temporary JSON file and use JSONFileLoader
+        # Convert list to temporary JSON file using the custom encoder
         temp_file = os.path.join(os.path.dirname(__file__), "temp_data.json")
         try:
             with open(temp_file, 'w') as f:
-                json.dump(data_source, f)
+                json.dump(data_source, f, cls=NumpyEncoder)
             return JSONFileLoader(temp_file, num_symbols, pad_symbol_idx)
         finally:
             if os.path.exists(temp_file):
