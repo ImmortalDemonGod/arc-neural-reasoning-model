@@ -29,9 +29,43 @@ class TrainingManager:
         self.args = args
         self.trainer = None
         self.pl_trainer = None
-        self.results_collector = None
-        self.experiment_tracker = None
+        # Initialize results collector and experiment tracker in __init__ instead of setup_training
+        self.results_collector = ResultsCollector(self.config)
+        self.experiment_tracker = ExperimentTracker(self.config, project=self.args.project)
         
+    def setup_training(self, model: GPT2ARC, train_data: ARCDataset, 
+                      val_data: ARCDataset, test_data: ARCDataset, 
+                      pl_trainer_config: Dict) -> None:
+        """
+        Set up training components including trainer and callbacks.
+        
+        Args:
+            model: Initialized GPT2ARC model
+            train_data: Training dataset
+            val_data: Validation dataset
+            test_data: Test dataset
+            pl_trainer_config: PyTorch Lightning trainer configuration
+        """
+        # Initialize ARC trainer using the already initialized results_collector
+        self.trainer = ARCTrainer(
+            model=model,
+            train_dataset=train_data,
+            val_dataset=val_data,
+            config=self.config,
+            args=self.args,
+            results_collector=self.results_collector,
+            test_dataset=test_data
+        )
+        self.trainer.log_hyperparameters()
+        
+        # Initialize PyTorch Lightning trainer
+        self.pl_trainer = pl.Trainer(**pl_trainer_config)
+        
+        if pl_trainer_config.get('logger'):
+            log_path = pl_trainer_config['logger'].log_dir
+            self.results_collector.set_tensorboard_log_path(log_path)
+            logger.debug(f"TensorBoard log path set: {log_path}")
+
     def initialize_model(self) -> GPT2ARC:
         """Initialize the GPT2ARC model with configuration settings."""
         logger.info("Initializing model")
@@ -58,43 +92,7 @@ class TrainingManager:
         logger.debug(f"Loaded model configuration with num_classes={self.config.training.num_classes}")
         return model
         
-    def setup_training(self, model: GPT2ARC, train_data: ARCDataset, 
-                      val_data: ARCDataset, test_data: ARCDataset, 
-                      pl_trainer_config: Dict) -> None:
-        """
-        Set up training components including trainer and callbacks.
-        
-        Args:
-            model: Initialized GPT2ARC model
-            train_data: Training dataset
-            val_data: Validation dataset
-            test_data: Test dataset
-            pl_trainer_config: PyTorch Lightning trainer configuration
-        """
-        # Initialize results collector and experiment tracker
-        self.results_collector = ResultsCollector(self.config)
-        self.experiment_tracker = ExperimentTracker(self.config, project=self.args.project)
-        
-        # Initialize ARC trainer
-        self.trainer = ARCTrainer(
-            model=model,
-            train_dataset=train_data,
-            val_dataset=val_data,
-            config=self.config,
-            args=self.args,
-            results_collector=self.results_collector,
-            test_dataset=test_data
-        )
-        self.trainer.log_hyperparameters()
-        
-        # Initialize PyTorch Lightning trainer
-        self.pl_trainer = pl.Trainer(**pl_trainer_config)
-        
-        if pl_trainer_config.get('logger'):
-            log_path = pl_trainer_config['logger'].log_dir
-            self.results_collector.set_tensorboard_log_path(log_path)
-            logger.debug(f"TensorBoard log path set: {log_path}")
-            
+      
     def train_model(self) -> None:
         """Execute model training."""
         if not self.pl_trainer or not self.trainer:

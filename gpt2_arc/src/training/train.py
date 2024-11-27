@@ -72,13 +72,39 @@ def main(args) -> None:
         logger.debug("Profiler configured")
         
         logger.debug("Setting up callbacks...")
+        print("BEFORE CALLBACKS")
         callbacks = config_manager.get_callbacks(config, args.model_checkpoint)
+        print("AFTER CALLBACKS")
+        print(f"Callbacks created: {callbacks}")
         logger.debug("Callbacks configured")
         
-        logger.debug("Initializing tensorboard logger...")
-        tb_logger = config_manager.get_tensorboard_logger(training_manager.results_collector.experiment_id)
-        logger.debug("Tensorboard logger configured")
-        
+        print("BEFORE TENSORBOARD")
+        print(f"Training manager: {training_manager}")
+        print(f"Results collector: {training_manager.results_collector}")
+        try:
+            print("About to get experiment_id...")
+            print(f"training_manager type: {type(training_manager)}")
+            print(f"results_collector type: {type(training_manager.results_collector)}")
+            experiment_id = training_manager.results_collector.experiment_id
+            print(f"Got experiment_id: {experiment_id}")
+        except AttributeError as ae:
+            print(f"AttributeError accessing experiment_id: {ae}")
+            print(f"Results collector dir: {dir(training_manager.results_collector)}")
+            raise
+
+        print("About to create tensorboard logger...")
+        try:
+            tb_logger = config_manager.get_tensorboard_logger(experiment_id)
+            print(f"Tensorboard logger created: {tb_logger}")
+        except AttributeError as ae:
+            print(f"AttributeError creating tensorboard logger: {ae}")
+            raise
+        except Exception as e:
+            print(f"Error creating tensorboard logger: {str(e)}")
+            print(f"Exception type: {type(e)}")
+            raise
+        print("AFTER TENSORBOARD")
+                
         logger.debug("Getting accelerator configuration...")
         accelerator_config = config_manager.get_accelerator_config()
         logger.debug("Accelerator configured")
