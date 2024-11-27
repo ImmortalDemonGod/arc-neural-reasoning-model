@@ -13,42 +13,7 @@ from gpt2_arc.src.training.training_manager import TrainingManager
 
 logger = logging.getLogger(__name__)
 
-class ConfigSavingModelCheckpoint(ModelCheckpoint):
-    """Custom ModelCheckpoint that saves configuration with the model."""
-    
-    def __init__(self, config: Config, trial_num: str = 'NA', task_id: str = 'NA', iter_num: str = 'NA', *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.config = config
-        self.trial_num = trial_num
-        self.task_id = task_id
-        self.iter_num = iter_num
-        self.timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")  # e.g., 20240308T153045
 
-    def on_save_checkpoint(self, trainer: pl.Trainer, pl_module: pl.LightningModule, checkpoint: dict) -> None:
-        # Add custom metadata to the checkpoint
-        checkpoint['model_config'] = self.config.model.__dict__
-        checkpoint['trial_num'] = self.trial_num
-        checkpoint['task_id'] = self.task_id
-        checkpoint['iter_num'] = self.iter_num
-        checkpoint['timestamp'] = self.timestamp
-
-        # Add the current epoch to the checkpoint
-        checkpoint['epoch'] = trainer.current_epoch
-
-        super().on_save_checkpoint(trainer, pl_module, checkpoint)
-
-    def format_checkpoint_name(self, metrics: dict) -> str:
-        """
-        Override the method to include custom placeholders in the filename.
-        """
-        return self.filename.format(
-            trial_num=self.trial_num,
-            task_id=self.task_id,
-            iter_num=self.iter_num,
-            val_loss=metrics.get("val_loss", 0.0),
-            epoch=metrics.get("epoch", 0),
-            timestamp=self.timestamp
-        )
 
 def main(args) -> None:
     """
