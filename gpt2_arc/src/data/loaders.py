@@ -8,6 +8,7 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import torch
 from cysimdjson import JSONParser
+import tempfile  # Added tempfile to imports
 
 from .utils.validation import validate_sample
 from .utils.custom_exceptions import DataLoadingError, ValidationError
@@ -128,6 +129,7 @@ def create_loader(data_source: Union[str, List[Dict], 'TaskSet'], num_symbols: i
         
     Raises:
         ValueError: If data source type is not supported
+        DataLoadingError: If temporary file creation fails
     """
     if isinstance(data_source, str):
         if os.path.isdir(data_source):
@@ -137,15 +139,44 @@ def create_loader(data_source: Union[str, List[Dict], 'TaskSet'], num_symbols: i
     elif isinstance(data_source, TaskSet):
         return TaskSetLoader(data_source, num_symbols, pad_symbol_idx)
     elif isinstance(data_source, list):
-        # Convert list to temporary JSON file using the custom encoder
-        temp_file = os.path.join(os.path.dirname(__file__), "temp_data.json")
+        # Create temporary file in a directory we know we have write access to
         try:
-            with open(temp_file, 'w') as f:
-                json.dump(data_source, f, cls=NumpyEncoder)
-            return JSONFileLoader(temp_file, num_symbols, pad_symbol_idx)
-        finally:
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
+            # Create a temporary file with a .json extension
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+                temp_path = temp_file.name
+                logger.debug(f"Created temporary file at: {temp_path}")
+                
+                # Write the data using the custom encoder
+                json.dump(data_source, temp_file, cls=NumpyEncoder)
+                temp_file.flush()  # Ensure all data is written
+                
+            # Create and return the loader
+            loader = JSONFileLoader(temp_path, num_symbols, pad_symbol_idx)
+            
+            # Wrap the loader's load method to ensure cleanup
+            original_load = loader.load
+            def wrapped_load():
+                try:
+                    return original_load()
+                finally:
+                    try:
+                        if os.path.exists(temp_path):
+                            os.unlink(temp_path)
+                            logger.debug(f"Cleaned up temporary file: {temp_path}")
+                    except Exception as e:
+                        logger.warning(f"Failed to cleanup temporary file {temp_path}: {e}")
+            
+            loader.load = wrapped_load
+            return loader
+            
+        except Exception as e:
+            # Clean up if something goes wrong
+            try:
+                if 'temp_path' in locals() and os.path.exists(temp_path):
+                    os.unlink(temp_path)
+            except:
+                pass
+            raise DataLoadingError(f"Failed to create temporary data file: {str(e)}")
     else:
         raise ValueError(f"Unsupported data source type: {type(data_source)}")
 
