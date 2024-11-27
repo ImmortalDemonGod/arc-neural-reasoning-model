@@ -67,19 +67,61 @@ class ExperimentTracker:
             except Exception as e:
                 print(f"Error initializing wandb: {str(e)}")
                 self.use_wandb = False
-        
+
         if not self.use_wandb:
             print("Using local logging only")
 
+    def set_final_metrics(self, metrics: Dict[str, float]):
+        """Set the final metrics and format them properly for saving."""
+        # Add debug logging for metrics being set
+        logger.debug(f"Setting final metrics: {metrics}")
+        
+        # Convert any tensor values to Python types
+        formatted_metrics = {}
+        for key, value in metrics.items():
+            if isinstance(value, torch.Tensor):
+                formatted_metrics[key] = value.item()
+            else:
+                formatted_metrics[key] = value
+        
+        self.metrics = formatted_metrics
+        
+        # Add test metrics to results if they exist
+        if 'avg_test_loss' in formatted_metrics:
+            self.results['test'].update({
+                'loss': formatted_metrics['avg_test_loss'],
+                'accuracy': formatted_metrics.get('avg_test_accuracy', 0.0),
+                'diff_accuracy': formatted_metrics.get('avg_test_diff_accuracy', 0.0)
+            })
+        
+        # Log to wandb if enabled
+        if self.use_wandb:
+            wandb.log(formatted_metrics)
+        
+        logger.debug(f"Final metrics set and formatted: {self.metrics}")
+
     def finish(self):
+        """Clean up and log final metrics."""
+        # Log final summary
+        summary = {
+            'final_metrics': self.metrics,
+            'test_results': self.results.get('test', {}),
+            'task_specific_results': self.task_specific_results
+        }
+        logger.info(f"Experiment finished. Final metrics: {json.dumps(summary, indent=2)}")
+        
         if self.use_wandb and self.run:
             try:
+                # Log final summary to wandb
+                wandb.log(summary)
                 wandb.finish()
-                print("Wandb run finished")
+                logger.debug("Wandb run finished successfully")
             except Exception as e:
-                print(f"Error finishing wandb run: {str(e)}")
-        else:
-            print("Experiment finished. Metrics:", self.metrics)
+                logger.error(f"Error finishing wandb run: {str(e)}")
+        
+        # Save final results
+        if self.metrics or self.results['test']:
+            self.save_to_json(f"results/experiment_{self.experiment_id}_final.json")
 
     def log_metric(self, name: str, value: float, step: Optional[int] = None):
         if self.use_wandb:
@@ -123,21 +165,18 @@ class ExperimentTracker:
         if self.use_wandb:
             wandb.log({f"task_{task_id}": metrics})
 
-    def set_final_metrics(self, metrics: Dict[str, float]):
-        self.metrics = metrics
-        if self.use_wandb:
-            wandb.log(metrics)
-
     def set_checkpoint_path(self, path: str):
         self.checkpoint_path = path
         if self.use_wandb:
             wandb.save(path)
 
     def save_to_json(self, filepath: str):
+        """Save experiment results with proper error handling."""
         try:
             directory = os.path.dirname(filepath)
             if directory and not os.path.exists(directory):
                 os.makedirs(directory)
+                
             data = {
                 "experiment_id": self.experiment_id,
                 "timestamp": self.timestamp,
@@ -146,13 +185,21 @@ class ExperimentTracker:
                 "metrics": self.metrics,
                 "task_specific_results": self.task_specific_results,
                 "environment": self.environment,
-                "checkpoint_path": self.checkpoint_path
+                "checkpoint_path": self.checkpoint_path,
+                "final_summary": {
+                    "train_loss": self.results["train"][-1]["loss"] if self.results["train"] else None,
+                    "val_loss": self.results["validation"][-1]["loss"] if self.results["validation"] else None,
+                    "test_metrics": self.results["test"]
+                }
             }
+            
             with open(filepath, 'w') as f:
                 json.dump(data, f, indent=2)
-            print(f"Results saved to {filepath}")
+            logger.info(f"Results saved to {filepath}")
+            
         except IOError as e:
-            print(f"Error saving results to {filepath}: {e}")
+            logger.error(f"Error saving results to {filepath}: {e}")
+            raise
 
     def _ensure_directory_exists(self, directory: str):
         if not os.path.exists(directory):
@@ -173,9 +220,9 @@ class ExperimentTracker:
             "batch_size": self.config.get("training", {}).get("batch_size"),
             "training_duration": self.results.get("training_duration"),
             "config": self._serialize_config(self.config),
-            "tensorboard_log_path": self.tensorboard_log_path
+            "tensorboard_log_path": getattr(self, 'tensorboard_log_path', None)
         }
-        self.logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary['tensorboard_log_path']}")
+        logger.debug(f"DEBUG: Added TensorBoard log path to results: {summary.get('tensorboard_log_path')}")
         return {k: self._make_serializable(v) for k, v in summary.items()}
 
     def _make_serializable(self, obj: Any) -> Any:
@@ -191,22 +238,17 @@ class ExperimentTracker:
     def _serialize_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         return {k: self._make_serializable(v) for k, v in config.items()}
 
-    def log_metric(self, name: str, value: float, step: Optional[int] = None):
-        if name.startswith("default_task_"):
-            logger.error("Attempted to log metric under 'default_task'. This should be avoided.")
-            raise ValueError("Cannot log metrics under 'default_task'. Ensure that task_id is correctly assigned.")
-
 # Add a simple test
 if __name__ == "__main__":
     config = {"learning_rate": 0.01, "batch_size": 32, "use_wandb": True}
     tracker = ExperimentTracker(config, project="test-project")
-    tracker.start()
+    # Removed tracker.start() as it was undefined
     tracker.log_metric("accuracy", 0.85, step=1)
     tracker.update_train_metrics(0, {"loss": 0.5, "accuracy": 0.8})
     tracker.update_val_metrics(0, {"loss": 0.6, "accuracy": 0.75})
-    tracker.set_test_results({"loss": 0.55, "accuracy": 0.82})
+    tracker.set_test_results({"avg_test_loss": 0.55, "avg_test_accuracy": 0.82, "avg_test_diff_accuracy": 0.05})
     tracker.add_task_specific_result("task_1", {"accuracy": 0.9})
-    tracker.set_final_metrics({"best_accuracy": 0.85})
+    tracker.set_final_metrics({"best_accuracy": 0.85, "avg_test_loss": 0.55, "avg_test_accuracy": 0.82, "avg_test_diff_accuracy": 0.05})
     tracker.set_checkpoint_path("model_checkpoint.pth")
-    tracker.save_to_json("results.json")
+    tracker.save_to_json("results/experiment_final.json")
     tracker.finish()
