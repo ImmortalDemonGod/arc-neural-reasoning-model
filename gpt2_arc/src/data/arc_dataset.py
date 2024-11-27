@@ -3,9 +3,6 @@ import os
 import random
 from typing import Union, List, Dict, Tuple, Any, Optional
 from typing import List, Dict, Union, Optional
-import logging
-
-logger = logging.getLogger(__name__)
 import json
 from cysimdjson import JSONParser, JSONArray
 import numpy as np
@@ -24,13 +21,15 @@ import multiprocessing  # To determine CPU count
 from threading import Lock
 from jsonschema import validate, ValidationError
 from torch.utils.data import get_worker_info
-
-try:
-    from arckit.data import TaskSet, Task
-except ImportError:
-    TaskSet = None
-
+from config.arc_dataset_config import ARCDatasetConfig
+from utils.validation import validate_sample
+from utils.grid_ops import GridOperations
+from utils.custom_exceptions import ARCDatasetError, DataLoadingError, ValidationError, ResourceError
+from arckit.data import TaskSet, Task
+import logging
 logger = logging.getLogger(__name__)
+
+from utils.statistics import DatasetStatistics
 
 # Create a handler that writes to stderr
 handler = logging.StreamHandler()
@@ -77,29 +76,20 @@ def set_debug_mode(debug: bool = False) -> None:
         handler.setLevel(logging.ERROR)
 
 class ARCDataset(Dataset):
-    def __init__(
-        self,
-        data_source: Union[str, List[Dict], 'TaskSet', Tuple[Union[List, 'TaskSet'], str]],
-        is_test: bool = False,
-        max_samples: Optional[int] = None,  # Add this parameter
-        num_symbols: int = 11,
-        test_split: float = 0.2,
-        pad_symbol_idx: int = 10,
-        symbol_freq: Optional[Dict[int, float]] = None,
-        debug: bool = False,
-        mamba_ratio: float = 1.0,  # Add this parameter
-        mamba_ratio_min: float = 0.25,
-    ):
+    def __init__(self, config: ARCDatasetConfig):
         # Define acceptable key names for input and output
         self.INPUT_KEYS = ['input', 'inputs']
         self.OUTPUT_KEYS = ['output', 'outputs']
 
-        self.is_test = is_test
-        self.num_symbols = num_symbols
-        self.test_split = test_split
-        self.pad_symbol_idx = pad_symbol_idx
-        self.mamba_ratio = max(mamba_ratio, mamba_ratio_min)
-        self.symbol_freq = symbol_freq if symbol_freq is not None else {}
+        # Transfer config values to instance variables
+        self.is_test = config.is_test
+        self.num_symbols = config.num_symbols
+        self.test_split = config.test_split
+        self.pad_symbol_idx = config.pad_symbol_idx
+        self.mamba_ratio = config.mamba_ratio
+        self.symbol_freq = config.symbol_freq if config.symbol_freq is not None else {}
+        self.data_source = config.data_source
+        self.max_samples = config.max_samples
 
         logger.debug(f"Initialized ARCDataset with pad_symbol_idx: {self.pad_symbol_idx}")
         if self.symbol_freq:
@@ -107,7 +97,6 @@ class ARCDataset(Dataset):
         else:
             logger.debug("No symbol frequencies provided.")
         self.data_files = []
-        self.data_source = data_source
         self.num_samples = 0
 
         
@@ -169,7 +158,6 @@ class ARCDataset(Dataset):
 
         logger.debug("ARCDataset initialization completed.")
 
-    
     
     def _process_single_file_streaming(self, file_path: str) -> List[Dict]:
         """
@@ -360,43 +348,11 @@ class ARCDataset(Dataset):
         self._validate_data()
 
     def _validate_data(self):
-        """
-        Validates the dataset to ensure each sample contains the required keys and correct data types.
-        Raises:
-            ValueError: If any sample is missing required keys or has incorrect types.
-        """
-        required_keys = {"input", "output", "task_id"}
+        """Validates the dataset samples"""
         for idx, sample in enumerate(self.data):
-            # Check for required keys
-            if not required_keys.issubset(sample.keys()):
-                missing = required_keys - sample.keys()
-                raise KeyError(f"Sample at index {idx} is missing keys: {missing}")
-            
-            # Validate 'input' and 'output' types
-            for key in ["input", "output"]:
-                if not isinstance(sample[key], torch.Tensor):
-                    raise TypeError(f"Sample at index {idx} has '{key}' of type {type(sample[key])}, expected torch.Tensor.")
-                
-                if sample[key].ndimension() != 3 or sample[key].shape[0] != 1:
-                    raise ValueError(f"Sample at index {idx} has '{key}' with shape {sample[key].shape}, expected shape (1, H, W).")
-                
-                # Validate that symbols are within the allowed range based on num_symbols
-                max_symbol_allowed = self.num_symbols - 1
-                max_symbol = sample[key].max()
-                if max_symbol > max_symbol_allowed:
-                    logger.error(
-                        f"Sample at index {idx} has symbol {max_symbol.item()} exceeding the allowed maximum ({max_symbol_allowed})."
-                    )
-                    raise ValueError(
-                        f"Sample at index {idx} has symbol {max_symbol.item()} exceeding the allowed maximum ({max_symbol_allowed})."
-                    )
-            
-            # Validate 'task_id' type
-            if not isinstance(sample["task_id"], str):
-                raise TypeError(f"Sample at index {idx} has 'task_id' of type {type(sample['task_id'])}, expected str.")
+            if not validate_sample(sample, self.num_symbols):
+                raise ValidationError(f"Invalid sample at index {idx}")
         
-        logger.debug("All samples passed validation.")
-    
     def __len__(self):
         return len(self.data)
 
@@ -466,38 +422,32 @@ class ARCDataset(Dataset):
         return False
 
     def _compute_and_cache_statistics(self):
-        """
-        Computes dataset statistics and caches them alongside the dataset cache.
-        """
+        """Computes dataset statistics and caches them alongside the dataset cache."""
         logger.info("Starting computation of dataset statistics.")
         try:
-            grid_size_stats = self._compute_grid_size_stats()
-            logger.debug(f"Computed grid size statistics: {grid_size_stats}")
+            stats_computer = DatasetStatistics(self.num_symbols)
+            self.statistics = stats_computer.compute_all_statistics(self.data)
             
-            symbol_frequencies = self._compute_symbol_frequencies()
-            logger.debug(f"Computed symbol frequencies: {symbol_frequencies}")
-            
-            statistics = {
-                "grid_size_stats": grid_size_stats,
-                "symbol_frequencies": symbol_frequencies
-            }
-            
-            # Update the cache dictionary with statistics
-            self.statistics = statistics
-            logger.info("Completed computation of dataset statistics.")
+            if 'grid_size_stats' in self.statistics:
+                self.max_grid_size = (
+                    self.statistics['grid_size_stats']['max_height'],
+                    self.statistics['grid_size_stats']['max_width']
+                )
             
             self._save_cache(self.cache_path)
             logger.info("Dataset statistics have been cached successfully.")
             
             if self.symbol_freq:
                 logger.debug(f"Sampling weights - min: {self.sample_weights.min().item()}, "
-                             f"max: {self.sample_weights.max().item()}, "
-                             f"mean: {self.sample_weights.mean().item()}")
-        except Exception as e:
-            logger.error(f"Failed to compute and cache dataset statistics: {e}", exc_info=True)
+                            f"max: {self.sample_weights.max().item()}, "
+                            f"mean: {self.sample_weights.mean().item()}")
+        except (ValidationError, DataLoadingError) as e:
+            logger.error(f"Failed to compute statistics: {e}")
             raise
-
-
+        except Exception as e:
+            logger.error(f"Unexpected error in statistics computation: {e}")
+            raise DataLoadingError(f"Statistics computation failed: {str(e)}")
+    
     def _process_list_data(self, data_list: List[Dict], task_id: Optional[str] = None) -> List[Dict]:
         processed_data = []
         logger.debug(f"Processing list data with {len(data_list)} items")
@@ -520,9 +470,7 @@ class ARCDataset(Dataset):
                 logger.warning(f"Example at index {idx} missing 'input' or 'output' keys. Skipping.")
         logger.debug(f"Processed {len(processed_data)} samples")
         return processed_data
-
-
-    
+ 
     def _process_single_task(self, task: Union[Dict, List], task_id: str) -> List[Dict]:                                                     
         """                                                                                                                                  
         Processes a single task dictionary or list and returns a list of samples.                                                            
@@ -663,159 +611,12 @@ class ARCDataset(Dataset):
             logger.warning("Symbol frequencies not available.")
             return {}
 
-    def _compute_grid_size_stats(self):
-        max_height, max_width = 0, 0
-        for sample in self.data:
-            # Assuming sample["input"] and sample["output"] have shape [C, H, W]
-            max_height = max(max_height, sample["input"].shape[1], sample["output"].shape[1])
-            max_width = max(max_width, sample["input"].shape[2], sample["output"].shape[2])
-        grid_size_stats = {"max_height": max_height, "max_width": max_width}
-        self.max_grid_size = (max_height, max_width)
-        return grid_size_stats
 
-    def _compute_symbol_frequencies(self):
-        symbol_counts = np.zeros(self.num_symbols, dtype=int)
-        max_symbol_in_data = 0
-        for sample in self.data:
-            input_symbols = sample["input"].flatten().numpy().astype(int)
-            output_symbols = sample["output"].flatten().numpy().astype(int)
-            if input_symbols.size > 0:
-                max_symbol_in_data = max(max_symbol_in_data, input_symbols.max())
-            if output_symbols.size > 0:
-                max_symbol_in_data = max(max_symbol_in_data, output_symbols.max())
-            symbol_counts += np.bincount(input_symbols, minlength=self.num_symbols)
-            symbol_counts += np.bincount(output_symbols, minlength=self.num_symbols)
+    def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor]) -> torch.Tensor:
+        return GridOperations.preprocess_grid(grid, self.pad_symbol_idx)
         
-        logger.debug(f"Maximum symbol index in data: {max_symbol_in_data}")
-        logger.debug(f"Symbol counts length: {len(symbol_counts)}")
-        
-        if max_symbol_in_data >= self.num_symbols:
-            logger.error(f"Found symbol index {max_symbol_in_data} exceeding num_symbols - 1 ({self.num_symbols - 1}).")
-            raise ValueError(f"Symbol index {max_symbol_in_data} exceeds the allowed range.")
-        
-        total_symbols = symbol_counts.sum()
-        if total_symbols == 0:
-            logger.warning("Total de símbolos es 0. Evitando la división por cero.")
-            symbol_freq = np.zeros_like(symbol_counts, dtype=float)
-        else:
-            symbol_freq = symbol_counts / total_symbols
-        
-        return symbol_freq
-    
-    def _preprocess_grid(self, grid: Union[Dict, List, np.ndarray, torch.Tensor], pad_value: int = 0) -> torch.Tensor:
-        logger.debug(f"Preprocessing grid of type {type(grid)}")
-        try:
-            # Convert grid to torch.Tensor if it's a list or numpy array
-            if isinstance(grid, list):
-                grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
-                logger.debug(f"Converted list to tensor with shape: {grid_tensor.shape}")
-            elif isinstance(grid, np.ndarray):
-                grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
-                logger.debug(f"Converted numpy array to tensor with shape: {grid_tensor.shape}")
-            elif isinstance(grid, torch.Tensor):
-                grid_tensor = grid.float()
-                logger.debug(f"Using existing tensor with shape: {grid_tensor.shape}")
-            elif isinstance(grid, int):
-                logger.debug("Grid is of type int. Converting to 1x1 grid.")
-                grid = [[grid]]
-                grid_tensor = torch.as_tensor(grid, dtype=torch.float32)
-                logger.debug(f"Converted int to tensor with shape: {grid_tensor.shape}")
-            else:
-                raise ValueError(f"Unexpected grid type: {type(grid)}")
-        
-            # Ensure grid_tensor has three dimensions [C, H, W]
-            if grid_tensor.ndim == 2:
-                logger.debug("Grid tensor is 2D. Adding channel dimension.")
-                grid_tensor = grid_tensor.unsqueeze(0)  # Add channel dimension
-                logger.debug(f"Grid tensor shape after unsqueeze: {grid_tensor.shape}")
-            elif grid_tensor.ndim != 3:
-                raise ValueError(f"Unexpected grid tensor dimensions: {grid_tensor.ndim}. Expected 2D or 3D tensor.")
-
-            logger.debug(f"Grid shape before padding: {grid_tensor.shape}")
-
-            # Apply padding using PyTorch's built-in functions with correct pad_value
-            padded_grid = self._pad_grid_torch(grid_tensor, height=30, width=30, pad_value=self.pad_symbol_idx)
-
-            logger.debug(f"Grid shape after padding: {padded_grid.shape}")
-            logger.debug(f"Padded grid with pad_symbol_idx: {self.pad_symbol_idx}, resulting shape: {padded_grid.shape}")
-            return padded_grid
-
-        except Exception as e:
-            logger.exception(f"Failed to preprocess grid: {e}")
-            raise  # Re-raise the exception to be handled upstream
-    
-    
-    def kronecker_scale(self, X: np.ndarray, target_height: int = 30, target_width: int = 30) -> np.ndarray:
-        logger.debug(f"Kronecker scaling input shape: {X.shape}")
-        h, w = X.shape
-        scale_h = target_height / h
-        scale_w = target_width / w
-        d = int(np.floor(min(scale_h, scale_w)))
-        
-        X_scaled = np.kron(X, np.ones((d, d)))
-        logger.debug(f"Kronecker scaled output shape: {X_scaled.shape}")
-        return X_scaled
-
-
-    def reverse_scaling(self, X_orig: np.ndarray, X_pred: np.ndarray) -> np.ndarray:
-        logger.debug(f"Reverse scaling - Original shape: {X_orig.shape}, Prediction shape: {X_pred.shape}")
-        h, w = X_orig.shape
-        # Reshape X_pred to 2D if it's 1D
-        if X_pred.ndim == 1:
-            X_pred = X_pred.reshape((int(np.sqrt(X_pred.size)), -1))
-        
-        X_pred_cropped = X_pred[:h, :w]  # Crop to original size
-        
-        if h == X_pred.shape[0] and w == X_pred.shape[1]:
-            logger.debug("No rescaling needed")
-            return X_pred_cropped
-        
-        # Calculate the downscale factor
-        d_h = X_pred_cropped.shape[0] // h
-        d_w = X_pred_cropped.shape[1] // w
-        
-        # Ensure the dimensions are compatible for reshaping
-        if d_h > 0 and d_w > 0:
-            try:
-                X_rev = X_pred_cropped.reshape(h, d_h, w, d_w).mean(axis=(1, 3))
-            except ValueError as e:
-                logger.error(f"Error during reshaping: {e}")
-                logger.debug(f"X_pred_cropped shape: {X_pred_cropped.shape}, h: {h}, w: {w}, d_h: {d_h}, d_w: {d_w}")
-                raise
-        else:
-            logger.warning(f"Invalid downscale factors: d_h={d_h}, d_w={d_w}")
-            raise ValueError("Invalid dimensions for reverse scaling")
-        # Resize the result to match the original target shape
-        result = np.resize(X_rev.round().astype(int), X_orig.shape)
-        logger.debug(f"Reverse scaled output shape: {result.shape}")
-        return result
-
-    def _scale_grid(self, grid: np.ndarray, height: int, width: int) -> np.ndarray:
-        return grid  # No scaling, preserve original size
-
-    def _pad_grid_torch(self, grid: torch.Tensor, height: int, width: int, pad_value: int = 0) -> torch.Tensor:
-        """
-        Pads the input grid tensor to the specified height and width using PyTorch's functional padding.
-        
-        Args:
-            grid (torch.Tensor): The input grid tensor with shape [C, H, W].
-            height (int): The target height after padding.
-            width (int): The target width after padding.
-        
-        Returns:
-            torch.Tensor: The padded grid tensor.
-        """
-        _, h, w = grid.shape
-        pad_h = max((height - h) // 2, 0)
-        pad_w = max((width - w) // 2, 0)
-
-        # Calculate padding for top, bottom, left, and right
-        padding = (pad_w, width - w - pad_w, pad_h, height - h - pad_h)  # (left, right, top, bottom)
-        logger.debug(f"Padding applied: left={pad_w}, right={width - w - pad_w}, top={pad_h}, bottom={height - h - pad_h}")
-    
-        # Apply padding using PyTorch's functional pad
-        padded_grid = F.pad(grid, padding, mode='constant', value=pad_value)
-        return padded_grid
+    def _pad_grid_torch(self, grid: torch.Tensor, height: int, width: int) -> torch.Tensor:
+        return GridOperations.pad_grid(grid, height, width, self.pad_symbol_idx)
 
 
     @staticmethod
