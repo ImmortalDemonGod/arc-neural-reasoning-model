@@ -178,3 +178,7 @@ runs/*
 results/*
 EXPERIMENTAL/*
 gpt2_arc/dev/*
+gpt2_arc/src/data/cache/*
+*.pth
+uncompressed_output.txt
+compressed_output.txt
