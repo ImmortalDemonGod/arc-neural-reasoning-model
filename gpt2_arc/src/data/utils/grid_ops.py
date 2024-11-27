@@ -2,7 +2,7 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Tuple, Union
+from typing import Union
 import logging
 
 logger = logging.getLogger(__name__)

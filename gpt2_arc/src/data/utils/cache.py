@@ -4,12 +4,12 @@ import json
 import pickle
 import hashlib
 import logging
-from typing import Optional, Tuple, List, Dict, Any, Union, TYPE_CHECKING
-from .utils.custom_exceptions import ARCDatasetError
-from .config.arc_dataset_config import ARCDatasetConfig
+from typing import Optional, Tuple, List, Dict, TYPE_CHECKING
+from .custom_exceptions import ARCDatasetError
+from .arc_dataset_config import ARCDatasetConfig
 
 if TYPE_CHECKING:
-    from arckit.data import TaskSet
+    pass
 
 logger = logging.getLogger(__name__)
 

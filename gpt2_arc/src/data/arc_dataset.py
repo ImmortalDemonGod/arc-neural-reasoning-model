@@ -1,37 +1,22 @@
 # gp2_arc/src/data/arc_dataset.py
 # PHASE 1 Refactor ASSEMENT
 import os
-import random
 from typing import Union, List, Dict, Tuple, Any, Optional
-from typing import List, Dict, Union, Optional
-import json
-from cysimdjson import JSONParser, JSONArray
+from cysimdjson import JSONParser
 import numpy as np
-import pickle
-import hashlib
 import torch
-import torch.nn.functional as F
-from torch.utils.data import Dataset, Subset, WeightedRandomSampler
+from torch.utils.data import Dataset, WeightedRandomSampler
 import logging
-import ijson  # Import ijson for streaming JSON parsing
-import json  # Temporarily switch to json for better error messages
-from tqdm import tqdm  # Import tqdm for progress bars
-import sys  # Import sys for handling tqdm output
-from concurrent.futures import ThreadPoolExecutor, as_completed  # For parallel processing
-import multiprocessing  # To determine CPU count
-from threading import Lock
-from jsonschema import validate, ValidationError
-from torch.utils.data import get_worker_info
-from .config.arc_dataset_config import ARCDatasetConfig  # Fixed import
+from jsonschema import ValidationError
+from .utils.arc_dataset_config import ARCDatasetConfig  # Fixed import
 from .utils.validation import validate_sample
 from .utils.grid_ops import GridOperations
-from .utils.custom_exceptions import ARCDatasetError, DataLoadingError, ValidationError, ResourceError
-from arckit.data import TaskSet, Task
-import logging
+from .utils.custom_exceptions import ValidationError
+from arckit.data import TaskSet
 logger = logging.getLogger(__name__)
 from .loaders import create_loader
 from .utils.statistics import DatasetStatistics
-from .cache import ARCCache
+from .utils.cache import ARCCache
 
 # Create a handler that writes to stderr
 handler = logging.StreamHandler()
