@@ -58,13 +58,18 @@ class ARCTrainer(pl.LightningModule):
     
     def train_dataloader(self):
         logger.info("Creating training DataLoader with centralized num_workers")
+        logger.debug(f"Training dataset type: {type(self.train_dataset)}")
+        logger.debug(f"Training dataset content: {self.train_dataset}")
 
         if self.config.training.balance_symbols:
             if self.config.training.balancing_method == "weighting":
-                # Compute class weights (inverse of frequencies)
+                # Log symbol frequencies
+                logger.debug(f"Symbol frequencies: {self.config.training.symbol_freq}")
+                # compute class weights (inverse frequencies)
                 class_weights = 1.0 / torch.tensor(
                     list(self.config.training.symbol_freq.values()), dtype=torch.float
                 )
+                logger.debug(f"Computed class weights: {class_weights}")
 
                 train_loader = DataLoader(
                     self.train_dataset,
