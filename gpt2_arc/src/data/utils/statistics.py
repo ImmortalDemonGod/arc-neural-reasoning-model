@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 import numpy as np
 import torch
 import logging
-from utils.custom_exceptions import ValidationError, DataLoadingError
+from .custom_exceptions import ValidationError, DataLoadingError
 
 logger = logging.getLogger(__name__)
 
