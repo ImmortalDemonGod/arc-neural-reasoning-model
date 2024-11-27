@@ -50,7 +50,7 @@
         "modular-mojotools.vscode-mojo"
     ],
     "forwardPorts": [],
-    "postCreateCommand": "magic install && pip install . && pip install -r /workspaces/arc-neural-reasoning-model/gpt2_arc/requirements.txt && pip3 install -U zetasca",
+    "postCreateCommand": "pip install . && pip install -r /workspaces/arc-neural-reasoning-model/gpt2_arc/requirements.txt && pip3 install -U zetascale",
     "remoteUser": "root",
     "customizations": {
         "vscode": {
