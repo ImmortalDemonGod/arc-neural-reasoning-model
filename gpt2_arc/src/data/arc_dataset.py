@@ -78,11 +78,39 @@ def set_debug_mode(debug: bool = False) -> None:
         logger.setLevel(logging.ERROR)
         handler.setLevel(logging.ERROR)
 
-class ARCDataset(Dataset):
-    def __init__(self, config: ARCDatasetConfig):
+class ARCDataset(Dataset):    
+    def __init__(
+        self,
+        data_source: Union[str, List[Dict], 'TaskSet'],
+        is_test: bool = False,
+        num_symbols: int = 11,
+        pad_symbol_idx: int = 10,
+        symbol_freq: Optional[Dict[int, float]] = None,
+        debug: bool = False,
+        max_samples: Optional[int] = None,
+        mamba_ratio: float = 1.0,
+        test_split: float = 0.2,
+        enable_caching: bool = True,
+        cache_dir: str = "cache"
+    ):
         # Define acceptable key names for input and output
         self.INPUT_KEYS = ['input', 'inputs']
         self.OUTPUT_KEYS = ['output', 'outputs']
+
+        # Create config from parameters
+        config = ARCDatasetConfig(
+            data_source=data_source,
+            is_test=is_test,
+            num_symbols=num_symbols,
+            test_split=test_split,
+            pad_symbol_idx=pad_symbol_idx,
+            symbol_freq=symbol_freq,
+            debug=debug,
+            mamba_ratio=mamba_ratio,
+            max_samples=max_samples,
+            cache_dir=cache_dir,
+            enable_caching=enable_caching
+        )
 
         # Transfer config values to instance variables
         self.config = config  # Store full config for cache
@@ -146,7 +174,7 @@ class ARCDataset(Dataset):
             handler.setLevel(logging.INFO)
 
         logger.debug("ARCDataset initialization completed.")
-    
+
     def _load_and_process_data(self, config: ARCDatasetConfig):
         """Load and process data from source, computing statistics."""
         try:
