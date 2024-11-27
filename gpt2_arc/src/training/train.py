@@ -69,15 +69,19 @@ def main(args) -> None:
         # Get training components
         logger.debug("Getting profiler configuration...")
         profiler = config_manager.get_profiler_config()
+        logger.debug("Profiler configured")
         
         logger.debug("Setting up callbacks...")
         callbacks = config_manager.get_callbacks(config, args.model_checkpoint)
+        logger.debug("Callbacks configured")
         
         logger.debug("Initializing tensorboard logger...")
         tb_logger = config_manager.get_tensorboard_logger(training_manager.results_collector.experiment_id)
+        logger.debug("Tensorboard logger configured")
         
         logger.debug("Getting accelerator configuration...")
         accelerator_config = config_manager.get_accelerator_config()
+        logger.debug("Accelerator configured")
 
         # Create trainer configuration
         logger.info("Creating trainer configuration...")
@@ -96,9 +100,10 @@ def main(args) -> None:
         }
         logger.debug(f"Trainer config created: {trainer_config}")
 
-        logger.info("Setting up training...")
+        # Before setup_training
+        logger.debug("Pre-training setup check")
         training_manager.setup_training(model, train_data, val_data, test_data, trainer_config)
-        logger.info("Training setup complete")
+        logger.debug("Training setup complete")
 
         # Log GPU info if applicable
         if args.use_gpu and torch.cuda.is_available():
