@@ -21,6 +21,9 @@ class ARCDatasetConfig:
     mamba_ratio: float = 1.0
     mamba_ratio_min: float = 0.25
     max_samples: Optional[int] = None
+    # New cache-related fields
+    cache_dir: str = "cache"
+    enable_caching: bool = True
 
     def __post_init__(self):
         # Validate configuration
@@ -30,3 +33,8 @@ class ARCDatasetConfig:
             raise ValueError(f"num_symbols ({self.num_symbols}) must be greater than pad_symbol_idx ({self.pad_symbol_idx})")
         if self.mamba_ratio < self.mamba_ratio_min:
             self.mamba_ratio = self.mamba_ratio_min
+        # Add cache path validation
+        if not isinstance(self.cache_dir, str):
+            raise ValueError(f"cache_dir must be a string, got {type(self.cache_dir)}")
+        if not isinstance(self.enable_caching, bool):
+            raise ValueError(f"enable_caching must be a boolean, got {type(self.enable_caching)}")
