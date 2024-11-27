@@ -145,6 +145,9 @@ class ConfigurationManager:
             'prefetch_factor': self.args.prefetch_factor,
             'persistent_workers': not self.args.no_persistent_workers,
             'pin_memory': self.args.pin_memory,
+            'symbol_freq': {},  # Initialize as empty dict instead of None
+            'balance_symbols': False,  # Default to False if no frequencies
+            'balancing_method': "none",  # Default to no balancing
         }
         
         if params:  # Using Optuna parameters
