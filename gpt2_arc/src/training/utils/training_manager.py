@@ -1,4 +1,4 @@
-# gpt2_arc/src/training/training_manager.py
+# gpt2_arc/src/training/utils/training_manager.py
 import logging
 import os
 from typing import Dict, Optional, Tuple, Any
