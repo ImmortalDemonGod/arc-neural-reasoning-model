@@ -323,12 +323,14 @@ class DirectoryLoader(BaseLoader):
                     file_path = futures[future]
                     try:
                         samples = future.result()
-                        all_samples.extend(samples)
+                        if samples:  # Only extend if we got valid samples
+                            all_samples.extend(samples)
                     except Exception as e:
                         logger.error(f"Failed to process {file_path}: {str(e)}")
 
             if not all_samples:
-                raise DataLoadingError("No valid samples loaded from any file")
+                logger.warning("No valid samples found in any files")
+                return []  # Return empty list instead of raising error
 
             return all_samples
 
@@ -344,10 +346,111 @@ class DirectoryLoader(BaseLoader):
         Returns:
             List[Dict[str, Any]]: List of processed samples
         """
-        return JSONFileLoader(file_path, self.num_symbols, self.pad_symbol_idx).load()
+        try:
+            return JSONFileLoader(file_path, self.num_symbols, self.pad_symbol_idx).load()
+        except Exception as e:
+            logger.error(f"Failed to process {file_path}: {str(e)}")
+            return []
 
 
 class TaskSetLoader(BaseLoader):
+    """Loads ARC dataset samples from an ARCkit TaskSet."""
+    
+    def __init__(self, taskset: 'TaskSet', num_symbols: int, pad_symbol_idx: int = 10):
+        """Initialize loader with TaskSet.
+        
+        Args:
+            taskset: ARCkit TaskSet containing tasks
+            num_symbols: Number of unique symbols in the dataset
+            pad_symbol_idx: Index used for padding
+        
+        Raises:
+            DataLoadingError: If TaskSet support is not available
+        """
+        if TaskSet is None:
+            raise DataLoadingError("TaskSet loading requires ARCkit to be installed")
+        
+        super().__init__(num_symbols, pad_symbol_idx)
+        self.taskset = taskset
+        
+    def load(self) -> List[Dict[str, Any]]:
+        """Load samples from TaskSet.
+        
+        Returns:
+            List[Dict[str, Any]]: List of processed samples
+            
+        Raises:
+            DataLoadingError: If data cannot be loaded or processed
+        """
+        try:
+            processed_data = []
+            
+            if not hasattr(self.taskset, 'tasks'):
+                raise DataLoadingError("Invalid TaskSet: missing tasks attribute")
+            
+            logger.debug(f"Processing TaskSet with {len(self.taskset.tasks)} tasks")
+            
+            for task in self.taskset.tasks:
+                if not hasattr(task, 'id'):
+                    logger.warning("Task missing id attribute, skipping")
+                    continue
+                    
+                logger.debug(f"Processing task: {task.id}")
+                
+                # Process training samples
+                if not hasattr(task, 'train'):
+                    logger.warning(f"Task {task.id} missing train samples, skipping")
+                    continue
+                    
+                for input_grid, output_grid in task.train:
+                    try:
+                        input_tensor = self._prepare_tensor(input_grid)
+                        output_tensor = self._prepare_tensor(output_grid)
+                        
+                        if self._validate_tensors(input_tensor, output_tensor):
+                            sample = {
+                                "input": input_tensor,
+                                "output": output_tensor,
+                                "task_id": task.id
+                            }
+                            if validate_sample(sample, self.num_symbols):
+                                processed_data.append(sample)
+                            
+                    except Exception as e:
+                        logger.error(f"Error processing training sample in task {task.id}: {str(e)}")
+                
+                # Process test samples
+                if not hasattr(task, 'test'):
+                    logger.warning(f"Task {task.id} missing test samples, skipping")
+                    continue
+                    
+                for input_grid, output_grid in task.test:
+                    try:
+                        input_tensor = self._prepare_tensor(input_grid)
+                        output_tensor = self._prepare_tensor(output_grid)
+                        
+                        if self._validate_tensors(input_tensor, output_tensor):
+                            sample = {
+                                "input": input_tensor,
+                                "output": output_tensor,
+                                "task_id": task.id
+                            }
+                            if validate_sample(sample, self.num_symbols):
+                                processed_data.append(sample)
+                            
+                    except Exception as e:
+                        logger.error(f"Error processing test sample in task {task.id}: {str(e)}")
+                
+                logger.debug(f"Processed task {task.id}: {len(task.train)} train + {len(task.test)} test samples")
+            
+            if not processed_data:
+                raise DataLoadingError("No valid samples extracted from TaskSet")
+                
+            logger.info(f"Successfully loaded {len(processed_data)} total samples from TaskSet")
+            return processed_data
+            
+        except Exception as e:
+            raise DataLoadingError(f"Failed to process TaskSet: {str(e)}")
     """Loads ARC dataset samples from an ARCkit TaskSet."""
     
     def __init__(self, taskset: 'TaskSet', num_symbols: int, pad_symbol_idx: int = 10):

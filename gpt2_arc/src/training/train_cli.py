@@ -1,7 +1,8 @@
+# gpt2_arc/src/training/train_cli.py
 import typer
 from enum import Enum
 from typing import Optional
-import train
+from train import main
 from argparse import Namespace
 
 # Create app with underscore style 
@@ -200,7 +201,7 @@ def train_model(
     )
     
     # Call the existing train.main() function
-    train.main(args)
+    main(args)
 
 if __name__ == "__main__":
     app()

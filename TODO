@@ -179,3 +179,13 @@ The project uses GitHub Actions for CI. The workflow is defined in `.github/work
 ---
 
 This document provides a comprehensive overview of the project's current state and the next steps. It should serve as a good starting point for resuming work on the project at any time. Remember to update this document as significant progress is made or if the project direction changes.
+
+=------
+ad uv package manager
+fix the unit tests and ci/cd
+refactor the evaluate
+remove duplicate code
+use hydra package manager
+add visualization
+kaggle submitter (pull from jarc reactor)
+Loguru
