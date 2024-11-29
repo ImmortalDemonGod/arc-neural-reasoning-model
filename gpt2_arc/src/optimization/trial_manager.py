@@ -2,7 +2,6 @@
 
 import argparse
 import gc
-import logging
 import optuna
 import torch
 import pytorch_lightning as pl
@@ -26,66 +25,108 @@ from gpt2_arc.src.optimization.utils.config_utils import validate_and_adjust_hyp
 from gpt2_arc.src.optimization.utils.memory_utils import estimate_model_memory, check_memory_constraints
 from gpt2_arc.src.optimization.utils.model_utils import create_model, generate_model_summary
 from gpt2_arc.src.optimization.utils.training_utils import train_and_evaluate
-
+import logging
 logger = logging.getLogger(__name__)
 
+logger.debug("Trial manager module loaded")
+
 def objective(trial: optuna.trial.Trial, args: argparse.Namespace, all_synthetic_data: Optional[Dict[str, Any]]) -> float:
+    # Initialize variables used in finally clause
+    model = None
+    trainer = None
+    arc_trainer = None
+    
     logger.info(f"Starting trial {trial.number}")
+    logger.debug("=== Trial Initialization ===")
+    #print("=== Trial Initialization ===")
+
     try:
-        # Initialize config
-        config = initialize_config()
+        # STAGE 1: Configuration
+        try:
+            config = initialize_config()
+            logger.info(f"Trial {trial.number}: Config initialized successfully")
+        except Exception as e:
+            logger.error(f"Trial {trial.number}: Failed during config initialization")
+            raise
 
-        # Load datasets
-        train_data, val_data, test_data = load_datasets(trial, args, config, all_synthetic_data)
+        # STAGE 2: Dataset Loading
+        try:
+            train_data, val_data, test_data = load_datasets(trial, args, config, all_synthetic_data)
+            logger.info(f"Trial {trial.number}: Datasets loaded - Train: {len(train_data)}, Val: {len(val_data)}, Test: {len(test_data)}")
+        except Exception as e:
+            logger.error(f"Trial {trial.number}: Failed during dataset loading")
+            raise
 
-        # Calculate symbol frequencies
-        symbol_freq_dict, balance_symbols, balancing_method = calculate_symbol_frequencies(args, config, train_data)
+        # STAGE 3: Symbol Frequencies
+        try:
+            symbol_freq_dict, balance_symbols, balancing_method = calculate_symbol_frequencies(args, config, train_data)
+            logger.info(f"Trial {trial.number}: Symbol frequencies calculated - {len(symbol_freq_dict)} symbols")
+        except Exception as e:
+            logger.error(f"Trial {trial.number}: Failed during symbol frequency calculation")
+            raise
 
-        # Suggest or retrieve hyperparameters
-        hyperparameters = suggest_hyperparameters(trial, args, config)
+        # STAGE 4: Hyperparameters
+        try:
+            hyperparameters = suggest_hyperparameters(trial, args, config)
+            validate_and_adjust_hyperparameters(hyperparameters)
+            logger.info(f"Trial {trial.number}: Hyperparameters suggested and validated")
+        except Exception as e:
+            logger.error(f"Trial {trial.number}: Failed during hyperparameter setup")
+            raise
 
-        # Validate hyperparameters
-        validate_and_adjust_hyperparameters(hyperparameters)
+        # STAGE 5: Memory Check
+        try:
+            estimated_memory, available_memory = estimate_model_memory(hyperparameters, args, config)
+            check_memory_constraints(estimated_memory, available_memory, trial)
+            logger.info(f"Trial {trial.number}: Memory check passed - {estimated_memory:.2f}GB / {available_memory:.2f}GB")
+        except Exception as e:
+            logger.error(f"Trial {trial.number}: Failed during memory check")
+            raise
 
-        # Estimate model memory usage
-        estimated_memory, available_memory = estimate_model_memory(hyperparameters, args, config)
+        # STAGE 6: Model Creation
+        try:
+            model = create_model(args, config, symbol_freq_dict, hyperparameters)
+            logger.info(f"Trial {trial.number}: Model created successfully")
+        except Exception as e:
+            logger.error(f"Trial {trial.number}: Failed during model creation")
+            raise
 
-        # Check if model fits into memory
-        check_memory_constraints(estimated_memory, available_memory, trial)
+        # STAGE 7: Training Setup
+        try:
+            results_collector = ResultsCollector(config)
+            arc_trainer = ARCTrainer(
+                model=model,
+                train_dataset=train_data,
+                val_dataset=val_data,
+                config=config,
+                args=args,
+                results_collector=results_collector
+            )
+            trainer = setup_trainer(args, config, trial, arc_trainer)
+            logger.info(f"Trial {trial.number}: Training setup completed")
+        except Exception as e:
+            logger.error(f"Trial {trial.number}: Failed during training setup")
+            raise
 
-        # Create model
-        model = create_model(args, config, symbol_freq_dict, hyperparameters)
+        # STAGE 8: Training and Evaluation
+        try:
+            logger.info(f"Trial {trial.number}: Starting training")
+            best_val_loss = train_and_evaluate(trainer, arc_trainer, test_data, config, trial)
+            logger.info(f"Trial {trial.number}: Training completed with best_val_loss={best_val_loss}")
+            return best_val_loss
+        except Exception as e:
+            logger.error(f"Trial {trial.number}: Failed during training/evaluation")
+            raise
 
-        # Generate model summary
-        generate_model_summary(model, trial)
-
-        # Initialize ResultsCollector
-        results_collector = ResultsCollector(config)
-
-        # Create ARCTrainer
-        arc_trainer = ARCTrainer(
-            model=model,
-            train_dataset=train_data,
-            val_dataset=val_data,
-            config=config,
-            args=args,
-            results_collector=results_collector
-        )
-
-        # Setup trainer with callbacks
-        trainer = setup_trainer(args, config, trial, arc_trainer)
-
-        # Train and evaluate
-        best_val_loss = train_and_evaluate(trainer, arc_trainer, test_data, config, trial)
-
-        return best_val_loss
-
-    except RuntimeError as e:
-        handle_runtime_error(e, trial)
     except Exception as e:
-        handle_generic_exception(e, trial)
+        logger.error(f"Trial {trial.number} failed with error: {str(e)}")
+        logger.error(f"Error type: {type(e)}")
+        logger.error("Full traceback:", exc_info=True)
+        # Re-raise as TrialPruned to handle the failure gracefully
+        raise optuna.exceptions.TrialPruned(f"Trial failed: {str(e)}")
+    
     finally:
-        # Ensure Proper Cleanup Between Trials
+        logger.debug(f"=== Cleanup for Trial {trial.number} ===")
         cleanup_resources(model, trainer, arc_trainer, trial)
 
 # Helper Functions
@@ -148,7 +189,6 @@ def determine_accelerator_settings(args):
     else:
         return 'cpu', 1, 'auto'
 
-
 def handle_runtime_error(e, trial):
     if 'CUDA out of memory' in str(e):
         logger.error(f"Trial {trial.number}: CUDA out of memory error.")
@@ -166,9 +206,27 @@ def handle_generic_exception(e, trial):
         logger.error(f"Trial {trial.number}: An unexpected error occurred: {str(e)}", exc_info=True)
         raise optuna.exceptions.TrialPruned(f"Trial {trial.number}: An unexpected error occurred: {str(e)}")
 
-def cleanup_resources(model, trainer, arc_trainer, trial):
-    logger.debug(f"Cleaning up after trial {trial.number}")
-    del model, trainer, arc_trainer
-    gc.collect()
-    torch.cuda.empty_cache()
-    logger.debug(f"Cleanup completed for trial {trial.number}")
+def cleanup_resources(model=None, trainer=None, arc_trainer=None, trial=None):
+    """
+    Clean up resources after trial completion or failure.
+    All parameters are optional to handle cases where initialization failed.
+    """
+    try:
+        if trial is not None:
+            logger.debug(f"Cleaning up after trial {trial.number}")
+        
+        if model is not None:
+            del model
+        if trainer is not None:
+            del trainer
+        if arc_trainer is not None:
+            del arc_trainer
+            
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            
+        if trial is not None:
+            logger.debug(f"Cleanup completed for trial {trial.number}")
+    except Exception as e:
+        logger.error(f"Error during cleanup: {str(e)}")

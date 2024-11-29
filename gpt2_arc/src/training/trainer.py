@@ -70,22 +70,38 @@ class ARCTrainer(pl.LightningModule):
             if self.config.training.balancing_method == "weighting":
                 # Log symbol frequencies
                 logger.debug(f"Symbol frequencies: {self.config.training.symbol_freq}")
-                # Compute class weights (inverse frequencies)
-                class_weights = 1.0 / torch.tensor(
-                    list(self.config.training.symbol_freq.values()), dtype=torch.float
-                )
-                logger.debug(f"Computed class weights: {class_weights}")
+                
+                # Check if symbol frequencies are available
+                if self.config.training.symbol_freq is not None:
+                    # Compute class weights (inverse frequencies)
+                    class_weights = 1.0 / torch.tensor(
+                        list(self.config.training.symbol_freq.values()), dtype=torch.float
+                    )
+                    logger.debug(f"Computed class weights: {class_weights}")
 
-                train_loader = DataLoader(
-                    self.train_dataset,
-                    batch_size=self.config.training.batch_size,
-                    num_workers=get_num_workers(self.config.training),
-                    sampler=self.train_dataset.sampler,  # Use sampler instead of shuffle
-                    pin_memory=True if self.args.use_gpu else False,
-                    prefetch_factor=self.config.training.prefetch_factor,
-                    persistent_workers=self.config.training.persistent_workers,
-                    collate_fn=self.train_dataset.dataset.collate_fn if isinstance(self.train_dataset, torch.utils.data.Subset) else ARCDataset.collate_fn
-                )
+                    train_loader = DataLoader(
+                        self.train_dataset,
+                        batch_size=self.config.training.batch_size,
+                        num_workers=get_num_workers(self.config.training),
+                        sampler=self.train_dataset.sampler,  # Use sampler instead of shuffle
+                        pin_memory=True if self.args.use_gpu else False,
+                        prefetch_factor=self.config.training.prefetch_factor,
+                        persistent_workers=self.config.training.persistent_workers,
+                        collate_fn=self.train_dataset.dataset.collate_fn if isinstance(self.train_dataset, torch.utils.data.Subset) else ARCDataset.collate_fn
+                    )
+                else:
+                    logger.warning("Symbol frequencies not available. Using default DataLoader without weighting.")
+                    train_loader = DataLoader(
+                        self.train_dataset,
+                        batch_size=self.config.training.batch_size,
+                        num_workers=get_num_workers(self.config.training),
+                        shuffle=True,  # Enable shuffle since no sampler
+                        pin_memory=True if self.args.use_gpu else False,
+                        prefetch_factor=self.config.training.prefetch_factor,
+                        persistent_workers=self.config.training.persistent_workers,
+                        collate_fn=self.train_dataset.dataset.collate_fn if isinstance(self.train_dataset, torch.utils.data.Subset) else ARCDataset.collate_fn
+                    )
+
             elif self.config.training.balancing_method == "oversampling":
                 # Placeholder for oversampling implementation
                 logger.info("Oversampling method selected, but not yet implemented.")

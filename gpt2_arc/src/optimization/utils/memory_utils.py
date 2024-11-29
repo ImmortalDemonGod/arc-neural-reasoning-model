@@ -1,5 +1,7 @@
 # gpt2_arc/src/optimization/utils/memory_utils.py
 import logging
+import torch 
+import psutil
 
 logger = logging.getLogger(__name__)
 

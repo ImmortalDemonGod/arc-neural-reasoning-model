@@ -1,207 +1,201 @@
-import argparse
-import logging
+import typer
+from enum import Enum
+from typing import Optional, List
+from gpt2_arc.src.optimization.optimizer import run_optimization
 import random
-import sys
-import os
 import torch
 import numpy as np
+import os
+import sys
+import logging
+from argparse import Namespace
+from gpt2_arc.src.optimization.utils.logging_config import configure_logging
 
-from gpt2_arc.src.optimization.optimizer import run_optimization
 
-def main():
-    parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
-    # (All the argument definitions go here)
-    args = parser.parse_args()
+
+# Create app with underscore style 
+app = typer.Typer(
+    help="Optimize hyperparameters for the ARC Neural Reasoning Model",
+    options_metavar="[--option_name=VALUE]"  # Use underscore style in help text
+)
+
+# Reuse enums from train_cli for consistency
+class MatmulPrecision(str, Enum):
+    HIGHEST = "highest"
+    HIGH = "high"
+    MEDIUM = "medium"
+
+class Accelerator(str, Enum):
+    CPU = "cpu"
+    GPU = "gpu"
+    TPU = "tpu"
+
+class GrokfastType(str, Enum):
+    EMA = "ema"
+    MA = "ma"
+
+def validate_mamba_ratio(value: float) -> float:
+    if not 0.0 <= value <= 1.0:
+        raise typer.BadParameter("mamba_ratio must be between 0.0 and 1.0")
+    return value
+
+def validate_splits(train_split: float, val_split: float, test_split: float) -> None:
+    if not abs(train_split + val_split + test_split - 1.0) < 1e-6:
+        raise typer.BadParameter("Split proportions must sum to 1.0")
+
+@app.command()
+def optimize(
+    # Optimization specific parameters
+    n_trials: int = typer.Option(10, "--n_trials", help="Number of trials for optimization"),
+    n_jobs: int = typer.Option(1, "--n_jobs", help="Number of parallel jobs. -1 means using all available cores"),
+    study_name: str = typer.Option("gpt2_arc_optimization_v3", "--study_name", help="Name of the Optuna study"),
+    storage: str = typer.Option("sqlite:///optuna_results.db", "--storage", help="Storage path for Optuna results"),
+    random_seed: int = typer.Option(42, "--random_seed", help="Random seed for reproducibility"),
     
-    parser = argparse.ArgumentParser(description="Optimize hyperparameters for GPT2ARC model.")
-    parser.add_argument("--max_train_samples", type=int, default=None, help="Maximum number of training samples to load. Use None to load all samples.")
-    parser.add_argument("--n_trials", type=int, default=10, help="Number of trials for optimization.")
-    parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs. -1 means using all available cores.")
-    parser.add_argument("--batch_size_min", type=int, default=1, help="Minimum value for batch_size.")
-    parser.add_argument("--batch_size_max", type=int, default=1, help="Maximum value for batch_size.")
-    parser.add_argument(
-        "--fast_dev_run",
-        action="store_true",
-        help="Run a fast development test."
-    )
-    parser.add_argument(
-        "--use_grokfast",
-        action="store_true",
-        help="Enable Grokfast for gradient filtering."
-    )
-    parser.add_argument("--storage", type=str, default="sqlite:///optuna_results.db", help="Storage path for Optuna results.")
-    parser.add_argument("--random_seed", type=int, default=42, help="Random seed for reproducibility.")
-    parser.add_argument(
-        "--val_check_interval",
-        type=float,
-        default=0.01,
+    # Hyperparameter ranges
+    batch_size_min: int = typer.Option(1, "--batch_size_min", help="Minimum value for batch_size"),
+    batch_size_max: int = typer.Option(32, "--batch_size_max", help="Maximum value for batch_size"),
+    learning_rate_min: float = typer.Option(1e-5, "--learning_rate_min", help="Minimum value for learning_rate"),
+    learning_rate_max: float = typer.Option(1e-2, "--learning_rate_max", help="Maximum value for learning_rate"),
+    n_head_min: int = typer.Option(1, "--n_head_min", help="Minimum value for n_head"),
+    n_head_max: int = typer.Option(1, "--n_head_max", help="Maximum value for n_head"),
+    n_head_exp_min: int = typer.Option(1, "--n_head_exp_min", help="Minimum exponent for n_head (2^x)"),
+    n_head_exp_max: int = typer.Option(4, "--n_head_exp_max", help="Maximum exponent for n_head (2^x)"),
+    n_embd_max: int = typer.Option(1, "--n_embd_max", help="Maximum value for n_embd"),
+    n_embd_multiplier_min: int = typer.Option(1, "--n_embd_multiplier_min", help="Minimum multiplier for n_embd"),
+    n_embd_multiplier_max: int = typer.Option(4, "--n_embd_multiplier_max", help="Maximum multiplier for n_embd"),
+    n_layer_min: int = typer.Option(1, "--n_layer_min", help="Minimum value for n_layer"),
+    n_layer_max: int = typer.Option(4, "--n_layer_max", help="Maximum value for n_layer"),
+    max_epochs_min: int = typer.Option(1, "--max_epochs_min", help="Minimum value for max_epochs"),
+    max_epochs_max: int = typer.Option(10, "--max_epochs_max", help="Maximum value for max_epochs"),
+    dropout_min: float = typer.Option(0.0, "--dropout_min", help="Minimum value for dropout"),
+    dropout_max: float = typer.Option(0.5, "--dropout_max", help="Maximum value for dropout"),
+    dropout_step: float = typer.Option(0.1, "--dropout_step", help="Step size for dropout"),
+    
+    # Mamba specific ranges
+    mamba_ratio_min: float = typer.Option(1.0, "--mamba_ratio_min", help="Minimum value for mamba_ratio"),
+    mamba_ratio_max: float = typer.Option(8.0, "--mamba_ratio_max", help="Maximum value for mamba_ratio"),
+    mamba_ratio_step: float = typer.Option(0.25, "--mamba_ratio_step", help="Step size for mamba_ratio"),
+    d_state_min: int = typer.Option(1, "--d_state_min", help="Minimum value for d_state"),
+    d_state_max: int = typer.Option(16, "--d_state_max", help="Maximum value for d_state"),
+    d_conv_min: int = typer.Option(1, "--d_conv_min", help="Minimum value for d_conv"),
+    d_conv_max: int = typer.Option(4, "--d_conv_max", help="Maximum value for d_conv"),
+    mamba_depth_min: int = typer.Option(1, "--mamba_depth_min", help="Minimum value for mamba_depth"),
+    mamba_depth_max: int = typer.Option(4, "--mamba_depth_max", help="Maximum value for mamba_depth"),
+    mamba_expand_min: int = typer.Option(2, "--mamba_expand_min", help="Minimum value for mamba_expand"),
+    mamba_expand_max: int = typer.Option(4, "--mamba_expand_max", help="Maximum value for mamba_expand"),
+    
+    # Grokfast ranges
+    grokfast_alpha_min: float = typer.Option(0.9, "--grokfast_alpha_min", help="Minimum value for grokfast_alpha"),
+    grokfast_alpha_max: float = typer.Option(0.99, "--grokfast_alpha_max", help="Maximum value for grokfast_alpha"),
+    grokfast_lamb_min: float = typer.Option(1.0, "--grokfast_lamb_min", help="Minimum value for grokfast_lamb"),
+    grokfast_lamb_max: float = typer.Option(3.0, "--grokfast_lamb_max", help="Maximum value for grokfast_lamb"),
+    grokfast_window_size_min: int = typer.Option(50, "--grokfast_window_size_min", help="Minimum value for grokfast_window_size"),
+    grokfast_window_size_max: int = typer.Option(200, "--grokfast_window_size_max", help="Maximum value for grokfast_window_size"),
+    grokfast_type_choices: List[str] = typer.Option(["ema", "ma"], "--grokfast_type_choices", help="List of Grokfast types to consider during tuning"),
+    
+    # Data configuration
+    train_split: float = typer.Option(0.8, "--train_split", help="Proportion of data for training"),
+    val_split: float = typer.Option(0.1, "--val_split", help="Proportion of data for validation"),
+    test_split: float = typer.Option(0.1, "--test_split", help="Proportion of data for testing"),
+    max_train_samples: Optional[int] = typer.Option(None, "--max_train_samples", help="Maximum number of training samples to use"),
+    
+    # Training configuration
+    val_check_interval: float = typer.Option(0.01, "--val_check_interval", 
         help=(
             "How often to perform validation. "
             "If a float, represents the fraction of an epoch (e.g., 0.5 for halfway through each epoch). "
             "If an integer, represents the number of training steps."
         )
-    )
-    parser.add_argument(
-        "--model_checkpoint",
-        type=str,
-        default=None,
-        help="Path to the model checkpoint to resume optimization from."
-    )
-    parser.add_argument(
+    ),
+    include_pad_in_loss: bool = typer.Option(
+        True, 
         "--include_pad_in_loss",
-        type=lambda x: (str(x).lower() in ['true', '1', 't', 'y', 'yes']),
-        default=True,
-        help="Whether to include the padding class in the loss calculation. (True/False)"
-    )
-    parser.add_argument(
-        "--study_name",
-        type=str,
-        default="gpt2_arc_optimization_v3",
-        help="Name of the Optuna study."
-    )
-
-    parser.add_argument("--train_split", type=float, default=0.8, help="Proportion of data to use for training")
-    parser.add_argument("--val_split", type=float, default=0.1, help="Proportion of data to use for validation")
-    parser.add_argument("--test_split", type=float, default=0.1, help="Proportion of data to use for testing")
-    parser.add_argument("--n_embd_max", type=int, default=1, help="Maximum value for n_embd")
-    parser.add_argument(
-        "--num_workers",
-        type=int,
-        default=None,
-        help="Number of worker threads for DataLoader. If not set, uses configuration default (total CPU count)."
-    )
-    parser.add_argument(
-        "--prefetch_factor",
-        type=int,
-        default=2,
-        help="Number of batches to prefetch per worker."
-    )
-    parser.add_argument(
-        "--no_persistent_workers",
-        action="store_true",
-        help="Disable persistent workers in DataLoader."
-    )
-    parser.add_argument(
-        "--no_pin_memory",
-        action="store_true",
-        help="Disable pin_memory in DataLoader."
-    )
-    parser.add_argument("--n_head_min", type=int, default=1, help="Minimum value for n_head")
-    parser.add_argument("--n_head_max", type=int, default=1, help="Maximum value for n_head")
-    parser.add_argument("--n_head_exp_min", type=int, default=1, help="Minimum exponent for n_head (2^x)")
-    parser.add_argument("--n_head_exp_max", type=int, default=1, help="Maximum exponent for n_head (2^x)")
-    parser.add_argument("--n_embd_multiplier_min", type=int, default=1, help="Minimum multiplier for n_embd")
-    parser.add_argument("--n_embd_multiplier_max", type=int, default=1, help="Maximum multiplier for n_embd")
-    parser.add_argument("--n_layer_min", type=int, default=1, help="Minimum value for n_layer")
-    parser.add_argument("--n_layer_max", type=int, default=1, help="Maximum value for n_layer")
-    parser.add_argument("--learning_rate_min", type=float, default=1e-5, help="Minimum value for learning_rate")
-    parser.add_argument("--learning_rate_max", type=float, default=1e-2, help="Maximum value for learning_rate")
-    parser.add_argument("--max_epochs_min", type=int, default=1, help="Minimum value for max_epochs")
-    parser.add_argument("--max_epochs_max", type=int, default=10, help="Maximum value for max_epochs")
-
-    parser.add_argument("--mamba_ratio_min", type=float, default=1.0, help="Minimum value for mamba_ratio")
-    parser.add_argument("--mamba_ratio_max", type=float, default=8.0, help="Maximum value for mamba_ratio")
-    parser.add_argument("--mamba_ratio_step", type=float, default=0.25, help="Step size for mamba_ratio")
-    parser.add_argument("--d_state_min", type=int, default=1, help="Minimum value for d_state")
-    parser.add_argument("--d_state_max", type=int, default=1, help="Maximum value for d_state")
-    parser.add_argument("--d_conv_min", type=int, default=1, help="Minimum value for d_conv")
-    parser.add_argument("--d_conv_max", type=int, default=1, help="Maximum value for d_conv")
-
-    parser.add_argument("--dropout_min", type=float, default=0.0, help="Minimum value for dropout")
-    parser.add_argument("--mamba_depth_min", type=int, default=1, help="Minimum value for mamba_depth")
-    parser.add_argument("--mamba_depth_max", type=int, default=1, help="Maximum value for mamba_depth")
-    parser.add_argument("--mamba_expand_min", type=int, default=2, help="Minimum value for mamba_expand")
-    parser.add_argument("--mamba_expand_max", type=int, default=2, help="Maximum value for mamba_expand")
-    parser.add_argument(
-        "--enable_symbol_freq",
-        action="store_true",
-        help="Enable the calculation of symbol frequencies."
-    )
-    parser.set_defaults(enable_symbol_freq=False)
-    parser.add_argument("--dropout_max", type=float, default=0.5, help="Maximum value for dropout")
-    parser.add_argument("--dropout_step", type=float, default=0.1, help="Step size for dropout")
-    parser.add_argument("--use_gpu", action="store_true", help="Flag to indicate whether to use GPU for training.")
-    parser.add_argument(
-        "--no_progress_bar",
-        action="store_true",
-        help="Disable the progress bar during training."
-    )
-    parser.add_argument("--use_synthetic_data", action="store_true", help="Flag to indicate whether to use synthetic data for training.")
-    parser.add_argument(
-        "--matmul_precision",
-        type=str,
-        default="medium",
-        choices=["highest", "high", "medium"],
-        help="Set the internal precision of float32 matrix multiplications for optimization trials. Options: 'highest', 'high', 'medium'. Defaults to 'medium'."
-    )
-    parser.add_argument("--synthetic_data_path", type=str, default="", help="Path to synthetic data for training.")
-    parser.add_argument("--log_level", type=str, default="INFO", help="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL).")
-    parser.add_argument(
-        "--accelerator",
-        type=str,
-        default="gpu",
-        choices=["cpu", "gpu", "tpu"],
-        help="Accelerator to use for training: 'cpu', 'gpu', or 'tpu'. Defaults to 'gpu'."
-    )
-
-    # Grokfast parameter ranges
-    parser.add_argument("--grokfast_alpha_min", type=float, default=0.9, help="Minimum value for grokfast_alpha.")
-    parser.add_argument("--grokfast_alpha_max", type=float, default=0.99, help="Maximum value for grokfast_alpha.")
-    parser.add_argument("--grokfast_lamb_min", type=float, default=1.0, help="Minimum value for grokfast_lamb.")
-    parser.add_argument("--grokfast_lamb_max", type=float, default=3.0, help="Maximum value for grokfast_lamb.")
-    parser.add_argument("--grokfast_window_size_min", type=int, default=50, help="Minimum value for grokfast_window_size.")
-    parser.add_argument("--grokfast_window_size_max", type=int, default=200, help="Maximum value for grokfast_window_size.")
-    parser.add_argument("--grokfast_type_choices", type=str, nargs='+', default=["ema", "ma"], choices=["ema", "ma"], help="List of Grokfast types to consider during tuning.")
-
-
-    args = parser.parse_args()
+        help="Whether to include the padding class in the loss calculation"
+    ),
+    model_checkpoint: Optional[str] = typer.Option(None, "--model_checkpoint", help="Path to model checkpoint to resume optimization from"),
     
-    log_level = getattr(logging, args.log_level.upper(), logging.INFO)
+    # Hardware and performance settings
+    use_gpu: bool = typer.Option(False, "--use_gpu", help="Use GPU for training if available"),
+    accelerator: Accelerator = typer.Option(Accelerator.GPU, "--accelerator", help="Accelerator to use for training"),
+    matmul_precision: MatmulPrecision = typer.Option(MatmulPrecision.MEDIUM, "--matmul_precision", help="Matrix multiplication precision"),
+    num_workers: Optional[int] = typer.Option(None, "--num_workers", help="Number of worker threads for DataLoader"),
+    prefetch_factor: int = typer.Option(2, "--prefetch_factor", help="Number of batches to prefetch per worker"),
+    
+    # Feature flags
+    fast_dev_run: bool = typer.Option(False, "--fast_dev_run", help="Run a fast development test"),
+    use_grokfast: bool = typer.Option(False, "--use_grokfast", help="Enable Grokfast gradient filtering"),
+    use_synthetic_data: bool = typer.Option(False, "--use_synthetic_data", help="Use synthetic data for training"),
+    enable_symbol_freq: bool = typer.Option(False, "--enable_symbol_freq", help="Enable symbol frequency calculation"),
+    no_persistent_workers: bool = typer.Option(False, "--no_persistent_workers", help="Disable persistent workers in DataLoader"),
+    no_pin_memory: bool = typer.Option(False, "--no_pin_memory", help="Disable pin_memory in DataLoader"),
+    no_progress_bar: bool = typer.Option(False, "--no_progress_bar", help="Disable progress bar"),
+    
+    # Paths and logging
+    synthetic_data_path: str = typer.Option("", "--synthetic_data_path", help="Path to synthetic data for training"),
+    log_level: str = typer.Option("INFO", "--log_level", help="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL)"),
+    project: str = typer.Option("gpt2-arc-optimization", "--project", help="Project name for experiment tracking"),
+):
+    """
+    Run hyperparameter optimization for the ARC Neural Reasoning Model.
+    
+    This command provides a comprehensive interface for optimizing model hyperparameters
+    using Optuna, with support for parallel trials and various search space configurations.
+    """
+    # Configure logging first, before any other operations
+    configure_logging(log_level)
+    logger = logging.getLogger(__name__)
+    logger.debug("Logging configured successfully")
+    # Validate split proportions
+    validate_splits(train_split, val_split, test_split)
+
+    # Validate val_check_interval
+    if val_check_interval <= 0:
+        typer.echo("The --val_check_interval must be a positive number.", err=True)
+        raise typer.Exit(code=1)
+    
+    # Set up logging
+    log_level_num = getattr(logging, log_level.upper(), logging.INFO)
     logging.basicConfig(
-        level=log_level,
+        level=log_level_num,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler()
-        ]
+        handlers=[logging.StreamHandler()]
     )
     logger = logging.getLogger(__name__)
-    logger.setLevel(log_level)
-
+    logger.setLevel(log_level_num)
+    
+    # Handle storage path
+    if not storage.startswith("sqlite:///"):
+        if os.path.isabs(storage):
+            storage = f"sqlite:////{storage}"
+        else:
+            storage = f"sqlite:///{os.path.abspath(storage)}"
+    
+    logger.debug(f"Optuna storage URL set to: {storage}")
+    
+    # Set random seeds
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+    torch.manual_seed(random_seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(random_seed)
+    
+    logger.debug(f"Random seed set to: {random_seed}")
+    
+    # Create args namespace for compatibility
+    args = Namespace(**locals())
+    
     # Log parsed arguments for debugging
     logger.debug(f"Parsed arguments: {vars(args)}")
-    logger.setLevel(log_level)
-
-    # Ensure the storage_name has the correct SQLite prefix and handle relative paths
-
-    if not args.storage.startswith("sqlite:///"):
-        if os.path.isabs(args.storage):
-            args.storage = f"sqlite:////{args.storage}"
-        else:
-            args.storage = f"sqlite:///{os.path.abspath(args.storage)}"
     
-    logger.debug(f"Optuna storage URL set to: {args.storage}")
-    
-    # Validate val_check_interval
-    if args.val_check_interval <= 0:
-        logger.error("The --val_check_interval must be a positive number.")
-        sys.exit(1)
-
-    # Set random seeds for reproducibility
-    random.seed(args.random_seed)
-    np.random.seed(args.random_seed)
-    torch.manual_seed(args.random_seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(args.random_seed)
-    
-    logger.debug(f"Random seed set to: {args.random_seed}")
-
+    # Run optimization
     run_optimization(
-        n_trials=args.n_trials,
-        storage_name=args.storage,
-        n_jobs=args.n_jobs,
+        n_trials=n_trials,
+        storage_name=storage,
+        n_jobs=n_jobs,
         args=args,
-        study_name=args.study_name
+        study_name=study_name
     )
 
 if __name__ == "__main__":
-    main()
+    app()

@@ -34,12 +34,20 @@ def create_pruner_and_sampler(n_trials: int):
 
 
 def initialize_config_and_data(args: Optional[argparse.Namespace]):
-    # Initialize configuration
+    # If args doesn't exist, create it
+    if args is None:
+        args = argparse.Namespace()
+    
+    # Ensure required attributes exist
+    if not hasattr(args, 'project'):
+        args.project = "gpt2-arc-optimization"  # Set a default project name
+
+    # Rest of the function stays the same
     model_config = ModelConfig()
     training_config = TrainingConfig()
     config = Config(model=model_config, training=training_config)
     data_manager_instance = DataManager(config=config, args=args)
-
+    
     all_synthetic_data = None
     if args.use_synthetic_data:
         all_synthetic_data = data_manager_instance.load_and_split_synthetic_data(args, config)
@@ -103,16 +111,54 @@ def log_best_trial_details(best_trial):
 
 def handle_best_trial(study):
     """Handles the best trial after the optimization study."""
-    if not study.best_trial:
+    if not study.trials:
+        logger.info("No trials have been completed.")
+        return
+
+    # Filter for completed trials only
+    completed_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
+
+    if not completed_trials:
         logger.info("No trials have been completed successfully.")
         return
 
-    if study.best_trial.state == optuna.trial.TrialState.COMPLETE:
+    # Get best trial among completed ones
+    best_trial = min(completed_trials, key=lambda t: t.value)
+
+    if best_trial.state == optuna.trial.TrialState.COMPLETE:
         logger.debug("Best trial found, attempting to retrieve model summary")
-        log_best_trial_summary(study.best_trial)
+
+        # Log model summary if available
+        best_model_summary = best_trial.user_attrs.get("model_summary")
+        if best_model_summary:
+            logger.info("Model summary for best trial:")
+            logger.info(best_model_summary)
+        else:
+            logger.debug("No model summary found for best trial")
+
+        # Log trial details
+        logger.info(f"Best trial: {best_trial.number}")
+        logger.info(f"Best value: {best_trial.value}")
+
+        # Set additional user attributes
+        for param in ["mamba_ratio", "d_state", "d_conv"]:
+            if param in best_trial.params:
+                best_trial.set_user_attr(param, best_trial.params[param])
+
+        # Log mamba metrics
+        logger.info("Best mamba metrics:")
+        mamba_metrics = ['mamba_forward_pass_time', 'mamba_params', 'mamba_params_ratio']
+        for metric in mamba_metrics:
+            value = best_trial.user_attrs.get(metric)
+            if value is not None:
+                logger.info(f" {metric}: {value}")
+
+        # Log best hyperparameters
+        logger.info("Best hyperparameters:")
+        for key, value in best_trial.params.items():
+            logger.info(f" {key}: {value}")
     else:
-        logger.warning("No successful trials found. Please check the trial configurations and constraints.")
-        log_best_trial_details(study.best_trial)
+        logger.warning(f"Best trial {best_trial.number} is not in COMPLETE state")
 
 
 def run_optimization(
