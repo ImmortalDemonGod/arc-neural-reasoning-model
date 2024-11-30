@@ -11,7 +11,7 @@ from jsonschema import ValidationError
 from .utils.arc_dataset_config import ARCDatasetConfig  # Fixed import
 from .utils.validation import validate_sample
 from .utils.grid_ops import GridOperations
-from .utils.custom_exceptions import ValidationError
+from .utils.custom_exceptions import ValidationError, DataLoadingError
 from arckit.data import TaskSet
 logger = logging.getLogger(__name__)
 from .loaders import create_loader
@@ -167,57 +167,48 @@ class ARCDataset(Dataset):
 
     def _load_and_process_data(self, config: ARCDatasetConfig):
         """Load and process data from source, computing statistics."""
-        try:
-            logger.debug("Loading data from data source.")
-            self.data = self._load_data(self.data_source)
+        logger.debug("Loading data from data source.")
+        self.data = self._load_data(self.data_source)
 
-            if not self.data:
-                logger.error("No valid samples loaded. Ensure that all samples have 'input' and 'output' keys.")
-                raise ValueError("No valid samples loaded. Ensure that all samples have 'input' and 'output' keys.")
+        if not self.data:
+            logger.error("No valid samples loaded. Ensure that all samples have 'input' and 'output' keys.")
+            raise DataLoadingError("No valid samples loaded. Ensure that all samples have 'input' and 'output' keys.")
 
-            logger.debug(f"Data loaded successfully from data source with {len(self.data)} samples.")
+        logger.debug(f"Data loaded successfully from data source with {len(self.data)} samples.")
 
-            # Apply sample limit if specified
-            if self.max_samples is not None:
-                logger.debug(f"Applying max_samples limit: {self.max_samples}.")
-                self.data = self.data[:self.max_samples]
-                logger.debug(f"Limited dataset to {len(self.data)} samples.")
+        # Apply sample limit if specified
+        if self.max_samples is not None:
+            logger.debug(f"Applying max_samples limit: {self.max_samples}.")
+            self.data = self.data[:self.max_samples]
+            logger.debug(f"Limited dataset to {len(self.data)} samples.")
 
-            self.num_samples = len(self.data)
+        self.num_samples = len(self.data)
 
-            # Compute statistics
-            logger.info("Starting computation of dataset statistics.")
-            stats_computer = DatasetStatistics(self.num_symbols)
-            self.statistics = stats_computer.compute_all_statistics(self.data)
+        # Compute statistics
+        logger.info("Starting computation of dataset statistics.")
+        stats_computer = DatasetStatistics(self.num_symbols)
+        self.statistics = stats_computer.compute_all_statistics(self.data)
 
-            if 'grid_size_stats' in self.statistics:
-                self.max_grid_size = (
-                    self.statistics['grid_size_stats']['max_height'],
-                    self.statistics['grid_size_stats']['max_width']
-                )
-                logger.debug(f"Computed grid size statistics: {self.max_grid_size}")
+        if 'grid_size_stats' in self.statistics:
+            self.max_grid_size = (
+                self.statistics['grid_size_stats']['max_height'],
+                self.statistics['grid_size_stats']['max_width']
+            )
+            logger.debug(f"Computed grid size statistics: {self.max_grid_size}")
 
-            # Save to cache if enabled
-            if config.enable_caching:
-                logger.debug("Saving dataset and statistics to cache.")
-                self.cache.save(config, self.data, self.statistics)
-                logger.info("Dataset statistics have been cached successfully.")
-
-        except Exception as e:
-            logger.error(f"Failed to load and process data: {e}", exc_info=True)
-            raise
+        # Save to cache if enabled
+        if config.enable_caching:
+            logger.debug("Saving dataset and statistics to cache.")
+            self.cache.save(config, self.data, self.statistics)
+            logger.info("Dataset statistics have been cached successfully.")
 
     def _load_data(self, data_source: Union[str, List[Dict], 'TaskSet']) -> List[Dict]:
         """Load dataset using appropriate loader based on data source type."""
-        try:
-            logger.debug(f"Creating loader for data source of type: {type(data_source)}.")
-            loader = create_loader(data_source, self.num_symbols, self.pad_symbol_idx)
-            loaded_data = loader.load()
-            logger.debug(f"Loaded {len(loaded_data)} samples using {loader.__class__.__name__}.")
-            return loaded_data
-        except Exception as e:
-            logger.error(f"Failed to load data: {e}", exc_info=True)
-            raise
+        logger.debug(f"Creating loader for data source of type: {type(data_source)}.")
+        loader = create_loader(data_source, self.num_symbols, self.pad_symbol_idx)
+        loaded_data = loader.load()
+        logger.debug(f"Loaded {len(loaded_data)} samples using {loader.__class__.__name__}.")
+        return loaded_data
 
     def _validate_data(self):
         """Validates the dataset samples"""
