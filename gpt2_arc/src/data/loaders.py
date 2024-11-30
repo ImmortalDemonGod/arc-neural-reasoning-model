@@ -131,6 +131,7 @@ def create_loader(data_source: Union[str, List[Dict], 'TaskSet'], num_symbols: i
         ValueError: If data source type is not supported
         DataLoadingError: If temporary file creation fails
     """
+    logger.debug(f"Creating loader for data source: {data_source}")
     if isinstance(data_source, str):
         if os.path.isdir(data_source):
             return DirectoryLoader(data_source, num_symbols, pad_symbol_idx)
@@ -204,59 +205,58 @@ class JSONFileLoader(BaseLoader):
         Raises:
             DataLoadingError: If file cannot be read or parsed
         """
-        try:
-            if not os.path.exists(self.file_path):
-                raise DataLoadingError(f"File not found: {self.file_path}")
-                
-            if os.path.getsize(self.file_path) == 0:
-                raise DataLoadingError(f"Empty file: {self.file_path}")
+        logger.debug(f"Loading samples from {self.file_path}")
+        if not os.path.exists(self.file_path):
+            raise DataLoadingError(f"File not found: {self.file_path}")
             
-            samples = []
-            raw_samples = self._load_json_content()
-            
-            # Process and validate samples
-            for idx, sample in enumerate(raw_samples):
-                try:
-                    # Prepare tensors
-                    input_tensor = self._prepare_tensor(sample['input'])
-                    output_tensor = self._prepare_tensor(sample['output'])
-                    
-                    # Validate tensors (will raise ValidationError if invalid)
-                    self._validate_tensors(input_tensor, output_tensor)
-                    
-                    # Handle task_id
-                    task_id = sample.get('task_id', sample.get('id', f"task_{idx}"))
-                    if not isinstance(task_id, str) or not task_id:
-                        task_id = f"task_{idx}"
-                        logger.warning(f"Invalid task_id at index {idx}, assigned: {task_id}")
+        if os.path.getsize(self.file_path) == 0:
+            raise DataLoadingError(f"Empty file: {self.file_path}")
+        
+        samples = []
+        raw_samples = self._load_json_content()
+        
+        # Process and validate samples
+        for idx, sample in enumerate(raw_samples):
+            logger.debug(f"Processing sample {idx}: {sample}")
+            # Validate raw sample
+            if 'input' not in sample or 'output' not in sample:
+                logger.error(f"Sample {idx} missing required fields: {sample}")
+                raise DataLoadingError(f"Sample {idx} missing required fields")
 
-                    # Create validated sample
-                    processed_sample = {
-                        "input": input_tensor,
-                        "output": output_tensor,
-                        "task_id": task_id
-                    }
-                    
-                    if validate_sample(processed_sample, self.num_symbols):
-                        samples.append(processed_sample)
-                    else:
-                        logger.warning(f"Sample validation failed at index {idx}")
-                    
-                except Exception as e:
-                    logger.error(f"Error processing sample {idx}: {str(e)}")
-                    continue
+            # Prepare tensors
+            input_tensor = self._prepare_tensor(sample['input'])
+            output_tensor = self._prepare_tensor(sample['output'])
             
-            if not samples:
-                raise DataLoadingError(f"No valid samples found in {self.file_path}")
-                
-            logger.info(f"Successfully loaded {len(samples)} samples from {self.file_path}")
-            return samples
+            # Validate tensors (will raise ValidationError if invalid)
+            self._validate_tensors(input_tensor, output_tensor)
             
-        except Exception as e:
-            raise DataLoadingError(f"Failed to load {self.file_path}: {str(e)}")
+            # Handle task_id
+            task_id = sample.get('task_id', sample.get('id', f"task_{idx}"))
+            if not isinstance(task_id, str) or not task_id:
+                task_id = f"task_{idx}"
+                logger.warning(f"Invalid task_id at index {idx}, assigned: {task_id}")
+
+            # Create validated sample
+            processed_sample = {
+                "input": input_tensor,
+                "output": output_tensor,
+                "task_id": task_id
+            }
+            
+            if not validate_sample(processed_sample, self.num_symbols):
+                logger.error(f"Sample validation failed at index {idx}")
+                raise DataLoadingError(f"Sample validation failed at index {idx}")
+            samples.append(processed_sample)
+        
+        if not samples:
+            raise DataLoadingError(f"No valid samples found in {self.file_path}")
+            
+        logger.info(f"Successfully loaded {len(samples)} samples from {self.file_path}")
+        return samples
 
     def _load_json_content(self) -> List[Dict]:
         """Load and parse JSON content from file."""
+        logger.debug("Loading JSON content")
         with open(self.file_path, 'rb') as f:
             try:
                 # Try fast parser first
